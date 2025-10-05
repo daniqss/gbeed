@@ -4,7 +4,7 @@ use crate::prelude::*;
 pub const MEMORY_SIZE: usize = 0x10000; // 64KB
 
 pub struct Memory {
-    pub memory: [u8; 0x10000],
+    memory: [u8; MEMORY_SIZE],
 }
 
 impl Memory {
