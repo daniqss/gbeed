@@ -1,13 +1,17 @@
 use super::license::get_license;
 use crate::prelude::*;
 
-const TITLE_START_ADDR: usize = 0x0134;
-const TITLE_END_ADDR: usize = 0x0143;
-const SGB_FLAG_ADDR: usize = 0x0146;
-const CARTRIDGE_TYPE_ADDR: usize = 0x0147;
-const ROM_SIZE_ADDR: usize = 0x0148;
-const RAM_SIZE_ADDR: usize = 0x0149;
-const DESTINATION_CODE_ADDR: usize = 0x014A;
+pub const TITLE_START_ADDR: usize = 0x0134;
+pub const TITLE_END_ADDR: usize = 0x0143;
+pub const SGB_FLAG_ADDR: usize = 0x0146;
+pub const CARTRIDGE_TYPE_ADDR: usize = 0x0147;
+pub const ROM_SIZE_ADDR: usize = 0x0148;
+pub const RAM_SIZE_ADDR: usize = 0x0149;
+pub const DESTINATION_CODE_ADDR: usize = 0x014A;
+pub const GAME_VERSION_ADDR: usize = 0x014C;
+pub const HEADER_CHECKSUM_ADDR: usize = 0x14D;
+pub const GLOBAL_CHECKSUM_START_ADDR: usize = 0x14E;
+pub const GLOBAL_CHECKSUM_END_ADDR: usize = 0x14F;
 
 /// Indicates the available hardware in the cartridge
 /// Is mostly used to indicates memory bank controllers
@@ -54,6 +58,9 @@ pub struct Cartridge {
     rom_banks: u16,
     ram_size: u32,
     destination: &'static str,
+    game_version: u8,
+    header_checksum: u8,
+    global_checksum: u16,
 }
 
 impl Cartridge {
@@ -68,6 +75,11 @@ impl Cartridge {
         let (rom_size, rom_banks) = Self::get_rom_size(raw[ROM_SIZE_ADDR]);
         let ram_size = Self::get_ram_size(raw[RAM_SIZE_ADDR]);
         let destination = Self::get_destination_code(raw[DESTINATION_CODE_ADDR]);
+        // usually 0x00
+        let game_version = raw[GAME_VERSION_ADDR];
+        let header_checksum = raw[HEADER_CHECKSUM_ADDR];
+        let global_checksum = ((raw[GLOBAL_CHECKSUM_START_ADDR] as u16) << 8)
+            | (raw[GLOBAL_CHECKSUM_END_ADDR] as u16);
 
         Ok(Self {
             raw,
@@ -80,7 +92,20 @@ impl Cartridge {
             rom_banks,
             ram_size,
             destination,
+            game_version,
+            header_checksum,
+            global_checksum,
         })
+    }
+
+    /// # Header checksum
+    pub fn check_header_checksum(&self) -> Result<()> {
+        Ok(())
+    }
+
+    /// # Global checksum
+    pub fn check_global_checksum(&self) -> Result<()> {
+        Ok(())
     }
 
     /// indicates if the game supports Super Gameboy
@@ -203,7 +228,9 @@ impl std::fmt::Display for Cartridge {
         )?;
         write!(f, "RAM Size -> {} KB\n", self.ram_size / 1024)?;
         write!(f, "Destination code -> {}\n", self.destination)?;
-
+        write!(f, "Game version -> {}\n", self.game_version)?;
+        write!(f, "Header checksum -> {:#04X}\n", self.header_checksum)?;
+        write!(f, "Global checksum -> {:#06X}\n", self.global_checksum)?;
         Ok(())
     }
 }
