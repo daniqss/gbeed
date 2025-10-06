@@ -1,6 +1,9 @@
+mod cartrigde;
 mod cpu;
+mod license;
 mod memory;
 
+pub use cartrigde::Cartridge;
 use cpu::Cpu;
 use memory::Memory;
 

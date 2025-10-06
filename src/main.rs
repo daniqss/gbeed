@@ -5,7 +5,7 @@ fn main() -> Result<()> {
         .nth(1)
         .ok_or_else(|| Error::Generic("First argument must be a Gameboy ROM".to_owned()))?;
 
-    let file = std::fs::File::open(file_name)?;
+    let file = std::fs::read(file_name)?;
 
     gbeed::run(file)
 }
