@@ -48,7 +48,6 @@ pub enum CartridgeType {
 }
 
 pub struct Cartridge {
-    raw: Vec<u8>,
     is_pre_sgb: bool,
     license: Option<String>,
     title: String,
@@ -61,6 +60,7 @@ pub struct Cartridge {
     game_version: u8,
     header_checksum: u8,
     global_checksum: u16,
+    raw: Vec<u8>,
 }
 
 impl Cartridge {
@@ -82,7 +82,6 @@ impl Cartridge {
             | (raw[GLOBAL_CHECKSUM_END_ADDR] as u16);
 
         Ok(Self {
-            raw,
             is_pre_sgb,
             license,
             title: title.to_string(),
@@ -95,17 +94,31 @@ impl Cartridge {
             game_version,
             header_checksum,
             global_checksum,
+            raw,
         })
     }
 
     /// # Header checksum
     pub fn check_header_checksum(&self) -> Result<()> {
-        Ok(())
+        todo!("not implemented yet")
     }
 
     /// # Global checksum
     pub fn check_global_checksum(&self) -> Result<()> {
-        Ok(())
+        let cartridge_sum: u16 = self.raw.iter().enumerate().fold(0u16, |acc, (i, &b)| {
+            match i != GLOBAL_CHECKSUM_START_ADDR && i != GLOBAL_CHECKSUM_END_ADDR {
+                true => acc.wrapping_add(b as u16),
+                false => acc,
+            }
+        });
+
+        match cartridge_sum == self.global_checksum {
+            true => Ok(()),
+            false => Err(Error::Generic(format!(
+                "Global checksum mismatch, {} != {}",
+                cartridge_sum, self.global_checksum
+            ))),
+        }
     }
 
     /// indicates if the game supports Super Gameboy
