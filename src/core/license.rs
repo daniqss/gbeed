@@ -156,7 +156,7 @@ pub fn get_license(raw: &Vec<u8>) -> (bool, Option<String>) {
             0xF0 => Some("A Wave".to_owned()),
             0xF3 => Some("Extreme Entertainment".to_owned()),
             0xFF => Some("LJN".to_owned()),
-            _ => unreachable!(),
+            _ => unreachable!("Unknown old license code: {:#?}", raw[OLD_LICENSE_ADDR]),
         },
     )
 }
