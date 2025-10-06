@@ -240,8 +240,8 @@ impl std::fmt::Display for Cartridge {
         write!(
             f,
             "ROM Size -> {} KB ({} banks)\n",
-            self.rom_size / 1024,
-            self.rom_banks
+            self.rom_size.0 / 1024,
+            self.rom_size.1
         )?;
         write!(f, "RAM Size -> {} KB\n", self.ram_size / 1024)?;
         write!(f, "Destination code -> {}\n", self.destination)?;
