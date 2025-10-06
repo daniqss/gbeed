@@ -13,6 +13,7 @@ pub fn run(file: Vec<u8>) -> Result<()> {
         Err(e) => return Err(e),
     };
     println!("{}", cartridge);
+    cartridge.check_header_checksum()?;
     cartridge.check_global_checksum()?;
     let emulator = Dmg::new();
 

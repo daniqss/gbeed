@@ -53,8 +53,7 @@ pub struct Cartridge {
     title: String,
     supports_sgb: bool,
     cartridge_type: CartridgeType,
-    rom_size: u32,
-    rom_banks: u16,
+    rom_size: (u32, u16),
     ram_size: u32,
     destination: &'static str,
     game_version: u8,
@@ -65,45 +64,50 @@ pub struct Cartridge {
 
 impl Cartridge {
     pub fn new(raw: Vec<u8>) -> Result<Self> {
-        let (is_pre_sgb, license) = get_license(&raw);
-        let title = &raw[TITLE_START_ADDR..TITLE_END_ADDR]
-            .iter()
-            .map(|&c| c as char)
-            .collect::<String>();
-        let supports_sgb = Self::get_supports_sgb(raw[SGB_FLAG_ADDR]);
-        let cartridge_type = Self::get_cartridge_type(raw[CARTRIDGE_TYPE_ADDR]);
-        let (rom_size, rom_banks) = Self::get_rom_size(raw[ROM_SIZE_ADDR]);
-        let ram_size = Self::get_ram_size(raw[RAM_SIZE_ADDR]);
-        let destination = Self::get_destination_code(raw[DESTINATION_CODE_ADDR]);
-        // usually 0x00
-        let game_version = raw[GAME_VERSION_ADDR];
-        let header_checksum = raw[HEADER_CHECKSUM_ADDR];
-        let global_checksum = ((raw[GLOBAL_CHECKSUM_START_ADDR] as u16) << 8)
-            | (raw[GLOBAL_CHECKSUM_END_ADDR] as u16);
-
-        Ok(Self {
-            is_pre_sgb,
-            license,
-            title: title.to_string(),
-            supports_sgb,
-            cartridge_type,
-            rom_size,
-            rom_banks,
-            ram_size,
-            destination,
-            game_version,
-            header_checksum,
-            global_checksum,
+        let cartridge = Self {
+            is_pre_sgb: get_license(&raw).0,
+            license: get_license(&raw).1,
+            title: raw[TITLE_START_ADDR..TITLE_END_ADDR]
+                .iter()
+                .map(|&c| c as char)
+                .collect(),
+            supports_sgb: Self::get_supports_sgb(raw[SGB_FLAG_ADDR]),
+            cartridge_type: Self::get_cartridge_type(raw[CARTRIDGE_TYPE_ADDR]),
+            rom_size: Self::get_rom_size(raw[ROM_SIZE_ADDR]),
+            ram_size: Self::get_ram_size(raw[RAM_SIZE_ADDR]),
+            destination: Self::get_destination_code(raw[DESTINATION_CODE_ADDR]),
+            game_version: raw[GAME_VERSION_ADDR],
+            header_checksum: raw[HEADER_CHECKSUM_ADDR],
+            global_checksum: ((raw[GLOBAL_CHECKSUM_START_ADDR] as u16) << 8)
+                | (raw[GLOBAL_CHECKSUM_END_ADDR] as u16),
             raw,
-        })
+        };
+
+        match cartridge.check_global_checksum() {
+            Ok(_) => Ok(cartridge),
+            Err(e) => Err(e),
+        }
     }
 
     /// # Header checksum
+    /// Checked by real hardware by the boot ROM
     pub fn check_header_checksum(&self) -> Result<()> {
-        todo!("not implemented yet")
+        let header_sum = self.raw[TITLE_START_ADDR..=GAME_VERSION_ADDR]
+            .iter()
+            .fold(0u8, |acc, &b| acc.wrapping_sub(b).wrapping_sub(1));
+
+        match header_sum == self.header_checksum {
+            true => Ok(()),
+            false => Err(Error::Generic(format!(
+                "Header checksum mismatch, {:#04X} != {:#04X}",
+                header_sum, self.header_checksum
+            ))),
+        }
     }
 
     /// # Global checksum
+    /// Not actually checked by real hardware
+    /// We'll use in Cartridge creation for now to verify correct file parsing and integrity
     pub fn check_global_checksum(&self) -> Result<()> {
         let cartridge_sum: u16 = self.raw.iter().enumerate().fold(0u16, |acc, (i, &b)| {
             match i != GLOBAL_CHECKSUM_START_ADDR && i != GLOBAL_CHECKSUM_END_ADDR {
@@ -115,8 +119,8 @@ impl Cartridge {
         match cartridge_sum == self.global_checksum {
             true => Ok(()),
             false => Err(Error::Generic(format!(
-                "Global checksum mismatch, {} != {}",
-                cartridge_sum, self.global_checksum
+                "Global checksum mismatch, {:#04X} != {:#04X}",
+                cartridge_sum, self.global_checksum,
             ))),
         }
     }
