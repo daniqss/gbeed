@@ -124,21 +124,17 @@ impl Cartridge {
     }
 
     /// # Rom Size
-    /// Usually its 32 KiB × (1 << <value>)
+    /// Other formats are listed in unofficial docs, but they're not found in real cartridges
     fn get_rom_size(byte: u8) -> (u32, u16) {
         match byte {
-            0x00 => (32 * 1024, 2), // no banking
-            0x01 => (64 * 1024, 4),
-            0x02 => (128 * 1024, 8),
-            0x03 => (256 * 1024, 16),
-            0x04 => (512 * 1024, 32),
-            0x05 => (1 * 1024 * 1024, 64),
-            0x06 => (2 * 1024 * 1024, 128),
-            0x07 => (4 * 1024 * 1024, 256),
+            // 32 KiB rom size (2 banks) does not do bancking
+            0x00..=0x07 => (0x8000 << byte, 2 << byte),
             _ => unreachable!("Unknown ROM size: {byte:#X}"),
         }
     }
 
+    /// # Ram Size
+    /// Defines how much RAM is provided by the cartridge
     fn get_ram_size(byte: u8) -> u32 {
         match byte {
             0x00 => 0,
@@ -154,7 +150,7 @@ impl Cartridge {
     fn get_destination_code(byte: u8) -> &'static str {
         match byte {
             0x00 => "Japanese",
-            0x01 => "Non-Japanese",
+            0x01 => "Overseas",
             _ => unreachable!("Unknown destination code: {byte:#X}"),
         }
     }
