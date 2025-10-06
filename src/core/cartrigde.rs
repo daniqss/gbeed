@@ -147,6 +147,8 @@ impl Cartridge {
         }
     }
 
+    /// # Destination Code
+    /// Whether the game is made for japanese or overseas markets
     fn get_destination_code(byte: u8) -> &'static str {
         match byte {
             0x00 => "Japanese",
