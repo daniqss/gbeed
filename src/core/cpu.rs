@@ -16,21 +16,25 @@ pub struct Cpu {
     pub l: u8,
     pub pc: u16,
     pub sp: u16,
+
+    cycles: usize,
 }
 
 impl Cpu {
     pub fn new() -> Cpu {
         Cpu {
-            a: 0,
-            f: 0,
-            b: 0,
-            c: 0,
-            d: 0,
-            e: 0,
-            h: 0,
-            l: 0,
-            pc: 0,
-            sp: 0,
+            a: 0x00,
+            f: 0x00,
+            b: 0x00,
+            c: 0x00,
+            d: 0x00,
+            e: 0x00,
+            h: 0x00,
+            l: 0x00,
+            pc: 0x0000,
+            sp: 0x0100,
+
+            cycles: 0,
         }
     }
 
@@ -44,38 +48,31 @@ impl Cpu {
         self.h = 0x00;
         self.l = 0x00;
         self.pc = 0x0000;
-        self.sp = 0x0000;
+        self.sp = 0x1000;
+        self.cycles = 0;
     }
 
-    pub fn get_af(&self) -> u16 {
-        to_u16(self.a, self.f)
-    }
-    pub fn get_bc(&self) -> u16 {
-        to_u16(self.b, self.c)
-    }
-    pub fn get_de(&self) -> u16 {
-        to_u16(self.d, self.e)
-    }
-    pub fn get_hl(&self) -> u16 {
-        to_u16(self.h, self.l)
-    }
+    pub fn get_af(&self) -> u16 { to_u16(self.a, self.f) }
+    pub fn get_bc(&self) -> u16 { to_u16(self.b, self.c) }
+    pub fn get_de(&self) -> u16 { to_u16(self.d, self.e) }
+    pub fn get_hl(&self) -> u16 { to_u16(self.h, self.l) }
 
-    pub fn set_af(&mut self, value: u16) -> () {
-        (self.a, self.f) = to_u8(value);
-    }
-    pub fn set_bc(&mut self, value: u16) -> () {
-        (self.b, self.c) = to_u8(value);
-    }
-    pub fn set_de(&mut self, value: u16) -> () {
-        (self.d, self.e) = to_u8(value);
-    }
-    pub fn set_hl(&mut self, value: u16) -> () {
-        (self.h, self.l) = to_u8(value);
-    }
+    pub fn set_af(&mut self, value: u16) -> () { (self.a, self.f) = to_u8(value); }
+    pub fn set_bc(&mut self, value: u16) -> () { (self.b, self.c) = to_u8(value); }
+    pub fn set_de(&mut self, value: u16) -> () { (self.d, self.e) = to_u8(value); }
+    pub fn set_hl(&mut self, value: u16) -> () { (self.h, self.l) = to_u8(value); }
 
     /// Flags are set if occurs a condition in the last math operation
-    pub fn set_flags(&mut self, operation_result: u8) -> () {
-        self.f = operation_result;
+    pub fn set_flags(&mut self, operation_result: u8) -> () { self.f = operation_result; }
+
+    pub fn exec_next(&mut self, instruction: u16) -> () {
+        // most instructions are 8 bits, and 16 instructions are differentiated from the rest from the first 8 bits
+        let opcode = (instruction >> 8) as u8;
+
+        match opcode {
+            0x00 => println!("opcode -> {}, instruction -> {}", opcode, instruction),
+            _ => todo!("xd"),
+        };
     }
 }
 
@@ -122,5 +119,6 @@ mod cpu_tests {
         assert_eq!(cpu.l, 0x00);
         assert_eq!(cpu.pc, 0x0000);
         assert_eq!(cpu.sp, 0x0000);
+        assert_eq!(cpu.cycles, 0);
     }
 }
