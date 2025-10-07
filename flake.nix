@@ -6,18 +6,11 @@
   };
 
   outputs = {nixpkgs, ...}: let
-    systems = ["x86_64-linux" "aarch64-linux"];
-
-    forAllSystems = f:
-      builtins.listToAttrs (map (system: {
-          name = system;
-          value = f system;
-        })
-        systems);
+    eachSystem = f:
+      nixpkgs.lib.genAttrs ["x86_64-linux" "aarch64-linux"]
+      (system: f (import nixpkgs {inherit system;}));
   in {
-    devShells = forAllSystems (system: let
-      pkgs = import nixpkgs {inherit system;};
-    in {
+    devShells = eachSystem (pkgs: {
       default = pkgs.mkShell {
         buildInputs = with pkgs; [
           cargo
