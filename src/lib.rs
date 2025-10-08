@@ -15,7 +15,9 @@ pub fn run(file: Vec<u8>) -> Result<()> {
     println!("{}", cartridge);
     cartridge.check_header_checksum()?;
     cartridge.check_global_checksum()?;
-    let emulator = Dmg::new();
+    let mut emulator = Dmg::new(cartridge);
+
+    emulator.run();
 
     Ok(())
 }
