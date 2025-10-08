@@ -1,5 +1,11 @@
-use crate::prelude::{utils::to_u8, utils::to_u16};
-use std::fmt::{self, Display, Formatter};
+use crate::{
+    core::memory::MemoryBus,
+    prelude::utils::{to_u8, to_u16},
+};
+use std::{
+    fmt::{self, Display, Formatter},
+    rc::Rc,
+};
 
 /// # CPU
 /// Gameboy CPU, with a mix of Intel 8080 and Zilog Z80 features and instruction set.
@@ -18,10 +24,11 @@ pub struct Cpu {
     pub sp: u16,
 
     cycles: usize,
+    memory_bus: Rc<MemoryBus>,
 }
 
 impl Cpu {
-    pub fn new() -> Cpu {
+    pub fn new(memory_bus: Rc<MemoryBus>) -> Cpu {
         Cpu {
             a: 0x00,
             f: 0x00,
@@ -35,6 +42,7 @@ impl Cpu {
             sp: 0x0100,
 
             cycles: 0,
+            memory_bus,
         }
     }
 
@@ -52,18 +60,36 @@ impl Cpu {
         self.cycles = 0;
     }
 
-    pub fn get_af(&self) -> u16 { to_u16(self.a, self.f) }
-    pub fn get_bc(&self) -> u16 { to_u16(self.b, self.c) }
-    pub fn get_de(&self) -> u16 { to_u16(self.d, self.e) }
-    pub fn get_hl(&self) -> u16 { to_u16(self.h, self.l) }
+    pub fn get_af(&self) -> u16 {
+        to_u16(self.a, self.f)
+    }
+    pub fn get_bc(&self) -> u16 {
+        to_u16(self.b, self.c)
+    }
+    pub fn get_de(&self) -> u16 {
+        to_u16(self.d, self.e)
+    }
+    pub fn get_hl(&self) -> u16 {
+        to_u16(self.h, self.l)
+    }
 
-    pub fn set_af(&mut self, value: u16) -> () { (self.a, self.f) = to_u8(value); }
-    pub fn set_bc(&mut self, value: u16) -> () { (self.b, self.c) = to_u8(value); }
-    pub fn set_de(&mut self, value: u16) -> () { (self.d, self.e) = to_u8(value); }
-    pub fn set_hl(&mut self, value: u16) -> () { (self.h, self.l) = to_u8(value); }
+    pub fn set_af(&mut self, value: u16) -> () {
+        (self.a, self.f) = to_u8(value);
+    }
+    pub fn set_bc(&mut self, value: u16) -> () {
+        (self.b, self.c) = to_u8(value);
+    }
+    pub fn set_de(&mut self, value: u16) -> () {
+        (self.d, self.e) = to_u8(value);
+    }
+    pub fn set_hl(&mut self, value: u16) -> () {
+        (self.h, self.l) = to_u8(value);
+    }
 
     /// Flags are set if occurs a condition in the last math operation
-    pub fn set_flags(&mut self, operation_result: u8) -> () { self.f = operation_result; }
+    pub fn set_flags(&mut self, operation_result: u8) -> () {
+        self.f = operation_result;
+    }
 
     pub fn exec_next(&mut self, instruction: u16) -> () {
         // most instructions are 8 bits, and 16 instructions are differentiated from the rest from the first 8 bits
@@ -88,9 +114,13 @@ impl Display for Cpu {
 
 #[cfg(test)]
 mod cpu_tests {
+    use std::rc::Rc;
+
+    use crate::core::memory::MemoryBus;
+
     #[test]
     fn test_cpu() {
-        let mut cpu = super::Cpu::new();
+        let mut cpu = super::Cpu::new(Rc::new(MemoryBus::new()));
         let (af_value, bc_value, de_value, hl_value) = (0x1234, 0x5678, 0x9ABC, 0xDEF0);
         cpu.set_af(af_value);
         cpu.set_bc(bc_value);

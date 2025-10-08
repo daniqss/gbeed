@@ -4,33 +4,39 @@ mod license;
 mod memory;
 mod ppu;
 
+use std::rc::Rc;
+
 pub use cartrigde::Cartridge;
 use cpu::Cpu;
-use memory::Memory;
+use memory::MemoryBus;
 use ppu::Ppu;
 
 pub struct Dmg {
     pub cpu: Cpu,
-    pub memory: Memory,
+    pub memory_bus: Rc<MemoryBus>,
     pub ppu: Ppu,
     pub cartridge: Cartridge,
 }
 
 impl Dmg {
     pub fn new(cartridge: Cartridge) -> Dmg {
+        let memory_bus = Rc::new(MemoryBus::new());
+
         Dmg {
-            cpu: Cpu::new(),
-            memory: Memory::new(),
-            ppu: Ppu::new(),
+            cpu: Cpu::new(memory_bus.clone()),
+            ppu: Ppu::new(memory_bus.clone()),
+            memory_bus,
             cartridge,
         }
     }
 
-    pub fn reset(&mut self) { self.cpu.reset(); }
+    pub fn reset(&mut self) {
+        self.cpu.reset();
+    }
 
     pub fn run(&mut self) {
-        while true {
-            let instruction = self.memory[self.cpu.pc];
+        loop {
+            let instruction = self.memory_bus.read_word(self.cpu.pc);
 
             self.cpu.exec_next(instruction);
         }
