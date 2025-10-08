@@ -30,9 +30,7 @@ impl Dmg {
         }
     }
 
-    pub fn reset(&mut self) {
-        self.cpu.reset();
-    }
+    pub fn reset(&mut self) { self.cpu.reset(); }
 
     pub fn run(&mut self) {
         loop {

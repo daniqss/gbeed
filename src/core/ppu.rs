@@ -7,7 +7,5 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new(memory_bus: Rc<MemoryBus>) -> Self {
-        Self { memory_bus }
-    }
+    pub fn new(memory_bus: Rc<MemoryBus>) -> Self { Self { memory_bus } }
 }
