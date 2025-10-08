@@ -60,36 +60,18 @@ impl Cpu {
         self.cycles = 0;
     }
 
-    pub fn get_af(&self) -> u16 {
-        to_u16(self.a, self.f)
-    }
-    pub fn get_bc(&self) -> u16 {
-        to_u16(self.b, self.c)
-    }
-    pub fn get_de(&self) -> u16 {
-        to_u16(self.d, self.e)
-    }
-    pub fn get_hl(&self) -> u16 {
-        to_u16(self.h, self.l)
-    }
+    pub fn get_af(&self) -> u16 { to_u16(self.a, self.f) }
+    pub fn get_bc(&self) -> u16 { to_u16(self.b, self.c) }
+    pub fn get_de(&self) -> u16 { to_u16(self.d, self.e) }
+    pub fn get_hl(&self) -> u16 { to_u16(self.h, self.l) }
 
-    pub fn set_af(&mut self, value: u16) -> () {
-        (self.a, self.f) = to_u8(value);
-    }
-    pub fn set_bc(&mut self, value: u16) -> () {
-        (self.b, self.c) = to_u8(value);
-    }
-    pub fn set_de(&mut self, value: u16) -> () {
-        (self.d, self.e) = to_u8(value);
-    }
-    pub fn set_hl(&mut self, value: u16) -> () {
-        (self.h, self.l) = to_u8(value);
-    }
+    pub fn set_af(&mut self, value: u16) -> () { (self.a, self.f) = to_u8(value); }
+    pub fn set_bc(&mut self, value: u16) -> () { (self.b, self.c) = to_u8(value); }
+    pub fn set_de(&mut self, value: u16) -> () { (self.d, self.e) = to_u8(value); }
+    pub fn set_hl(&mut self, value: u16) -> () { (self.h, self.l) = to_u8(value); }
 
     /// Flags are set if occurs a condition in the last math operation
-    pub fn set_flags(&mut self, operation_result: u8) -> () {
-        self.f = operation_result;
-    }
+    pub fn set_flags(&mut self, operation_result: u8) -> () { self.f = operation_result; }
 
     pub fn exec_next(&mut self, instruction: u16) -> () {
         // most instructions are 8 bits, and 16 instructions are differentiated from the rest from the first 8 bits
