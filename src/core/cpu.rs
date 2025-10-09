@@ -1,5 +1,5 @@
 use crate::{
-    core::memory::MemoryBus,
+    core::memory::{self, MemoryBus},
     prelude::utils::{to_u8, to_u16},
 };
 use std::{
@@ -20,6 +20,7 @@ pub struct Cpu {
     pub e: u8,
     pub h: u8,
     pub l: u8,
+
     pub pc: u16,
     pub sp: u16,
 
@@ -56,7 +57,7 @@ impl Cpu {
         self.h = 0x00;
         self.l = 0x00;
         self.pc = 0x0000;
-        self.sp = 0x1000;
+        self.sp = 0x0100;
         self.cycles = 0;
     }
 
@@ -73,14 +74,12 @@ impl Cpu {
     /// Flags are set if occurs a condition in the last math operation
     pub fn set_flags(&mut self, operation_result: u8) -> () { self.f = operation_result; }
 
-    pub fn exec_next(&mut self, instruction: u16) -> () {
-        // most instructions are 8 bits, and 16 instructions are differentiated from the rest from the first 8 bits
-        let opcode = (instruction >> 8) as u8;
-
-        match opcode {
-            0x00 => println!("opcode -> {}, instruction -> {}", opcode, instruction),
+    pub fn exec_next(&mut self, opcode: u8) -> u16 {
+        let (instruction_len, flags, cycles): (u8, u8, u8) = match opcode {
             _ => todo!("xd"),
         };
+
+        self.pc += instruction_len as u16;
     }
 }
 
@@ -102,7 +101,7 @@ mod cpu_tests {
 
     #[test]
     fn test_cpu() {
-        let mut cpu = super::Cpu::new(Rc::new(MemoryBus::new()));
+        let mut cpu = super::Cpu::new(Rc::new(MemoryBus::new(None)));
         let (af_value, bc_value, de_value, hl_value) = (0x1234, 0x5678, 0x9ABC, 0xDEF0);
         cpu.set_af(af_value);
         cpu.set_bc(bc_value);
@@ -130,7 +129,7 @@ mod cpu_tests {
         assert_eq!(cpu.h, 0x00);
         assert_eq!(cpu.l, 0x00);
         assert_eq!(cpu.pc, 0x0000);
-        assert_eq!(cpu.sp, 0x0000);
+        assert_eq!(cpu.sp, 0x0100);
         assert_eq!(cpu.cycles, 0);
     }
 }

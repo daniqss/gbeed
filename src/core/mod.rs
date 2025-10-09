@@ -12,15 +12,16 @@ use memory::MemoryBus;
 use ppu::Ppu;
 
 pub struct Dmg {
-    pub cpu: Cpu,
+    pub cartridge: Rc<Cartridge>,
     pub memory_bus: Rc<MemoryBus>,
+    pub cpu: Cpu,
     pub ppu: Ppu,
-    pub cartridge: Cartridge,
 }
 
 impl Dmg {
     pub fn new(cartridge: Cartridge) -> Dmg {
-        let memory_bus = Rc::new(MemoryBus::new());
+        let cartridge = Rc::new(cartridge);
+        let memory_bus = Rc::new(MemoryBus::new(Some(cartridge.clone())));
 
         Dmg {
             cpu: Cpu::new(memory_bus.clone()),
@@ -34,9 +35,9 @@ impl Dmg {
 
     pub fn run(&mut self) {
         loop {
-            let instruction = self.memory_bus.read_word(self.cpu.pc);
+            let instruction = self.memory_bus[self.cpu.pc];
 
-            self.cpu.exec_next(instruction);
+            self.cpu.pc = self.cpu.exec_next(instruction);
         }
     }
 }
