@@ -4,7 +4,7 @@ mod license;
 mod memory;
 mod ppu;
 
-use std::{os::linux::raw, rc::Rc};
+use std::rc::Rc;
 
 pub use cartrigde::Cartridge;
 use cpu::Cpu;
@@ -33,6 +33,11 @@ impl Dmg {
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     pub fn run(&mut self) {
+        println!(
+            "memory {:?}",
+            &self.memory_bus[memory::ROM_BANK00_START..=memory::ROM_BANK00_END]
+        );
+
         loop {
             let instruction = self.memory_bus[self.cpu.pc];
 
