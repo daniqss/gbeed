@@ -6,16 +6,16 @@ pub mod utils;
 use crate::prelude::*;
 use core::{Cartridge, Dmg};
 
-pub fn run(file: Vec<u8>) -> Result<()> {
+pub fn run(raw: Vec<u8>) -> Result<()> {
     // parse cartridge data from raw ROM file
-    let cartridge = match Cartridge::new(file) {
+    let cartridge = match Cartridge::new(&raw) {
         Ok(c) => c,
         Err(e) => return Err(e),
     };
     println!("{}", cartridge);
-    cartridge.check_header_checksum()?;
-    cartridge.check_global_checksum()?;
-    let mut emulator = Dmg::new(cartridge);
+    cartridge.check_header_checksum(&raw)?;
+
+    let mut emulator = Dmg::new(cartridge, raw);
 
     emulator.run();
 

@@ -4,7 +4,7 @@ mod license;
 mod memory;
 mod ppu;
 
-use std::rc::Rc;
+use std::{os::linux::raw, rc::Rc};
 
 pub use cartrigde::Cartridge;
 use cpu::Cpu;
@@ -12,16 +12,15 @@ use memory::MemoryBus;
 use ppu::Ppu;
 
 pub struct Dmg {
-    pub cartridge: Rc<Cartridge>,
+    pub cartridge: Cartridge,
     pub memory_bus: Rc<MemoryBus>,
     pub cpu: Cpu,
     pub ppu: Ppu,
 }
 
 impl Dmg {
-    pub fn new(cartridge: Cartridge) -> Dmg {
-        let cartridge = Rc::new(cartridge);
-        let memory_bus = Rc::new(MemoryBus::new(Some(cartridge.clone())));
+    pub fn new(cartridge: Cartridge, raw: Vec<u8>) -> Dmg {
+        let memory_bus = Rc::new(MemoryBus::new(Some(raw)));
 
         Dmg {
             cpu: Cpu::new(memory_bus.clone()),
