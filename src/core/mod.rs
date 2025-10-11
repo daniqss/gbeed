@@ -19,8 +19,8 @@ pub struct Dmg {
 }
 
 impl Dmg {
-    pub fn new(cartridge: Cartridge, raw: Vec<u8>) -> Dmg {
-        let memory_bus = Rc::new(MemoryBus::new(Some(raw)));
+    pub fn new(cartridge: Cartridge, game_rom: Vec<u8>, boot_rom: Vec<u8>) -> Dmg {
+        let memory_bus = Rc::new(MemoryBus::new(Some(game_rom), Some(boot_rom)));
 
         Dmg {
             cpu: Cpu::new(memory_bus.clone()),
@@ -33,6 +33,8 @@ impl Dmg {
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     pub fn run(&mut self) {
+        println!("{}", self.cartridge);
+
         println!(
             "memory {:?}",
             &self.memory_bus[memory::ROM_BANK00_START..=memory::ROM_BANK00_END]

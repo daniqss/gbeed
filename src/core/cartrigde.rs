@@ -63,26 +63,26 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
-    pub fn new(raw: &Vec<u8>) -> Result<Self> {
+    pub fn new(game_rom: &Vec<u8>) -> Result<Self> {
         let cartridge = Self {
-            is_pre_sgb: get_license(&raw).0,
-            license: get_license(&raw).1,
-            title: raw[TITLE_START..TITLE_END]
+            is_pre_sgb: get_license(&game_rom).0,
+            license: get_license(&game_rom).1,
+            title: game_rom[TITLE_START..TITLE_END]
                 .iter()
                 .map(|&c| c as char)
                 .collect(),
-            supports_sgb: Self::get_supports_sgb(raw[SGB_FLAG]),
-            cartridge_type: Self::get_cartridge_type(raw[CARTRIDGE_TYPE]),
-            rom_size: Self::get_rom_size(raw[ROM_SIZE]),
-            ram_size: Self::get_ram_size(raw[RAM_SIZE]),
-            destination: Self::get_destination_code(raw[DESTINATION_CODE]),
-            game_version: raw[GAME_VERSION],
-            header_checksum: raw[HEADER_CHECKSUM],
-            global_checksum: ((raw[GLOBAL_CHECKSUM_START] as u16) << 8)
-                | (raw[GLOBAL_CHECKSUM_END] as u16),
+            supports_sgb: Self::get_supports_sgb(game_rom[SGB_FLAG]),
+            cartridge_type: Self::get_cartridge_type(game_rom[CARTRIDGE_TYPE]),
+            rom_size: Self::get_rom_size(game_rom[ROM_SIZE]),
+            ram_size: Self::get_ram_size(game_rom[RAM_SIZE]),
+            destination: Self::get_destination_code(game_rom[DESTINATION_CODE]),
+            game_version: game_rom[GAME_VERSION],
+            header_checksum: game_rom[HEADER_CHECKSUM],
+            global_checksum: ((game_rom[GLOBAL_CHECKSUM_START] as u16) << 8)
+                | (game_rom[GLOBAL_CHECKSUM_END] as u16),
         };
 
-        match cartridge.check_global_checksum(&raw) {
+        match cartridge.check_global_checksum(&game_rom) {
             Ok(_) => Ok(cartridge),
             Err(e) => Err(e),
         }
@@ -90,8 +90,8 @@ impl Cartridge {
 
     /// # Header checksum
     /// Checked by real hardware by the boot ROM
-    pub fn check_header_checksum(&self, raw: &Vec<u8>) -> Result<()> {
-        let header_sum = raw[TITLE_START..=GAME_VERSION]
+    pub fn check_header_checksum(&self, game_rom: &Vec<u8>) -> Result<()> {
+        let header_sum = game_rom[TITLE_START..=GAME_VERSION]
             .iter()
             .fold(0u8, |acc, &b| acc.wrapping_sub(b).wrapping_sub(1));
 
@@ -107,8 +107,8 @@ impl Cartridge {
     /// # Global checksum
     /// Not actually checked by real hardware
     /// We'll use in Cartridge creation for now to verify correct file parsing and integrity
-    pub fn check_global_checksum(&self, raw: &Vec<u8>) -> Result<()> {
-        let cartridge_sum: u16 = raw.iter().enumerate().fold(0u16, |acc, (i, &b)| {
+    pub fn check_global_checksum(&self, game_rom: &Vec<u8>) -> Result<()> {
+        let cartridge_sum: u16 = game_rom.iter().enumerate().fold(0u16, |acc, (i, &b)| {
             match i != GLOBAL_CHECKSUM_START && i != GLOBAL_CHECKSUM_END {
                 true => acc.wrapping_add(b as u16),
                 false => acc,

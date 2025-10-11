@@ -101,7 +101,7 @@ mod cpu_tests {
 
     #[test]
     fn test_cpu() {
-        let mut cpu = super::Cpu::new(Rc::new(MemoryBus::new(None)));
+        let mut cpu = super::Cpu::new(Rc::new(MemoryBus::new(None, None)));
         let (af_value, bc_value, de_value, hl_value) = (0x1234, 0x5678, 0x9ABC, 0xDEF0);
         cpu.set_af(af_value);
         cpu.set_bc(bc_value);
