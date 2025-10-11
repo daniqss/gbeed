@@ -5,6 +5,7 @@ use crate::prelude::*;
 /// addressable memory size
 pub const ADDRESABLE_MEMORY: usize = 0xFFFF; // 64KB
 pub const ROM_BANK00_START: u16 = 0x0000;
+pub const BOOT_ROM_END: u16 = 0x0100;
 pub const ROM_BANK00_END: u16 = 0x3FFF;
 pub const ROM_BANKNN_START: u16 = 0x4000;
 pub const ROM_BANKNN_END: u16 = 0x7FFF;
@@ -59,10 +60,27 @@ pub struct MemoryBus {
 
 impl MemoryBus {
     pub fn new(game_rom: Option<Vec<u8>>, boot_rom: Option<Vec<u8>>) -> MemoryBus {
+        let mut rom = [0u8; (ROM_BANKNN_END as usize) + 1];
+
+        // copy first from boot rom, and then from game
+        // both initial copies are required in real hardware for nintendo logo check from boot rom and cartridge
+        // used in real hardware to required games to have a nintendo logo in rom and allow nintendo to sue them if they're not allow (trademark violation)
+        if let Some(ref boot) = boot_rom {
+            let boot_len = boot.len().min(BOOT_ROM_END as usize);
+            rom[..boot_len].copy_from_slice(&boot[..boot_len]);
+        }
+
+        // copy directly from game rom
+        if let Some(ref game) = game_rom {
+            let start = BOOT_ROM_END as usize;
+            let game_len = game.len().min(rom.len() - start);
+            rom[start..start + game_len].copy_from_slice(&game[..game_len]);
+        }
+
         MemoryBus {
-            game_rom: game_rom,
-            boot_rom: boot_rom,
-            rom: [0; (ROM_BANKNN_END as usize) + 1],
+            game_rom,
+            boot_rom,
+            rom,
             ram: [0; (WRAM_BANKN_END - WRAM_BANK0_START + 1) as usize],
             vram: [0; (VRAM_END - VRAM_START + 1) as usize],
         }
