@@ -3,11 +3,13 @@ pub mod load;
 pub struct InstructionEffect {
     pub cycles: u8,
     pub len: u16,
-    pub flags: u8,
+    pub flags: Option<u8>,
 }
 
 impl InstructionEffect {
-    pub fn new(cycles: u8, len: u16, flags: u8) -> Self { InstructionEffect { cycles, len, flags } }
+    pub fn new(cycles: u8, len: u16, flags: Option<u8>) -> Self {
+        InstructionEffect { cycles, len, flags }
+    }
 }
 
 pub enum InstructionError {

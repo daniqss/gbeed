@@ -1,10 +1,10 @@
 use super::instructions::*;
 use crate::{
-    core::memory::MemoryBus,
-    prelude::{
-        utils::{to_u8, to_u16},
-        *,
+    core::{
+        instructions::load::{ld_r8_hl, ld_r8_r8},
+        memory::MemoryBus,
     },
+    prelude::utils::{to_u8, to_u16},
 };
 use std::{
     fmt::{self, Display, Formatter},
@@ -78,11 +78,38 @@ impl Cpu {
     /// Flags are set if occurs a condition in the last math operation
     pub fn set_flags(&mut self, operation_result: u8) -> () { self.f = operation_result; }
 
+    /// execute instruction based on the opcode
+    /// return a result with the effect of the instruction or an instruction error (e.g unused opcode)
     pub fn exec(&mut self, opcode: u8) -> InstructionResult {
-        match opcode {
-            0x40 => Err(InstructionError::NoOp(opcode, self.pc)), // LD B,B
+        let effect = match opcode {
+            0x40 => return Err(InstructionError::NoOp(opcode, self.pc)), // LD B,B
+            0x41 => ld_r8_r8(&mut self.b, self.c),                       // LD B,C
+            0x42 => ld_r8_r8(&mut self.b, self.d),                       // LD B,D
+            0x43 => ld_r8_r8(&mut self.b, self.e),                       // LD B,E
+            0x44 => ld_r8_r8(&mut self.b, self.h),                       // LD B,H
+            0x45 => ld_r8_r8(&mut self.b, self.l),                       // LD B,L
+            0x46 => {
+                let addr = self.get_hl();
+                let value = self.memory_bus[addr];
+                ld_r8_hl(&mut self.b, value)
+            } // LD B,(HL)
+            0x47 => ld_r8_r8(&mut self.b, self.a),                       // LD B,A
+            0x48 => ld_r8_r8(&mut self.c, self.b),                       // LD C,B
+            0x49 => return Err(InstructionError::NoOp(opcode, self.pc)), // LD C,C
+            0x4A => ld_r8_r8(&mut self.c, self.d),                       // LD C,D
+            0x4B => ld_r8_r8(&mut self.c, self.e),                       // LD C,E
+            0x4C => ld_r8_r8(&mut self.c, self.h),                       // LD C,H
+            0x4D => ld_r8_r8(&mut self.c, self.l),                       // LD C,L
+            0x4E => {
+                let addr = self.get_hl();
+                let value = self.memory_bus[addr];
+                ld_r8_hl(&mut self.c, value)
+            } // LD C,(HL)
+            0x4F => ld_r8_r8(&mut self.c, self.a),                       // LD C,A
             _ => todo!("xd"),
-        }
+        };
+
+        Ok(effect)
     }
 }
 

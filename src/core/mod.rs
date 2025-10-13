@@ -12,8 +12,6 @@ use cpu::Cpu;
 use memory::MemoryBus;
 use ppu::Ppu;
 
-use crate::{core::instructions::InstructionError, error::Error};
-
 pub struct Dmg {
     pub cartridge: Cartridge,
     pub memory_bus: Rc<MemoryBus>,
@@ -36,14 +34,21 @@ impl Dmg {
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     pub fn run(&mut self) {
+        let counter = 0;
+
         loop {
+            println!("Cycle: {}", counter);
+
             let opcode = self.memory_bus[self.cpu.pc];
 
             match self.cpu.exec(opcode) {
                 Ok(effect) => {
                     self.cpu.cycles += effect.cycles as usize;
                     self.cpu.pc += effect.len;
-                    self.cpu.f = effect.flags;
+                    match effect.flags {
+                        Some(f) => self.cpu.f |= f,
+                        None => {}
+                    };
                 }
                 Err(e) => {
                     println!("Error: {}", e);
