@@ -1,6 +1,10 @@
+use super::instructions::*;
 use crate::{
-    core::memory::{self, MemoryBus},
-    prelude::utils::{to_u8, to_u16},
+    core::memory::MemoryBus,
+    prelude::{
+        utils::{to_u8, to_u16},
+        *,
+    },
 };
 use std::{
     fmt::{self, Display, Formatter},
@@ -24,7 +28,7 @@ pub struct Cpu {
     pub pc: u16,
     pub sp: u16,
 
-    cycles: usize,
+    pub cycles: usize,
     memory_bus: Rc<MemoryBus>,
 }
 
@@ -74,12 +78,11 @@ impl Cpu {
     /// Flags are set if occurs a condition in the last math operation
     pub fn set_flags(&mut self, operation_result: u8) -> () { self.f = operation_result; }
 
-    pub fn exec_next(&mut self, opcode: u8) -> u16 {
-        let (instruction_len, flags, cycles): (u8, u8, u8) = match opcode {
+    pub fn exec(&mut self, opcode: u8) -> InstructionResult {
+        match opcode {
+            0x40 => Err(InstructionError::NoOp(opcode, self.pc)), // LD B,B
             _ => todo!("xd"),
-        };
-
-        self.pc += instruction_len as u16;
+        }
     }
 }
 

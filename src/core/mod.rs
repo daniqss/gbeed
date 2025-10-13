@@ -1,5 +1,6 @@
 mod cartrigde;
 mod cpu;
+mod instructions;
 mod license;
 mod memory;
 mod ppu;
@@ -10,6 +11,8 @@ pub use cartrigde::Cartridge;
 use cpu::Cpu;
 use memory::MemoryBus;
 use ppu::Ppu;
+
+use crate::{core::instructions::InstructionError, error::Error};
 
 pub struct Dmg {
     pub cartridge: Cartridge,
@@ -33,17 +36,21 @@ impl Dmg {
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     pub fn run(&mut self) {
-        println!("{}", self.cartridge);
-
-        println!(
-            "memory {:?}",
-            &self.memory_bus[memory::ROM_BANK00_START..memory::ROM_BANK00_END + 1]
-        );
-
         loop {
-            let instruction = self.memory_bus[self.cpu.pc];
+            let opcode = self.memory_bus[self.cpu.pc];
 
-            self.cpu.pc = self.cpu.exec_next(instruction);
+            match self.cpu.exec(opcode) {
+                Ok(effect) => {
+                    self.cpu.cycles += effect.cycles as usize;
+                    self.cpu.pc += effect.len;
+                    self.cpu.f = effect.flags;
+                }
+                Err(e) => {
+                    println!("Error: {}", e);
+
+                    self.cpu.pc += 1;
+                }
+            };
         }
     }
 }
