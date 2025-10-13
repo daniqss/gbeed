@@ -71,7 +71,7 @@ impl MemoryBus {
                 rom[..boot_len].copy_from_slice(&boot[..boot_len]);
 
                 let game_len = game.len().min(ROM_BANKNN_END as usize);
-                rom[boot_len..game_len - boot_len].copy_from_slice(&game[boot_len..game_len]);
+                rom[boot_len..game_len].copy_from_slice(&game[boot_len..game_len]);
             }
             // copy only game if no boot rom is provided
             (Some(game), None) => {
@@ -193,66 +193,6 @@ impl IndexMut<Range<u16>> for MemoryBus {
                 let s = (start - ECHO_RAM_START) as usize;
                 let e = (end - ECHO_RAM_START) as usize;
                 &mut self.ram[s..e]
-            }
-            _ => &mut [],
-        }
-    }
-}
-
-impl Index<RangeInclusive<u16>> for MemoryBus {
-    type Output = [u8];
-
-    fn index(&self, range: RangeInclusive<u16>) -> &Self::Output {
-        let start = *range.start();
-        let end = *range.end();
-
-        match (start, end) {
-            (ROM_BANK00_START..=ROM_BANKNN_END, ROM_BANK00_START..=ROM_BANKNN_END) => {
-                &self.rom[start as usize..=end as usize]
-            }
-            (VRAM_START..=VRAM_END, VRAM_START..=VRAM_END) => {
-                let s = (start - VRAM_START) as usize;
-                let e = (end - VRAM_START) as usize;
-                &self.vram[s..=e]
-            }
-            (WRAM_BANK0_START..=WRAM_BANKN_END, WRAM_BANK0_START..=WRAM_BANKN_END) => {
-                let s = (start - WRAM_BANK0_START) as usize;
-                let e = (end - WRAM_BANK0_START) as usize;
-                &self.ram[s..=e]
-            }
-            (ECHO_RAM_START..=ECHO_RAM_END, ECHO_RAM_START..=ECHO_RAM_END) => {
-                let s = (start - ECHO_RAM_START) as usize;
-                let e = (end - ECHO_RAM_START) as usize;
-                &self.ram[s..=e]
-            }
-            _ => &[],
-        }
-    }
-}
-
-impl IndexMut<RangeInclusive<u16>> for MemoryBus {
-    fn index_mut(&mut self, range: RangeInclusive<u16>) -> &mut Self::Output {
-        let start = *range.start();
-        let end = *range.end();
-
-        match (start, end) {
-            (ROM_BANK00_START..=ROM_BANKNN_END, ROM_BANK00_START..=ROM_BANKNN_END) => {
-                &mut self.rom[start as usize..=end as usize]
-            }
-            (VRAM_START..=VRAM_END, VRAM_START..=VRAM_END) => {
-                let s = (start - VRAM_START) as usize;
-                let e = (end - VRAM_START) as usize;
-                &mut self.vram[s..=e]
-            }
-            (WRAM_BANK0_START..=WRAM_BANKN_END, WRAM_BANK0_START..=WRAM_BANKN_END) => {
-                let s = (start - WRAM_BANK0_START) as usize;
-                let e = (end - WRAM_BANK0_START) as usize;
-                &mut self.ram[s..=e]
-            }
-            (ECHO_RAM_START..=ECHO_RAM_END, ECHO_RAM_START..=ECHO_RAM_END) => {
-                let s = (start - ECHO_RAM_START) as usize;
-                let e = (end - ECHO_RAM_START) as usize;
-                &mut self.ram[s..=e]
             }
             _ => &mut [],
         }

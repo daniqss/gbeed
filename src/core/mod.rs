@@ -37,7 +37,7 @@ impl Dmg {
 
         println!(
             "memory {:?}",
-            &self.memory_bus[memory::ROM_BANK00_START..=memory::ROM_BANK00_END]
+            &self.memory_bus[memory::ROM_BANK00_START..memory::ROM_BANK00_END + 1]
         );
 
         loop {
