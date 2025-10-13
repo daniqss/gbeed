@@ -5,23 +5,23 @@ mod license;
 mod memory;
 mod ppu;
 
-use std::rc::Rc;
-
 pub use cartrigde::Cartridge;
 use cpu::Cpu;
 use memory::MemoryBus;
 use ppu::Ppu;
 
+use crate::core::memory::Memory;
+
 pub struct Dmg {
     pub cartridge: Cartridge,
-    pub memory_bus: Rc<MemoryBus>,
+    pub memory_bus: MemoryBus,
     pub cpu: Cpu,
     pub ppu: Ppu,
 }
 
 impl Dmg {
     pub fn new(cartridge: Cartridge, game_rom: Vec<u8>, boot_rom: Vec<u8>) -> Dmg {
-        let memory_bus = Rc::new(MemoryBus::new(Some(game_rom), Some(boot_rom)));
+        let memory_bus = Memory::new(Some(game_rom), Some(boot_rom));
 
         Dmg {
             cpu: Cpu::new(memory_bus.clone()),
@@ -34,12 +34,8 @@ impl Dmg {
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     pub fn run(&mut self) {
-        let counter = 0;
-
         loop {
-            println!("Cycle: {}", counter);
-
-            let opcode = self.memory_bus[self.cpu.pc];
+            let opcode = self.memory_bus.borrow()[self.cpu.pc];
 
             match self.cpu.exec(opcode) {
                 Ok(effect) => {
@@ -56,6 +52,8 @@ impl Dmg {
                     self.cpu.pc += 1;
                 }
             };
+
+            std::thread::sleep(std::time::Duration::from_secs(1));
         }
     }
 }

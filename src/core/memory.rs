@@ -1,4 +1,8 @@
-use std::ops::{Index, IndexMut, Range};
+use std::{
+    cell::RefCell,
+    ops::{Index, IndexMut, Range},
+    rc::Rc,
+};
 
 use crate::prelude::*;
 
@@ -29,6 +33,8 @@ pub const HRAM_START: u16 = 0xFF80;
 pub const HRAM_END: u16 = 0xFFFE;
 pub const INTERRUPT_ENABLE_REGISTER: u16 = 0xFFFF;
 
+pub type MemoryBus = Rc<RefCell<Memory>>;
+
 /// # Memory bus
 /// different parts of the hardware access different parts of the memory map
 /// This memory is distributed among the various hardware components
@@ -50,7 +56,7 @@ pub const INTERRUPT_ENABLE_REGISTER: u16 = 0xFFFF;
 /// FF80        | FFFE      | High RAM (HRAM)                                                   |
 /// FFFF        | FFFF      | [Interrupt](#Interrupts) Enable register (IE)                     |
 #[derive(Debug)]
-pub struct MemoryBus {
+pub struct Memory {
     pub game_rom: Option<Vec<u8>>,
     pub boot_rom: Option<Vec<u8>>,
     pub rom: [u8; (ROM_BANKNN_END + 1) as usize],
@@ -59,7 +65,7 @@ pub struct MemoryBus {
     pub oam_ram: [u8; (OAM_END - OAM_START + 1) as usize],
 }
 
-impl MemoryBus {
+impl Memory {
     pub fn new(game_rom: Option<Vec<u8>>, boot_rom: Option<Vec<u8>>) -> MemoryBus {
         let mut rom = [0u8; (ROM_BANKNN_END as usize) + 1];
 
@@ -86,14 +92,14 @@ impl MemoryBus {
             _ => {}
         };
 
-        MemoryBus {
+        Rc::new(RefCell::new(Memory {
             game_rom,
             boot_rom,
             rom,
             ram: [0; (WRAM_BANKN_END - WRAM_BANK0_START + 1) as usize],
             vram: [0; (VRAM_END - VRAM_START + 1) as usize],
             oam_ram: [0; (OAM_END - OAM_START + 1) as usize],
-        }
+        }))
     }
 
     /// read 16 bits little endian word
@@ -107,7 +113,7 @@ impl MemoryBus {
     }
 }
 
-impl Index<u16> for MemoryBus {
+impl Index<u16> for Memory {
     type Output = u8;
 
     fn index(&self, address: u16) -> &Self::Output {
@@ -125,7 +131,7 @@ impl Index<u16> for MemoryBus {
     }
 }
 
-impl IndexMut<u16> for MemoryBus {
+impl IndexMut<u16> for Memory {
     fn index_mut(&mut self, address: u16) -> &mut Self::Output {
         match address {
             ROM_BANK00_START..=ROM_BANKNN_END => &mut self.rom[address as usize],
@@ -143,7 +149,7 @@ impl IndexMut<u16> for MemoryBus {
     }
 }
 
-impl Index<Range<u16>> for MemoryBus {
+impl Index<Range<u16>> for Memory {
     type Output = [u8];
 
     fn index(&self, range: Range<u16>) -> &Self::Output {
@@ -179,7 +185,7 @@ impl Index<Range<u16>> for MemoryBus {
     }
 }
 
-impl IndexMut<Range<u16>> for MemoryBus {
+impl IndexMut<Range<u16>> for Memory {
     fn index_mut(&mut self, range: Range<u16>) -> &mut Self::Output {
         let start = range.start;
         let end = range.end;
@@ -219,15 +225,15 @@ mod test {
 
     #[test]
     fn test_read_write_byte() {
-        let mut memory = MemoryBus::new(None, None);
-        memory[0x1234] = 0x56;
-        assert_eq!(memory[0x1234], 0x56);
+        let mut memory = Memory::new(None, None);
+        memory.borrow_mut()[0x1234] = 0x56;
+        assert_eq!(memory.borrow()[0x1234], 0x56);
     }
 
     #[test]
     fn test_read_write_word() {
-        let mut memory = MemoryBus::new(None, None);
-        memory.write_word(0x1234, 0x5678);
-        assert_eq!(memory.read_word(0x1234), 0x5678);
+        let mut memory = Memory::new(None, None);
+        memory.borrow_mut().write_word(0x1234, 0x5678);
+        assert_eq!(memory.borrow().read_word(0x1234), 0x5678);
     }
 }
