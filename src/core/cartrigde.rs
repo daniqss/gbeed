@@ -1,17 +1,17 @@
 use super::license::get_license;
 use crate::prelude::*;
 
-pub const TITLE_START_ADDR: usize = 0x0134;
-pub const TITLE_END_ADDR: usize = 0x0143;
-pub const SGB_FLAG_ADDR: usize = 0x0146;
-pub const CARTRIDGE_TYPE_ADDR: usize = 0x0147;
-pub const ROM_SIZE_ADDR: usize = 0x0148;
-pub const RAM_SIZE_ADDR: usize = 0x0149;
-pub const DESTINATION_CODE_ADDR: usize = 0x014A;
-pub const GAME_VERSION_ADDR: usize = 0x014C;
-pub const HEADER_CHECKSUM_ADDR: usize = 0x14D;
-pub const GLOBAL_CHECKSUM_START_ADDR: usize = 0x14E;
-pub const GLOBAL_CHECKSUM_END_ADDR: usize = 0x14F;
+pub const TITLE_START: usize = 0x0134;
+pub const TITLE_END: usize = 0x0143;
+pub const SGB_FLAG: usize = 0x0146;
+pub const CARTRIDGE_TYPE: usize = 0x0147;
+pub const ROM_SIZE: usize = 0x0148;
+pub const RAM_SIZE: usize = 0x0149;
+pub const DESTINATION_CODE: usize = 0x014A;
+pub const GAME_VERSION: usize = 0x014C;
+pub const HEADER_CHECKSUM: usize = 0x14D;
+pub const GLOBAL_CHECKSUM_START: usize = 0x14E;
+pub const GLOBAL_CHECKSUM_END: usize = 0x14F;
 
 /// Indicates the available hardware in the cartridge
 /// Is mostly used to indicates memory bank controllers
@@ -47,6 +47,7 @@ pub enum CartridgeType {
     HuC1RamBattery,
 }
 
+#[derive(Debug)]
 pub struct Cartridge {
     is_pre_sgb: bool,
     license: Option<String>,
@@ -59,31 +60,29 @@ pub struct Cartridge {
     game_version: u8,
     header_checksum: u8,
     global_checksum: u16,
-    raw: Vec<u8>,
 }
 
 impl Cartridge {
-    pub fn new(raw: Vec<u8>) -> Result<Self> {
+    pub fn new(game_rom: &Vec<u8>) -> Result<Self> {
         let cartridge = Self {
-            is_pre_sgb: get_license(&raw).0,
-            license: get_license(&raw).1,
-            title: raw[TITLE_START_ADDR..TITLE_END_ADDR]
+            is_pre_sgb: get_license(&game_rom).0,
+            license: get_license(&game_rom).1,
+            title: game_rom[TITLE_START..TITLE_END]
                 .iter()
                 .map(|&c| c as char)
                 .collect(),
-            supports_sgb: Self::get_supports_sgb(raw[SGB_FLAG_ADDR]),
-            cartridge_type: Self::get_cartridge_type(raw[CARTRIDGE_TYPE_ADDR]),
-            rom_size: Self::get_rom_size(raw[ROM_SIZE_ADDR]),
-            ram_size: Self::get_ram_size(raw[RAM_SIZE_ADDR]),
-            destination: Self::get_destination_code(raw[DESTINATION_CODE_ADDR]),
-            game_version: raw[GAME_VERSION_ADDR],
-            header_checksum: raw[HEADER_CHECKSUM_ADDR],
-            global_checksum: ((raw[GLOBAL_CHECKSUM_START_ADDR] as u16) << 8)
-                | (raw[GLOBAL_CHECKSUM_END_ADDR] as u16),
-            raw,
+            supports_sgb: Self::get_supports_sgb(game_rom[SGB_FLAG]),
+            cartridge_type: Self::get_cartridge_type(game_rom[CARTRIDGE_TYPE]),
+            rom_size: Self::get_rom_size(game_rom[ROM_SIZE]),
+            ram_size: Self::get_ram_size(game_rom[RAM_SIZE]),
+            destination: Self::get_destination_code(game_rom[DESTINATION_CODE]),
+            game_version: game_rom[GAME_VERSION],
+            header_checksum: game_rom[HEADER_CHECKSUM],
+            global_checksum: ((game_rom[GLOBAL_CHECKSUM_START] as u16) << 8)
+                | (game_rom[GLOBAL_CHECKSUM_END] as u16),
         };
 
-        match cartridge.check_global_checksum() {
+        match cartridge.check_global_checksum(&game_rom) {
             Ok(_) => Ok(cartridge),
             Err(e) => Err(e),
         }
@@ -91,8 +90,8 @@ impl Cartridge {
 
     /// # Header checksum
     /// Checked by real hardware by the boot ROM
-    pub fn check_header_checksum(&self) -> Result<()> {
-        let header_sum = self.raw[TITLE_START_ADDR..=GAME_VERSION_ADDR]
+    pub fn check_header_checksum(&self, game_rom: &Vec<u8>) -> Result<()> {
+        let header_sum = game_rom[TITLE_START..=GAME_VERSION]
             .iter()
             .fold(0u8, |acc, &b| acc.wrapping_sub(b).wrapping_sub(1));
 
@@ -108,9 +107,9 @@ impl Cartridge {
     /// # Global checksum
     /// Not actually checked by real hardware
     /// We'll use in Cartridge creation for now to verify correct file parsing and integrity
-    pub fn check_global_checksum(&self) -> Result<()> {
-        let cartridge_sum: u16 = self.raw.iter().enumerate().fold(0u16, |acc, (i, &b)| {
-            match i != GLOBAL_CHECKSUM_START_ADDR && i != GLOBAL_CHECKSUM_END_ADDR {
+    pub fn check_global_checksum(&self, game_rom: &Vec<u8>) -> Result<()> {
+        let cartridge_sum: u16 = game_rom.iter().enumerate().fold(0u16, |acc, (i, &b)| {
+            match i != GLOBAL_CHECKSUM_START && i != GLOBAL_CHECKSUM_END {
                 true => acc.wrapping_add(b as u16),
                 false => acc,
             }
@@ -197,19 +196,6 @@ impl Cartridge {
             0x01 => "Overseas",
             _ => unreachable!("Unknown destination code: {byte:#X}"),
         }
-    }
-}
-
-impl std::fmt::Debug for Cartridge {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for &byte in &self.raw {
-            let c = byte as char;
-            match c.is_ascii_graphic() {
-                true => write!(f, "{}", c)?,
-                false => write!(f, ".")?,
-            }
-        }
-        Ok(())
     }
 }
 

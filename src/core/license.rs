@@ -5,10 +5,10 @@ const NEW_LICENSE_END_ADDR: usize = 0x0145;
 /// # Old license
 /// The byte 0x014B is used to set the game’s publisher
 /// When the value is 0x33, it is a post Super Gameboy cartridge, that use new license codes
-pub fn get_license(raw: &Vec<u8>) -> (bool, Option<String>) {
+pub fn get_license(game_rom: &Vec<u8>) -> (bool, Option<String>) {
     (
         true,
-        match raw[OLD_LICENSE_ADDR] {
+        match game_rom[OLD_LICENSE_ADDR] {
             0x00 => None,
             0x01 => Some("Nintendo".to_owned()),
             0x08 => Some("Capcom".to_owned()),
@@ -29,7 +29,7 @@ pub fn get_license(raw: &Vec<u8>) -> (bool, Option<String>) {
             0x30 => Some("Infogrames".to_owned()),
             0x31 => Some("Nintendo".to_owned()),
             0x32 => Some("Bandai".to_owned()),
-            0x33 => return (false, get_new_license(raw)),
+            0x33 => return (false, get_new_license(game_rom)),
             0x34 => Some("Konami".to_owned()),
             0x35 => Some("HectorSoft".to_owned()),
             0x38 => Some("Capcom".to_owned()),
@@ -156,7 +156,10 @@ pub fn get_license(raw: &Vec<u8>) -> (bool, Option<String>) {
             0xF0 => Some("A Wave".to_owned()),
             0xF3 => Some("Extreme Entertainment".to_owned()),
             0xFF => Some("LJN".to_owned()),
-            _ => unreachable!("Unknown old license code: {:#?}", raw[OLD_LICENSE_ADDR]),
+            _ => unreachable!(
+                "Unknown old license code: {:#?}",
+                game_rom[OLD_LICENSE_ADDR]
+            ),
         },
     )
 }
@@ -164,8 +167,11 @@ pub fn get_license(raw: &Vec<u8>) -> (bool, Option<String>) {
 /// # New license
 /// NEW_LICENSE_START_ADDR and NEW_LICENSE_END_ADDR are use in post Super Gameboy cartridges to set the game's publisher
 /// New licenses are coded in ASCII
-fn get_new_license(raw: &Vec<u8>) -> Option<String> {
-    match (raw[NEW_LICENSE_START_ADDR], raw[NEW_LICENSE_END_ADDR]) {
+fn get_new_license(game_rom: &Vec<u8>) -> Option<String> {
+    match (
+        game_rom[NEW_LICENSE_START_ADDR],
+        game_rom[NEW_LICENSE_END_ADDR],
+    ) {
         (b'0', b'0') => None,
         (b'0', b'1') => Some("Nintendo Research & Development 1".to_owned()),
         (b'0', b'8') => Some("Capcom".to_owned()),
