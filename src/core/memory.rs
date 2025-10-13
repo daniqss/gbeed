@@ -65,17 +65,25 @@ impl MemoryBus {
         // copy first from boot rom, and then from game
         // both initial copies are required in real hardware for nintendo logo check from boot rom and cartridge
         // used in real hardware to required games to have a nintendo logo in rom and allow nintendo to sue them if they're not allow (trademark violation)
-        if let Some(ref boot) = boot_rom {
-            let boot_len = boot.len().min(BOOT_ROM_END as usize);
-            rom[..boot_len].copy_from_slice(&boot[..boot_len]);
-        }
+        match (&game_rom, &boot_rom) {
+            (Some(game), Some(boot)) => {
+                let boot_len = boot.len().min(BOOT_ROM_END as usize);
+                rom[..boot_len].copy_from_slice(&boot[..boot_len]);
 
-        // copy directly from game rom
-        if let Some(ref game) = game_rom {
-            let start = BOOT_ROM_END as usize;
-            let game_len = game.len().min(rom.len() - start);
-            rom[start..start + game_len].copy_from_slice(&game[..game_len]);
-        }
+                let game_len = game.len().min(ROM_BANKNN_END as usize);
+                rom[boot_len..game_len - boot_len].copy_from_slice(&game[boot_len..game_len]);
+            }
+            // copy only game if no boot rom is provided
+            (Some(game), None) => {
+                let game_len = game.len().min(rom.len());
+                rom[..game_len].copy_from_slice(&game[..game_len]);
+            }
+            (None, Some(boot)) => {
+                let boot_len = boot.len().min(BOOT_ROM_END as usize);
+                rom[..boot_len].copy_from_slice(&boot[..boot_len]);
+            }
+            _ => {}
+        };
 
         MemoryBus {
             game_rom,
