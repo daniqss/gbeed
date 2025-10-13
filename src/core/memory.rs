@@ -56,6 +56,7 @@ pub struct MemoryBus {
     pub rom: [u8; (ROM_BANKNN_END + 1) as usize],
     pub ram: [u8; (WRAM_BANKN_END - WRAM_BANK0_START + 1) as usize],
     pub vram: [u8; (VRAM_END - VRAM_START + 1) as usize],
+    pub oam_ram: [u8; (OAM_END - OAM_START + 1) as usize],
 }
 
 impl MemoryBus {
@@ -70,7 +71,7 @@ impl MemoryBus {
                 let boot_len = boot.len().min(BOOT_ROM_END as usize);
                 rom[..boot_len].copy_from_slice(&boot[..boot_len]);
 
-                let game_len = game.len().min(ROM_BANKNN_END as usize);
+                let game_len = game.len().min((ROM_BANKNN_END + 1) as usize);
                 rom[boot_len..game_len].copy_from_slice(&game[boot_len..game_len]);
             }
             // copy only game if no boot rom is provided
@@ -91,6 +92,7 @@ impl MemoryBus {
             rom,
             ram: [0; (WRAM_BANKN_END - WRAM_BANK0_START + 1) as usize],
             vram: [0; (VRAM_END - VRAM_START + 1) as usize],
+            oam_ram: [0; (OAM_END - OAM_START + 1) as usize],
         }
     }
 
@@ -117,6 +119,7 @@ impl Index<u16> for MemoryBus {
                 let offset = (address - ECHO_RAM_START) as usize;
                 &self.ram[offset]
             }
+            OAM_START..=OAM_END => &self.oam_ram[(address - OAM_START) as usize],
             _ => &self.rom[0],
         }
     }
@@ -134,6 +137,7 @@ impl IndexMut<u16> for MemoryBus {
                 let offset = (address - ECHO_RAM_START) as usize;
                 &mut self.ram[offset]
             }
+            OAM_START..=OAM_END => &mut self.oam_ram[(address - OAM_START) as usize],
             _ => &mut self.rom[0],
         }
     }
@@ -165,6 +169,11 @@ impl Index<Range<u16>> for MemoryBus {
                 let e = (end - ECHO_RAM_START) as usize;
                 &self.ram[s..e]
             }
+            (OAM_START..=OAM_END, OAM_START..=OAM_END) => {
+                let s = (start - OAM_START) as usize;
+                let e = (end - OAM_START) as usize;
+                &self.oam_ram[s..e]
+            }
             _ => &[],
         }
     }
@@ -193,6 +202,11 @@ impl IndexMut<Range<u16>> for MemoryBus {
                 let s = (start - ECHO_RAM_START) as usize;
                 let e = (end - ECHO_RAM_START) as usize;
                 &mut self.ram[s..e]
+            }
+            (OAM_START..=OAM_END, OAM_START..=OAM_END) => {
+                let s = (start - OAM_START) as usize;
+                let e = (end - OAM_START) as usize;
+                &mut self.oam_ram[s..e]
             }
             _ => &mut [],
         }
