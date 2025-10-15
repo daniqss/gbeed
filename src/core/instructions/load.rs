@@ -62,3 +62,50 @@ pub fn ldh_n16_a(address: u16, dst: &mut u8, src: u8) -> InstructionResult {
         _ => Err(InstructionError::AddressOutOfRange(address, None, None)),
     }
 }
+
+/// copy the src value in register to the byte at address 0xFF00 + value in register C
+/// sometimes written as `LD [$FF00+C],A`
+pub fn ldh_c_a(dst: &mut u8, src: u8) -> InstructionEffect {
+    *dst = src;
+    InstructionEffect::new(2, 1, None)
+}
+
+/// copy the src byte addressed by a pair of registers into dst register a
+pub fn ld_a_r16(dst: &mut u8, src: u8) -> InstructionEffect {
+    *dst = src;
+    InstructionEffect::new(2, 1, None)
+}
+
+/// copy the src byte addressed by a 16 bits immediate value into dst register a
+pub fn ld_a_n16(dst: &mut u8, src: u8) -> InstructionEffect {
+    *dst = src;
+    InstructionEffect::new(3, 2, None)
+}
+
+/// copy the src byte addressed by a 16 bits immediate value
+/// (that must be between 0xFF00 and 0xFFFF),
+/// into dst register a
+pub fn ldh_a_n16(address: u16, dst: &mut u8, src: u8) -> InstructionResult {
+    match address {
+        IO_REGISTERS_START..=INTERRUPT_ENABLE_REGISTER => {
+            *dst = src;
+            Ok(InstructionEffect::new(3, 2, None))
+        }
+        _ => Err(InstructionError::AddressOutOfRange(address, None, None)),
+    }
+}
+
+/// copy the src byte addressed by 0xFF00 + C into dst register A
+/// sometimes written as `LD A,[$FF00+C]`
+pub fn ldh_a_c(dst: &mut u8, src: u8) -> InstructionEffect {
+    *dst = src;
+    InstructionEffect::new(2, 1, None)
+}
+
+/// copy the src value in register A into the byte addressed by HL, then increment HL
+/// sometimes written as `LD [HL+],A`, or `LDI [HL],A`
+pub fn ld_hli_a(h: &mut u8, l: &mut u8, dst: &mut u8, src: u8) -> InstructionEffect {
+    *dst = src;
+    todo!("move instructions to impl Cpu");
+    InstructionEffect::new(2, 2, None)
+}
