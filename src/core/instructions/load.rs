@@ -3,7 +3,6 @@ use crate::{
         instructions::{InstructionEffect, InstructionError, InstructionResult},
         memory::{INTERRUPT_ENABLE_REGISTER, IO_REGISTERS_START},
     },
-    prelude::*,
     utils::{to_u8, to_u16},
 };
 

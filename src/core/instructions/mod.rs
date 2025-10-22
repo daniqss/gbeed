@@ -1,3 +1,4 @@
+pub mod arithmetic;
 pub mod load;
 
 pub struct InstructionEffect {
