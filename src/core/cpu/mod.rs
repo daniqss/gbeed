@@ -78,6 +78,12 @@ impl Cpu {
     /// execute instruction based on the opcode
     /// return a result with the effect of the instruction or an instruction error (e.g unused opcode)
     pub fn exec(&mut self, opcode: u8) -> InstructionResult {
+
+
+    	// maybe I should create a instruction struct, and then run it
+    	// (trait Instruction), this way I could pattern match the instruction one time
+    	// and run and disassemble it with the same instruction, with the same args
+    	// this way I can implement better error handling 
         let effect = match opcode {
             0x00 => todo!("NOP"),                                        // NOP
             0x40 => return Err(InstructionError::NoOp(opcode, self.pc)), // LD B,B
