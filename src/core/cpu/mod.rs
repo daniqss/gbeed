@@ -2,13 +2,10 @@ mod flags;
 mod instructions;
 
 use crate::{
-    core::{
-        cpu::instructions::load::{ld_hl_r8, ld_r8_hl, ld_r8_r8, ldh_c_a},
-        memory::MemoryBus,
-    },
+    core::memory::MemoryBus,
     prelude::utils::{to_u8, to_u16},
 };
-use instructions::*;
+use instructions::{InstructionTarget as IT, *};
 use std::fmt::{self, Display, Formatter};
 
 /// # CPU
@@ -173,14 +170,29 @@ impl Cpu {
                 let addr = self.get_hl();
                 ld_r8_hl(&mut self.a, self.memory_bus.borrow()[addr])
             } // LD A,(HL)
-            0x7F => return Err(InstructionError::NoOp(opcode, self.pc)), // LD A,Aself.get_hl()
-            // cpu.exec() should not handle the instruction behavior (0xFF00 + C)
-            // maybe instructions should be implemented as methods of Cpu, defined in their own module
-            // that way we could access memory directly from the instruction, ensuring that the instructions are responsible for themselves
-            0xE2 => ldh_c_a(
-                &mut self.memory_bus.borrow_mut()[0xFF00 + self.c as u16],
-                self.a,
-            ), // LD [$FF00+C],A
+            0x7F => return Err(InstructionError::NoOp(opcode, self.pc)), // LD A,A
+            0xE0 => LDH::exec(
+                IT::DstPointedByN16(&mut self.memory_bus.borrow_mut()[self.pc + 1], self.pc + 1),
+                IT::RegisterA(self.a),
+            )?, // LDH [n16],A
+            0xE2 => LDH::exec(
+                IT::DstPointedByCPlusFF00(
+                    &mut self.memory_bus.borrow_mut()[0xFF00 + self.c as u16],
+                    self.c as u16,
+                ),
+                IT::RegisterA(self.a),
+            )?, // LDH [C],A
+            0xF0 => LDH::exec(
+                IT::DstRegisterA(&mut self.a),
+                IT::PointedByN16(self.memory_bus.borrow()[self.pc + 1], self.pc + 1),
+            )?, // LDH A,[n16]
+            0xF2 => LDH::exec(
+                IT::DstRegisterA(&mut self.a),
+                IT::PointedByCPlusFF00(
+                    self.memory_bus.borrow()[0xFF00 + self.c as u16],
+                    self.c as u16,
+                ),
+            )?, // LDH A,[C]
 
             _ => return Err(InstructionError::NotImplemented(opcode, self.pc)),
         };

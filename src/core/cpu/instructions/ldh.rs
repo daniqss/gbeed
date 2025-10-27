@@ -1,4 +1,4 @@
-use super::{InstructionEffect, InstructionError, InstructionResult, InstructionTarget};
+use super::{InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT};
 use crate::core::memory::{INTERRUPT_ENABLE_REGISTER, IO_REGISTERS_START};
 
 // /// copy the src byte addressed by a 16 bits immediate value
@@ -40,18 +40,6 @@ use crate::core::memory::{INTERRUPT_ENABLE_REGISTER, IO_REGISTERS_START};
 //     InstructionEffect::new(2, 1, None)
 // }
 
-enum Destination<'a> {
-    PointedByN16(&'a mut u8, u16),
-    PointedByCPlusFF00(&'a mut u8, u16),
-    RegisterA(&'a mut u8),
-}
-
-enum Source {
-    RegisterA(u8),
-    PointedByN16(u8, u16),
-    PointedByCPlusFF00(u8, u16),
-}
-
 fn is_high_address(address: u16) -> bool {
     address >= IO_REGISTERS_START && address <= INTERRUPT_ENABLE_REGISTER
 }
@@ -60,26 +48,26 @@ fn is_high_address(address: u16) -> bool {
 /// Usually used to access memory mapped IO and HRAM,
 /// so the used addresses are between 0xFF00 and 0xFFFF
 pub struct LDH<'a> {
-    dst: Destination<'a>,
-    src: Source,
+    dst: IT<'a>,
+    src: IT<'a>,
 }
 
 impl<'a> LDH<'a> {
-    pub fn new(src: Source, dst: Destination<'a>) -> Self { LDH { src, dst } }
+    pub fn new(dst: IT<'a>, src: IT<'a>) -> Self { LDH { dst, src } }
 
-    pub fn exec(src: Source, dst: Destination<'a>) -> InstructionResult {
+    pub fn exec(dst: IT<'a>, src: IT<'a>) -> InstructionResult {
         let (dst, src, address, cycles, len) = match (dst, src) {
-            (Destination::PointedByN16(dst, address), Source::RegisterA(src)) => {
+            (IT::DstPointedByN16(dst, address), IT::RegisterA(src)) => {
                 (dst, src, Some(address), 3, 2)
             }
-            (Destination::PointedByCPlusFF00(dst, address), Source::RegisterA(src)) => {
+            (IT::DstPointedByCPlusFF00(dst, address), IT::RegisterA(src)) => {
                 (dst, src, Some(address), 2, 1)
             }
-            (Destination::RegisterA(dst), Source::PointedByN16(src, address)) => {
+            (IT::DstRegisterA(dst), IT::PointedByN16(src, address)) => {
                 (dst, src, Some(address), 3, 2)
             }
 
-            (Destination::RegisterA(dst), Source::PointedByCPlusFF00(src, address)) => {
+            (IT::DstRegisterA(dst), IT::PointedByCPlusFF00(src, address)) => {
                 (dst, src, Some(address), 2, 1)
             }
 
@@ -106,20 +94,19 @@ impl std::fmt::Display for LDH<'_> {
             f,
             "LDH {},{}",
             match self.dst {
-                Destination::RegisterA(_) => "A".to_string(),
-                Destination::PointedByN16(_, address) if is_high_address(address) =>
+                IT::RegisterA(_) => "A".to_string(),
+                IT::PointedByN16(_, address) if is_high_address(address) =>
                     format!("[${:04X}]", address),
                 // sometimes written as `LD [C+$FF00],A`
-                Destination::PointedByCPlusFF00(_, address) if is_high_address(address) =>
-                    "[C]".to_string(),
+                IT::PointedByCPlusFF00(_, address) if is_high_address(address) => "[C]".to_string(),
                 _ => return Err(std::fmt::Error),
                 // _ => return Err(InstructionError::AddressOutOfRange(addr, None, None)),
             },
             match self.src {
-                Source::RegisterA(_) => "A".to_string(),
-                Source::PointedByN16(_, address) if is_high_address(address) =>
+                IT::RegisterA(_) => "A".to_string(),
+                IT::PointedByN16(_, address) if is_high_address(address) =>
                     format!("[${:04X}]", address),
-                Source::PointedByCPlusFF00(_, address) if is_high_address(address) =>
+                IT::PointedByCPlusFF00(_, address) if is_high_address(address) =>
                 // sometimes written as `LD A,[C+$FF00]`
                     "[C]".to_string(),
                 _ => return Err(std::fmt::Error),

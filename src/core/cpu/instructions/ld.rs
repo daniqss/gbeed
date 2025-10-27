@@ -1,8 +1,5 @@
 use crate::{
-    core::{
-        cpu::instructions::{InstructionEffect, InstructionError, InstructionResult},
-        memory::{INTERRUPT_ENABLE_REGISTER, IO_REGISTERS_START},
-    },
+    core::cpu::instructions::InstructionEffect,
     utils::{to_u8, to_u16},
 };
 
@@ -54,25 +51,6 @@ pub fn ld_n16_a(dst: &mut u8, src: u8) -> InstructionEffect {
     InstructionEffect::new(4, 3, None)
 }
 
-/// copy the src value in register A to the memory pointed by the 16 bits immediate value
-/// this address is between 0xFF00 and 0xFFFF (memory mapped IO and HRAM)
-pub fn ldh_n16_a(address: u16, dst: &mut u8, src: u8) -> InstructionResult {
-    match address {
-        IO_REGISTERS_START..=INTERRUPT_ENABLE_REGISTER => {
-            *dst = src;
-            Ok(InstructionEffect::new(3, 2, None))
-        }
-        _ => Err(InstructionError::AddressOutOfRange(address, None, None)),
-    }
-}
-
-/// copy the src value in register to the byte at address 0xFF00 + value in register C
-/// sometimes written as `LD [$FF00+C],A`
-pub fn ldh_c_a(dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(2, 1, None)
-}
-
 /// copy the src byte addressed by a pair of registers into dst register a
 pub fn ld_a_r16(dst: &mut u8, src: u8) -> InstructionEffect {
     *dst = src;
@@ -83,26 +61,6 @@ pub fn ld_a_r16(dst: &mut u8, src: u8) -> InstructionEffect {
 pub fn ld_a_n16(dst: &mut u8, src: u8) -> InstructionEffect {
     *dst = src;
     InstructionEffect::new(3, 2, None)
-}
-
-/// copy the src byte addressed by a 16 bits immediate value
-/// (that must be between 0xFF00 and 0xFFFF),
-/// into dst register a
-pub fn ldh_a_n16(address: u16, dst: &mut u8, src: u8) -> InstructionResult {
-    match address {
-        IO_REGISTERS_START..=INTERRUPT_ENABLE_REGISTER => {
-            *dst = src;
-            Ok(InstructionEffect::new(3, 2, None))
-        }
-        _ => Err(InstructionError::AddressOutOfRange(address, None, None)),
-    }
-}
-
-/// copy the src byte addressed by 0xFF00 + C into dst register A
-/// sometimes written as `LD A,[$FF00+C]`
-pub fn ldh_a_c(dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(2, 1, None)
 }
 
 /// copy the src value in register A into the byte addressed by HL, then increment HL

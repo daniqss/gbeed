@@ -1,5 +1,30 @@
-pub mod arithmetic;
-pub mod load;
+mod adc;
+mod ld;
+mod ldh;
+
+pub use adc::*;
+pub use ld::*;
+pub use ldh::*;
+
+#[derive(Debug)]
+pub enum InstructionTarget<'a> {
+    Immediate(u8),
+    RegisterA(u8),
+    RegisterB(u8),
+    RegisterC(u8),
+    RegisterD(u8),
+    RegisterE(u8),
+    RegisterH(u8),
+    RegisterL(u8),
+    PointedByHL(u8),
+    PointedByN16(u8, u16),
+    PointedByCPlusFF00(u8, u16),
+
+    // Destination for load instructions
+    DstPointedByN16(&'a mut u8, u16),
+    DstPointedByCPlusFF00(&'a mut u8, u16),
+    DstRegisterA(&'a mut u8),
+}
 
 pub struct InstructionEffect {
     pub cycles: u8,
@@ -18,6 +43,7 @@ pub enum InstructionError {
     UnusedOpcode(u8, u16),
     AddressOutOfRange(u16, Option<u8>, Option<u16>),
     NotImplemented(u8, u16),
+    MalformedInstruction,
 }
 
 impl std::fmt::Display for InstructionError {
@@ -39,6 +65,10 @@ impl std::fmt::Display for InstructionError {
             InstructionError::NotImplemented(opcode, pc) => {
                 write!(f, "Opcode not implemented {:02X} at PC {:04X}", opcode, pc)
             }
+            InstructionError::MalformedInstruction => write!(
+                f,
+                "Opcode corresponds to a valid instruction, but its operands are malformed"
+            ),
         }
     }
 }
