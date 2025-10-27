@@ -1,6 +1,5 @@
 mod cartrigde;
 mod cpu;
-mod instructions;
 mod license;
 mod memory;
 mod ppu;

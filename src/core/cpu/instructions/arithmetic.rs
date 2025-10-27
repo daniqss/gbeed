@@ -1,6 +1,6 @@
 use crate::core::{
-    cpu::{CARRY_FLAG_MASK, check_carry, check_half_carry, check_zero},
-    instructions::InstructionEffect,
+    cpu::flags::{CARRY_FLAG_MASK, check_carry, check_half_carry, check_zero},
+    cpu::instructions::InstructionEffect,
 };
 pub enum Addend {
     Immediate(u8),

@@ -1,6 +1,6 @@
 use crate::{
     core::{
-        instructions::{InstructionEffect, InstructionError, InstructionResult},
+        cpu::instructions::{InstructionEffect, InstructionError, InstructionResult},
         memory::{INTERRUPT_ENABLE_REGISTER, IO_REGISTERS_START},
     },
     utils::{to_u8, to_u16},

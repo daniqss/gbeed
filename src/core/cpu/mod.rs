@@ -1,31 +1,15 @@
-use super::instructions::*;
+mod flags;
+mod instructions;
+
 use crate::{
     core::{
-        instructions::load::{ld_hl_r8, ld_r8_hl, ld_r8_r8, ldh_c_a},
+        cpu::instructions::load::{ld_hl_r8, ld_r8_hl, ld_r8_r8, ldh_c_a},
         memory::MemoryBus,
     },
     prelude::utils::{to_u8, to_u16},
 };
+use instructions::*;
 use std::fmt::{self, Display, Formatter};
-
-/// # Flag masks
-/// The F register use its 4 most significant bits to store information about the result of the previous operation
-pub const ZERO_FLAG_MASK: u8 = 0b1000_0000;
-pub const SUBTRACTION_FLAG_MASK: u8 = 0b0100_0000;
-pub const HALF_CARRY_FLAG_MASK: u8 = 0b0010_0000;
-pub const CARRY_FLAG_MASK: u8 = 0b0001_0000;
-
-pub fn check_zero(result: u8) -> u8 { if result == 0 { ZERO_FLAG_MASK } else { 0 } }
-pub fn check_carry(result: u8, old: u8) -> u8 {
-    if (result & 0x0F) < (old & 0x0F) {
-        HALF_CARRY_FLAG_MASK
-    } else {
-        0
-    }
-}
-pub fn check_half_carry(result: u8, old: u8) -> u8 {
-    if result < old { CARRY_FLAG_MASK } else { 0 }
-}
 
 /// # CPU
 /// Gameboy CPU, with a mix of Intel 8080 and Zilog Z80 features and instruction set.
