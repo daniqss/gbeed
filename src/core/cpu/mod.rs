@@ -78,12 +78,10 @@ impl Cpu {
     /// execute instruction based on the opcode
     /// return a result with the effect of the instruction or an instruction error (e.g unused opcode)
     pub fn exec(&mut self, opcode: u8) -> InstructionResult {
-
-
-    	// maybe I should create a instruction struct, and then run it
-    	// (trait Instruction), this way I could pattern match the instruction one time
-    	// and run and disassemble it with the same instruction, with the same args
-    	// this way I can implement better error handling 
+        // maybe I should create a instruction struct, and then run it
+        // (trait Instruction), this way I could pattern match the instruction one time
+        // and run and disassemble it with the same instruction, with the same args
+        // this way I can implement better error handling
         let effect = match opcode {
             0x00 => todo!("NOP"),                                        // NOP
             0x40 => return Err(InstructionError::NoOp(opcode, self.pc)), // LD B,B
@@ -172,33 +170,44 @@ impl Cpu {
             0x7B => ld_r8_r8(&mut self.a, self.e),                       // LD A,E
             0x7C => ld_r8_r8(&mut self.a, self.h),                       // LD A,H
             0x7D => ld_r8_r8(&mut self.a, self.l),                       // LD A,L
-            0x7E => {
-                let addr = self.get_hl();
-                ld_r8_hl(&mut self.a, self.memory_bus.borrow()[addr])
-            } // LD A,(HL)
-            0x7F => return Err(InstructionError::NoOp(opcode, self.pc)), // LD A,A
-            0xE0 => LDH::exec(
-                IT::DstPointedByN16(&mut self.memory_bus.borrow_mut()[self.pc + 1], self.pc + 1),
-                IT::RegisterA(self.a),
-            )?, // LDH [n16],A
-            0xE2 => LDH::exec(
-                IT::DstPointedByCPlusFF00(
-                    &mut self.memory_bus.borrow_mut()[0xFF00 + self.c as u16],
-                    self.c as u16,
-                ),
-                IT::RegisterA(self.a),
-            )?, // LDH [C],A
-            0xF0 => LDH::exec(
-                IT::DstRegisterA(&mut self.a),
-                IT::PointedByN16(self.memory_bus.borrow()[self.pc + 1], self.pc + 1),
-            )?, // LDH A,[n16]
-            0xF2 => LDH::exec(
-                IT::DstRegisterA(&mut self.a),
-                IT::PointedByCPlusFF00(
-                    self.memory_bus.borrow()[0xFF00 + self.c as u16],
-                    self.c as u16,
-                ),
-            )?, // LDH A,[C]
+            // 0x7E => {
+            //     let addr = self.get_hl();
+            //     ld_r8_hl(&mut self.a, self.memory_bus.borrow()[addr])
+            // } // LD A,(HL)
+            // 0x7F => return Err(InstructionError::NoOp(opcode, self.pc)), // LD A,A
+            // 0xE0 => LDH::exec(
+            //     IT::DstPointedByN16(&mut self.memory_bus.borrow_mut()[self.pc + 1], self.pc + 1),
+            //     IT::RegisterA(self.a),
+            // )?, // LDH [n16],A
+            // 0xE2 => LDH::exec(
+            //     IT::DstPointedByCPlusFF00(
+            //         &mut self.memory_bus.borrow_mut()[0xFF00 + self.c as u16],
+            //         self.c as u16,
+            //     ),
+            //     IT::RegisterA(self.a),
+            // )?, // LDH [C],A
+            // 0xF0 => LDH::exec(
+            //     IT::DstRegisterA(&mut self.a),
+            //     IT::PointedByN16(self.memory_bus.borrow()[self.pc + 1], self.pc + 1),
+            // )?, // LDH A,[n16]
+            // 0xF2 => LDH::exec(
+            //     IT::DstRegisterA(&mut self.a),
+            //     IT::PointedByCPlusFF00(
+            //         self.memory_bus.borrow()[0xFF00 + self.c as u16],
+            //         self.c as u16,
+            //     ),
+            // )?, // LDH A,[C]
+            0xF2 => {
+                let mut instr = LDH::new(
+                    IT::DstRegisterA(&mut self.a),
+                    IT::PointedByCPlusFF00(
+                        self.memory_bus.borrow()[0xFF00 + self.c as u16],
+                        self.c as u16,
+                    ),
+                );
+
+                instr.exec()?
+            }
 
             _ => return Err(InstructionError::NotImplemented(opcode, self.pc)),
         };

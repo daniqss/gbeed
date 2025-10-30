@@ -1,48 +1,7 @@
+use std::fmt::Write;
+
 use super::{InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT};
-use crate::core::memory::{INTERRUPT_ENABLE_REGISTER, IO_REGISTERS_START};
-
-// /// copy the src byte addressed by a 16 bits immediate value
-// /// copy the src value in register A to the memory pointed by the 16 bits immediate value
-// /// this address is between 0xFF00 and 0xFFFF (memory mapped IO and HRAM)
-// pub fn ldh_n16_a(address: u16, dst: &mut u8, src: u8) -> InstructionResult {
-//     match address {
-//         IO_REGISTERS_START..=INTERRUPT_ENABLE_REGISTER => {
-//             *dst = src;
-//             Ok(InstructionEffect::new(3, 2, None))
-//         }
-//         _ => Err(InstructionError::AddressOutOfRange(address, None, None)),
-//     }
-// }
-
-// /// copy the src value in register A to the byte at address 0xFF00 + value in register C
-// /// sometimes written as `LD [$FF00+C],A`
-// pub fn ldh_c_a(dst: &mut u8, src: u8) -> InstructionEffect {
-//     *dst = src;
-//     InstructionEffect::new(2, 1, None)
-// }
-
-// /// (that must be between 0xFF00 and 0xFFFF),
-// /// into dst register a
-// pub fn ldh_a_n16(address: u16, dst: &mut u8, src: u8) -> InstructionResult {
-//     match address {
-//         IO_REGISTERS_START..=INTERRUPT_ENABLE_REGISTER => {
-//             *dst = src;
-//             Ok(InstructionEffect::new(3, 2, None))
-//         }
-//         _ => Err(InstructionError::AddressOutOfRange(address, None, None)),
-//     }
-// }
-
-// /// copy the src byte addressed by 0xFF00 + C into dst register A
-// /// sometimes written as `LD A,[$FF00+C]`
-// pub fn ldh_a_c(dst: &mut u8, src: u8) -> InstructionEffect {
-//     *dst = src;
-//     InstructionEffect::new(2, 1, None)
-// }
-
-fn is_high_address(address: u16) -> bool {
-    address >= IO_REGISTERS_START && address <= INTERRUPT_ENABLE_REGISTER
-}
+use crate::core::{cpu::instructions::Instruction, memory::is_high_address};
 
 /// Load from/to high memory area instruction
 /// Usually used to access memory mapped IO and HRAM,
@@ -54,25 +13,31 @@ pub struct LDH<'a> {
 
 impl<'a> LDH<'a> {
     pub fn new(dst: IT<'a>, src: IT<'a>) -> Self { LDH { dst, src } }
+}
 
-    pub fn exec(dst: IT<'a>, src: IT<'a>) -> InstructionResult {
-        let (dst, src, address, cycles, len) = match (dst, src) {
-            (IT::DstPointedByN16(dst, address), IT::RegisterA(src)) => {
-                (dst, src, Some(address), 3, 2)
-            }
-            (IT::DstPointedByCPlusFF00(dst, address), IT::RegisterA(src)) => {
-                (dst, src, Some(address), 2, 1)
-            }
-            (IT::DstRegisterA(dst), IT::PointedByN16(src, address)) => {
-                (dst, src, Some(address), 3, 2)
-            }
+impl<'a> Instruction<'a> for LDH<'a> {
+    fn exec(&mut self) -> InstructionResult {
+        let (dst, src, address, cycles, len): (&mut u8, u8, Option<u16>, u8, u16) =
+            match (&mut self.dst, &self.src) {
+                // copy the src value in register A to the byte at 16 bits immediate address (that must be between 0xFF00 and 0xFFFF)
+                (IT::DstPointedByN16(dst, address), &IT::RegisterA(src)) => {
+                    (*dst, src, Some(*address), 3, 2)
+                }
+                // copy the src value in register A to the byte at address 0xFF00 + value in register C
+                (IT::DstPointedByCPlusFF00(dst, address), &IT::RegisterA(src)) => {
+                    (*dst, src, Some(*address), 2, 1)
+                }
+                // copy the src byte addressed by 16 bits immediate (that must be between 0xFF00 and 0xFFFF) into dst register A
+                (IT::DstRegisterA(dst), &IT::PointedByN16(src, address)) => {
+                    (*dst, src, Some(address), 3, 2)
+                }
+                // copy the src byte addressed by 0xFF00 + C into dst register A
+                (IT::DstRegisterA(dst), &IT::PointedByCPlusFF00(src, address)) => {
+                    (*dst, src, Some(address), 2, 1)
+                }
 
-            (IT::DstRegisterA(dst), IT::PointedByCPlusFF00(src, address)) => {
-                (dst, src, Some(address), 2, 1)
-            }
-
-            _ => return Err(InstructionError::MalformedInstruction),
-        };
+                _ => return Err(InstructionError::MalformedInstruction),
+            };
 
         // if the destination target is a memory byte, check if the address is in range
         // otherwise return an error
@@ -86,32 +51,48 @@ impl<'a> LDH<'a> {
 
         Ok(InstructionEffect::new(cycles, len, None))
     }
-}
 
-impl std::fmt::Display for LDH<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "LDH {},{}",
-            match self.dst {
-                IT::RegisterA(_) => "A".to_string(),
-                IT::PointedByN16(_, address) if is_high_address(address) =>
-                    format!("[${:04X}]", address),
-                // sometimes written as `LD [C+$FF00],A`
-                IT::PointedByCPlusFF00(_, address) if is_high_address(address) => "[C]".to_string(),
-                _ => return Err(std::fmt::Error),
-                // _ => return Err(InstructionError::AddressOutOfRange(addr, None, None)),
-            },
-            match self.src {
-                IT::RegisterA(_) => "A".to_string(),
-                IT::PointedByN16(_, address) if is_high_address(address) =>
-                    format!("[${:04X}]", address),
-                IT::PointedByCPlusFF00(_, address) if is_high_address(address) =>
-                // sometimes written as `LD A,[C+$FF00]`
-                    "[C]".to_string(),
-                _ => return Err(std::fmt::Error),
-                // _ => return Err(InstructionError::AddressOutOfRange(addr, None, None)),
-            },
-        )
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), InstructionError> {
+        let dst_asm = match self.dst {
+            IT::RegisterA(_) => "a".to_string(),
+            IT::PointedByN16(_, address) => {
+                if is_high_address(address) {
+                    format!("[${:04X}]", address)
+                } else {
+                    return Err(InstructionError::AddressOutOfRange(address, None, None));
+                }
+            }
+            // sometimes written as `LD [C+$FF00],A`
+            IT::PointedByCPlusFF00(_, address) => {
+                if is_high_address(address) {
+                    "[c]".to_string()
+                } else {
+                    return Err(InstructionError::AddressOutOfRange(address, None, None));
+                }
+            }
+            _ => return Err(InstructionError::MalformedInstruction),
+        };
+
+        let src_asm = match self.src {
+            IT::RegisterA(_) => "a".to_string(),
+            IT::PointedByN16(_, address) => {
+                if is_high_address(address) {
+                    format!("[${:04X}]", address)
+                } else {
+                    return Err(InstructionError::AddressOutOfRange(address, None, None));
+                }
+            }
+            // sometimes written as `LD A,[C+$FF00]`
+            IT::PointedByCPlusFF00(_, address) => {
+                if is_high_address(address) {
+                    "[c]".to_string()
+                } else {
+                    return Err(InstructionError::AddressOutOfRange(address, None, None));
+                }
+            }
+            _ => return Err(InstructionError::MalformedInstruction),
+        };
+
+        write!(w, "ldh {},{}", dst_asm, src_asm).map_err(|_| InstructionError::MalformedInstruction)
     }
 }

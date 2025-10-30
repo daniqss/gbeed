@@ -2,9 +2,22 @@ mod adc;
 mod ld;
 mod ldh;
 
+use std::fmt::Write;
+
 pub use adc::*;
 pub use ld::*;
 pub use ldh::*;
+
+pub trait Instruction<'a> {
+    fn exec(&mut self) -> InstructionResult;
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), InstructionError>;
+}
+
+impl<'a> std::fmt::Display for dyn Instruction<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.disassembly(f).map_err(|_| std::fmt::Error)
+    }
+}
 
 #[derive(Debug)]
 pub enum InstructionTarget<'a> {

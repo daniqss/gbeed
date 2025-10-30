@@ -1,7 +1,7 @@
 mod cartrigde;
 mod cpu;
 mod license;
-mod memory;
+pub mod memory;
 mod ppu;
 
 pub use cartrigde::Cartridge;
