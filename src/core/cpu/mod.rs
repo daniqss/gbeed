@@ -8,6 +8,37 @@ use crate::{
 use instructions::{InstructionTarget as IT, *};
 use std::fmt::{self, Display, Formatter};
 
+#[derive(Debug, PartialEq)]
+pub enum Register8 {
+    A,
+    F,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+}
+
+impl Display for Register8 {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Register8::A => "a",
+                Register8::F => "f",
+                Register8::B => "b",
+                Register8::C => "c",
+                Register8::D => "d",
+                Register8::E => "e",
+                Register8::H => "h",
+                Register8::L => "L",
+            }
+        )
+    }
+}
+
 /// # CPU
 /// Gameboy CPU, with a mix of Intel 8080 and Zilog Z80 features and instruction set.
 /// Most of its register are 8-bits ones, that are commonly used as pairs to perform 16-bits operations.

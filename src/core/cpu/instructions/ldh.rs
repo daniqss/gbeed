@@ -1,7 +1,10 @@
 use std::fmt::Write;
 
 use super::{InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT};
-use crate::core::{cpu::instructions::Instruction, memory::is_high_address};
+use crate::core::{
+    cpu::{Register8 as R8, instructions::Instruction},
+    memory::is_high_address,
+};
 
 /// Load from/to high memory area instruction
 /// Usually used to access memory mapped IO and HRAM,
@@ -12,28 +15,30 @@ pub struct LDH<'a> {
 }
 
 impl<'a> LDH<'a> {
-    pub fn new(dst: IT<'a>, src: IT<'a>) -> Self { LDH { dst, src } }
+    pub fn new(dst: IT<'a>, src: IT<'a>) -> Self { Self { dst, src } }
 }
 
 impl<'a> Instruction<'a> for LDH<'a> {
     fn exec(&mut self) -> InstructionResult {
-        let (dst, src, address, cycles, len): (&mut u8, u8, Option<u16>, u8, u16) =
+        let (dst, src, address, cycles, len): (&mut u8, u8, Option<u16>, u8, u8) =
             match (&mut self.dst, &self.src) {
                 // copy the src value in register A to the byte at 16 bits immediate address (that must be between 0xFF00 and 0xFFFF)
-                (IT::DstPointedByN16(dst, address), &IT::RegisterA(src)) => {
-                    (*dst, src, Some(*address), 3, 2)
+                (IT::DstPointedByN16(dst, address), IT::Register(src, reg)) if *reg == R8::A => {
+                    (*dst, *src, Some(*address), 3, 2)
                 }
                 // copy the src value in register A to the byte at address 0xFF00 + value in register C
-                (IT::DstPointedByCPlusFF00(dst, address), &IT::RegisterA(src)) => {
-                    (*dst, src, Some(*address), 2, 1)
+                (IT::DstPointedByCPlusFF00(dst, address), IT::Register(src, reg))
+                    if *reg == R8::A =>
+                {
+                    (*dst, *src, Some(*address), 2, 1)
                 }
                 // copy the src byte addressed by 16 bits immediate (that must be between 0xFF00 and 0xFFFF) into dst register A
-                (IT::DstRegisterA(dst), &IT::PointedByN16(src, address)) => {
-                    (*dst, src, Some(address), 3, 2)
+                (IT::DstRegisterA(dst), IT::PointedByN16(src, address)) => {
+                    (*dst, *src, Some(*address), 3, 2)
                 }
                 // copy the src byte addressed by 0xFF00 + C into dst register A
-                (IT::DstRegisterA(dst), &IT::PointedByCPlusFF00(src, address)) => {
-                    (*dst, src, Some(address), 2, 1)
+                (IT::DstRegisterA(dst), IT::PointedByCPlusFF00(src, address)) => {
+                    (*dst, *src, Some(*address), 2, 1)
                 }
 
                 _ => return Err(InstructionError::MalformedInstruction),
@@ -52,47 +57,7 @@ impl<'a> Instruction<'a> for LDH<'a> {
         Ok(InstructionEffect::new(cycles, len, None))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), InstructionError> {
-        let dst_asm = match self.dst {
-            IT::RegisterA(_) => "a".to_string(),
-            IT::PointedByN16(_, address) => {
-                if is_high_address(address) {
-                    format!("[${:04X}]", address)
-                } else {
-                    return Err(InstructionError::AddressOutOfRange(address, None, None));
-                }
-            }
-            // sometimes written as `LD [C+$FF00],A`
-            IT::PointedByCPlusFF00(_, address) => {
-                if is_high_address(address) {
-                    "[c]".to_string()
-                } else {
-                    return Err(InstructionError::AddressOutOfRange(address, None, None));
-                }
-            }
-            _ => return Err(InstructionError::MalformedInstruction),
-        };
-
-        let src_asm = match self.src {
-            IT::RegisterA(_) => "a".to_string(),
-            IT::PointedByN16(_, address) => {
-                if is_high_address(address) {
-                    format!("[${:04X}]", address)
-                } else {
-                    return Err(InstructionError::AddressOutOfRange(address, None, None));
-                }
-            }
-            // sometimes written as `LD A,[C+$FF00]`
-            IT::PointedByCPlusFF00(_, address) => {
-                if is_high_address(address) {
-                    "[c]".to_string()
-                } else {
-                    return Err(InstructionError::AddressOutOfRange(address, None, None));
-                }
-            }
-            _ => return Err(InstructionError::MalformedInstruction),
-        };
-
-        write!(w, "ldh {},{}", dst_asm, src_asm).map_err(|_| InstructionError::MalformedInstruction)
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
+        write!(w, "ldh {},{}", self.dst, self.src)
     }
 }

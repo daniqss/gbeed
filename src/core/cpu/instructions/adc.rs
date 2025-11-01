@@ -2,6 +2,7 @@ use std::fmt::Write;
 
 use super::InstructionTarget as IT;
 use crate::core::cpu::{
+    Register8 as R8,
     flags::{CARRY_FLAG_MASK, check_carry, check_half_carry, check_zero},
     instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
 };
@@ -20,21 +21,16 @@ impl<'a> ADC<'a> {
 
 impl<'a> Instruction<'a> for ADC<'a> {
     fn exec(&mut self) -> InstructionResult {
-        let (addend, cycles, len) = match self.addend {
+        let (addend, cycles, len) = match &self.addend {
+            IT::Register(val, reg) if *reg != R8::F => (val, 1, 1),
             IT::Immediate(n8) => (n8, 2, 2),
-            IT::RegisterB(b) => (b, 1, 1),
-            IT::RegisterC(c) => (c, 1, 1),
-            IT::RegisterD(d) => (d, 1, 1),
-            IT::RegisterE(e) => (e, 1, 1),
-            IT::RegisterH(h) => (h, 1, 1),
-            IT::RegisterL(l) => (l, 1, 1),
             IT::PointedByHL(value) => (value, 2, 1),
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
         // perform the addition
         // wrapping it prevent overflow panics in debug mode
-        let mut result = self.a.wrapping_add(addend);
+        let mut result = self.a.wrapping_add(*addend);
         result = result.wrapping_add(if (*self.f & CARRY_FLAG_MASK) != 0 {
             1
         } else {
@@ -46,22 +42,7 @@ impl<'a> Instruction<'a> for ADC<'a> {
         Ok(InstructionEffect::new(len, cycles, Some(flags)))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), InstructionError> {
-        write!(
-            w,
-            "adc a,{}",
-            match self.addend {
-                IT::Immediate(n8) => format!("{}", n8),
-                IT::RegisterB(_) => "b".to_string(),
-                IT::RegisterC(_) => "c".to_string(),
-                IT::RegisterD(_) => "d".to_string(),
-                IT::RegisterE(_) => "e".to_string(),
-                IT::RegisterH(_) => "h".to_string(),
-                IT::RegisterL(_) => "l".to_string(),
-                IT::PointedByHL(_) => "[hl]".to_string(),
-                _ => return Err(InstructionError::MalformedInstruction),
-            }
-        )
-        .map_err(|_| InstructionError::MalformedInstruction)
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
+        write!(w, "adc a,{}", self.addend)
     }
 }

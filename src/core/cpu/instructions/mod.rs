@@ -2,33 +2,31 @@ mod adc;
 mod ld;
 mod ldh;
 
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 
 pub use adc::*;
 pub use ld::*;
 pub use ldh::*;
 
+use crate::core::cpu::Register8;
+
+/// Represents a CPU instruction
+/// The instruction can be executed and can provide its disassembly representation
 pub trait Instruction<'a> {
     fn exec(&mut self) -> InstructionResult;
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), InstructionError>;
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error>;
 }
 
-impl<'a> std::fmt::Display for dyn Instruction<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.disassembly(f).map_err(|_| std::fmt::Error)
-    }
+impl Display for dyn Instruction<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { self.disassembly(f) }
 }
 
-#[derive(Debug)]
+/// Instructions possible operands and targets
+/// Only used when various operand types are possible for the same instruction
+#[derive(Debug, PartialEq)]
 pub enum InstructionTarget<'a> {
     Immediate(u8),
-    RegisterA(u8),
-    RegisterB(u8),
-    RegisterC(u8),
-    RegisterD(u8),
-    RegisterE(u8),
-    RegisterH(u8),
-    RegisterL(u8),
+    Register(u8, Register8),
     PointedByHL(u8),
     PointedByN16(u8, u16),
     PointedByCPlusFF00(u8, u16),
@@ -39,18 +37,36 @@ pub enum InstructionTarget<'a> {
     DstRegisterA(&'a mut u8),
 }
 
+impl Display for InstructionTarget<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InstructionTarget::Immediate(n8) => write!(f, "${:02X}", n8),
+            InstructionTarget::Register(_, reg) => write!(f, "{}", reg),
+            InstructionTarget::PointedByHL(_) => write!(f, "[hl]"),
+            InstructionTarget::PointedByN16(_, address) => write!(f, "[${:04X}]", address),
+            InstructionTarget::PointedByCPlusFF00(_, address) => write!(f, "[${:04X}]", address),
+            InstructionTarget::DstPointedByN16(_, address) => write!(f, "[${:04X}]", address),
+            InstructionTarget::DstPointedByCPlusFF00(_, address) => {
+                write!(f, "[${:04X}]", address)
+            }
+            InstructionTarget::DstRegisterA(_) => write!(f, "a"),
+        }
+    }
+}
+
+/// Effect of executing a instruction
+/// Instructions also "effect" their operands but those are represented as parameters using references
 pub struct InstructionEffect {
     pub cycles: u8,
-    pub len: u16,
+    pub len: u8,
     pub flags: Option<u8>,
 }
 
 impl InstructionEffect {
-    pub fn new(cycles: u8, len: u16, flags: Option<u8>) -> Self {
-        InstructionEffect { cycles, len, flags }
-    }
+    pub fn new(cycles: u8, len: u8, flags: Option<u8>) -> Self { Self { cycles, len, flags } }
 }
 
+/// Errors that can occur during instruction execution
 pub enum InstructionError {
     NoOp(u8, u16),
     UnusedOpcode(u8, u16),
@@ -80,7 +96,7 @@ impl std::fmt::Display for InstructionError {
             }
             InstructionError::MalformedInstruction => write!(
                 f,
-                "Opcode corresponds to a valid instruction, but its operands are malformed"
+                "Opcode corresponds to a valid instruction, but illegal operands were used"
             ),
         }
     }

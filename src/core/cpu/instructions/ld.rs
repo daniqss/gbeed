@@ -1,7 +1,53 @@
+use std::fmt::Write;
+
 use crate::{
-    core::cpu::instructions::InstructionEffect,
+    core::cpu::instructions::{
+        Instruction, InstructionEffect, InstructionError, InstructionResult,
+        InstructionTarget as IT,
+    },
     utils::{to_u8, to_u16},
 };
+
+// pub struct LD<'a> {
+//     dst: IT<'a>,
+//     src: IT<'a>,
+// }
+
+// impl<'a> LD<'a> {
+//     pub fn new(dst: IT<'a>, src: IT<'a>) -> Self { LD { dst, src } }
+// }
+
+// impl<'a> Instruction<'a> for LD<'a> {
+//     fn exec(&mut self) -> InstructionEffect {
+//         // // u8 loads
+//         // let (dst, src, cycles, len): (&mut u8, u8, u8, u16) = match (&mut self.dst, &self.src) {
+//         //     (IT::DstRegisterA(dst), &IT::Register(src, _)) => (*dst, src, 1, 1),
+
+//         //     _ => return Err(InstructionError::MalformedInstruction),
+//         // };
+
+//         // *dst = src;
+
+//         // InstructionEffect::new(cycles, len, None)
+//         todo!("xd")
+//     }
+
+// fn disassembly(&self, w: &mut dyn Write) -> Result<(), InstructionError> {
+//     let dst_asm = match self.dst {
+//         IT::DstRegisterA(_) => "A".to_string(),
+
+//         _ => return Err(InstructionError::MalformedInstruction),
+//     };
+
+//     let src_asm = match self.src {
+//         IT::Register(_, _) => "a".to_string(),
+
+//         _ => return Err(InstructionError::MalformedInstruction),
+//     };
+
+//     write!(w, "ld {},{}", dst_asm, src_asm).map_err(|_| InstructionError::MalformedInstruction)
+// }
+// }
 
 /// copy the value stored in A src register to dst register
 pub fn ld_r8_r8(dst: &mut u8, src: u8) -> InstructionEffect {
