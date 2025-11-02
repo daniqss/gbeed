@@ -1,8 +1,7 @@
 mod cartrigde;
 mod cpu;
-mod instructions;
 mod license;
-mod memory;
+pub mod memory;
 mod ppu;
 
 pub use cartrigde::Cartridge;
@@ -40,7 +39,7 @@ impl Dmg {
             match self.cpu.exec(opcode) {
                 Ok(effect) => {
                     self.cpu.cycles += effect.cycles as usize;
-                    self.cpu.pc += effect.len;
+                    self.cpu.pc += effect.len as u16;
                     match effect.flags {
                         Some(f) => self.cpu.f |= f,
                         None => {}

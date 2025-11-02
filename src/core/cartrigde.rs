@@ -67,10 +67,7 @@ impl Cartridge {
         let cartridge = Self {
             is_pre_sgb: get_license(&game_rom).0,
             license: get_license(&game_rom).1,
-            title: game_rom[TITLE_START..TITLE_END]
-                .iter()
-                .map(|&c| c as char)
-                .collect(),
+            title: game_rom[TITLE_START..TITLE_END].iter().map(|&c| c as char).collect(),
             supports_sgb: Self::get_supports_sgb(game_rom[SGB_FLAG]),
             cartridge_type: Self::get_cartridge_type(game_rom[CARTRIDGE_TYPE]),
             rom_size: Self::get_rom_size(game_rom[ROM_SIZE]),
@@ -78,8 +75,7 @@ impl Cartridge {
             destination: Self::get_destination_code(game_rom[DESTINATION_CODE]),
             game_version: game_rom[GAME_VERSION],
             header_checksum: game_rom[HEADER_CHECKSUM],
-            global_checksum: ((game_rom[GLOBAL_CHECKSUM_START] as u16) << 8)
-                | (game_rom[GLOBAL_CHECKSUM_END] as u16),
+            global_checksum: ((game_rom[GLOBAL_CHECKSUM_START] as u16) << 8) | (game_rom[GLOBAL_CHECKSUM_END] as u16),
         };
 
         match cartridge.check_global_checksum(&game_rom) {
