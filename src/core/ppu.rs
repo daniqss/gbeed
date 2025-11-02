@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use crate::core::memory::MemoryBus;
 
 pub struct Ppu {

@@ -36,21 +36,43 @@ impl Dmg {
         loop {
             let opcode = self.memory_bus.borrow()[self.cpu.pc];
 
-            match self.cpu.exec(opcode) {
-                Ok(effect) => {
-                    self.cpu.cycles += effect.cycles as usize;
-                    self.cpu.pc += effect.len as u16;
-                    match effect.flags {
-                        Some(f) => self.cpu.f |= f,
-                        None => {}
-                    };
-                }
+            let mut instruction = match self.cpu.fetch(opcode) {
+                Ok(instr) => instr,
                 Err(e) => {
-                    println!("Error: {}", e);
-
-                    self.cpu.pc += 1;
+                    eprintln!("Error fetching instruction: {}", e);
+                    break;
                 }
             };
+
+            let writer = &mut String::new();
+            match instruction.disassembly(writer) {
+                Ok(_) => println!("{}", writer),
+                Err(e) => {
+                    eprintln!("Error disassembling instruction: {}", e);
+                }
+            }
+
+            let (cycles, len, f) = match instruction.exec() {
+                Ok(effect) => (effect.cycles as usize, effect.len as u16, effect.flags),
+                Err(e) => {
+                    eprintln!("Error executing instruction: {}", e);
+                    break;
+                }
+            };
+
+            // explicitly drop the instruction to release borrow references
+            // after actually making changes to the CPU state and return the effect
+            // maybe in the future we must implement a better way to handle this
+            // using reference counting for registers I guess
+            // which would be ez, because we already have registers enums
+            // so changing that to a type/struct that holds Rc<RefCell<u8>> would be easy
+            drop(instruction);
+
+            self.cpu.cycles = self.cpu.cycles.wrapping_add(cycles);
+            self.cpu.pc = self.cpu.pc.wrapping_add(len);
+            if let Some(flags) = f {
+                self.cpu.f = flags;
+            }
 
             std::thread::sleep(std::time::Duration::from_secs(1));
         }

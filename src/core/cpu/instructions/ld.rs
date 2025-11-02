@@ -9,7 +9,7 @@ use crate::{
         },
         registers::{Register8 as R8, Register16 as R16},
     },
-    utils::{low, to_u8, to_u16, with_u16},
+    utils::{high, low, to_u8, to_u16, with_u16},
 };
 
 pub struct LD<'a> {
@@ -56,22 +56,26 @@ impl<'a> Instruction<'a> for LD<'a> {
 
                 return Ok(InstructionEffect::new(3, 3, None));
             }
-            (ID::PointedByHL(dst), IT::Register8(src, _)) => (*dst, *src, 2, 1),
-            (ID::PointedByHL(dst), IT::Immediate8(src)) => (*dst, *src, 3, 2),
+            (ID::PointedByHL(bus, addr), IT::Register8(src, _)) => (&mut bus.borrow_mut()[*addr], *src, 2, 1),
+            (ID::PointedByHL(bus, addr), IT::Immediate8(src)) => (&mut bus.borrow_mut()[*addr], *src, 3, 2),
             (ID::Register8(dst, _), IT::PointedByHL(src)) => (*dst, *src, 2, 1),
-            (ID::PointedByRegister16(dst, _), IT::Register8(src, reg)) if *reg == R8::A => (dst, *src, 2, 1),
-            (ID::PointedByN16(dst, _), IT::Register8(src, reg)) if *reg == R8::A => (*dst, *src, 4, 3),
+            (ID::PointedByRegister16(bus, addr, _), IT::Register8(src, reg)) if *reg == R8::A => {
+                (&mut bus.borrow_mut()[*addr], *src, 2, 1)
+            }
+            (ID::PointedByN16(bus, addr), IT::Register8(src, reg)) if *reg == R8::A => {
+                (&mut bus.borrow_mut()[*addr], *src, 4, 3)
+            }
             (ID::Register8(dst, _), IT::PointedByRegister16(src, _)) => (*dst, *src, 2, 1),
             (ID::Register8(dst, reg), IT::PointedByN16(src, _)) if *reg == R8::A => (*dst, *src, 4, 3),
             // sometimes written as `LD [HL+],A`, or `LDI [HL],A`
-            (ID::PointedByHLI(dst, hl), IT::Register8(src, reg)) if *reg == R8::A => {
+            (ID::PointedByHLI(bus, hl), IT::Register8(src, reg)) if *reg == R8::A => {
                 with_u16(hl.1, hl.0, |hl| hl.wrapping_add(1));
-                (dst, *src, 2, 1)
+                (&mut bus.borrow_mut()[to_u16(*hl.1, *hl.0)], *src, 2, 1)
             }
             // sometimes written as `LD [HL-],A`, or `LDD [HL],A`
-            (ID::PointedByHLD(dst, hl), IT::Register8(src, reg)) if *reg == R8::A => {
+            (ID::PointedByHLD(bus, hl), IT::Register8(src, reg)) if *reg == R8::A => {
                 with_u16(hl.1, hl.0, |hl| hl.wrapping_sub(1));
-                (*dst, *src, 2, 1)
+                (&mut bus.borrow_mut()[to_u16(*hl.1, *hl.0)], *src, 2, 1)
             }
 
             // stack manipulation load instructions
@@ -82,10 +86,9 @@ impl<'a> Instruction<'a> for LD<'a> {
                 **dst = *src;
                 return Ok(InstructionEffect::new(3, 3, None));
             }
-            (ID::PointedByN16AndNext(dst, _), IT::StackPointer(src)) => {
-                let (high, low) = to_u8(*src);
-                *dst.0 = high;
-                *dst.1 = low;
+            (ID::PointedByN16AndNext(bus, addr), IT::StackPointer(src)) => {
+                bus.borrow_mut()[addr.wrapping_add(1)] = high(*src);
+                bus.borrow_mut()[*addr] = low(*src);
 
                 return Ok(InstructionEffect::new(5, 3, None));
             }

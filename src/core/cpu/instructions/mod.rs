@@ -8,7 +8,10 @@ pub use adc::*;
 pub use ld::*;
 pub use ldh::*;
 
-use crate::core::cpu::{R8, R16};
+use crate::core::{
+    cpu::{R8, R16},
+    memory::{Memory, MemoryBus},
+};
 
 /// Represents a CPU instruction.
 /// The instruction can be executed and can provide its disassembly representation
@@ -59,24 +62,24 @@ impl Display for InstructionTarget<'_> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum InstructionDestination<'a> {
-    PointedByHL(&'a mut u8),
-    PointedByN16(&'a mut u8, u16),
-    PointedByN16AndNext((&'a mut u8, &'a mut u8), u16),
-    PointedByCPlusFF00(&'a mut u8, u16),
+    PointedByHL(MemoryBus, u16),
+    PointedByN16(MemoryBus, u16),
+    PointedByN16AndNext(MemoryBus, u16),
+    PointedByCPlusFF00(MemoryBus, u16),
     Register8(&'a mut u8, R8),
     Register16((&'a mut u8, &'a mut u8), R16),
-    PointedByRegister16(&'a mut u8, R16),
-    PointedByHLI(&'a mut u8, (&'a mut u8, &'a mut u8)),
-    PointedByHLD(&'a mut u8, (&'a mut u8, &'a mut u8)),
+    PointedByRegister16(MemoryBus, u16, R16),
+    PointedByHLI(MemoryBus, (&'a mut u8, &'a mut u8)),
+    PointedByHLD(MemoryBus, (&'a mut u8, &'a mut u8)),
     StackPointer(&'a mut u16),
 }
 
 impl Display for InstructionDestination<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InstructionDestination::PointedByHL(_) => write!(f, "[hl]"),
+            InstructionDestination::PointedByHL(_, _) => write!(f, "[hl]"),
             InstructionDestination::PointedByN16(_, address) => write!(f, "[${:04X}]", address),
             InstructionDestination::PointedByN16AndNext(_, address)
             | InstructionDestination::PointedByCPlusFF00(_, address) => {
@@ -84,7 +87,7 @@ impl Display for InstructionDestination<'_> {
             }
             InstructionDestination::Register8(_, reg) => write!(f, "{}", reg),
             InstructionDestination::Register16(_, reg) => write!(f, "{}", reg),
-            InstructionDestination::PointedByRegister16(_, reg) => write!(f, "[{}]", reg),
+            InstructionDestination::PointedByRegister16(_, _, reg) => write!(f, "[{}]", reg),
             InstructionDestination::PointedByHLI(_, _) => write!(f, "[hli]"),
             InstructionDestination::PointedByHLD(_, _) => write!(f, "[hld]"),
             InstructionDestination::StackPointer(_) => write!(f, "sp"),
