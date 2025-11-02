@@ -156,10 +156,7 @@ pub fn get_license(game_rom: &Vec<u8>) -> (bool, Option<String>) {
             0xF0 => Some("A Wave".to_owned()),
             0xF3 => Some("Extreme Entertainment".to_owned()),
             0xFF => Some("LJN".to_owned()),
-            _ => unreachable!(
-                "Unknown old license code: {:#?}",
-                game_rom[OLD_LICENSE_ADDR]
-            ),
+            _ => unreachable!("Unknown old license code: {:#?}", game_rom[OLD_LICENSE_ADDR]),
         },
     )
 }
@@ -168,10 +165,7 @@ pub fn get_license(game_rom: &Vec<u8>) -> (bool, Option<String>) {
 /// NEW_LICENSE_START_ADDR and NEW_LICENSE_END_ADDR are use in post Super Gameboy cartridges to set the game's publisher
 /// New licenses are coded in ASCII
 fn get_new_license(game_rom: &Vec<u8>) -> Option<String> {
-    match (
-        game_rom[NEW_LICENSE_START_ADDR],
-        game_rom[NEW_LICENSE_END_ADDR],
-    ) {
+    match (game_rom[NEW_LICENSE_START_ADDR], game_rom[NEW_LICENSE_END_ADDR]) {
         (b'0', b'0') => None,
         (b'0', b'1') => Some("Nintendo Research & Development 1".to_owned()),
         (b'0', b'8') => Some("Capcom".to_owned()),

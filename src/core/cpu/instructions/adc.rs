@@ -22,8 +22,8 @@ impl<'a> ADC<'a> {
 impl<'a> Instruction<'a> for ADC<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (addend, cycles, len) = match &self.addend {
-            IT::Register(val, reg) if *reg != R8::F => (val, 1, 1),
-            IT::Immediate(n8) => (n8, 2, 2),
+            IT::Register8(val, reg) if *reg != R8::F => (val, 1, 1),
+            IT::Immediate8(n8) => (n8, 2, 2),
             IT::PointedByHL(value) => (value, 2, 1),
             _ => return Err(InstructionError::MalformedInstruction),
         };
@@ -31,18 +31,11 @@ impl<'a> Instruction<'a> for ADC<'a> {
         // perform the addition
         // wrapping it prevent overflow panics in debug mode
         let mut result = self.a.wrapping_add(*addend);
-        result = result.wrapping_add(if (*self.f & CARRY_FLAG_MASK) != 0 {
-            1
-        } else {
-            0
-        });
-        let flags =
-            check_zero(result) | check_carry(result, *self.a) | check_half_carry(result, *self.a);
+        result = result.wrapping_add(if (*self.f & CARRY_FLAG_MASK) != 0 { 1 } else { 0 });
+        let flags = check_zero(result) | check_carry(result, *self.a) | check_half_carry(result, *self.a);
 
         Ok(InstructionEffect::new(len, cycles, Some(flags)))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
-        write!(w, "adc a,{}", self.addend)
-    }
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "adc a,{}", self.addend) }
 }

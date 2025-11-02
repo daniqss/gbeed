@@ -20,29 +20,26 @@ impl<'a> LDH<'a> {
 
 impl<'a> Instruction<'a> for LDH<'a> {
     fn exec(&mut self) -> InstructionResult {
-        let (dst, src, address, cycles, len): (&mut u8, u8, Option<u16>, u8, u8) =
-            match (&mut self.dst, &self.src) {
-                // copy the src value in register A to the byte at 16 bits immediate address (that must be between 0xFF00 and 0xFFFF)
-                (IT::DstPointedByN16(dst, address), IT::Register(src, reg)) if *reg == R8::A => {
-                    (*dst, *src, Some(*address), 3, 2)
-                }
-                // copy the src value in register A to the byte at address 0xFF00 + value in register C
-                (IT::DstPointedByCPlusFF00(dst, address), IT::Register(src, reg))
-                    if *reg == R8::A =>
-                {
-                    (*dst, *src, Some(*address), 2, 1)
-                }
-                // copy the src byte addressed by 16 bits immediate (that must be between 0xFF00 and 0xFFFF) into dst register A
-                (IT::DstRegisterA(dst), IT::PointedByN16(src, address)) => {
-                    (*dst, *src, Some(*address), 3, 2)
-                }
-                // copy the src byte addressed by 0xFF00 + C into dst register A
-                (IT::DstRegisterA(dst), IT::PointedByCPlusFF00(src, address)) => {
-                    (*dst, *src, Some(*address), 2, 1)
-                }
+        let (dst, src, address, cycles, len): (&mut u8, u8, Option<u16>, u8, u8) = match (&mut self.dst, &self.src) {
+            // copy the src value in register A to the byte at 16 bits immediate address (that must be between 0xFF00 and 0xFFFF)
+            (IT::DstPointedByN16(dst, address), IT::Register8(src, reg)) if *reg == R8::A => {
+                (*dst, *src, Some(*address), 3, 2)
+            }
+            // copy the src value in register A to the byte at address 0xFF00 + value in register C
+            (IT::DstPointedByCPlusFF00(dst, address), IT::Register8(src, reg)) if *reg == R8::A => {
+                (*dst, *src, Some(*address), 2, 1)
+            }
+            // copy the src byte addressed by 16 bits immediate (that must be between 0xFF00 and 0xFFFF) into dst register A
+            (IT::DstRegister8(dst, reg), IT::PointedByN16(src, address)) if *reg == R8::A => {
+                (*dst, *src, Some(*address), 3, 2)
+            }
+            // copy the src byte addressed by 0xFF00 + C into dst register A
+            (IT::DstRegister8(dst, reg), IT::PointedByCPlusFF00(src, address)) if *reg == R8::A => {
+                (*dst, *src, Some(*address), 2, 1)
+            }
 
-                _ => return Err(InstructionError::MalformedInstruction),
-            };
+            _ => return Err(InstructionError::MalformedInstruction),
+        };
 
         // if the destination target is a memory byte, check if the address is in range
         // otherwise return an error

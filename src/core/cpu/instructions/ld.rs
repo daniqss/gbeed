@@ -1,191 +1,117 @@
 use std::fmt::Write;
 
 use crate::{
-    core::cpu::instructions::{
-        Instruction, InstructionEffect, InstructionError, InstructionResult,
-        InstructionTarget as IT,
+    core::cpu::{
+        flags::{check_carry, check_half_carry},
+        instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT},
+        registers::{Register8 as R8, Register16 as R16},
     },
-    utils::{to_u8, to_u16},
+    utils::{low, to_u8, to_u16, with_u16},
 };
 
-// pub struct LD<'a> {
-//     dst: IT<'a>,
-//     src: IT<'a>,
-// }
-
-// impl<'a> LD<'a> {
-//     pub fn new(dst: IT<'a>, src: IT<'a>) -> Self { LD { dst, src } }
-// }
-
-// impl<'a> Instruction<'a> for LD<'a> {
-//     fn exec(&mut self) -> InstructionEffect {
-//         // // u8 loads
-//         // let (dst, src, cycles, len): (&mut u8, u8, u8, u16) = match (&mut self.dst, &self.src) {
-//         //     (IT::DstRegisterA(dst), &IT::Register(src, _)) => (*dst, src, 1, 1),
-
-//         //     _ => return Err(InstructionError::MalformedInstruction),
-//         // };
-
-//         // *dst = src;
-
-//         // InstructionEffect::new(cycles, len, None)
-//         todo!("xd")
-//     }
-
-// fn disassembly(&self, w: &mut dyn Write) -> Result<(), InstructionError> {
-//     let dst_asm = match self.dst {
-//         IT::DstRegisterA(_) => "A".to_string(),
-
-//         _ => return Err(InstructionError::MalformedInstruction),
-//     };
-
-//     let src_asm = match self.src {
-//         IT::Register(_, _) => "a".to_string(),
-
-//         _ => return Err(InstructionError::MalformedInstruction),
-//     };
-
-//     write!(w, "ld {},{}", dst_asm, src_asm).map_err(|_| InstructionError::MalformedInstruction)
-// }
-// }
-
-/// copy the value stored in A src register to dst register
-pub fn ld_r8_r8(dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(1, 1, None)
+pub struct LD<'a> {
+    dst: IT<'a>,
+    src: IT<'a>,
 }
 
-/// copy immediate value into dst register
-pub fn ld_r8_n8(dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(2, 2, None)
+impl<'a> LD<'a> {
+    pub fn new(dst: IT<'a>, src: IT<'a>) -> Self { LD { dst, src } }
 }
 
-/// copy 16 bits immediate value into dst pair of registers
-pub fn ld_r16_n16(dst: &mut u16, src: u16) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(3, 3, None)
-}
+impl<'a> Instruction<'a> for LD<'a> {
+    fn exec(&mut self) -> InstructionResult {
+        // handle cases where srcs are increased and decreased after load
+        if let (IT::DstRegister8(dst, reg), IT::PointedByHLD(src, hl)) = (&mut self.dst, &mut self.src) {
+            if *reg != R8::A {
+                return Err(InstructionError::MalformedInstruction);
+            }
 
-/// copy the value stored in A src register to the memory addressed by hl register pair
-pub fn ld_hl_r8(dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(2, 1, None)
-}
+            **dst = *src;
 
-/// copy immediate value into the memory addressed by hl register pair
-pub fn ld_hl_n8(dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(3, 2, None)
-}
+            with_u16(hl.1, hl.0, |hl| hl.wrapping_add(1));
+            return Ok(InstructionEffect::new(2, 1, None));
+        }
+        if let (IT::DstRegister8(dst, reg), IT::PointedByHLI(src, hl)) = (&mut self.dst, &mut self.src) {
+            if *reg != R8::A {
+                return Err(InstructionError::MalformedInstruction);
+            }
 
-/// copy the value pointed by hl into A dst register
-pub fn ld_r8_hl(dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(2, 1, None)
-}
+            **dst = *src;
 
-/// copy the value in src register A to the memory pointed by the dst 16 bits pair of registers
-pub fn ld_r8_a(dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(2, 1, None)
-}
+            with_u16(hl.1, hl.0, |hl| hl.wrapping_sub(1));
+            return Ok(InstructionEffect::new(2, 1, None));
+        }
 
-/// copy the src value in register A to the memory pointed by the 16 bits immediate value
-pub fn ld_n16_a(dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(4, 3, None)
-}
+        // u8 loads
+        let (dst, src, cycles, len): (&mut u8, u8, u8, u8) = match (&mut self.dst, &self.src) {
+            (IT::DstRegister8(dst, _), IT::Register8(src, _)) => (*dst, *src, 1, 1),
+            (IT::DstRegister8(dst, _), IT::Immediate8(src)) => (*dst, *src, 2, 2),
+            (IT::DstRegister16(dst, _), IT::Immediate16(src)) => {
+                let (high, low) = to_u8(*src);
+                *dst.0 = high;
+                *dst.1 = low;
 
-/// copy the src byte addressed by a pair of registers into dst register a
-pub fn ld_a_r16(dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(2, 1, None)
-}
+                return Ok(InstructionEffect::new(3, 3, None));
+            }
+            (IT::DstPointedByHL(dst), IT::Register8(src, _)) => (*dst, *src, 2, 1),
+            (IT::DstPointedByHL(dst), IT::Immediate8(src)) => (*dst, *src, 3, 2),
+            (IT::DstRegister8(dst, _), IT::PointedByHL(src)) => (*dst, *src, 2, 1),
+            (IT::DstPointedByRegister16(dst, _), IT::Register8(src, reg)) if *reg == R8::A => (dst, *src, 2, 1),
+            (IT::DstPointedByN16(dst, _), IT::Register8(src, reg)) if *reg == R8::A => (*dst, *src, 4, 3),
+            (IT::DstRegister8(dst, _), IT::PointedByRegister16(src, _)) => (*dst, *src, 2, 1),
+            (IT::DstRegister8(dst, reg), IT::PointedByN16(src, _)) if *reg == R8::A => (*dst, *src, 4, 3),
+            // sometimes written as `LD [HL+],A`, or `LDI [HL],A`
+            (IT::DstPointedByHLI(dst, hl), IT::Register8(src, reg)) if *reg == R8::A => {
+                with_u16(hl.1, hl.0, |hl| hl.wrapping_add(1));
+                (dst, *src, 2, 1)
+            }
+            // sometimes written as `LD [HL-],A`, or `LDD [HL],A`
+            (IT::DstPointedByHLD(dst, hl), IT::Register8(src, reg)) if *reg == R8::A => {
+                with_u16(hl.1, hl.0, |hl| hl.wrapping_sub(1));
+                (*dst, *src, 2, 1)
+            }
 
-/// copy the src byte addressed by a 16 bits immediate value into dst register a
-pub fn ld_a_n16(dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-    InstructionEffect::new(3, 2, None)
-}
+            // stack manipulation load instructions
 
-/// copy the src value in register A into the byte addressed by HL, then increment HL
-/// sometimes written as `LD [HL+],A`, or `LDI [HL],A`
-pub fn ld_hli_a(h: &mut u8, l: &mut u8, dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
+            // we'll do this load hear surpass the generic handling
+            // with u8 destinations
+            (IT::DstStackPointer(dst), IT::Immediate16(src)) => {
+                **dst = *src;
+                return Ok(InstructionEffect::new(3, 3, None));
+            }
+            (IT::DstPointedByN16AndNext(dst, _), IT::StackPointer(src)) => {
+                let (high, low) = to_u8(*src);
+                *dst.0 = high;
+                *dst.1 = low;
 
-    let hl = to_u16(*h, *l).wrapping_add(1);
-    (*h, *l) = to_u8(hl);
+                return Ok(InstructionEffect::new(5, 3, None));
+            }
+            // add the 8 bit signed immediate to the SP register and store the result in HL register pair
+            // half carries come from Z80 with binary coded decimal, that worked with nibbles (4 bits)
+            // also surpass the generic handling
+            (IT::DstRegister16(dst, reg), IT::StackPointerPlusE8(sp, e8)) if *reg == R16::HL => {
+                let src = sp.wrapping_add(*e8 as i16 as u16);
+                with_u16(dst.1, dst.0, |_| src);
 
-    InstructionEffect::new(2, 1, None)
-}
+                // the carries are computed on the low byte only, not the full u16
+                let flags = check_half_carry(low(src), low(*sp)) | check_carry(low(src), low(*sp));
 
-/// copy the src value in register A into the byte addressed by HL, then decrement HL
-/// sometimes written as `LD [HL-],A`, or `LDD [HL],A`
-pub fn ld_hld_a(h: &mut u8, l: &mut u8, dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
+                return Ok(InstructionEffect::new(3, 2, Some(flags)));
+            }
+            (IT::DstStackPointer(dst), IT::Register16(src, reg)) if *reg == R16::HL => {
+                **dst = to_u16(src.0, src.1);
+                return Ok(InstructionEffect::new(2, 1, None));
+            }
 
-    let hl = to_u16(*h, *l).wrapping_sub(1);
-    (*h, *l) = to_u8(hl);
+            _ => return Err(InstructionError::MalformedInstruction),
+        };
 
-    InstructionEffect::new(2, 1, None)
-}
+        *dst = src;
 
-/// copy the src byte addressed by HL into register A, then decrement HL
-/// sometimes written as `LD A,[HL-]`, or `LDD A,[HL]
-pub fn ld_a_hld(h: &mut u8, l: &mut u8, dst: &mut u8, src: u8) -> InstructionEffect {
-    *dst = src;
-
-    let hl = to_u16(*h, *l).wrapping_sub(1);
-    (*h, *l) = to_u8(hl);
-
-    InstructionEffect::new(2, 1, None)
-}
-
-/// copy the src byte addressed by HL into register A, then increment HL
-/// sometimes written as `LD A,[HL+]`, or `LDI A,[HL]
-pub fn ld_a_hli(h: &mut u8, l: &mut u8, dst: &mut u8, a: u8) -> InstructionEffect {
-    *dst = a;
-
-    let hl = to_u16(*h, *l).wrapping_add(1);
-    (*h, *l) = to_u8(hl);
-
-    InstructionEffect::new(2, 1, None)
-}
-
-/// copy the src value of a 16 bits immediate into SP register
-pub fn ld_sp_n16(sp: &mut u16, src: u16) -> InstructionEffect {
-    *sp = src;
-    InstructionEffect::new(3, 3, None)
-}
-
-/// copy the srcs values of SP & 0xFF and SP >> 8 into the memory addressed by a 16 bits immediate value and its next byte
-pub fn ld_n16_sp(dst_low: &mut u8, dst_high: &mut u8, src: u16) -> InstructionEffect {
-    *dst_low = (src & 0x00FF) as u8;
-    *dst_high = (src >> 8) as u8;
-    InstructionEffect::new(5, 3, None)
-}
-
-/// add the 8 bit signed immediate to the SP register and store the result in HL register pair
-/// half carries come from Z80 with binary coded decimal, that worked with nibbles (4 bits)
-pub fn ld_hl_sp_plus_n8(h: &mut u8, l: &mut u8, sp: u16, e: i8) -> InstructionEffect {
-    let result = sp.wrapping_add(e as i16 as u16);
-
-    (*h, *l) = to_u8(result);
-
-    let mut flags = 0;
-    if ((sp & 0x0F) + ((e as u16) & 0x0F)) > 0x0F {
-        flags |= 0x20;
-    }
-    if ((sp & 0xFF) + ((e as u16) & 0xFF)) > 0xFF {
-        flags |= 0x10;
+        Ok(InstructionEffect::new(cycles, len, None))
     }
 
-    InstructionEffect::new(3, 3, Some(flags))
-}
-
-///copy the src pair of registers HL to the SP register
-pub fn ld_sp_hl(sp: &mut u16, h: &mut u8, l: &u8) -> InstructionEffect {
-    *sp = to_u16(*h, *l);
-    InstructionEffect::new(2, 1, None)
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
+        write!(w, "ld {},{}", self.dst, self.src)
+    }
 }

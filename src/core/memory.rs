@@ -33,9 +33,7 @@ pub const HRAM_START: u16 = 0xFF80;
 pub const HRAM_END: u16 = 0xFFFE;
 pub const INTERRUPT_ENABLE_REGISTER: u16 = 0xFFFF;
 
-pub fn is_high_address(address: u16) -> bool {
-    address >= IO_REGISTERS_START && address <= INTERRUPT_ENABLE_REGISTER
-}
+pub fn is_high_address(address: u16) -> bool { address >= IO_REGISTERS_START && address <= INTERRUPT_ENABLE_REGISTER }
 
 pub type MemoryBus = Rc<RefCell<Memory>>;
 
@@ -140,9 +138,7 @@ impl IndexMut<u16> for Memory {
         match address {
             ROM_BANK00_START..=ROM_BANKNN_END => &mut self.rom[address as usize],
             VRAM_START..=VRAM_END => &mut self.vram[(address - VRAM_START) as usize],
-            WRAM_BANK0_START..=WRAM_BANKN_END => {
-                &mut self.ram[(address - WRAM_BANK0_START) as usize]
-            }
+            WRAM_BANK0_START..=WRAM_BANKN_END => &mut self.ram[(address - WRAM_BANK0_START) as usize],
             ECHO_RAM_START..=ECHO_RAM_END => {
                 let offset = (address - ECHO_RAM_START) as usize;
                 &mut self.ram[offset]

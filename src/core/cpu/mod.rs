@@ -1,43 +1,14 @@
 mod flags;
 mod instructions;
+mod registers;
 
 use crate::{
     core::memory::MemoryBus,
     prelude::utils::{to_u8, to_u16},
 };
 use instructions::{InstructionTarget as IT, *};
+use registers::{Register8, Register16};
 use std::fmt::{self, Display, Formatter};
-
-#[derive(Debug, PartialEq)]
-pub enum Register8 {
-    A,
-    F,
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-}
-
-impl Display for Register8 {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Register8::A => "a",
-                Register8::F => "f",
-                Register8::B => "b",
-                Register8::C => "c",
-                Register8::D => "d",
-                Register8::E => "e",
-                Register8::H => "h",
-                Register8::L => "L",
-            }
-        )
-    }
-}
 
 /// # CPU
 /// Gameboy CPU, with a mix of Intel 8080 and Zilog Z80 features and instruction set.
@@ -57,11 +28,11 @@ pub struct Cpu {
     pub sp: u16,
 
     pub cycles: usize,
-    memory_bus: MemoryBus,
+    bus: MemoryBus,
 }
 
 impl Cpu {
-    pub fn new(memory_bus: MemoryBus) -> Cpu {
+    pub fn new(bus: MemoryBus) -> Cpu {
         Cpu {
             a: 0x00,
             f: 0x00,
@@ -75,7 +46,7 @@ impl Cpu {
             sp: 0x0000,
 
             cycles: 0,
-            memory_bus,
+            bus,
         }
     }
 
@@ -114,7 +85,8 @@ impl Cpu {
         // and run and disassemble it with the same instruction, with the same args
         // this way I can implement better error handling
         let effect = match opcode {
-            0x00 => todo!("NOP"),                                        // NOP
+            0x00 => todo!("NOP"), // NOP
+            /*
             0x40 => return Err(InstructionError::NoOp(opcode, self.pc)), // LD B,B
             0x41 => ld_r8_r8(&mut self.b, self.c),                       // LD B,C
             0x42 => ld_r8_r8(&mut self.b, self.d),                       // LD B,D
@@ -123,7 +95,7 @@ impl Cpu {
             0x45 => ld_r8_r8(&mut self.b, self.l),                       // LD B,L
             0x46 => {
                 let addr = self.get_hl();
-                let value = self.memory_bus.borrow()[addr];
+                let value = self.bus.borrow()[addr];
                 ld_r8_hl(&mut self.b, value)
             } // LD B,(HL)
             0x47 => ld_r8_r8(&mut self.b, self.a),                       // LD B,A
@@ -135,7 +107,7 @@ impl Cpu {
             0x4D => ld_r8_r8(&mut self.c, self.l),                       // LD C,L
             0x4E => {
                 let addr = self.get_hl();
-                let value = self.memory_bus.borrow()[addr];
+                let value = self.bus.borrow()[addr];
                 ld_r8_hl(&mut self.c, value)
             } // LD C,(HL)
             0x4F => ld_r8_r8(&mut self.c, self.a),                       // LD C,A
@@ -147,7 +119,7 @@ impl Cpu {
             0x55 => ld_r8_r8(&mut self.d, self.l),                       // LD D,L
             0x56 => {
                 let addr = self.get_hl();
-                let value = self.memory_bus.borrow()[addr];
+                let value = self.bus.borrow()[addr];
                 ld_r8_hl(&mut self.d, value)
             } // LD D,(HL)
             0x57 => ld_r8_r8(&mut self.d, self.a),                       // LD D,A
@@ -159,7 +131,7 @@ impl Cpu {
             0x5D => ld_r8_r8(&mut self.e, self.l),                       // LD E,L
             0x5E => {
                 let addr = self.get_hl();
-                let value = self.memory_bus.borrow()[addr];
+                let value = self.bus.borrow()[addr];
                 ld_r8_hl(&mut self.e, value)
             } // LD E,(HL)
             0x5F => ld_r8_r8(&mut self.e, self.a),                       // LD E,A
@@ -171,7 +143,7 @@ impl Cpu {
             0x65 => ld_r8_r8(&mut self.h, self.l),                       // LD H,L
             0x66 => {
                 let addr = self.get_hl();
-                let value = self.memory_bus.borrow()[addr];
+                let value = self.bus.borrow()[addr];
                 ld_r8_hl(&mut self.h, value)
             } // LD H,(HL)
             0x67 => ld_r8_r8(&mut self.h, self.a),                       // LD H,A
@@ -183,18 +155,18 @@ impl Cpu {
             0x6D => return Err(InstructionError::NoOp(opcode, self.pc)), // LD L,L
             0x6E => {
                 let addr = self.get_hl();
-                let value = self.memory_bus.borrow()[addr];
+                let value = self.bus.borrow()[addr];
                 ld_r8_hl(&mut self.l, value)
             } // LD L,(HL)
             0x6F => ld_r8_r8(&mut self.l, self.a),                       // LD L,A
-            0x70 => ld_hl_r8(&mut self.memory_bus.borrow_mut()[self.get_hl()], self.a), // LD (HL),B
-            0x71 => ld_hl_r8(&mut self.memory_bus.borrow_mut()[self.get_hl()], self.c), // LD (HL),C
-            0x72 => ld_hl_r8(&mut self.memory_bus.borrow_mut()[self.get_hl()], self.d), // LD (HL),D
-            0x73 => ld_hl_r8(&mut self.memory_bus.borrow_mut()[self.get_hl()], self.e), // LD (HL),E
-            0x74 => ld_hl_r8(&mut self.memory_bus.borrow_mut()[self.get_hl()], self.h), // LD (HL
-            0x75 => ld_hl_r8(&mut self.memory_bus.borrow_mut()[self.get_hl()], self.l), // LD (HL),L
+            0x70 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.a), // LD (HL),B
+            0x71 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.c), // LD (HL),C
+            0x72 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.d), // LD (HL),D
+            0x73 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.e), // LD (HL),E
+            0x74 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.h), // LD (HL
+            0x75 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.l), // LD (HL),L
             0x76 => return Err(InstructionError::NotImplemented(opcode, self.pc)), // HALT
-            0x77 => ld_hl_r8(&mut self.memory_bus.borrow_mut()[self.get_hl()], self.a), // LD (HL),A
+            0x77 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.a), // LD (HL),A
             0x78 => ld_r8_r8(&mut self.a, self.b),                       // LD A,B
             0x79 => ld_r8_r8(&mut self.a, self.c),                       // LD A,C
             0x7A => ld_r8_r8(&mut self.a, self.d),                       // LD A,D
@@ -203,38 +175,36 @@ impl Cpu {
             0x7D => ld_r8_r8(&mut self.a, self.l),                       // LD A,L
             // 0x7E => {
             //     let addr = self.get_hl();
-            //     ld_r8_hl(&mut self.a, self.memory_bus.borrow()[addr])
+            //     ld_r8_hl(&mut self.a, self.bus.borrow()[addr])
             // } // LD A,(HL)
             // 0x7F => return Err(InstructionError::NoOp(opcode, self.pc)), // LD A,A
             // 0xE0 => LDH::exec(
-            //     IT::DstPointedByN16(&mut self.memory_bus.borrow_mut()[self.pc + 1], self.pc + 1),
+            //     IT::DstPointedByN16(&mut self.bus.borrow_mut()[self.pc + 1], self.pc + 1),
             //     IT::RegisterA(self.a),
             // )?, // LDH [n16],A
             // 0xE2 => LDH::exec(
             //     IT::DstPointedByCPlusFF00(
-            //         &mut self.memory_bus.borrow_mut()[0xFF00 + self.c as u16],
+            //         &mut self.bus.borrow_mut()[0xFF00 + self.c as u16],
             //         self.c as u16,
             //     ),
             //     IT::RegisterA(self.a),
             // )?, // LDH [C],A
             // 0xF0 => LDH::exec(
             //     IT::DstRegisterA(&mut self.a),
-            //     IT::PointedByN16(self.memory_bus.borrow()[self.pc + 1], self.pc + 1),
+            //     IT::PointedByN16(self.bus.borrow()[self.pc + 1], self.pc + 1),
             // )?, // LDH A,[n16]
             // 0xF2 => LDH::exec(
             //     IT::DstRegisterA(&mut self.a),
             //     IT::PointedByCPlusFF00(
-            //         self.memory_bus.borrow()[0xFF00 + self.c as u16],
+            //         self.bus.borrow()[0xFF00 + self.c as u16],
             //         self.c as u16,
             //     ),
             // )?, // LDH A,[C]
+            */
             0xF2 => {
                 let mut instr = LDH::new(
-                    IT::DstRegisterA(&mut self.a),
-                    IT::PointedByCPlusFF00(
-                        self.memory_bus.borrow()[0xFF00 + self.c as u16],
-                        self.c as u16,
-                    ),
+                    IT::DstRegister8(&mut self.a, Register8::A),
+                    IT::PointedByCPlusFF00(self.bus.borrow()[0xFF00 + self.c as u16], self.c as u16),
                 );
 
                 instr.exec()?

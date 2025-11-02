@@ -13,6 +13,4 @@ pub fn check_carry(result: u8, old: u8) -> u8 {
         0
     }
 }
-pub fn check_half_carry(result: u8, old: u8) -> u8 {
-    if result < old { CARRY_FLAG_MASK } else { 0 }
-}
+pub fn check_half_carry(result: u8, old: u8) -> u8 { if result < old { CARRY_FLAG_MASK } else { 0 } }

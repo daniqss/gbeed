@@ -8,7 +8,7 @@ pub use adc::*;
 pub use ld::*;
 pub use ldh::*;
 
-use crate::core::cpu::Register8;
+use crate::core::cpu::{Register8 as R8, Register16 as R16};
 
 /// Represents a CPU instruction
 /// The instruction can be executed and can provide its disassembly representation
@@ -23,33 +23,64 @@ impl Display for dyn Instruction<'_> {
 
 /// Instructions possible operands and targets
 /// Only used when various operand types are possible for the same instruction
+/// maybe we should remove non Dst variants, use always references an use it as mutable or not depending on the context
 #[derive(Debug, PartialEq)]
 pub enum InstructionTarget<'a> {
-    Immediate(u8),
-    Register(u8, Register8),
+    Immediate8(u8),
+    Immediate16(u16),
+    Register8(u8, R8),
+    Register16((u8, u8), R16),
     PointedByHL(u8),
     PointedByN16(u8, u16),
     PointedByCPlusFF00(u8, u16),
+    PointedByRegister16(u8, R16),
+    PointedByHLI(u8, (&'a mut u8, &'a mut u8)),
+    PointedByHLD(u8, (&'a mut u8, &'a mut u8)),
+    StackPointer(u16),
+    StackPointerPlusE8(u16, i8),
 
     // Destination for load instructions
+    DstPointedByHL(&'a mut u8),
     DstPointedByN16(&'a mut u8, u16),
+    DstPointedByN16AndNext((&'a mut u8, &'a mut u8), u16),
     DstPointedByCPlusFF00(&'a mut u8, u16),
-    DstRegisterA(&'a mut u8),
+    DstRegister8(&'a mut u8, R8),
+    DstRegister16((&'a mut u8, &'a mut u8), R16),
+    DstPointedByRegister16(&'a mut u8, R16),
+    DstPointedByHLI(&'a mut u8, (&'a mut u8, &'a mut u8)),
+    DstPointedByHLD(&'a mut u8, (&'a mut u8, &'a mut u8)),
+    DstStackPointer(&'a mut u16),
 }
 
 impl Display for InstructionTarget<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InstructionTarget::Immediate(n8) => write!(f, "${:02X}", n8),
-            InstructionTarget::Register(_, reg) => write!(f, "{}", reg),
+            InstructionTarget::Immediate8(n8) => write!(f, "${:02X}", n8),
+            InstructionTarget::Immediate16(n16) => write!(f, "${:04X}", n16),
+            InstructionTarget::Register8(_, reg) => write!(f, "{}", reg),
+            InstructionTarget::Register16(_, reg) => write!(f, "{}", reg),
             InstructionTarget::PointedByHL(_) => write!(f, "[hl]"),
             InstructionTarget::PointedByN16(_, address) => write!(f, "[${:04X}]", address),
             InstructionTarget::PointedByCPlusFF00(_, address) => write!(f, "[${:04X}]", address),
+            InstructionTarget::PointedByRegister16(_, reg) => write!(f, "[{}]", reg),
+            InstructionTarget::PointedByHLI(_, _) => write!(f, "[hli]"),
+            InstructionTarget::PointedByHLD(_, _) => write!(f, "[hld]"),
+            InstructionTarget::StackPointer(_) => write!(f, "sp"),
+            InstructionTarget::StackPointerPlusE8(_, e8) => write!(f, "sp+{:+}", e8),
+            InstructionTarget::DstPointedByHL(_) => write!(f, "[hl]"),
             InstructionTarget::DstPointedByN16(_, address) => write!(f, "[${:04X}]", address),
+            InstructionTarget::DstPointedByN16AndNext(_, address) => {
+                write!(f, "[${:04X}]", address)
+            }
             InstructionTarget::DstPointedByCPlusFF00(_, address) => {
                 write!(f, "[${:04X}]", address)
             }
-            InstructionTarget::DstRegisterA(_) => write!(f, "a"),
+            InstructionTarget::DstRegister8(_, reg) => write!(f, "{}", reg),
+            InstructionTarget::DstRegister16(_, reg) => write!(f, "{}", reg),
+            InstructionTarget::DstPointedByRegister16(_, reg) => write!(f, "[{}]", reg),
+            InstructionTarget::DstPointedByHLI(_, _) => write!(f, "[hli]"),
+            InstructionTarget::DstPointedByHLD(_, _) => write!(f, "[hld]"),
+            InstructionTarget::DstStackPointer(_) => write!(f, "sp"),
         }
     }
 }
