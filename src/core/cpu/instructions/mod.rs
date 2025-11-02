@@ -8,9 +8,9 @@ pub use adc::*;
 pub use ld::*;
 pub use ldh::*;
 
-use crate::core::cpu::{Register8 as R8, Register16 as R16};
+use crate::core::cpu::{R8, R16};
 
-/// Represents a CPU instruction
+/// Represents a CPU instruction.
 /// The instruction can be executed and can provide its disassembly representation
 pub trait Instruction<'a> {
     fn exec(&mut self) -> InstructionResult;
@@ -21,8 +21,8 @@ impl Display for dyn Instruction<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { self.disassembly(f) }
 }
 
-/// Instructions possible operands and targets
-/// Only used when various operand types are possible for the same instruction
+/// Instructions possible operands and targets.
+/// Only used when various operand types are possible for the same instruction.
 /// maybe we should remove non Dst variants, use always references an use it as mutable or not depending on the context
 #[derive(Debug, PartialEq)]
 pub enum InstructionTarget<'a> {

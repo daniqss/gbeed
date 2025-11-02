@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use super::InstructionTarget as IT;
 use crate::core::cpu::{
-    Register8 as R8,
+    R8,
     flags::{CARRY_FLAG_MASK, check_carry, check_half_carry, check_zero},
     instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
 };
@@ -16,7 +16,7 @@ pub struct ADC<'a> {
 }
 
 impl<'a> ADC<'a> {
-    pub fn new(a: &'a mut u8, f: &'a mut u8, addend: IT<'a>) -> Self { ADC { a, f, addend } }
+    pub fn new(a: &'a mut u8, f: &'a mut u8, addend: IT<'a>) -> Box<Self> { Box::new(ADC { a, f, addend }) }
 }
 
 impl<'a> Instruction<'a> for ADC<'a> {

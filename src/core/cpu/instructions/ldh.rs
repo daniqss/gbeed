@@ -4,7 +4,7 @@ use super::{
     InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
 };
 use crate::core::{
-    cpu::{Register8 as R8, instructions::Instruction},
+    cpu::{R8, instructions::Instruction},
     memory::is_high_address,
 };
 
@@ -17,7 +17,7 @@ pub struct LDH<'a> {
 }
 
 impl<'a> LDH<'a> {
-    pub fn new(dst: ID<'a>, src: IT<'a>) -> Self { Self { dst, src } }
+    pub fn new(dst: ID<'a>, src: IT<'a>) -> Box<Self> { Box::new(Self { dst, src }) }
 }
 
 impl<'a> Instruction<'a> for LDH<'a> {

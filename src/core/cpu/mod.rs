@@ -2,9 +2,12 @@ mod flags;
 mod instructions;
 mod registers;
 
-use crate::core::memory::MemoryBus;
+use crate::{
+    core::memory::{IO_REGISTERS_START, MemoryBus},
+    utils::to_u16,
+};
 use instructions::{InstructionDestination as ID, InstructionTarget as IT, *};
-use registers::{Register8, Register16};
+use registers::{Register8 as R8, Register16 as R16};
 use std::fmt::{self, Display, Formatter};
 
 /// # CPU
@@ -47,6 +50,8 @@ impl Cpu {
         }
     }
 
+    pub fn get_hl(&self) -> u16 { to_u16(self.h, self.l) }
+
     pub fn reset(&mut self) {
         self.a = 0x00;
         self.f = 0x00;
@@ -61,143 +66,121 @@ impl Cpu {
         self.cycles = 0;
     }
 
-    /// execute instruction based on the opcode
-    /// return a result with the effect of the instruction or an instruction error (e.g unused opcode)
+    /// Execute instruction based on the opcode.
+    /// Return a result with the effect of the instruction or an instruction error (e.g unused opcode)
     pub fn exec(&mut self, opcode: u8) -> InstructionResult {
-        // maybe I should create a instruction struct, and then run it
-        // (trait Instruction), this way I could pattern match the instruction one time
-        // and run and disassemble it with the same instruction, with the same args
-        // this way I can implement better error handling
-        let effect = match opcode {
-            0x00 => todo!("NOP"), // NOP
-            /*
-            0x40 => return Err(InstructionError::NoOp(opcode, self.pc)), // LD B,B
-            0x41 => ld_r8_r8(&mut self.b, self.c),                       // LD B,C
-            0x42 => ld_r8_r8(&mut self.b, self.d),                       // LD B,D
-            0x43 => ld_r8_r8(&mut self.b, self.e),                       // LD B,E
-            0x44 => ld_r8_r8(&mut self.b, self.h),                       // LD B,H
-            0x45 => ld_r8_r8(&mut self.b, self.l),                       // LD B,L
+        let mut bus = self.bus.borrow_mut();
+
+        let mut instruction: Box<dyn Instruction> = match opcode {
+            0x00 => todo!("NOP"),
+            0x40 => return Err(InstructionError::NoOp(opcode, self.pc)),
+            0x41 => LD::new(ID::Register8(&mut self.b, R8::B), IT::Register8(self.c, R8::C)),
+            0x42 => LD::new(ID::Register8(&mut self.b, R8::B), IT::Register8(self.d, R8::D)),
+            0x43 => LD::new(ID::Register8(&mut self.b, R8::B), IT::Register8(self.e, R8::E)),
+            0x44 => LD::new(ID::Register8(&mut self.b, R8::B), IT::Register8(self.h, R8::H)),
+            0x45 => LD::new(ID::Register8(&mut self.b, R8::B), IT::Register8(self.l, R8::L)),
             0x46 => {
                 let addr = self.get_hl();
-                let value = self.bus.borrow()[addr];
-                ld_r8_hl(&mut self.b, value)
-            } // LD B,(HL)
-            0x47 => ld_r8_r8(&mut self.b, self.a),                       // LD B,A
-            0x48 => ld_r8_r8(&mut self.c, self.b),                       // LD C,B
-            0x49 => return Err(InstructionError::NoOp(opcode, self.pc)), // LD C,C
-            0x4A => ld_r8_r8(&mut self.c, self.d),                       // LD C,D
-            0x4B => ld_r8_r8(&mut self.c, self.e),                       // LD C,E
-            0x4C => ld_r8_r8(&mut self.c, self.h),                       // LD C,H
-            0x4D => ld_r8_r8(&mut self.c, self.l),                       // LD C,L
+                LD::new(ID::Register8(&mut self.b, R8::B), IT::PointedByHL(bus[addr]))
+            }
+            0x47 => LD::new(ID::Register8(&mut self.b, R8::B), IT::Register8(self.a, R8::A)),
+            0x48 => LD::new(ID::Register8(&mut self.c, R8::C), IT::Register8(self.b, R8::B)),
+            0x49 => return Err(InstructionError::NoOp(opcode, self.pc)),
+            0x4A => LD::new(ID::Register8(&mut self.c, R8::C), IT::Register8(self.d, R8::D)),
+            0x4B => LD::new(ID::Register8(&mut self.c, R8::C), IT::Register8(self.e, R8::E)),
+            0x4C => LD::new(ID::Register8(&mut self.c, R8::C), IT::Register8(self.h, R8::H)),
+            0x4D => LD::new(ID::Register8(&mut self.c, R8::C), IT::Register8(self.l, R8::L)),
             0x4E => {
                 let addr = self.get_hl();
-                let value = self.bus.borrow()[addr];
-                ld_r8_hl(&mut self.c, value)
-            } // LD C,(HL)
-            0x4F => ld_r8_r8(&mut self.c, self.a),                       // LD C,A
-            0x50 => ld_r8_r8(&mut self.d, self.b),                       // LD D,B
-            0x51 => ld_r8_r8(&mut self.d, self.c),                       // LD D,C
-            0x52 => return Err(InstructionError::NoOp(opcode, self.pc)), // LD D,D
-            0x53 => ld_r8_r8(&mut self.d, self.e),                       // LD D,E
-            0x54 => ld_r8_r8(&mut self.d, self.h),                       // LD D,H
-            0x55 => ld_r8_r8(&mut self.d, self.l),                       // LD D,L
+                LD::new(ID::Register8(&mut self.c, R8::C), IT::PointedByHL(bus[addr]))
+            }
+            0x4F => LD::new(ID::Register8(&mut self.c, R8::C), IT::Register8(self.a, R8::A)),
+            0x50 => LD::new(ID::Register8(&mut self.d, R8::D), IT::Register8(self.b, R8::B)),
+            0x51 => LD::new(ID::Register8(&mut self.d, R8::D), IT::Register8(self.c, R8::C)),
+            0x52 => return Err(InstructionError::NoOp(opcode, self.pc)),
+            0x53 => LD::new(ID::Register8(&mut self.d, R8::D), IT::Register8(self.e, R8::E)),
+            0x54 => LD::new(ID::Register8(&mut self.d, R8::D), IT::Register8(self.h, R8::H)),
+            0x55 => LD::new(ID::Register8(&mut self.d, R8::D), IT::Register8(self.l, R8::L)),
             0x56 => {
                 let addr = self.get_hl();
-                let value = self.bus.borrow()[addr];
-                ld_r8_hl(&mut self.d, value)
-            } // LD D,(HL)
-            0x57 => ld_r8_r8(&mut self.d, self.a),                       // LD D,A
-            0x58 => ld_r8_r8(&mut self.e, self.b),                       // LD E,B
-            0x59 => ld_r8_r8(&mut self.e, self.c),                       // LD E,C
-            0x5A => ld_r8_r8(&mut self.e, self.d),                       // LD E,D
-            0x5B => return Err(InstructionError::NoOp(opcode, self.pc)), // LD E,E
-            0x5C => ld_r8_r8(&mut self.e, self.h),                       // LD E,H
-            0x5D => ld_r8_r8(&mut self.e, self.l),                       // LD E,L
+                LD::new(ID::Register8(&mut self.d, R8::D), IT::PointedByHL(bus[addr]))
+            }
+            0x57 => LD::new(ID::Register8(&mut self.d, R8::D), IT::Register8(self.a, R8::A)),
+            0x58 => LD::new(ID::Register8(&mut self.e, R8::E), IT::Register8(self.b, R8::B)),
+            0x59 => LD::new(ID::Register8(&mut self.e, R8::E), IT::Register8(self.c, R8::C)),
+            0x5A => LD::new(ID::Register8(&mut self.e, R8::E), IT::Register8(self.d, R8::D)),
+            0x5B => return Err(InstructionError::NoOp(opcode, self.pc)),
+            0x5C => LD::new(ID::Register8(&mut self.e, R8::E), IT::Register8(self.h, R8::H)),
+            0x5D => LD::new(ID::Register8(&mut self.e, R8::E), IT::Register8(self.l, R8::L)),
             0x5E => {
                 let addr = self.get_hl();
-                let value = self.bus.borrow()[addr];
-                ld_r8_hl(&mut self.e, value)
-            } // LD E,(HL)
-            0x5F => ld_r8_r8(&mut self.e, self.a),                       // LD E,A
-            0x60 => ld_r8_r8(&mut self.h, self.b),                       // LD H,B
-            0x61 => ld_r8_r8(&mut self.h, self.c),                       // LD H,C
-            0x62 => ld_r8_r8(&mut self.h, self.d),                       // LD H,D
-            0x63 => ld_r8_r8(&mut self.h, self.e),                       // LD H,E
-            0x64 => return Err(InstructionError::NoOp(opcode, self.pc)), // LD H,H
-            0x65 => ld_r8_r8(&mut self.h, self.l),                       // LD H,L
+                LD::new(ID::Register8(&mut self.e, R8::E), IT::PointedByHL(bus[addr]))
+            }
+            0x5F => LD::new(ID::Register8(&mut self.e, R8::E), IT::Register8(self.a, R8::A)),
+            0x60 => LD::new(ID::Register8(&mut self.h, R8::H), IT::Register8(self.b, R8::B)),
+            0x61 => LD::new(ID::Register8(&mut self.h, R8::H), IT::Register8(self.c, R8::C)),
+            0x62 => LD::new(ID::Register8(&mut self.h, R8::H), IT::Register8(self.d, R8::D)),
+            0x63 => LD::new(ID::Register8(&mut self.h, R8::H), IT::Register8(self.e, R8::E)),
+            0x64 => return Err(InstructionError::NoOp(opcode, self.pc)),
+            0x65 => LD::new(ID::Register8(&mut self.h, R8::H), IT::Register8(self.l, R8::L)),
             0x66 => {
                 let addr = self.get_hl();
                 let value = self.bus.borrow()[addr];
-                ld_r8_hl(&mut self.h, value)
-            } // LD H,(HL)
-            0x67 => ld_r8_r8(&mut self.h, self.a),                       // LD H,A
-            0x68 => ld_r8_r8(&mut self.l, self.b),                       // LD L,B
-            0x69 => ld_r8_r8(&mut self.l, self.c),                       // LD L,C
-            0x6A => ld_r8_r8(&mut self.l, self.d),                       // LD L,D
-            0x6B => ld_r8_r8(&mut self.l, self.e),                       // LD L,E
-            0x6C => ld_r8_r8(&mut self.l, self.h),                       // LD L,H
-            0x6D => return Err(InstructionError::NoOp(opcode, self.pc)), // LD L,L
+                LD::new(ID::Register8(&mut self.h, R8::H), IT::PointedByHL(value))
+            }
+            0x67 => LD::new(ID::Register8(&mut self.h, R8::H), IT::Register8(self.a, R8::A)),
+            0x68 => LD::new(ID::Register8(&mut self.l, R8::L), IT::Register8(self.b, R8::B)),
+            0x69 => LD::new(ID::Register8(&mut self.l, R8::L), IT::Register8(self.c, R8::C)),
+            0x6A => LD::new(ID::Register8(&mut self.l, R8::L), IT::Register8(self.d, R8::D)),
+            0x6B => LD::new(ID::Register8(&mut self.l, R8::L), IT::Register8(self.e, R8::E)),
+            0x6C => LD::new(ID::Register8(&mut self.l, R8::L), IT::Register8(self.h, R8::H)),
+            0x6D => return Err(InstructionError::NoOp(opcode, self.pc)),
             0x6E => {
                 let addr = self.get_hl();
                 let value = self.bus.borrow()[addr];
-                ld_r8_hl(&mut self.l, value)
-            } // LD L,(HL)
-            0x6F => ld_r8_r8(&mut self.l, self.a),                       // LD L,A
-            0x70 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.a), // LD (HL),B
-            0x71 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.c), // LD (HL),C
-            0x72 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.d), // LD (HL),D
-            0x73 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.e), // LD (HL),E
-            0x74 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.h), // LD (HL
-            0x75 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.l), // LD (HL),L
-            0x76 => return Err(InstructionError::NotImplemented(opcode, self.pc)), // HALT
-            0x77 => ld_hl_r8(&mut self.bus.borrow_mut()[self.get_hl()], self.a), // LD (HL),A
-            0x78 => ld_r8_r8(&mut self.a, self.b),                       // LD A,B
-            0x79 => ld_r8_r8(&mut self.a, self.c),                       // LD A,C
-            0x7A => ld_r8_r8(&mut self.a, self.d),                       // LD A,D
-            0x7B => ld_r8_r8(&mut self.a, self.e),                       // LD A,E
-            0x7C => ld_r8_r8(&mut self.a, self.h),                       // LD A,H
-            0x7D => ld_r8_r8(&mut self.a, self.l),                       // LD A,L
-            // 0x7E => {
-            //     let addr = self.get_hl();
-            //     ld_r8_hl(&mut self.a, self.bus.borrow()[addr])
-            // } // LD A,(HL)
-            // 0x7F => return Err(InstructionError::NoOp(opcode, self.pc)), // LD A,A
-            // 0xE0 => LDH::exec(
-            //     IT::DstPointedByN16(&mut self.bus.borrow_mut()[self.pc + 1], self.pc + 1),
-            //     IT::RegisterA(self.a),
-            // )?, // LDH [n16],A
-            // 0xE2 => LDH::exec(
-            //     IT::DstPointedByCPlusFF00(
-            //         &mut self.bus.borrow_mut()[0xFF00 + self.c as u16],
-            //         self.c as u16,
-            //     ),
-            //     IT::RegisterA(self.a),
-            // )?, // LDH [C],A
-            // 0xF0 => LDH::exec(
-            //     IT::DstRegisterA(&mut self.a),
-            //     IT::PointedByN16(self.bus.borrow()[self.pc + 1], self.pc + 1),
-            // )?, // LDH A,[n16]
-            // 0xF2 => LDH::exec(
-            //     IT::DstRegisterA(&mut self.a),
-            //     IT::PointedByCPlusFF00(
-            //         self.bus.borrow()[0xFF00 + self.c as u16],
-            //         self.c as u16,
-            //     ),
-            // )?, // LDH A,[C]
-            */
-            0xF2 => {
-                let mut instr = LDH::new(
-                    ID::Register8(&mut self.a, Register8::A),
-                    IT::PointedByCPlusFF00(self.bus.borrow()[0xFF00 + self.c as u16], self.c as u16),
-                );
-
-                instr.exec()?
+                LD::new(ID::Register8(&mut self.l, R8::L), IT::PointedByHL(value))
             }
-
+            0x6F => LD::new(ID::Register8(&mut self.l, R8::L), IT::Register8(self.a, R8::A)),
+            0x70 => LD::new(ID::PointedByHL(&mut bus[self.get_hl()]), IT::Register8(self.b, R8::B)),
+            0x71 => LD::new(ID::PointedByHL(&mut bus[self.get_hl()]), IT::Register8(self.c, R8::C)),
+            0x72 => LD::new(ID::PointedByHL(&mut bus[self.get_hl()]), IT::Register8(self.d, R8::D)),
+            0x73 => LD::new(ID::PointedByHL(&mut bus[self.get_hl()]), IT::Register8(self.e, R8::E)),
+            0x74 => LD::new(ID::PointedByHL(&mut bus[self.get_hl()]), IT::Register8(self.h, R8::H)),
+            0x75 => LD::new(ID::PointedByHL(&mut bus[self.get_hl()]), IT::Register8(self.l, R8::L)),
+            0x76 => return Err(InstructionError::NotImplemented(opcode, self.pc)),
+            0x77 => LD::new(ID::PointedByHL(&mut bus[self.get_hl()]), IT::Register8(self.a, R8::A)),
+            0x78 => LD::new(ID::Register8(&mut self.a, R8::A), IT::Register8(self.b, R8::B)),
+            0x79 => LD::new(ID::Register8(&mut self.a, R8::A), IT::Register8(self.c, R8::C)),
+            0x7A => LD::new(ID::Register8(&mut self.a, R8::A), IT::Register8(self.d, R8::D)),
+            0x7B => LD::new(ID::Register8(&mut self.a, R8::A), IT::Register8(self.e, R8::E)),
+            0x7C => LD::new(ID::Register8(&mut self.a, R8::A), IT::Register8(self.h, R8::H)),
+            0x7D => LD::new(ID::Register8(&mut self.a, R8::A), IT::Register8(self.l, R8::L)),
+            0x7E => {
+                let addr = self.get_hl();
+                let value = self.bus.borrow()[addr];
+                LD::new(ID::Register8(&mut self.a, R8::A), IT::PointedByHL(value))
+            }
+            0x7F => return Err(InstructionError::NoOp(opcode, self.pc)),
+            0xE0 => LDH::new(
+                ID::PointedByN16(&mut bus[self.pc + 1], self.pc + 1),
+                IT::Register8(self.a, R8::A),
+            ),
+            0xE2 => LDH::new(
+                ID::PointedByCPlusFF00(&mut bus[IO_REGISTERS_START + self.c as u16], self.c as u16),
+                IT::Register8(self.a, R8::A),
+            ),
+            0xF0 => LDH::new(
+                ID::Register8(&mut self.a, R8::A),
+                IT::PointedByN16(bus[self.pc + 1], self.pc + 1),
+            ),
+            0xF2 => LDH::new(
+                ID::Register8(&mut self.a, R8::A),
+                IT::PointedByCPlusFF00(bus[IO_REGISTERS_START + self.c as u16], self.c as u16),
+            ),
             _ => return Err(InstructionError::NotImplemented(opcode, self.pc)),
         };
 
-        Ok(effect)
+        instruction.exec()
     }
 }
 
