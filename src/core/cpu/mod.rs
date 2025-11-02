@@ -2,11 +2,8 @@ mod flags;
 mod instructions;
 mod registers;
 
-use crate::{
-    core::memory::MemoryBus,
-    prelude::utils::{to_u8, to_u16},
-};
-use instructions::{InstructionTarget as IT, *};
+use crate::core::memory::MemoryBus;
+use instructions::{InstructionDestination as ID, InstructionTarget as IT, *};
 use registers::{Register8, Register16};
 use std::fmt::{self, Display, Formatter};
 
@@ -63,19 +60,6 @@ impl Cpu {
         self.sp = 0x0000;
         self.cycles = 0;
     }
-
-    pub fn get_af(&self) -> u16 { to_u16(self.a, self.f) }
-    pub fn get_bc(&self) -> u16 { to_u16(self.b, self.c) }
-    pub fn get_de(&self) -> u16 { to_u16(self.d, self.e) }
-    pub fn get_hl(&self) -> u16 { to_u16(self.h, self.l) }
-
-    pub fn set_af(&mut self, value: u16) -> () { (self.a, self.f) = to_u8(value); }
-    pub fn set_bc(&mut self, value: u16) -> () { (self.b, self.c) = to_u8(value); }
-    pub fn set_de(&mut self, value: u16) -> () { (self.d, self.e) = to_u8(value); }
-    pub fn set_hl(&mut self, value: u16) -> () { (self.h, self.l) = to_u8(value); }
-
-    /// Flags are set if occurs a condition in the last math operation
-    pub fn set_flags(&mut self, operation_result: u8) -> () { self.f = operation_result; }
 
     /// execute instruction based on the opcode
     /// return a result with the effect of the instruction or an instruction error (e.g unused opcode)
@@ -203,7 +187,7 @@ impl Cpu {
             */
             0xF2 => {
                 let mut instr = LDH::new(
-                    IT::DstRegister8(&mut self.a, Register8::A),
+                    ID::Register8(&mut self.a, Register8::A),
                     IT::PointedByCPlusFF00(self.bus.borrow()[0xFF00 + self.c as u16], self.c as u16),
                 );
 
@@ -226,42 +210,3 @@ impl Display for Cpu {
         )
     }
 }
-
-// #[cfg(test)]
-// mod cpu_tests {
-//     use crate::core::memory::Memory;
-
-//     #[test]
-//     fn test_cpu() {
-//         let mut cpu = super::Cpu::new(Memory::new(None, None));
-//         let (af_value, bc_value, de_value, hl_value) = (0x1234, 0x5678, 0x9ABC, 0xDEF0);
-//         cpu.set_af(af_value);
-//         cpu.set_bc(bc_value);
-//         cpu.set_de(de_value);
-//         cpu.set_hl(hl_value);
-
-//         println!("{}", cpu);
-//         println!(
-//             "{:4X} {:4X} {:4x} {:4X}",
-//             af_value, bc_value, de_value, hl_value
-//         );
-
-//         assert_eq!(cpu.get_af(), af_value);
-//         assert_eq!(cpu.get_bc(), bc_value);
-//         assert_eq!(cpu.get_de(), de_value);
-//         assert_eq!(cpu.get_hl(), hl_value);
-
-//         cpu.reset();
-//         assert_eq!(cpu.a, 0x00);
-//         assert_eq!(cpu.f, 0x00);
-//         assert_eq!(cpu.b, 0x00);
-//         assert_eq!(cpu.c, 0x00);
-//         assert_eq!(cpu.d, 0x00);
-//         assert_eq!(cpu.e, 0x00);
-//         assert_eq!(cpu.h, 0x00);
-//         assert_eq!(cpu.l, 0x00);
-//         assert_eq!(cpu.pc, 0x0100);
-//         assert_eq!(cpu.sp, 0x0000);
-//         assert_eq!(cpu.cycles, 0);
-//     }
-// }

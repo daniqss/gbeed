@@ -1,6 +1,8 @@
 use std::fmt::Write;
 
-use super::{InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT};
+use super::{
+    InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+};
 use crate::core::{
     cpu::{Register8 as R8, instructions::Instruction},
     memory::is_high_address,
@@ -10,31 +12,31 @@ use crate::core::{
 /// Usually used to access memory mapped IO and HRAM,
 /// so the used addresses are between 0xFF00 and 0xFFFF
 pub struct LDH<'a> {
-    dst: IT<'a>,
+    dst: ID<'a>,
     src: IT<'a>,
 }
 
 impl<'a> LDH<'a> {
-    pub fn new(dst: IT<'a>, src: IT<'a>) -> Self { Self { dst, src } }
+    pub fn new(dst: ID<'a>, src: IT<'a>) -> Self { Self { dst, src } }
 }
 
 impl<'a> Instruction<'a> for LDH<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (dst, src, address, cycles, len): (&mut u8, u8, Option<u16>, u8, u8) = match (&mut self.dst, &self.src) {
             // copy the src value in register A to the byte at 16 bits immediate address (that must be between 0xFF00 and 0xFFFF)
-            (IT::DstPointedByN16(dst, address), IT::Register8(src, reg)) if *reg == R8::A => {
+            (ID::PointedByN16(dst, address), IT::Register8(src, reg)) if *reg == R8::A => {
                 (*dst, *src, Some(*address), 3, 2)
             }
             // copy the src value in register A to the byte at address 0xFF00 + value in register C
-            (IT::DstPointedByCPlusFF00(dst, address), IT::Register8(src, reg)) if *reg == R8::A => {
+            (ID::PointedByCPlusFF00(dst, address), IT::Register8(src, reg)) if *reg == R8::A => {
                 (*dst, *src, Some(*address), 2, 1)
             }
             // copy the src byte addressed by 16 bits immediate (that must be between 0xFF00 and 0xFFFF) into dst register A
-            (IT::DstRegister8(dst, reg), IT::PointedByN16(src, address)) if *reg == R8::A => {
+            (ID::Register8(dst, reg), IT::PointedByN16(src, address)) if *reg == R8::A => {
                 (*dst, *src, Some(*address), 3, 2)
             }
             // copy the src byte addressed by 0xFF00 + C into dst register A
-            (IT::DstRegister8(dst, reg), IT::PointedByCPlusFF00(src, address)) if *reg == R8::A => {
+            (ID::Register8(dst, reg), IT::PointedByCPlusFF00(src, address)) if *reg == R8::A => {
                 (*dst, *src, Some(*address), 2, 1)
             }
 

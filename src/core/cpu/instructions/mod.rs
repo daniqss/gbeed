@@ -38,18 +38,6 @@ pub enum InstructionTarget<'a> {
     PointedByHLD(u8, (&'a mut u8, &'a mut u8)),
     StackPointer(u16),
     StackPointerPlusE8(u16, i8),
-
-    // Destination for load instructions
-    DstPointedByHL(&'a mut u8),
-    DstPointedByN16(&'a mut u8, u16),
-    DstPointedByN16AndNext((&'a mut u8, &'a mut u8), u16),
-    DstPointedByCPlusFF00(&'a mut u8, u16),
-    DstRegister8(&'a mut u8, R8),
-    DstRegister16((&'a mut u8, &'a mut u8), R16),
-    DstPointedByRegister16(&'a mut u8, R16),
-    DstPointedByHLI(&'a mut u8, (&'a mut u8, &'a mut u8)),
-    DstPointedByHLD(&'a mut u8, (&'a mut u8, &'a mut u8)),
-    DstStackPointer(&'a mut u16),
 }
 
 impl Display for InstructionTarget<'_> {
@@ -67,20 +55,39 @@ impl Display for InstructionTarget<'_> {
             InstructionTarget::PointedByHLD(_, _) => write!(f, "[hld]"),
             InstructionTarget::StackPointer(_) => write!(f, "sp"),
             InstructionTarget::StackPointerPlusE8(_, e8) => write!(f, "sp+{:+}", e8),
-            InstructionTarget::DstPointedByHL(_) => write!(f, "[hl]"),
-            InstructionTarget::DstPointedByN16(_, address) => write!(f, "[${:04X}]", address),
-            InstructionTarget::DstPointedByN16AndNext(_, address) => {
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum InstructionDestination<'a> {
+    PointedByHL(&'a mut u8),
+    PointedByN16(&'a mut u8, u16),
+    PointedByN16AndNext((&'a mut u8, &'a mut u8), u16),
+    PointedByCPlusFF00(&'a mut u8, u16),
+    Register8(&'a mut u8, R8),
+    Register16((&'a mut u8, &'a mut u8), R16),
+    PointedByRegister16(&'a mut u8, R16),
+    PointedByHLI(&'a mut u8, (&'a mut u8, &'a mut u8)),
+    PointedByHLD(&'a mut u8, (&'a mut u8, &'a mut u8)),
+    StackPointer(&'a mut u16),
+}
+
+impl Display for InstructionDestination<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InstructionDestination::PointedByHL(_) => write!(f, "[hl]"),
+            InstructionDestination::PointedByN16(_, address) => write!(f, "[${:04X}]", address),
+            InstructionDestination::PointedByN16AndNext(_, address)
+            | InstructionDestination::PointedByCPlusFF00(_, address) => {
                 write!(f, "[${:04X}]", address)
             }
-            InstructionTarget::DstPointedByCPlusFF00(_, address) => {
-                write!(f, "[${:04X}]", address)
-            }
-            InstructionTarget::DstRegister8(_, reg) => write!(f, "{}", reg),
-            InstructionTarget::DstRegister16(_, reg) => write!(f, "{}", reg),
-            InstructionTarget::DstPointedByRegister16(_, reg) => write!(f, "[{}]", reg),
-            InstructionTarget::DstPointedByHLI(_, _) => write!(f, "[hli]"),
-            InstructionTarget::DstPointedByHLD(_, _) => write!(f, "[hld]"),
-            InstructionTarget::DstStackPointer(_) => write!(f, "sp"),
+            InstructionDestination::Register8(_, reg) => write!(f, "{}", reg),
+            InstructionDestination::Register16(_, reg) => write!(f, "{}", reg),
+            InstructionDestination::PointedByRegister16(_, reg) => write!(f, "[{}]", reg),
+            InstructionDestination::PointedByHLI(_, _) => write!(f, "[hli]"),
+            InstructionDestination::PointedByHLD(_, _) => write!(f, "[hld]"),
+            InstructionDestination::StackPointer(_) => write!(f, "sp"),
         }
     }
 }
