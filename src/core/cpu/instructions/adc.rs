@@ -33,6 +33,7 @@ impl<'a> Instruction<'a> for ADC<'a> {
         let mut result = self.a.wrapping_add(*addend);
         result = result.wrapping_add(if (*self.f & CARRY_FLAG_MASK) != 0 { 1 } else { 0 });
         let flags = check_zero(result) | check_carry(result, *self.a) | check_half_carry(result, *self.a);
+        *self.a = result;
 
         Ok(InstructionEffect::new(len, cycles, Some(flags)))
     }

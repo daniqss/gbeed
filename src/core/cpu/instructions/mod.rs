@@ -1,16 +1,19 @@
 mod adc;
+mod add;
 mod ld;
 mod ldh;
+mod nop;
 
 use std::fmt::{Display, Write};
 
 pub use adc::*;
 pub use ld::*;
 pub use ldh::*;
+pub use nop::*;
 
 use crate::core::{
     cpu::{R8, R16},
-    memory::{Memory, MemoryBus},
+    memory::MemoryBus,
 };
 
 /// Represents a CPU instruction.
@@ -31,6 +34,7 @@ impl Display for dyn Instruction<'_> {
 pub enum InstructionTarget<'a> {
     Immediate8(u8),
     Immediate16(u16),
+    SignedImm(i8),
     Register8(u8, R8),
     Register16((u8, u8), R16),
     PointedByHL(u8),
@@ -48,6 +52,7 @@ impl Display for InstructionTarget<'_> {
         match self {
             InstructionTarget::Immediate8(n8) => write!(f, "${:02X}", n8),
             InstructionTarget::Immediate16(n16) => write!(f, "${:04X}", n16),
+            InstructionTarget::SignedImm(e8) => write!(f, "{:+}", e8),
             InstructionTarget::Register8(_, reg) => write!(f, "{}", reg),
             InstructionTarget::Register16(_, reg) => write!(f, "{}", reg),
             InstructionTarget::PointedByHL(_) => write!(f, "[hl]"),

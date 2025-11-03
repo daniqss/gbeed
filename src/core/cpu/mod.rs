@@ -70,7 +70,7 @@ impl Cpu {
     /// Return a result with the effect of the instruction or an instruction error (e.g unused opcode)
     pub fn fetch(&'_ mut self, opcode: u8) -> Result<Box<dyn Instruction<'_> + '_>, InstructionError> {
         let instruction: Box<dyn Instruction> = match opcode {
-            0x00 => return Err(InstructionError::NoOp(opcode, self.pc)),
+            0x00 => NOP::new(),
             0x40 => return Err(InstructionError::NoOp(opcode, self.pc)),
             0x41 => LD::new(ID::Register8(&mut self.b, R8::B), IT::Register8(self.c, R8::C)),
             0x42 => LD::new(ID::Register8(&mut self.b, R8::B), IT::Register8(self.d, R8::D)),

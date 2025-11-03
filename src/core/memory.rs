@@ -225,14 +225,14 @@ mod test {
 
     #[test]
     fn test_read_write_byte() {
-        let mut memory = Memory::new(None, None);
+        let memory = Memory::new(None, None);
         memory.borrow_mut()[0x1234] = 0x56;
         assert_eq!(memory.borrow()[0x1234], 0x56);
     }
 
     #[test]
     fn test_read_write_word() {
-        let mut memory = Memory::new(None, None);
+        let memory = Memory::new(None, None);
         memory.borrow_mut().write_word(0x1234, 0x5678);
         assert_eq!(memory.borrow().read_word(0x1234), 0x5678);
     }
