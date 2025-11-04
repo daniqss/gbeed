@@ -1,15 +1,24 @@
 mod adc;
 mod add;
+mod and;
+mod cpl;
 mod ld;
 mod ldh;
 mod nop;
+mod or;
+mod xor;
 
 use std::fmt::{Display, Write};
 
 pub use adc::*;
+pub use add::*;
+pub use and::*;
+pub use cpl::*;
 pub use ld::*;
 pub use ldh::*;
 pub use nop::*;
+pub use or::*;
+pub use xor::*;
 
 use crate::core::{
     cpu::{R8, R16},

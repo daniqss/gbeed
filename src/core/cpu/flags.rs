@@ -15,6 +15,7 @@ pub fn check_half_carry(result: u8, old: u8) -> u8 {
 }
 pub fn check_carry(result: u8, old: u8) -> u8 { if result < old { CARRY_FLAG_MASK } else { 0 } }
 
+// needs refactor by actually using instructions that return different flags
 #[cfg(test)]
 mod tests {
     use super::*;
