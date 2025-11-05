@@ -6,6 +6,9 @@ use crate::core::cpu::{
     instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT, sub},
 };
 
+/// Subtraction instruction
+/// Subtracts the value of the specified target from register A
+/// Always sets the subtraction flag, sets zero flag if result is zero, and sets half-carry and carry flags if there is a borrow in bits 4
 pub struct Sub<'a> {
     a: &'a mut u8,
     subtrahend: IT<'a>,
@@ -65,9 +68,10 @@ mod tests {
     fn test_sub_set_half_carry() {
         let mut a = 0b0001_0000;
         let subtrahend = IT::Register8(0b0000_0001, R8::B);
-        let mut instr = Sub::new(&mut a, subtrahend);
 
+        let mut instr = Sub::new(&mut a, subtrahend);
         let result = instr.exec().unwrap();
+
         assert_eq!(a, 0x0F);
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len, 1);
@@ -75,5 +79,21 @@ mod tests {
             result.flags.unwrap(),
             CARRY_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK
         );
+    }
+
+    #[test]
+    fn test_sub_set_carry() {
+        let mut a = 0x10;
+        let subtrahend = IT::PointedByHL(0x20);
+
+        let mut instr = Sub::new(&mut a, subtrahend);
+        let result = instr.exec().unwrap();
+
+        assert_eq!(a, 0xF0);
+        assert_eq!(result.cycles, 2);
+        assert_eq!(result.len, 1);
+        assert_eq!(result.flags.unwrap(), CARRY_FLAG_MASK | SUBTRACTION_FLAG_MASK);
+        assert_eq!(result.flags.unwrap() & ZERO_FLAG_MASK, 0);
+        assert_eq!(result.flags.unwrap() & HALF_CARRY_FLAG_MASK, 0);
     }
 }
