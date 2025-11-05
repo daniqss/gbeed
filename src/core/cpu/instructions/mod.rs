@@ -7,6 +7,7 @@ mod ldh;
 mod nop;
 mod or;
 mod sbc;
+mod sub;
 mod xor;
 
 use std::fmt::{Display, Write};
@@ -20,6 +21,7 @@ pub use ldh::*;
 pub use nop::*;
 pub use or::*;
 pub use sbc::*;
+pub use sub::*;
 pub use xor::*;
 
 use crate::core::{
