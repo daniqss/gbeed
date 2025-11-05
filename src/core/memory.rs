@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    ops::{Index, IndexMut, Range},
+    ops::{Index, IndexMut},
     rc::Rc,
 };
 

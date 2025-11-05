@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use crate::{
     core::cpu::{
-        flags::{check_carry, check_half_carry},
+        flags::{check_overflow_cy, check_overflow_hc},
         instructions::{
             Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
             InstructionTarget as IT,
@@ -100,7 +100,7 @@ impl<'a> Instruction<'a> for LD<'a> {
                 with_u16(dst.1, dst.0, |_| src);
 
                 // the carries are computed on the low byte only, not the full u16
-                let flags = check_half_carry(low(src), low(*sp)) | check_carry(low(src), low(*sp));
+                let flags = check_overflow_hc(low(src), low(*sp)) | check_overflow_cy(low(src), low(*sp));
 
                 return Ok(InstructionEffect::new(3, 2, Some(flags)));
             }

@@ -3,7 +3,7 @@ use std::fmt::Write;
 use super::InstructionTarget as IT;
 use crate::core::cpu::{
     R8,
-    flags::{CARRY_FLAG_MASK, check_carry, check_half_carry, check_zero},
+    flags::{CARRY_FLAG_MASK, check_overflow_cy, check_overflow_hc, check_zero},
     instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
 };
 
@@ -22,17 +22,20 @@ impl<'a> ADC<'a> {
 impl<'a> Instruction<'a> for ADC<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (addend, cycles, len) = match &self.addend {
-            IT::Register8(val, reg) if *reg != R8::F => (val, 1, 1),
-            IT::Immediate8(n8) => (n8, 2, 2),
-            IT::PointedByHL(value) => (value, 2, 1),
+            IT::Register8(val, reg) if *reg != R8::F => (*val, 1, 1),
+            IT::PointedByHL(value) => (*value, 2, 1),
+            IT::Immediate8(n8) => (*n8, 2, 2),
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
         // perform the addition
         // wrapping it prevent overflow panics in debug mode
-        let mut result = self.a.wrapping_add(*addend);
+        let mut result = self.a.wrapping_add(addend);
         result = result.wrapping_add(if (*self.f & CARRY_FLAG_MASK) != 0 { 1 } else { 0 });
-        let flags = check_zero(result) | check_carry(result, *self.a) | check_half_carry(result, *self.a);
+
+        // calculate flags
+        let flags = check_zero(result) | check_overflow_cy(result, *self.a) | check_overflow_hc(result, *self.a);
+
         *self.a = result;
 
         Ok(InstructionEffect::new(len, cycles, Some(flags)))

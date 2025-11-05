@@ -6,6 +6,7 @@ mod ld;
 mod ldh;
 mod nop;
 mod or;
+mod sbc;
 mod xor;
 
 use std::fmt::{Display, Write};
@@ -18,6 +19,7 @@ pub use ld::*;
 pub use ldh::*;
 pub use nop::*;
 pub use or::*;
+pub use sbc::*;
 pub use xor::*;
 
 use crate::core::{
@@ -122,6 +124,7 @@ impl InstructionEffect {
 }
 
 /// Errors that can occur during instruction execution
+#[derive(Debug)]
 pub enum InstructionError {
     NoOp(u8, u16),
     UnusedOpcode(u8, u16),
