@@ -4,8 +4,8 @@ use crate::{
     core::cpu::{
         flags::{check_overflow_cy, check_overflow_hc},
         instructions::{
-            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
-            InstructionTarget as IT,
+            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
+            InstructionResult, InstructionTarget as IT,
         },
         registers::{Register8 as R8, Register16 as R16},
     },

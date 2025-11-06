@@ -15,7 +15,9 @@ pub struct Sbc<'a> {
 }
 
 impl<'a> Sbc<'a> {
-    pub fn new(a: &'a mut u8, f: &'a mut u8, subtrahend: IT<'a>) -> Box<Self> { Box::new(Sbc { a, f, subtrahend }) }
+    pub fn new(a: &'a mut u8, f: &'a mut u8, subtrahend: IT<'a>) -> Box<Self> {
+        Box::new(Sbc { a, f, subtrahend })
+    }
 }
 
 impl<'a> Instruction<'a> for Sbc<'a> {
@@ -42,7 +44,9 @@ impl<'a> Instruction<'a> for Sbc<'a> {
         Ok(InstructionEffect::new(cycles, len, Some(flags)))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "sbc a,{}", self.subtrahend) }
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
+        write!(w, "sbc a,{}", self.subtrahend)
+    }
 }
 
 #[cfg(test)]
@@ -80,7 +84,10 @@ mod tests {
         assert_eq!(a, 0b0000_1101);
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len, 1);
-        assert_eq!(result.flags.unwrap(), HALF_CARRY_FLAG_MASK | SUBTRACTION_FLAG_MASK);
+        assert_eq!(
+            result.flags.unwrap(),
+            HALF_CARRY_FLAG_MASK | SUBTRACTION_FLAG_MASK
+        );
         assert_eq!(result.flags.unwrap() & ZERO_FLAG_MASK, 0);
         assert_eq!(result.flags.unwrap() & CARRY_FLAG_MASK, 0);
     }

@@ -5,8 +5,8 @@ use crate::{
         R8, R16,
         flags::{SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK, check_overflow_cy, check_overflow_hc, check_zero},
         instructions::{
-            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
-            InstructionTarget as IT,
+            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
+            InstructionResult, InstructionTarget as IT,
         },
     },
     utils::{high, low, to_u16, with_u16},
@@ -43,7 +43,8 @@ impl<'a> Instruction<'a> for ADD<'a> {
             (ID::StackPointer(sp), IT::SignedImm(e8)) => {
                 let result = sp.wrapping_add(*e8 as u16);
 
-                let flags = check_overflow_cy(low(result), low(**sp)) | check_overflow_hc(low(result), low(**sp));
+                let flags =
+                    check_overflow_cy(low(result), low(**sp)) | check_overflow_hc(low(result), low(**sp));
                 let flags = flags & !ZERO_FLAG_MASK | !SUBTRACTION_FLAG_MASK;
                 **sp = result;
 
@@ -58,7 +59,7 @@ impl<'a> Instruction<'a> for ADD<'a> {
         let flags = check_zero(result) | check_overflow_cy(result, *dst) | check_overflow_hc(result, *dst);
         *dst = result;
 
-        Ok(InstructionEffect::new(len, cycles, Some(flags)))
+        Ok(InstructionEffect::new(cycles, len, Some(flags)))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "add, ") }

@@ -3,7 +3,9 @@ use std::fmt::Write;
 use crate::core::cpu::{
     R8,
     flags::{SUBTRACTION_FLAG_MASK, check_borrow_cy, check_borrow_hc, check_zero},
-    instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT, sub},
+    instructions::{
+        Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT, sub,
+    },
 };
 
 /// Subtraction instruction
@@ -41,7 +43,9 @@ impl<'a> Instruction<'a> for Sub<'a> {
         Ok(InstructionEffect::new(cycles, len, Some(flags)))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "sub a,{}", self.subtrahend) }
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
+        write!(w, "sub a,{}", self.subtrahend)
+    }
 }
 
 #[cfg(test)]
@@ -75,7 +79,10 @@ mod tests {
         assert_eq!(a, 0x0F);
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len, 1);
-        assert_eq!(result.flags.unwrap(), SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK);
+        assert_eq!(
+            result.flags.unwrap(),
+            SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK
+        );
         assert_eq!(result.flags.unwrap() & ZERO_FLAG_MASK, 0);
         assert_eq!(result.flags.unwrap() & CARRY_FLAG_MASK, 0);
     }

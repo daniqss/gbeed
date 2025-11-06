@@ -2,7 +2,9 @@ use std::fmt::Write;
 
 use crate::core::cpu::{
     flags::{HALF_CARRY_FLAG_MASK, check_zero},
-    instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT},
+    instructions::{
+        Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+    },
 };
 
 pub struct And<'a> {
@@ -30,5 +32,7 @@ impl<'a> Instruction<'a> for And<'a> {
         Ok(InstructionEffect::new(cycles, len, Some(flags)))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "and a, {}", self.src) }
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
+        write!(w, "and a, {}", self.src)
+    }
 }

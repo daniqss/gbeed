@@ -2,7 +2,9 @@ use std::fmt::Write;
 
 use crate::core::cpu::{
     flags::check_zero,
-    instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT},
+    instructions::{
+        Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+    },
 };
 
 pub struct Xor<'a> {
@@ -30,5 +32,7 @@ impl<'a> Instruction<'a> for Xor<'a> {
         Ok(InstructionEffect::new(cycles, len, Some(flags)))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "xor a, {}", self.src) }
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
+        write!(w, "xor a, {}", self.src)
+    }
 }

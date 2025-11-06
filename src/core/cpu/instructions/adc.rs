@@ -34,12 +34,15 @@ impl<'a> Instruction<'a> for ADC<'a> {
         result = result.wrapping_add(if (*self.f & CARRY_FLAG_MASK) != 0 { 1 } else { 0 });
 
         // calculate flags
-        let flags = check_zero(result) | check_overflow_cy(result, *self.a) | check_overflow_hc(result, *self.a);
+        let flags =
+            check_zero(result) | check_overflow_cy(result, *self.a) | check_overflow_hc(result, *self.a);
 
         *self.a = result;
 
-        Ok(InstructionEffect::new(len, cycles, Some(flags)))
+        Ok(InstructionEffect::new(cycles, len, Some(flags)))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "adc a,{}", self.addend) }
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
+        write!(w, "adc a,{}", self.addend)
+    }
 }

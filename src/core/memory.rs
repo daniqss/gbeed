@@ -33,7 +33,9 @@ pub const HRAM_START: u16 = 0xFF80;
 pub const HRAM_END: u16 = 0xFFFE;
 pub const INTERRUPT_ENABLE_REGISTER: u16 = 0xFFFF;
 
-pub fn is_high_address(address: u16) -> bool { address >= IO_REGISTERS_START && address <= INTERRUPT_ENABLE_REGISTER }
+pub fn is_high_address(address: u16) -> bool {
+    address >= IO_REGISTERS_START && address <= INTERRUPT_ENABLE_REGISTER
+}
 
 pub type MemoryBus = Rc<RefCell<Memory>>;
 
