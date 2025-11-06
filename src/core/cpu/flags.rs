@@ -30,4 +30,4 @@ pub fn check_borrow_hc(result: u8, substrahend: u8) -> u8 {
 pub fn check_overflow_cy(result: u8, old: u8) -> u8 { if result < old { CARRY_FLAG_MASK } else { 0 } }
 /// check borrow
 #[inline]
-pub fn check_borrow_cy(result: u8, substrahend: u8) -> u8 { if result > substrahend { CARRY_FLAG_MASK } else { 0 } }
+pub fn check_borrow_cy(old: u8, subtrahend: u8) -> u8 { if subtrahend > old { CARRY_FLAG_MASK } else { 0 } }

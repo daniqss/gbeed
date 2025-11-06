@@ -38,7 +38,7 @@ impl<'a> Instruction<'a> for Sub<'a> {
 
         *self.a = result;
 
-        Ok(InstructionEffect::new(len, cycles, Some(flags)))
+        Ok(InstructionEffect::new(cycles, len, Some(flags)))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "sub a,{}", self.subtrahend) }
@@ -75,10 +75,9 @@ mod tests {
         assert_eq!(a, 0x0F);
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len, 1);
-        assert_eq!(
-            result.flags.unwrap(),
-            CARRY_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK
-        );
+        assert_eq!(result.flags.unwrap(), SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK);
+        assert_eq!(result.flags.unwrap() & ZERO_FLAG_MASK, 0);
+        assert_eq!(result.flags.unwrap() & CARRY_FLAG_MASK, 0);
     }
 
     #[test]

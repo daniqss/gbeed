@@ -3,9 +3,7 @@ use std::fmt::Write;
 use super::InstructionTarget as IT;
 use crate::core::cpu::{
     R8,
-    flags::{
-        CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, check_borrow_hc, check_overflow_cy, check_overflow_hc, check_zero,
-    },
+    flags::{CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, check_borrow_cy, check_borrow_hc, check_zero},
     instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
 };
 
@@ -37,7 +35,7 @@ impl<'a> Instruction<'a> for Sbc<'a> {
         let flags = check_zero(result)
             | SUBTRACTION_FLAG_MASK
             | check_borrow_hc(*self.a, subtrahend)
-            | check_overflow_cy(*self.a, subtrahend);
+            | check_borrow_cy(*self.a, subtrahend);
 
         *self.a = result;
 
