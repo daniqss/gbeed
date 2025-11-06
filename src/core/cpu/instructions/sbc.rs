@@ -30,14 +30,15 @@ impl<'a> Instruction<'a> for Sbc<'a> {
         };
 
         // perform substraction
-        let mut result = self.a.wrapping_sub(subtrahend);
-        result = result.wrapping_sub(if (*self.f & CARRY_FLAG_MASK) != 0 { 1 } else { 0 });
+        let (result, did_borrow_sub) = self.a.overflowing_sub(subtrahend);
+        let (result, did_borrow_cy) =
+            result.overflowing_sub(if (*self.f & CARRY_FLAG_MASK) != 0 { 1 } else { 0 });
 
         // calculate new flags
         let flags = check_zero(result)
             | SUBTRACTION_FLAG_MASK
             | check_borrow_hc(*self.a, subtrahend)
-            | check_borrow_cy(*self.a, subtrahend);
+            | check_borrow_cy(did_borrow_sub || did_borrow_cy);
 
         *self.a = result;
 

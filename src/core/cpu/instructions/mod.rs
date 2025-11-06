@@ -1,6 +1,7 @@
 mod adc;
 mod add;
 mod and;
+mod cp;
 mod cpl;
 mod ld;
 mod ldh;
@@ -15,6 +16,7 @@ use std::fmt::{Display, Write};
 pub use adc::*;
 pub use add::*;
 pub use and::*;
+pub use cp::*;
 pub use cpl::*;
 pub use ld::*;
 pub use ldh::*;

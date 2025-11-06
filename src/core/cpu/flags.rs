@@ -18,8 +18,8 @@ pub fn check_overflow_hc(result: u8, old: u8) -> u8 {
 }
 /// Check borrow in bit 4
 #[inline]
-pub fn check_borrow_hc(result: u8, substrahend: u8) -> u8 {
-    if (result & 0x0F) < (substrahend & 0x0F) {
+pub fn check_borrow_hc(old: u8, substrahend: u8) -> u8 {
+    if (old & 0x0F) < (substrahend & 0x0F) {
         HALF_CARRY_FLAG_MASK
     } else {
         0
@@ -30,4 +30,4 @@ pub fn check_borrow_hc(result: u8, substrahend: u8) -> u8 {
 pub fn check_overflow_cy(result: u8, old: u8) -> u8 { if result < old { CARRY_FLAG_MASK } else { 0 } }
 /// check borrow
 #[inline]
-pub fn check_borrow_cy(old: u8, subtrahend: u8) -> u8 { if subtrahend > old { CARRY_FLAG_MASK } else { 0 } }
+pub fn check_borrow_cy(did_borrow: bool) -> u8 { if did_borrow { CARRY_FLAG_MASK } else { 0 } }
