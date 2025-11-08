@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use crate::{
     core::cpu::{
-        flags::{SUBTRACTION_FLAG_MASK, check_borrow_hc, check_zero},
+        flags::{check_overflow_hc, check_zero},
         instructions::{
             Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
         },
@@ -11,16 +11,16 @@ use crate::{
     utils::with_u16,
 };
 
-/// decrement the dst value by one
-pub struct Dec<'a> {
+/// increment the dst value by one
+pub struct Inc<'a> {
     dst: ID<'a>,
 }
 
-impl<'a> Dec<'a> {
-    pub fn new(dst: ID<'a>) -> Box<Self> { Box::new(Dec { dst }) }
+impl<'a> Inc<'a> {
+    pub fn new(dst: ID<'a>) -> Box<Self> { Box::new(Inc { dst }) }
 }
 
-impl<'a> Instruction<'a> for Dec<'a> {
+impl<'a> Instruction<'a> for Inc<'a> {
     fn exec(&mut self) -> InstructionResult {
         let len = 1;
 
@@ -28,12 +28,12 @@ impl<'a> Instruction<'a> for Dec<'a> {
             ID::Register8(dst, reg) if *reg != R8::F => (*dst, 1),
             ID::PointedByHL(bus, addr) => (&mut bus.borrow_mut()[*addr], 3),
             ID::Register16(dst, reg) if *reg != R16::AF => {
-                with_u16(dst.1, dst.0, |val| val.wrapping_sub(1));
+                with_u16(dst.1, dst.0, |val| val.wrapping_add(1));
 
                 return Ok(InstructionEffect::new(2, len, None));
             }
             ID::StackPointer(dst) => {
-                **dst = dst.wrapping_sub(1);
+                **dst = dst.wrapping_add(1);
 
                 return Ok(InstructionEffect::new(2, len, None));
             }
@@ -41,8 +41,8 @@ impl<'a> Instruction<'a> for Dec<'a> {
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
-        let result = dst.wrapping_sub(1);
-        let flags = check_zero(result) | SUBTRACTION_FLAG_MASK | check_borrow_hc(*dst, 1);
+        let result = dst.wrapping_add(1);
+        let flags = check_zero(result) | check_overflow_hc(*dst, 1);
         *dst = result;
 
         Ok(InstructionEffect::new(cycles, len, Some(flags)))
