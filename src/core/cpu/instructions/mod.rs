@@ -1,6 +1,7 @@
 mod adc;
 mod add;
 mod and;
+mod bit;
 mod cp;
 mod cpl;
 mod dec;
@@ -9,7 +10,9 @@ mod ld;
 mod ldh;
 mod nop;
 mod or;
+mod res;
 mod sbc;
+mod set;
 mod sub;
 mod xor;
 
@@ -18,6 +21,7 @@ use std::fmt::{Display, Write};
 pub use adc::*;
 pub use add::*;
 pub use and::*;
+pub use bit::*;
 pub use cp::*;
 pub use cpl::*;
 pub use dec::*;
@@ -26,7 +30,9 @@ pub use ld::*;
 pub use ldh::*;
 pub use nop::*;
 pub use or::*;
+pub use res::*;
 pub use sbc::*;
+pub use set::*;
 pub use sub::*;
 pub use xor::*;
 
