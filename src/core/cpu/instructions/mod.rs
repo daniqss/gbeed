@@ -38,7 +38,7 @@ pub use sub::*;
 pub use xor::*;
 
 use crate::core::{
-    cpu::{R8, R16},
+    cpu::{R8, R16, flags::Flags},
     memory::MemoryBus,
 };
 
@@ -131,11 +131,11 @@ impl Display for InstructionDestination<'_> {
 pub struct InstructionEffect {
     pub cycles: u8,
     pub len: u8,
-    pub flags: Option<u8>,
+    pub flags: Option<Flags>,
 }
 
 impl InstructionEffect {
-    pub fn new(cycles: u8, len: u8, flags: Option<u8>) -> Self { Self { cycles, len, flags } }
+    pub fn new(cycles: u8, len: u8, flags: Option<Flags>) -> Self { Self { cycles, len, flags } }
 }
 
 /// Errors that can occur during instruction execution

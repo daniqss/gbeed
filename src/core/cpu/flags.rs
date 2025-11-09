@@ -5,6 +5,13 @@ pub const SUBTRACTION_FLAG_MASK: u8 = 0b0100_0000;
 pub const HALF_CARRY_FLAG_MASK: u8 = 0b0010_0000;
 pub const CARRY_FLAG_MASK: u8 = 0b0001_0000;
 
+pub struct Flags {
+    zero: Option<bool>,
+    subtraction: Option<bool>,
+    half_carry: Option<bool>,
+    carry: Option<bool>,
+}
+
 #[inline]
 pub fn check_zero(result: u8) -> u8 { if result == 0 { ZERO_FLAG_MASK } else { 0 } }
 
