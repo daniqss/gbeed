@@ -11,6 +11,7 @@ mod ldh;
 mod nop;
 mod or;
 mod res;
+mod rl;
 mod sbc;
 mod set;
 mod sub;
