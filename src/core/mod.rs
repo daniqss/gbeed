@@ -1,26 +1,26 @@
 mod cartrigde;
 mod cpu;
 mod license;
-mod memory;
+pub mod memory;
 mod ppu;
-
-use std::rc::Rc;
 
 pub use cartrigde::Cartridge;
 use cpu::Cpu;
 use memory::MemoryBus;
 use ppu::Ppu;
 
+use crate::core::memory::Memory;
+
 pub struct Dmg {
     pub cartridge: Cartridge,
-    pub memory_bus: Rc<MemoryBus>,
+    pub memory_bus: MemoryBus,
     pub cpu: Cpu,
     pub ppu: Ppu,
 }
 
 impl Dmg {
     pub fn new(cartridge: Cartridge, game_rom: Vec<u8>, boot_rom: Vec<u8>) -> Dmg {
-        let memory_bus = Rc::new(MemoryBus::new(Some(game_rom), Some(boot_rom)));
+        let memory_bus = Memory::new(Some(game_rom), Some(boot_rom));
 
         Dmg {
             cpu: Cpu::new(memory_bus.clone()),
@@ -33,17 +33,48 @@ impl Dmg {
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     pub fn run(&mut self) {
-        println!("{}", self.cartridge);
-
-        println!(
-            "memory {:?}",
-            &self.memory_bus[memory::ROM_BANK00_START..memory::ROM_BANK00_END + 1]
-        );
-
         loop {
-            let instruction = self.memory_bus[self.cpu.pc];
+            let opcode = self.memory_bus.borrow()[self.cpu.pc];
 
-            self.cpu.pc = self.cpu.exec_next(instruction);
+            let mut instruction = match self.cpu.fetch(opcode) {
+                Ok(instr) => instr,
+                Err(e) => {
+                    eprintln!("Error fetching instruction: {}", e);
+                    break;
+                }
+            };
+
+            let writer = &mut String::new();
+            match instruction.disassembly(writer) {
+                Ok(_) => println!("{}", writer),
+                Err(e) => {
+                    eprintln!("Error disassembling instruction: {}", e);
+                }
+            }
+
+            let (cycles, len, f) = match instruction.exec() {
+                Ok(effect) => (effect.cycles as usize, effect.len as u16, effect.flags),
+                Err(e) => {
+                    eprintln!("Error executing instruction: {}", e);
+                    break;
+                }
+            };
+
+            // explicitly drop the instruction to release borrow references
+            // after actually making changes to the CPU state and return the effect
+            // maybe in the future we must implement a better way to handle this
+            // using reference counting for registers I guess
+            // which would be ez, because we already have registers enums
+            // so changing that to a type/struct that holds Rc<RefCell<u8>> would be easy
+            drop(instruction);
+
+            self.cpu.cycles = self.cpu.cycles.wrapping_add(cycles);
+            self.cpu.pc = self.cpu.pc.wrapping_add(len);
+            if let Some(flags) = f {
+                self.cpu.f = flags;
+            }
+
+            std::thread::sleep(std::time::Duration::from_secs(1));
         }
     }
 }
