@@ -5,7 +5,7 @@ use super::{
     InstructionTarget as IT,
 };
 use crate::core::{
-    cpu::{R8, instructions::Instruction},
+    cpu::{R8, flags::Flags, instructions::Instruction},
     memory::is_high_address,
 };
 
@@ -55,7 +55,7 @@ impl<'a> Instruction<'a> for LDH<'a> {
 
         *dst = src;
 
-        Ok(InstructionEffect::new(cycles, len, None))
+        Ok(InstructionEffect::new(cycles, len, Flags::none()))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {

@@ -3,7 +3,7 @@ use std::fmt::Write;
 use super::InstructionTarget as IT;
 use crate::core::cpu::{
     R8,
-    flags::{CARRY_FLAG_MASK, check_overflow_cy, check_overflow_hc, check_zero},
+    flags::{CARRY_FLAG_MASK, Flags, check_overflow_cy, check_overflow_hc, check_zero},
     instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
 };
 
@@ -34,12 +34,16 @@ impl<'a> Instruction<'a> for ADC<'a> {
         result = result.wrapping_add(if (*self.f & CARRY_FLAG_MASK) != 0 { 1 } else { 0 });
 
         // calculate flags
-        let flags =
-            check_zero(result) | check_overflow_cy(result, *self.a) | check_overflow_hc(result, *self.a);
+        let flags = Flags {
+            z: Some(check_zero(result)),
+            n: Some(false),
+            h: Some(check_overflow_hc(result, *self.a)),
+            c: Some(check_overflow_cy(result, *self.a)),
+        };
 
         *self.a = result;
 
-        Ok(InstructionEffect::new(cycles, len, Some(flags)))
+        Ok(InstructionEffect::new(cycles, len, flags))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {

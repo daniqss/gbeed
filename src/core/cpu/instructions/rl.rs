@@ -1,5 +1,5 @@
 use crate::core::cpu::{
-    flags::{CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, check_zero},
+    flags::{CARRY_FLAG_MASK, Flags, check_zero},
     instructions::{
         Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
     },
@@ -28,12 +28,17 @@ impl<'a> Instruction<'a> for Rl<'a> {
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
-        let mut flags = if *dst & 0b1000_0000 != 0 {
-            CARRY_FLAG_MASK
-        } else {
-            0
+        // let mut flags = if *dst & 0b1000_0000 != 0 {
+        //     CARRY_FLAG_MASK
+        // } else {
+        //     0
+        // };
+        let mut flags = Flags {
+            z: None,
+            n: Some(false),
+            h: Some(false),
+            c: Some(*dst & 0b1000_0000 != 0),
         };
-        flags &= !HALF_CARRY_FLAG_MASK & !SUBTRACTION_FLAG_MASK;
 
         *dst <<= 1;
         *dst |= if self.carry & CARRY_FLAG_MASK != 0 {
@@ -42,11 +47,9 @@ impl<'a> Instruction<'a> for Rl<'a> {
             0
         };
 
-        Ok(InstructionEffect::new(
-            cycles,
-            len,
-            Some(flags | check_zero(*dst)),
-        ))
+        flags.z = Some(check_zero(*dst));
+
+        Ok(InstructionEffect::new(cycles, len, flags))
     }
 
     fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {

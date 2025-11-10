@@ -1,7 +1,7 @@
 use std::fmt::Write;
 
 use crate::core::cpu::{
-    flags::{HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK},
+    flags::Flags,
     instructions::{Instruction, InstructionEffect, InstructionResult},
 };
 
@@ -18,9 +18,14 @@ impl<'a> Cpl<'a> {
 impl<'a> Instruction<'a> for Cpl<'a> {
     fn exec(&mut self) -> InstructionResult {
         *self.a = !*self.a;
-        let flags = SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK;
+        let flags = Flags {
+            z: None,
+            n: Some(true),
+            h: Some(true),
+            c: None,
+        };
 
-        Ok(InstructionEffect::new(1, 1, Some(flags)))
+        Ok(InstructionEffect::new(1, 1, flags))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "cpl") }

@@ -52,7 +52,7 @@ impl Dmg {
                 }
             }
 
-            let (cycles, len, f) = match instruction.exec() {
+            let (cycles, len, flags) = match instruction.exec() {
                 Ok(effect) => (effect.cycles as usize, effect.len as u16, effect.flags),
                 Err(e) => {
                     eprintln!("Error executing instruction: {}", e);
@@ -70,9 +70,7 @@ impl Dmg {
 
             self.cpu.cycles = self.cpu.cycles.wrapping_add(cycles);
             self.cpu.pc = self.cpu.pc.wrapping_add(len);
-            if let Some(flags) = f {
-                self.cpu.f = flags;
-            }
+            flags.apply(&mut self.cpu.f);
 
             std::thread::sleep(std::time::Duration::from_secs(1));
         }
