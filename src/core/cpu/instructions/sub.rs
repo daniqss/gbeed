@@ -66,7 +66,6 @@ mod tests {
 
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len, 2);
-        // assert_eq!(result.flags.unwrap(), ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK);
         assert_eq!(
             result.flags,
             Flags {
@@ -89,12 +88,6 @@ mod tests {
         assert_eq!(a, 0x0F);
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len, 1);
-        // assert_eq!(
-        //     result.flags.unwrap(),
-        //     SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK
-        // );
-        // assert_eq!(result.flags.unwrap() & ZERO_FLAG_MASK, 0);
-        // assert_eq!(result.flags.unwrap() & CARRY_FLAG_MASK, 0);
         assert_eq!(
             result.flags,
             Flags {
@@ -117,9 +110,6 @@ mod tests {
         assert_eq!(a, 0xF0);
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len, 1);
-        // assert_eq!(result.flags.unwrap(), CARRY_FLAG_MASK | SUBTRACTION_FLAG_MASK);
-        // assert_eq!(result.flags.unwrap() & ZERO_FLAG_MASK, 0);
-        // assert_eq!(result.flags.unwrap() & HALF_CARRY_FLAG_MASK, 0);
         assert_eq!(
             result.flags,
             Flags {

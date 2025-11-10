@@ -28,11 +28,6 @@ impl<'a> Instruction<'a> for Rl<'a> {
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
-        // let mut flags = if *dst & 0b1000_0000 != 0 {
-        //     CARRY_FLAG_MASK
-        // } else {
-        //     0
-        // };
         let mut flags = Flags {
             z: None,
             n: Some(false),
@@ -54,5 +49,61 @@ impl<'a> Instruction<'a> for Rl<'a> {
 
     fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
         write!(w, "rl {}", self.dst)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::core::{
+        cpu::{R8, flags::Flags},
+        memory::Memory,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_rl_no_carry() {
+        let mut a = 0b0011_1100;
+        let mut instr = Rl::new(0, ID::Register8(&mut a, R8::A));
+
+        let result = instr.exec().unwrap();
+        assert_eq!(a, 0b0111_1000);
+
+        assert_eq!(result.cycles, 2);
+        assert_eq!(result.len, 2);
+        assert_eq!(
+            result.flags,
+            Flags {
+                z: Some(false),
+                n: Some(false),
+                h: Some(false),
+                c: Some(false),
+            }
+        );
+    }
+
+    #[test]
+    fn test_rl_with_carry() {
+        let addr = 0xAA00;
+        let value = 0b1011_1000;
+        let bus = Memory::new(None, None);
+        bus.borrow_mut()[addr] = value;
+
+        let mut instr = Rl::new(CARRY_FLAG_MASK, ID::PointedByHL(bus.clone(), addr));
+
+        let result = instr.exec().unwrap();
+        assert_eq!(bus.borrow()[addr], 0b0111_0001);
+
+        assert_eq!(result.cycles, 4);
+        assert_eq!(result.len, 2);
+        assert_eq!(
+            result.flags,
+            Flags {
+                z: Some(false),
+                n: Some(false),
+                h: Some(false),
+                c: Some(true),
+            }
+        );
     }
 }
