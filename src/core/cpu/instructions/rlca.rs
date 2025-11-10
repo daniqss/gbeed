@@ -1,6 +1,6 @@
 use crate::core::cpu::{
     R8,
-    flags::{Flags, check_zero},
+    flags::Flags,
     instructions::{
         Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
     },
@@ -30,7 +30,7 @@ impl<'a> Instruction<'a> for Rlca<'a> {
         let last_bit = *dst & 0b1000_0000 != 0;
         let result = (*dst << 1) | if last_bit { 1 } else { 0 };
         let flags = Flags {
-            z: Some(check_zero(result)),
+            z: Some(false),
             n: Some(false),
             h: Some(false),
             c: Some(last_bit),

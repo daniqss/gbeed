@@ -1,6 +1,6 @@
 use crate::core::cpu::{
     R8,
-    flags::{Flags, check_zero},
+    flags::Flags,
     instructions::{
         Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
     },
