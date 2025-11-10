@@ -10,16 +10,16 @@ use crate::core::cpu::{
 /// ┌─╂→  b7  →  ...  →  b0   ─╂─╂→   C   ─╂─┐
 /// │ ┗━━━━━━━━━━━━━━━━━━━━━━━━┛ ┗━━━━━━━━━┛ │
 /// └────────────────────────────────────────┘
-pub struct Rr<'a> {
+pub struct Rra<'a> {
     carry: u8,
     dst: ID<'a>,
 }
 
-impl<'a> Rr<'a> {
-    pub fn new(carry: u8, dst: ID<'a>) -> Box<Self> { Box::new(Rr { carry, dst }) }
+impl<'a> Rra<'a> {
+    pub fn new(carry: u8, dst: ID<'a>) -> Box<Self> { Box::new(Self { carry, dst }) }
 }
 
-impl<'a> Instruction<'a> for Rr<'a> {
+impl<'a> Instruction<'a> for Rra<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
             ID::Register8(r8, _) => (r8, 2, 2),
@@ -35,7 +35,7 @@ impl<'a> Instruction<'a> for Rr<'a> {
                 0
             };
         let flags = Flags {
-            z: Some(check_zero(result)),
+            z: Some(false),
             n: Some(false),
             h: Some(false),
             c: Some(*dst & 0b0000_0001 != 0),
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn test_rr_no_carry() {
         let mut a = 0b0000_0001;
-        let mut instr = Rr::new(0, ID::Register8(&mut a, R8::A));
+        let mut instr = Rra::new(0, ID::Register8(&mut a, R8::A));
 
         let result = instr.exec().unwrap();
         assert_eq!(a, 0);
@@ -72,7 +72,7 @@ mod tests {
         assert_eq!(
             result.flags,
             Flags {
-                z: Some(true),
+                z: Some(false),
                 n: Some(false),
                 h: Some(false),
                 c: Some(true),
@@ -87,7 +87,7 @@ mod tests {
         let bus = Memory::new(None, None);
         bus.borrow_mut()[addr] = value;
 
-        let mut instr = Rr::new(CARRY_FLAG_MASK, ID::PointedByHL(bus.clone(), addr));
+        let mut instr = Rra::new(CARRY_FLAG_MASK, ID::PointedByHL(bus.clone(), addr));
 
         let result = instr.exec().unwrap();
         assert_eq!(bus.borrow()[addr], 0b1001_1100);
