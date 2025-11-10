@@ -28,21 +28,14 @@ impl<'a> Instruction<'a> for Rl<'a> {
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
-        let mut flags = Flags {
-            z: None,
+        let result = (*dst << 1) | if self.carry & CARRY_FLAG_MASK != 0 { 1 } else { 0 };
+        let flags = Flags {
+            z: Some(check_zero(result)),
             n: Some(false),
             h: Some(false),
             c: Some(*dst & 0b1000_0000 != 0),
         };
-
-        *dst <<= 1;
-        *dst |= if self.carry & CARRY_FLAG_MASK != 0 {
-            0b0000_0001
-        } else {
-            0
-        };
-
-        flags.z = Some(check_zero(*dst));
+        *dst = result;
 
         Ok(InstructionEffect::new(cycles, len, flags))
     }
@@ -63,21 +56,21 @@ mod tests {
 
     #[test]
     fn test_rl_no_carry() {
-        let mut a = 0b0011_1100;
+        let mut a = 0b1000_0000;
         let mut instr = Rl::new(0, ID::Register8(&mut a, R8::A));
 
         let result = instr.exec().unwrap();
-        assert_eq!(a, 0b0111_1000);
+        assert_eq!(a, 0b0000_0000);
 
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len, 2);
         assert_eq!(
             result.flags,
             Flags {
-                z: Some(false),
+                z: Some(true),
                 n: Some(false),
                 h: Some(false),
-                c: Some(false),
+                c: Some(true),
             }
         );
     }
@@ -85,7 +78,7 @@ mod tests {
     #[test]
     fn test_rl_with_carry() {
         let addr = 0xAA00;
-        let value = 0b1011_1000;
+        let value = 0b0011_1000;
         let bus = Memory::new(None, None);
         bus.borrow_mut()[addr] = value;
 
@@ -102,7 +95,7 @@ mod tests {
                 z: Some(false),
                 n: Some(false),
                 h: Some(false),
-                c: Some(true),
+                c: Some(false),
             }
         );
     }
