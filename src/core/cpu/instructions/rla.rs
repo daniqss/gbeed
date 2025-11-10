@@ -1,5 +1,6 @@
 use crate::core::cpu::{
-    flags::{CARRY_FLAG_MASK, Flags, check_zero},
+    R8,
+    flags::{CARRY_FLAG_MASK, Flags},
     instructions::{
         Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
     },
@@ -22,8 +23,7 @@ impl<'a> Rla<'a> {
 impl<'a> Instruction<'a> for Rla<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
-            ID::Register8(r8, _) => (r8, 2, 2),
-            ID::PointedByHL(bus, addr) => (&mut bus.borrow_mut()[*addr], 4, 2),
+            ID::Register8(r8, reg) if *reg == R8::A => (r8, 1, 1),
 
             _ => return Err(InstructionError::MalformedInstruction),
         };
@@ -47,10 +47,7 @@ impl<'a> Instruction<'a> for Rla<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{
-        cpu::{R8, flags::Flags},
-        memory::Memory,
-    };
+    use crate::core::cpu::{R8, flags::Flags};
 
     use super::*;
 
@@ -62,8 +59,8 @@ mod tests {
         let result = instr.exec().unwrap();
         assert_eq!(a, 0b0000_0000);
 
-        assert_eq!(result.cycles, 2);
-        assert_eq!(result.len, 2);
+        assert_eq!(result.cycles, 1);
+        assert_eq!(result.len, 1);
         assert_eq!(
             result.flags,
             Flags {
@@ -77,18 +74,15 @@ mod tests {
 
     #[test]
     fn test_rl_with_carry() {
-        let addr = 0xAA00;
-        let value = 0b0011_1000;
-        let bus = Memory::new(None, None);
-        bus.borrow_mut()[addr] = value;
+        let mut a = 0b0011_1000;
 
-        let mut instr = Rla::new(CARRY_FLAG_MASK, ID::PointedByHL(bus.clone(), addr));
+        let mut instr = Rla::new(CARRY_FLAG_MASK, ID::Register8(&mut a, R8::A));
 
         let result = instr.exec().unwrap();
-        assert_eq!(bus.borrow()[addr], 0b0111_0001);
+        assert_eq!(a, 0b0111_0001);
 
-        assert_eq!(result.cycles, 4);
-        assert_eq!(result.len, 2);
+        assert_eq!(result.cycles, 1);
+        assert_eq!(result.len, 1);
         assert_eq!(
             result.flags,
             Flags {
