@@ -52,7 +52,7 @@ impl Dmg {
                 }
             }
 
-            let (cycles, len, f) = match instruction.exec() {
+            let (cycles, len, flags) = match instruction.exec() {
                 Ok(effect) => (effect.cycles as usize, effect.len as u16, effect.flags),
                 Err(e) => {
                     eprintln!("Error executing instruction: {}", e);

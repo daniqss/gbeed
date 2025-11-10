@@ -1,5 +1,8 @@
-use crate::core::cpu::instructions::{
-    Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
+use crate::core::cpu::{
+    flags::Flags,
+    instructions::{
+        Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
+    },
 };
 
 /// Sets bit u3 in register r8 to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
@@ -23,7 +26,7 @@ impl<'a> Instruction<'a> for Set<'a> {
 
         *dst |= 1 << self.bit;
 
-        Ok(InstructionEffect::new(cycles, len, None))
+        Ok(InstructionEffect::new(cycles, len, Flags::none()))
     }
 
     fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {

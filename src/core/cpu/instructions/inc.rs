@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use crate::{
     core::cpu::{
-        flags::{check_overflow_hc, check_zero},
+        flags::{Flags, check_overflow_hc, check_zero},
         instructions::{
             Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
         },
@@ -30,22 +30,27 @@ impl<'a> Instruction<'a> for Inc<'a> {
             ID::Register16(dst, reg) if *reg != R16::AF => {
                 with_u16(dst.1, dst.0, |val| val.wrapping_add(1));
 
-                return Ok(InstructionEffect::new(2, len, None));
+                return Ok(InstructionEffect::new(2, len, Flags::none()));
             }
             ID::StackPointer(dst) => {
                 **dst = dst.wrapping_add(1);
 
-                return Ok(InstructionEffect::new(2, len, None));
+                return Ok(InstructionEffect::new(2, len, Flags::none()));
             }
 
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
         let result = dst.wrapping_add(1);
-        let flags = check_zero(result) | check_overflow_hc(*dst, 1);
+        let flags = Flags {
+            z: Some(check_zero(result)),
+            n: Some(false),
+            h: Some(check_overflow_hc(result, *dst)),
+            c: None,
+        };
         *dst = result;
 
-        Ok(InstructionEffect::new(cycles, len, Some(flags)))
+        Ok(InstructionEffect::new(cycles, len, flags))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "dec {}", self.dst) }

@@ -1,6 +1,6 @@
 use crate::core::cpu::{
     R8,
-    flags::{HALF_CARRY_FLAG_MASK, check_zero},
+    flags::{Flags, check_zero},
     instructions::{
         Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
     },
@@ -26,9 +26,14 @@ impl<'a> Instruction<'a> for Bit<'a> {
         };
 
         let test_bit = target & (1 << self.bit);
-        let flags = check_zero(test_bit) | HALF_CARRY_FLAG_MASK;
+        let flags = Flags {
+            z: Some(check_zero(test_bit)),
+            n: Some(false),
+            h: Some(true),
+            c: None,
+        };
 
-        Ok(InstructionEffect::new(cycles, len, Some(flags)))
+        Ok(InstructionEffect::new(cycles, len, flags))
     }
 
     fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {

@@ -1,7 +1,7 @@
 use std::fmt::Write;
 
 use crate::core::cpu::{
-    flags::check_zero,
+    flags::{Flags, check_zero},
     instructions::{
         Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
     },
@@ -26,10 +26,15 @@ impl<'a> Instruction<'a> for Or<'a> {
         };
 
         let result = *self.a | src;
-        let flags = check_zero(result);
+        let flags = Flags {
+            z: Some(check_zero(result)),
+            n: Some(false),
+            h: Some(false),
+            c: Some(false),
+        };
         *self.a = result;
 
-        Ok(InstructionEffect::new(cycles, len, Some(flags)))
+        Ok(InstructionEffect::new(cycles, len, flags))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {

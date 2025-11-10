@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use crate::{
     core::cpu::{
-        flags::{check_overflow_cy, check_overflow_hc},
+        flags::{Flags, check_overflow_cy, check_overflow_hc},
         instructions::{
             Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
             InstructionResult, InstructionTarget as IT,
@@ -32,7 +32,7 @@ impl<'a> Instruction<'a> for LD<'a> {
             **dst = *src;
 
             with_u16(hl.1, hl.0, |hl| hl.wrapping_add(1));
-            return Ok(InstructionEffect::new(2, 1, None));
+            return Ok(InstructionEffect::new(2, 1, Flags::none()));
         }
         if let (ID::Register8(dst, reg), IT::PointedByHLI(src, hl)) = (&mut self.dst, &mut self.src) {
             if *reg != R8::A {
@@ -42,7 +42,7 @@ impl<'a> Instruction<'a> for LD<'a> {
             **dst = *src;
 
             with_u16(hl.1, hl.0, |hl| hl.wrapping_sub(1));
-            return Ok(InstructionEffect::new(2, 1, None));
+            return Ok(InstructionEffect::new(2, 1, Flags::none()));
         }
 
         // u8 loads
@@ -54,7 +54,7 @@ impl<'a> Instruction<'a> for LD<'a> {
                 *dst.0 = high;
                 *dst.1 = low;
 
-                return Ok(InstructionEffect::new(3, 3, None));
+                return Ok(InstructionEffect::new(3, 3, Flags::none()));
             }
             (ID::PointedByHL(bus, addr), IT::Register8(src, _)) => (&mut bus.borrow_mut()[*addr], *src, 2, 1),
             (ID::PointedByHL(bus, addr), IT::Immediate8(src)) => (&mut bus.borrow_mut()[*addr], *src, 3, 2),
@@ -84,13 +84,13 @@ impl<'a> Instruction<'a> for LD<'a> {
             // with u8 destinations
             (ID::StackPointer(dst), IT::Immediate16(src)) => {
                 **dst = *src;
-                return Ok(InstructionEffect::new(3, 3, None));
+                return Ok(InstructionEffect::new(3, 3, Flags::none()));
             }
             (ID::PointedByN16AndNext(bus, addr), IT::StackPointer(src)) => {
                 bus.borrow_mut()[addr.wrapping_add(1)] = high(*src);
                 bus.borrow_mut()[*addr] = low(*src);
 
-                return Ok(InstructionEffect::new(5, 3, None));
+                return Ok(InstructionEffect::new(5, 3, Flags::none()));
             }
             // add the 8 bit signed immediate to the SP register and store the result in HL register pair
             // half carries come from Z80 with binary coded decimal, that worked with nibbles (4 bits)
@@ -100,13 +100,18 @@ impl<'a> Instruction<'a> for LD<'a> {
                 with_u16(dst.1, dst.0, |_| src);
 
                 // the carries are computed on the low byte only, not the full u16
-                let flags = check_overflow_hc(low(src), low(*sp)) | check_overflow_cy(low(src), low(*sp));
+                let flags = Flags {
+                    z: Some(false),
+                    n: Some(false),
+                    h: Some(check_overflow_hc(low(src), low(*sp))),
+                    c: Some(check_overflow_cy(low(src), low(*sp))),
+                };
 
-                return Ok(InstructionEffect::new(3, 2, Some(flags)));
+                return Ok(InstructionEffect::new(3, 2, flags));
             }
             (ID::StackPointer(dst), IT::Register16(src, reg)) if *reg == R16::HL => {
                 **dst = to_u16(src.0, src.1);
-                return Ok(InstructionEffect::new(2, 1, None));
+                return Ok(InstructionEffect::new(2, 1, Flags::none()));
             }
 
             _ => return Err(InstructionError::MalformedInstruction),
@@ -114,7 +119,7 @@ impl<'a> Instruction<'a> for LD<'a> {
 
         *dst = src;
 
-        Ok(InstructionEffect::new(cycles, len, None))
+        Ok(InstructionEffect::new(cycles, len, Flags::none()))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {

@@ -131,11 +131,11 @@ impl Display for InstructionDestination<'_> {
 pub struct InstructionEffect {
     pub cycles: u8,
     pub len: u8,
-    pub flags: Option<Flags>,
+    pub flags: Flags,
 }
 
 impl InstructionEffect {
-    pub fn new(cycles: u8, len: u8, flags: Option<Flags>) -> Self { Self { cycles, len, flags } }
+    pub fn new(cycles: u8, len: u8, flags: Flags) -> Self { Self { cycles, len, flags } }
 }
 
 /// Errors that can occur during instruction execution

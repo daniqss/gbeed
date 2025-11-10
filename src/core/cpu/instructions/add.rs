@@ -3,7 +3,7 @@ use std::fmt::Write;
 use crate::{
     core::cpu::{
         R8, R16,
-        flags::{SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK, check_overflow_cy, check_overflow_hc, check_zero},
+        flags::{Flags, check_overflow_cy, check_overflow_hc, check_zero},
         instructions::{
             Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
             InstructionResult, InstructionTarget as IT,
@@ -32,23 +32,41 @@ impl<'a> Instruction<'a> for ADD<'a> {
                 if *dst_reg == R16::HL && *src_reg != R16::HL =>
             {
                 with_u16(hl.1, hl.0, |hl| hl.wrapping_add(to_u16(r16.1, r16.0)));
-                let flags = check_overflow_cy(*hl.1, r16.1) | check_overflow_hc(*hl.1, r16.1);
-                return Ok(InstructionEffect::new(2, 1, Some(flags)));
+                // let flags = check_overflow_cy(*hl.1, r16.1) | check_overflow_hc(*hl.1, r16.1);
+                let flags = Flags {
+                    z: None,
+                    n: Some(false),
+                    h: Some(check_overflow_hc(*hl.1, r16.1)),
+                    c: Some(check_overflow_cy(*hl.1, r16.1)),
+                };
+                return Ok(InstructionEffect::new(2, 1, flags));
             }
             (ID::Register16(hl, dst_reg), IT::StackPointer(sp)) if *dst_reg == R16::HL => {
                 with_u16(hl.1, hl.0, |hl| hl.wrapping_add(*sp));
-                let flags = check_overflow_cy(*hl.1, high(*sp)) | check_overflow_hc(*hl.1, high(*sp));
-                return Ok(InstructionEffect::new(2, 1, Some(flags)));
+                // let flags = check_overflow_cy(*hl.1, high(*sp)) | check_overflow_hc(*hl.1, high(*sp));
+                let flags = Flags {
+                    z: None,
+                    n: Some(false),
+                    h: Some(check_overflow_hc(*hl.1, high(*sp))),
+                    c: Some(check_overflow_cy(*hl.1, high(*sp))),
+                };
+                return Ok(InstructionEffect::new(2, 1, flags));
             }
             (ID::StackPointer(sp), IT::SignedImm(e8)) => {
                 let result = sp.wrapping_add(*e8 as u16);
 
-                let flags =
-                    check_overflow_cy(low(result), low(**sp)) | check_overflow_hc(low(result), low(**sp));
-                let flags = flags & !ZERO_FLAG_MASK | !SUBTRACTION_FLAG_MASK;
+                // let flags =
+                //     check_overflow_cy(low(result), low(**sp)) | check_overflow_hc(low(result), low(**sp));
+                // let flags = flags & !ZERO_FLAG_MASK | !SUBTRACTION_FLAG_MASK;
+                let flags = Flags {
+                    z: Some(false),
+                    n: Some(false),
+                    h: Some(check_overflow_hc(low(result), low(**sp))),
+                    c: Some(check_overflow_cy(low(result), low(**sp))),
+                };
                 **sp = result;
 
-                return Ok(InstructionEffect::new(4, 2, Some(flags)));
+                return Ok(InstructionEffect::new(4, 2, flags));
             }
 
             _ => return Err(InstructionError::MalformedInstruction),
@@ -56,10 +74,15 @@ impl<'a> Instruction<'a> for ADD<'a> {
 
         // perform the addition for most of the cases
         let result = dst.wrapping_add(addend);
-        let flags = check_zero(result) | check_overflow_cy(result, *dst) | check_overflow_hc(result, *dst);
+        let flags = Flags {
+            z: Some(check_zero(result)),
+            n: Some(false),
+            h: Some(check_overflow_hc(result, *dst)),
+            c: Some(check_overflow_cy(result, *dst)),
+        };
         *dst = result;
 
-        Ok(InstructionEffect::new(cycles, len, Some(flags)))
+        Ok(InstructionEffect::new(cycles, len, flags))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "add, ") }

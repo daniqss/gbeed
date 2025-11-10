@@ -1,7 +1,7 @@
 use std::fmt::Write;
 
 use crate::core::cpu::{
-    flags::{SUBTRACTION_FLAG_MASK, check_borrow_cy, check_borrow_hc, check_zero},
+    flags::{Flags, check_borrow_hc, check_zero},
     instructions::{
         Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
     },
@@ -29,12 +29,14 @@ impl<'a> Instruction<'a> for Cp<'a> {
         };
 
         let (result, did_borrow) = self.a.overflowing_sub(subtrahend);
-        let flags = check_zero(result)
-            | SUBTRACTION_FLAG_MASK
-            | check_borrow_hc(self.a, subtrahend)
-            | check_borrow_cy(did_borrow);
+        let flags = Flags {
+            z: Some(check_zero(result)),
+            n: Some(true),
+            h: Some(check_borrow_hc(self.a, subtrahend)),
+            c: Some(did_borrow),
+        };
 
-        Ok(InstructionEffect::new(cycles, len, Some(flags)))
+        Ok(InstructionEffect::new(cycles, len, flags))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
