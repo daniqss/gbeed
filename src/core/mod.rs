@@ -70,9 +70,7 @@ impl Dmg {
 
             self.cpu.cycles = self.cpu.cycles.wrapping_add(cycles);
             self.cpu.pc = self.cpu.pc.wrapping_add(len);
-            if let Some(flags) = f {
-                self.cpu.f = flags;
-            }
+            flags.apply(&mut self.cpu.f);
 
             std::thread::sleep(std::time::Duration::from_secs(1));
         }

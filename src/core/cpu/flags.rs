@@ -22,6 +22,37 @@ impl Flags {
             c: None,
         }
     }
+
+    pub fn apply(self, f: &mut u8) {
+        if let Some(z) = self.z {
+            if z {
+                *f |= ZERO_FLAG_MASK;
+            } else {
+                *f &= !ZERO_FLAG_MASK;
+            }
+        }
+        if let Some(n) = self.n {
+            if n {
+                *f |= SUBTRACTION_FLAG_MASK;
+            } else {
+                *f &= !SUBTRACTION_FLAG_MASK;
+            }
+        }
+        if let Some(h) = self.h {
+            if h {
+                *f |= HALF_CARRY_FLAG_MASK;
+            } else {
+                *f &= !HALF_CARRY_FLAG_MASK;
+            }
+        }
+        if let Some(c) = self.c {
+            if c {
+                *f |= CARRY_FLAG_MASK;
+            } else {
+                *f &= !CARRY_FLAG_MASK;
+            }
+        }
+    }
 }
 
 #[inline]
