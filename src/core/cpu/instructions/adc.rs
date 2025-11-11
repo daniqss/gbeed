@@ -9,17 +9,17 @@ use crate::core::cpu::{
 
 /// Add with carry instruction
 /// Adds the value of the specified target plus the carry flag to register A
-pub struct ADC<'a> {
+pub struct Adc<'a> {
     a: &'a mut u8,
     f: &'a mut u8,
     addend: IT<'a>,
 }
 
-impl<'a> ADC<'a> {
-    pub fn new(a: &'a mut u8, f: &'a mut u8, addend: IT<'a>) -> Box<Self> { Box::new(ADC { a, f, addend }) }
+impl<'a> Adc<'a> {
+    pub fn new(a: &'a mut u8, f: &'a mut u8, addend: IT<'a>) -> Box<Self> { Box::new(Adc { a, f, addend }) }
 }
 
-impl<'a> Instruction<'a> for ADC<'a> {
+impl<'a> Instruction<'a> for Adc<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (addend, cycles, len) = match &self.addend {
             IT::Register8(val, reg) if *reg != R8::F => (*val, 1, 1),

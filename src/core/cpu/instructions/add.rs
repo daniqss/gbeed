@@ -13,16 +13,16 @@ use crate::{
 };
 
 /// Add instruction
-pub struct ADD<'a> {
+pub struct Add<'a> {
     dst: ID<'a>,
     addend: IT<'a>,
 }
 
-impl<'a> ADD<'a> {
-    pub fn new(dst: ID<'a>, addend: IT<'a>) -> Box<Self> { Box::new(ADD { dst, addend }) }
+impl<'a> Add<'a> {
+    pub fn new(dst: ID<'a>, addend: IT<'a>) -> Box<Self> { Box::new(Add { dst, addend }) }
 }
 
-impl<'a> Instruction<'a> for ADD<'a> {
+impl<'a> Instruction<'a> for Add<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (dst, addend, cycles, len): (&mut u8, u8, u8, u8) = match (&mut self.dst, &self.addend) {
             (ID::Register8(a, _), IT::Register8(r8, reg)) if *reg != R8::F => (a, *r8, 1, 1),
