@@ -25,6 +25,7 @@ mod sla;
 mod sra;
 mod srl;
 mod sub;
+mod swap;
 mod xor;
 
 use std::fmt::{Display, Write};
@@ -56,6 +57,7 @@ pub use sla::Sla;
 pub use sra::Sra;
 pub use srl::Srl;
 pub use sub::Sub;
+pub use swap::Swap;
 pub use xor::Xor;
 
 use crate::core::{
