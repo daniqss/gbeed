@@ -22,6 +22,8 @@ mod rrca;
 mod sbc;
 mod set;
 mod sla;
+mod sra;
+mod srl;
 mod sub;
 mod xor;
 
@@ -51,6 +53,8 @@ pub use rrca::Rrca;
 pub use sbc::Sbc;
 pub use set::Set;
 pub use sla::Sla;
+pub use sra::Sra;
+pub use srl::Srl;
 pub use sub::Sub;
 pub use xor::Xor;
 

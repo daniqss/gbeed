@@ -17,7 +17,7 @@ pub struct Rla<'a> {
 }
 
 impl<'a> Rla<'a> {
-    pub fn new(carry: u8, dst: ID<'a>) -> Box<Self> { Box::new(Rla { carry, dst }) }
+    pub fn new(carry: u8, dst: ID<'a>) -> Box<Self> { Box::new(Self { carry, dst }) }
 }
 
 impl<'a> Instruction<'a> for Rla<'a> {

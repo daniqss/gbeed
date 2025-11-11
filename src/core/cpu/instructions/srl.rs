@@ -6,20 +6,19 @@ use crate::core::cpu::{
     },
 };
 
-/// Shift Left Arithmetically register r8.
-///
-/// ┏━ Flags ━┓ ┏━━━━━━━ r8 | [hl] ━━━━━━┓
-/// ┃    C   ←╂─╂─   b7  ←  ...  ←  b0  ←╂─ 0
-/// ┗━━━━━━━━━┛ ┗━━━━━━━━━━━━━━━━━━━━━━━━┛
-pub struct Sla<'a> {
+/// Shift Right Logically register r8.
+///    ┏━━━━━━━ r8 ━━━━━━┓ ┏━ Flags ━┓
+/// 0 ─╂→ b7 → ... → b0 ─╂─╂→   C    ┃
+///    ┗━━━━━━━━━━━━━━━━━┛ ┗━━━━━━━━━┛
+pub struct Srl<'a> {
     dst: ID<'a>,
 }
 
-impl<'a> Sla<'a> {
+impl<'a> Srl<'a> {
     pub fn new(dst: ID<'a>) -> Box<Self> { Box::new(Self { dst }) }
 }
 
-impl<'a> Instruction<'a> for Sla<'a> {
+impl<'a> Instruction<'a> for Srl<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
             ID::Register8(r8, reg) if *reg != R8::F => (r8, 2, 2),
@@ -27,12 +26,12 @@ impl<'a> Instruction<'a> for Sla<'a> {
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
-        let result = *dst << 1;
+        let result = (*dst >> 1);
         let flags = Flags {
             z: Some(result == 0),
             n: Some(false),
             h: Some(false),
-            c: Some(*dst & 0b1000_0000 != 0),
+            c: Some(*dst & 0b0000_0001 != 0),
         };
         *dst = result;
 
@@ -40,6 +39,6 @@ impl<'a> Instruction<'a> for Sla<'a> {
     }
 
     fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
-        write!(w, "sla {}", self.dst)
+        write!(w, "srl {}", self.dst)
     }
 }
