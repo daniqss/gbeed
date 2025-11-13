@@ -26,7 +26,7 @@ impl<'a> Instruction<'a> for Srl<'a> {
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
-        let result = (*dst >> 1);
+        let result = *dst >> 1;
         let flags = Flags {
             z: Some(result == 0),
             n: Some(false),

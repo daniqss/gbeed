@@ -67,6 +67,9 @@ pub struct Memory {
     pub ram: [u8; (WRAM_BANKN_END - WRAM_BANK0_START + 1) as usize],
     pub vram: [u8; (VRAM_END - VRAM_START + 1) as usize],
     pub oam_ram: [u8; (OAM_END - OAM_START + 1) as usize],
+    pub io_registers: [u8; (IO_REGISTERS_END - IO_REGISTERS_START + 1) as usize],
+    pub hram: [u8; (HRAM_END - HRAM_START + 1) as usize],
+    pub interrupt_enable: u8,
 }
 
 impl Memory {
@@ -103,17 +106,20 @@ impl Memory {
             ram: [0; (WRAM_BANKN_END - WRAM_BANK0_START + 1) as usize],
             vram: [0; (VRAM_END - VRAM_START + 1) as usize],
             oam_ram: [0; (OAM_END - OAM_START + 1) as usize],
+            io_registers: [0; (IO_REGISTERS_END - IO_REGISTERS_START + 1) as usize],
+            hram: [0; (HRAM_END - HRAM_START + 1) as usize],
+            interrupt_enable: 0,
         }))
     }
 
     /// read 16 bits little endian word
-    pub fn read_word(&self, address: u16) -> u16 { utils::to_u16(self[address], self[address + 1]) }
+    pub fn read_word(&self, address: u16) -> u16 { utils::to_u16(self[address + 1], self[address]) }
 
     /// write 16 bits little endian word
     pub fn write_word(&mut self, address: u16, value: u16) {
         let (high, low) = utils::to_u8(value);
-        self[address] = high;
-        self[address + 1] = low;
+        self[address + 1] = high;
+        self[address] = low;
     }
 }
 
@@ -130,7 +136,12 @@ impl Index<u16> for Memory {
                 &self.ram[offset]
             }
             OAM_START..=OAM_END => &self.oam_ram[(address - OAM_START) as usize],
-            _ => &self.rom[0],
+            IO_REGISTERS_START..=IO_REGISTERS_END => {
+                &self.io_registers[(address - IO_REGISTERS_START) as usize]
+            }
+            HRAM_START..=HRAM_END => &self.hram[(address - HRAM_START) as usize],
+            INTERRUPT_ENABLE_REGISTER => &self.interrupt_enable,
+            _ => unreachable!(),
         }
     }
 }
@@ -146,80 +157,15 @@ impl IndexMut<u16> for Memory {
                 &mut self.ram[offset]
             }
             OAM_START..=OAM_END => &mut self.oam_ram[(address - OAM_START) as usize],
-            _ => &mut self.rom[0],
+            IO_REGISTERS_START..=IO_REGISTERS_END => {
+                &mut self.io_registers[(address - IO_REGISTERS_START) as usize]
+            }
+            HRAM_START..=HRAM_END => &mut self.hram[(address - HRAM_START) as usize],
+            INTERRUPT_ENABLE_REGISTER => &mut self.interrupt_enable,
+            _ => unreachable!(),
         }
     }
 }
-
-// impl Index<Range<u16>> for Memory {
-//     type Output = [u8];
-
-//     fn index(&self, range: Range<u16>) -> &Self::Output {
-//         let start = range.start;
-//         let end = range.end;
-
-//         match (start, end.saturating_sub(1)) {
-//             (ROM_BANK00_START..=ROM_BANKNN_END, ROM_BANK00_START..=ROM_BANKNN_END) => {
-//                 &self.rom[start as usize..end as usize]
-//             }
-//             (VRAM_START..=VRAM_END, VRAM_START..=VRAM_END) => {
-//                 let s = (start - VRAM_START) as usize;
-//                 let e = (end - VRAM_START) as usize;
-//                 &self.vram[s..e]
-//             }
-//             (WRAM_BANK0_START..=WRAM_BANKN_END, WRAM_BANK0_START..=WRAM_BANKN_END) => {
-//                 let s = (start - WRAM_BANK0_START) as usize;
-//                 let e = (end - WRAM_BANK0_START) as usize;
-//                 &self.ram[s..e]
-//             }
-//             (ECHO_RAM_START..=ECHO_RAM_END, ECHO_RAM_START..=ECHO_RAM_END) => {
-//                 let s = (start - ECHO_RAM_START) as usize;
-//                 let e = (end - ECHO_RAM_START) as usize;
-//                 &self.ram[s..e]
-//             }
-//             (OAM_START..=OAM_END, OAM_START..=OAM_END) => {
-//                 let s = (start - OAM_START) as usize;
-//                 let e = (end - OAM_START) as usize;
-//                 &self.oam_ram[s..e]
-//             }
-//             _ => &[],
-//         }
-//     }
-// }
-
-// impl IndexMut<Range<u16>> for Memory {
-//     fn index_mut(&mut self, range: Range<u16>) -> &mut Self::Output {
-//         let start = range.start;
-//         let end = range.end;
-
-//         match (start, end.saturating_sub(1)) {
-//             (ROM_BANK00_START..=ROM_BANKNN_END, ROM_BANK00_START..=ROM_BANKNN_END) => {
-//                 &mut self.rom[start as usize..end as usize]
-//             }
-//             (VRAM_START..=VRAM_END, VRAM_START..=VRAM_END) => {
-//                 let s = (start - VRAM_START) as usize;
-//                 let e = (end - VRAM_START) as usize;
-//                 &mut self.vram[s..e]
-//             }
-//             (WRAM_BANK0_START..=WRAM_BANKN_END, WRAM_BANK0_START..=WRAM_BANKN_END) => {
-//                 let s = (start - WRAM_BANK0_START) as usize;
-//                 let e = (end - WRAM_BANK0_START) as usize;
-//                 &mut self.ram[s..e]
-//             }
-//             (ECHO_RAM_START..=ECHO_RAM_END, ECHO_RAM_START..=ECHO_RAM_END) => {
-//                 let s = (start - ECHO_RAM_START) as usize;
-//                 let e = (end - ECHO_RAM_START) as usize;
-//                 &mut self.ram[s..e]
-//             }
-//             (OAM_START..=OAM_END, OAM_START..=OAM_END) => {
-//                 let s = (start - OAM_START) as usize;
-//                 let e = (end - OAM_START) as usize;
-//                 &mut self.oam_ram[s..e]
-//             }
-//             _ => &mut [],
-//         }
-//     }
-// }
 
 #[cfg(test)]
 mod test {

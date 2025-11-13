@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_rr_with_carry() {
-        let addr = 0xAA00;
+        let addr = 0xFF00;
         let value = 0b0011_1000;
         let bus = Memory::new(None, None);
         bus.borrow_mut()[addr] = value;

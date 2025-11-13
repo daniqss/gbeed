@@ -14,6 +14,7 @@ mod ld;
 mod ldh;
 mod nop;
 mod or;
+mod pop;
 mod res;
 mod rl;
 mod rla;
@@ -51,6 +52,7 @@ pub use ld::Ld;
 pub use ldh::Ldh;
 pub use nop::Nop;
 pub use or::Or;
+pub use pop::Pop;
 pub use res::Res;
 pub use rl::Rl;
 pub use rla::Rla;
@@ -102,6 +104,7 @@ pub enum InstructionTarget<'a> {
     PointedByRegister16(u8, R16),
     PointedByHLI(u8, (&'a mut u8, &'a mut u8)),
     PointedByHLD(u8, (&'a mut u8, &'a mut u8)),
+    PointedByStackPointer((u8, u8), &'a mut u16),
     StackPointer(u16),
     StackPointerPlusE8(u16, i8),
 }
@@ -120,6 +123,7 @@ impl Display for InstructionTarget<'_> {
             InstructionTarget::PointedByRegister16(_, reg) => write!(f, "[{}]", reg),
             InstructionTarget::PointedByHLI(_, _) => write!(f, "[hli]"),
             InstructionTarget::PointedByHLD(_, _) => write!(f, "[hld]"),
+            InstructionTarget::PointedByStackPointer(_, _) => write!(f, "[sp]"),
             InstructionTarget::StackPointer(_) => write!(f, "sp"),
             InstructionTarget::StackPointerPlusE8(_, e8) => write!(f, "sp+{:+}", e8),
         }

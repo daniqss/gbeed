@@ -18,7 +18,7 @@ pub struct Ld<'a> {
 }
 
 impl<'a> Ld<'a> {
-    pub fn new(dst: ID<'a>, src: IT<'a>) -> Box<Self> { Box::new(Ld { dst, src }) }
+    pub fn new(dst: ID<'a>, src: IT<'a>) -> Box<Self> { Box::new(Self { dst, src }) }
 }
 
 impl<'a> Instruction<'a> for Ld<'a> {
