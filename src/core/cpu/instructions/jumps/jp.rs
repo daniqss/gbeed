@@ -22,20 +22,6 @@ impl<'a> Jp<'a> {
 
 impl<'a> Instruction<'a> for Jp<'a> {
     fn exec(&mut self) -> InstructionResult {
-        // let (addr, cycles, len) = match &self.jump {
-        //     IT::JumpToImm16(JC::None, addr) => (*addr, 4, 3),
-        //     IT::JumpToImm16(JC::Zero(true), addr) => (*addr, 4, 3),
-        //     IT::JumpToImm16(JC::Zero(false), _) => (*self.pc, 3, 3),
-        //     IT::JumpToImm16(JC::NotZero(true), addr) => (*addr, 4, 3),
-        //     IT::JumpToImm16(JC::NotZero(false), _) => (*self.pc, 3, 3),
-        //     IT::JumpToImm16(JC::Carry(true), addr) => (*addr, 4, 3),
-        //     IT::JumpToImm16(JC::Carry(false), _) => (*self.pc, 3, 3),
-        //     IT::JumpToImm16(JC::NotCarry(true), addr) => (*addr, 4, 3),
-        //     IT::JumpToImm16(JC::NotCarry(false), _) => (*self.pc, 3, 3),
-        //     IT::JumpToHL(addr) => (*addr, 1, 1),
-
-        //     _ => return Err(InstructionError::MalformedInstruction),
-        // };
         let (addr, cycles, len) = match &self.jump {
             IT::JumpToImm16(cc, addr) => {
                 let should_jump = cc.should_jump();

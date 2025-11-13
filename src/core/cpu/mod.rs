@@ -3,10 +3,13 @@ mod instructions;
 mod registers;
 
 use crate::{
-    core::memory::{IO_REGISTERS_START, MemoryBus},
+    core::{
+        cpu::flags::ZERO_FLAG_MASK,
+        memory::{IO_REGISTERS_START, MemoryBus},
+    },
     utils::to_u16,
 };
-use instructions::{InstructionDestination as ID, InstructionTarget as IT, *};
+use instructions::{InstructionDestination as ID, InstructionTarget as IT, JumpCondition as JC, *};
 use registers::{Register8 as R8, Register16 as R16};
 use std::fmt::{self, Display, Formatter};
 
@@ -198,6 +201,19 @@ impl Cpu {
                 )
             }
             0x7F => return Err(InstructionError::NoOp(opcode, self.pc)),
+            0xC2 => {
+                let ppcc = self.pc;
+                Jp::new(
+                    &mut self.pc,
+                    IT::JumpToImm16(
+                        JC::NotZero(self.f & ZERO_FLAG_MASK == 0),
+                        to_u16(
+                            self.bus.clone().borrow()[ppcc + 2],
+                            self.bus.clone().borrow()[ppcc + 1],
+                        ),
+                    ),
+                )
+            }
             0xE0 => Ldh::new(
                 ID::PointedByN16(self.bus.clone(), self.pc + 1),
                 IT::Register8(self.a, R8::A),
