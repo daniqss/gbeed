@@ -15,6 +15,7 @@ mod ldh;
 mod nop;
 mod or;
 mod pop;
+mod push;
 mod res;
 mod rl;
 mod rla;
@@ -53,6 +54,7 @@ pub use ldh::Ldh;
 pub use nop::Nop;
 pub use or::Or;
 pub use pop::Pop;
+pub use push::Push;
 pub use res::Res;
 pub use rl::Rl;
 pub use rla::Rla;
@@ -141,6 +143,7 @@ pub enum InstructionDestination<'a> {
     PointedByRegister16(MemoryBus, u16, R16),
     PointedByHLI(MemoryBus, (&'a mut u8, &'a mut u8)),
     PointedByHLD(MemoryBus, (&'a mut u8, &'a mut u8)),
+    PointedByStackPointer(MemoryBus, &'a mut u16),
     StackPointer(&'a mut u16),
 }
 
@@ -158,6 +161,7 @@ impl Display for InstructionDestination<'_> {
             InstructionDestination::PointedByRegister16(_, _, reg) => write!(f, "[{}]", reg),
             InstructionDestination::PointedByHLI(_, _) => write!(f, "[hli]"),
             InstructionDestination::PointedByHLD(_, _) => write!(f, "[hld]"),
+            InstructionDestination::PointedByStackPointer(_, _) => write!(f, "[sp]"),
             InstructionDestination::StackPointer(_) => write!(f, "sp"),
         }
     }

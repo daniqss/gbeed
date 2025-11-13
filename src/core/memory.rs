@@ -66,6 +66,7 @@ pub struct Memory {
     pub rom: [u8; (ROM_BANKNN_END + 1) as usize],
     pub ram: [u8; (WRAM_BANKN_END - WRAM_BANK0_START + 1) as usize],
     pub vram: [u8; (VRAM_END - VRAM_START + 1) as usize],
+    pub external_ram: [u8; (EXTERNAL_RAM_END - EXTERNAL_RAM_START + 1) as usize],
     pub oam_ram: [u8; (OAM_END - OAM_START + 1) as usize],
     pub io_registers: [u8; (IO_REGISTERS_END - IO_REGISTERS_START + 1) as usize],
     pub hram: [u8; (HRAM_END - HRAM_START + 1) as usize],
@@ -98,13 +99,13 @@ impl Memory {
             }
             _ => {}
         };
-
         Rc::new(RefCell::new(Memory {
             game_rom,
             boot_rom,
             rom,
             ram: [0; (WRAM_BANKN_END - WRAM_BANK0_START + 1) as usize],
             vram: [0; (VRAM_END - VRAM_START + 1) as usize],
+            external_ram: [0; (EXTERNAL_RAM_END - EXTERNAL_RAM_START + 1) as usize],
             oam_ram: [0; (OAM_END - OAM_START + 1) as usize],
             io_registers: [0; (IO_REGISTERS_END - IO_REGISTERS_START + 1) as usize],
             hram: [0; (HRAM_END - HRAM_START + 1) as usize],
@@ -130,6 +131,9 @@ impl Index<u16> for Memory {
         match address {
             ROM_BANK00_START..=ROM_BANKNN_END => &self.rom[address as usize],
             VRAM_START..=VRAM_END => &self.vram[(address - VRAM_START) as usize],
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
+                &self.external_ram[(address - EXTERNAL_RAM_START) as usize]
+            }
             WRAM_BANK0_START..=WRAM_BANKN_END => &self.ram[(address - WRAM_BANK0_START) as usize],
             ECHO_RAM_START..=ECHO_RAM_END => {
                 let offset = (address - ECHO_RAM_START) as usize;
@@ -151,18 +155,21 @@ impl IndexMut<u16> for Memory {
         match address {
             ROM_BANK00_START..=ROM_BANKNN_END => &mut self.rom[address as usize],
             VRAM_START..=VRAM_END => &mut self.vram[(address - VRAM_START) as usize],
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
+                &mut self.external_ram[(address - EXTERNAL_RAM_START) as usize]
+            }
             WRAM_BANK0_START..=WRAM_BANKN_END => &mut self.ram[(address - WRAM_BANK0_START) as usize],
             ECHO_RAM_START..=ECHO_RAM_END => {
                 let offset = (address - ECHO_RAM_START) as usize;
                 &mut self.ram[offset]
             }
             OAM_START..=OAM_END => &mut self.oam_ram[(address - OAM_START) as usize],
+            NOT_USABLE_START..=NOT_USABLE_END => unreachable!("Write to prohibited memory region FEA0–FEFF"),
             IO_REGISTERS_START..=IO_REGISTERS_END => {
                 &mut self.io_registers[(address - IO_REGISTERS_START) as usize]
             }
             HRAM_START..=HRAM_END => &mut self.hram[(address - HRAM_START) as usize],
             INTERRUPT_ENABLE_REGISTER => &mut self.interrupt_enable,
-            _ => unreachable!(),
         }
     }
 }

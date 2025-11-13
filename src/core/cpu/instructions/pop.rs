@@ -10,7 +10,7 @@ use crate::core::cpu::{
 };
 
 /// Pop a 16 bit register from the stack.
-/// Should behave like the following non-real instructions:
+/// Should behave like the following non-real instructions (for AF register, but its the same for the other 16 bit registers):
 /// ```asm
 /// ld f, [sp]
 /// inc sp
@@ -18,8 +18,8 @@ use crate::core::cpu::{
 /// inc sp
 /// ``````
 pub struct Pop<'a> {
-    src: IT<'a>,
     dst: ID<'a>,
+    src: IT<'a>,
 }
 
 impl<'a> Pop<'a> {
@@ -28,7 +28,7 @@ impl<'a> Pop<'a> {
 impl<'a> Instruction<'a> for Pop<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (dst, src, sp, flags) = match (&mut self.dst, &mut self.src) {
-            (ID::Register16(dst, reg), IT::PointedByStackPointer(val, sp)) if *reg == R16::AF => (
+            (ID::Register16(dst, R16::AF), IT::PointedByStackPointer(val, sp)) => (
                 dst,
                 *val,
                 sp,
@@ -49,7 +49,6 @@ impl<'a> Instruction<'a> for Pop<'a> {
 
         // pop [sp+1] to high register, such as A in AF
         *dst.1 = src.1;
-        println!("a after pop: {}", dst.1);
 
         // increment stack pointer by 2, one for each byte popped
         **sp += 2;
