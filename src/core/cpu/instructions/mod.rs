@@ -10,6 +10,7 @@ mod di;
 mod ei;
 mod halt;
 mod inc;
+mod jp;
 mod ld;
 mod ldh;
 mod nop;
@@ -49,6 +50,7 @@ pub use di::Di;
 pub use ei::Ei;
 pub use halt::Halt;
 pub use inc::Inc;
+pub use jp::Jp;
 pub use ld::Ld;
 pub use ldh::Ldh;
 pub use nop::Nop;
@@ -109,6 +111,41 @@ pub enum InstructionTarget<'a> {
     PointedByStackPointer((u8, u8), &'a mut u16),
     StackPointer(u16),
     StackPointerPlusE8(u16, i8),
+    JumpToImm16(JumpCondition, u16),
+    JumpToHL(u16),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum JumpCondition {
+    Zero(bool),
+    NotZero(bool),
+    Carry(bool),
+    NotCarry(bool),
+    None,
+}
+
+impl JumpCondition {
+    pub fn should_jump(&self) -> bool {
+        match self {
+            JumpCondition::Zero(cond) => *cond,
+            JumpCondition::NotZero(cond) => *cond,
+            JumpCondition::Carry(cond) => *cond,
+            JumpCondition::NotCarry(cond) => *cond,
+            JumpCondition::None => true,
+        }
+    }
+}
+
+impl Display for JumpCondition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            JumpCondition::Zero(_) => write!(f, "z,"),
+            JumpCondition::NotZero(_) => write!(f, "nz,"),
+            JumpCondition::Carry(_) => write!(f, "c,"),
+            JumpCondition::NotCarry(_) => write!(f, "nc,"),
+            JumpCondition::None => write!(f, ""),
+        }
+    }
 }
 
 impl Display for InstructionTarget<'_> {
@@ -128,6 +165,8 @@ impl Display for InstructionTarget<'_> {
             InstructionTarget::PointedByStackPointer(_, _) => write!(f, "[sp]"),
             InstructionTarget::StackPointer(_) => write!(f, "sp"),
             InstructionTarget::StackPointerPlusE8(_, e8) => write!(f, "sp+{:+}", e8),
+            InstructionTarget::JumpToImm16(cc, addr) => write!(f, "{}${:04X}", cc, addr),
+            InstructionTarget::JumpToHL(_) => write!(f, "hl"),
         }
     }
 }
