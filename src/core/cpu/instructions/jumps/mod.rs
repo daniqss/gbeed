@@ -1,12 +1,16 @@
 mod call;
 mod jp;
 mod jr;
+mod ret;
+mod reti;
 
 use std::fmt::Display;
 
 pub use call::Call;
 pub use jp::Jp;
 pub use jr::Jr;
+pub use ret::Ret;
+pub use reti::Reti;
 
 #[derive(Debug, PartialEq)]
 pub enum JumpCondition {

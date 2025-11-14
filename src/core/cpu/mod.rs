@@ -31,7 +31,8 @@ pub struct Cpu {
     pub sp: u16,
 
     pub cycles: usize,
-    bus: MemoryBus,
+    pub ime: bool,
+    pub bus: MemoryBus,
 }
 
 impl Cpu {
@@ -49,6 +50,7 @@ impl Cpu {
             sp: 0x0000,
 
             cycles: 0,
+            ime: false,
             bus,
         }
     }

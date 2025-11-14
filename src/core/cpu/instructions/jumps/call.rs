@@ -5,8 +5,7 @@ use crate::{
         cpu::{
             flags::Flags,
             instructions::{
-                Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
-                InstructionResult, InstructionTarget as IT, Push, add,
+                Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
             },
         },
         memory::MemoryBus,
