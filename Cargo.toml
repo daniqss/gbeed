@@ -5,3 +5,8 @@ edition = "2024"
 
 [dependencies]
 thiserror = "2.0.17"
+
+[dependencies.sdl2]
+version = "0.38"
+default-features = false
+features = ["mixer", "image", "ttf", "gfx"]

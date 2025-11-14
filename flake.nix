@@ -28,9 +28,17 @@
           pkgs.rustc
           pkgs.clippy
           fenix.packages.${system}.latest.rustfmt
+
+          pkgs.pkg-config
+          pkgs.SDL2
+          pkgs.SDL2_mixer
+          pkgs.SDL2_image
+          pkgs.SDL2_ttf
+          pkgs.SDL2_gfx
         ];
 
         RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+        SDL_VIDEODRIVER = "wayland";
       };
     });
   };

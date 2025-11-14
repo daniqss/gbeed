@@ -201,10 +201,10 @@ impl Cartridge {
 
 impl std::fmt::Display for Cartridge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}\n", self.title)?;
-        write!(
+        writeln!(f, "{}", self.title.replace('\0', ""))?;
+        writeln!(
             f,
-            "{} -> {}\n",
+            "{} -> {}",
             match self.is_pre_sgb {
                 true => "Old license",
                 false => "New license",
@@ -214,26 +214,26 @@ impl std::fmt::Display for Cartridge {
                 None => "None",
             }
         )?;
-        write!(
+        writeln!(
             f,
-            "{}upports Super Gameboy\n",
+            "{}upports Super Gameboy",
             match self.supports_sgb {
                 true => "S",
                 false => "Not s",
             }
         )?;
-        write!(f, "Cartridge type -> {:#?}\n", self.cartridge_type)?;
-        write!(
+        writeln!(f, "Cartridge type -> {:#?}", self.cartridge_type)?;
+        writeln!(
             f,
-            "ROM Size -> {} KB ({} banks)\n",
+            "ROM Size -> {} KB ({} banks)",
             self.rom_size.0 / 1024,
             self.rom_size.1
         )?;
-        write!(f, "RAM Size -> {} KB\n", self.ram_size / 1024)?;
-        write!(f, "Destination code -> {}\n", self.destination)?;
-        write!(f, "Game version -> {}\n", self.game_version)?;
-        write!(f, "Header checksum -> {:#04X}\n", self.header_checksum)?;
-        write!(f, "Global checksum -> {:#06X}\n", self.global_checksum)?;
+        writeln!(f, "RAM Size -> {} KB", self.ram_size / 1024)?;
+        writeln!(f, "Destination code -> {}", self.destination)?;
+        writeln!(f, "Game version -> {}", self.game_version)?;
+        writeln!(f, "Header checksum -> {:#04X}", self.header_checksum)?;
+        writeln!(f, "Global checksum -> {:#06X}", self.global_checksum)?;
         Ok(())
     }
 }
