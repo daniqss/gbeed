@@ -5,4 +5,6 @@ edition = "2024"
 
 [dependencies]
 thiserror = "2.0.17"
+# raylib = { git = "https://github.com/raylib-rs/raylib-rs", branch = "unstable", features = ["drm", "wayland", "opengl_es_20"] }
 raylib = { version = "5.5.1", features = ["wayland"] }
+# raylib = { git = "https://github.com/raylib-rs/raylib-rs", branch = "unstable", features = ["drm", "opengl_es_20"] }
