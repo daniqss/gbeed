@@ -28,9 +28,20 @@
           pkgs.rustc
           pkgs.clippy
           fenix.packages.${system}.latest.rustfmt
+
+          # raylib dependencies
+          pkgs.glfw-wayland
+          pkgs.cmake
+          pkgs.clang
+          pkgs.wayland
         ];
 
         RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+        LD_LIBRARY_PATH = with pkgs;
+          lib.makeLibraryPath [
+            libGL
+          ];
+        LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
       };
     });
   };
