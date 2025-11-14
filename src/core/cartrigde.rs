@@ -201,7 +201,7 @@ impl Cartridge {
 
 impl std::fmt::Display for Cartridge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}", self.title)?;
+        writeln!(f, "{}", self.title.replace('\0', ""))?;
         writeln!(
             f,
             "{} -> {}",

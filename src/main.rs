@@ -6,10 +6,17 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
+use sdl2::render::Texture;
 use sdl2::render::TextureQuery;
 
 const SCREEN_WIDTH: u32 = 800;
 const SCREEN_HEIGHT: u32 = 600;
+
+macro_rules! rect(
+    ($x:expr, $y:expr, $w:expr, $h:expr) => (
+        Rect::new($x as i32, $y as i32, $w as u32, $h as u32)
+    )
+);
 
 fn main() -> Result<()> {
     let mut args = std::env::args().skip(1);
@@ -45,30 +52,48 @@ fn main() -> Result<()> {
 
     // Load a font
     let mut font = ttf_context
-        .load_font("./assets/fonts/FreeSansBold.ttf", 200)
+        .load_font("./assets/fonts/FreeSansBold.ttf", 32)
         .map_err(Error::Sdl2)?;
     font.set_style(sdl2::ttf::FontStyle::BOLD);
 
-    // render a surface, and convert it to a texture bound to the canvas
+    let line_spacing = font.recommended_line_spacing() as u32;
+    let mut max_width = 0u32;
 
-    // xd
-    let surface = font
-        .render(&format!("{:#?}", cartridge))
-        .blended(Color::RGBA(255, 0, 0, 255))
-        .map_err(|e| Error::Generic(e.to_string()))?;
-    let texture = texture_creator
-        .create_texture_from_surface(&surface)
-        .map_err(|e| Error::Generic(e.to_string()))?;
+    let textures: Vec<Texture<'_>> = format!("{}", cartridge)
+        .lines()
+        .filter_map(|line| {
+            let render_line = if line.is_empty() { " " } else { line };
+            let surface = font
+                .render(render_line)
+                .blended(Color::RGBA(255, 0, 0, 255))
+                .ok()?;
+            let texture = texture_creator.create_texture_from_surface(&surface).ok()?;
 
-    canvas.set_draw_color(Color::RGBA(195, 217, 255, 255));
-    canvas.clear();
+            let TextureQuery { width, .. } = texture.query();
 
-    let TextureQuery { width, height, .. } = texture.query();
+            if width > max_width {
+                max_width = width;
+            }
 
-    let padding = 64;
-    let target = get_centered_rect(width, height, SCREEN_WIDTH - padding, SCREEN_HEIGHT - padding);
+            Some(texture)
+        })
+        .collect();
 
-    canvas.copy(&texture, None, Some(target)).map_err(Error::Sdl2)?;
+    let total_height = line_spacing * (textures.len().max(1) as u32);
+    let start_x = (SCREEN_WIDTH.saturating_sub(max_width)) / 2;
+    let start_y = (SCREEN_HEIGHT.saturating_sub(total_height)) / 2;
+    let mut current_y = start_y;
+
+    for texture in textures {
+        let TextureQuery { width, height, .. } = texture.query();
+
+        let target_rect = rect!(start_x, current_y, width, height);
+        canvas
+            .copy(&texture, None, Some(target_rect))
+            .map_err(|e| Error::Sdl2(e.to_string()))?;
+        current_y += line_spacing;
+    }
+
     canvas.present();
 
     'mainloop: loop {
@@ -85,34 +110,4 @@ fn main() -> Result<()> {
     }
 
     Ok(())
-}
-
-macro_rules! rect(
-    ($x:expr, $y:expr, $w:expr, $h:expr) => (
-        Rect::new($x as i32, $y as i32, $w as u32, $h as u32)
-    )
-);
-
-// Scale fonts to a reasonable size when they're too big (though they might look less smooth)
-fn get_centered_rect(rect_width: u32, rect_height: u32, cons_width: u32, cons_height: u32) -> Rect {
-    let wr = rect_width as f32 / cons_width as f32;
-    let hr = rect_height as f32 / cons_height as f32;
-
-    let (w, h) = if wr > 1f32 || hr > 1f32 {
-        if wr > hr {
-            println!("Scaling down! The text will look worse!");
-            let h = (rect_height as f32 / wr) as i32;
-            (cons_width as i32, h)
-        } else {
-            println!("Scaling down! The text will look worse!");
-            let w = (rect_width as f32 / hr) as i32;
-            (w, cons_height as i32)
-        }
-    } else {
-        (rect_width as i32, rect_height as i32)
-    };
-
-    let cx = (SCREEN_WIDTH as i32 - w) / 2;
-    let cy = (SCREEN_HEIGHT as i32 - h) / 2;
-    rect!(cx, cy, w, h)
 }
