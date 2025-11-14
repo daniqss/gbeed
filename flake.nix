@@ -29,19 +29,16 @@
           pkgs.clippy
           fenix.packages.${system}.latest.rustfmt
 
-          # raylib dependencies
-          pkgs.glfw-wayland
-          pkgs.cmake
-          pkgs.clang
-          pkgs.wayland
+          pkgs.pkg-config
+          pkgs.SDL2
+          pkgs.SDL2_mixer
+          pkgs.SDL2_image
+          pkgs.SDL2_ttf
+          pkgs.SDL2_gfx
         ];
 
         RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
-        LD_LIBRARY_PATH = with pkgs;
-          lib.makeLibraryPath [
-            libGL
-          ];
-        LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+        SDL_VIDEODRIVER = "wayland";
       };
     });
   };

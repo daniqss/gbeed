@@ -6,4 +6,10 @@ pub enum Error {
 
     #[error(transparent)]
     Io(#[from] std::io::Error),
+
+    #[error("SDL2 Error: {0}")]
+    Sdl2(String),
+
+    #[error("Error loading font: {0}")]
+    FontLoad(String),
 }
