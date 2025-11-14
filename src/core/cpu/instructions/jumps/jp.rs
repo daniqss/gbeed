@@ -4,13 +4,12 @@ use crate::core::cpu::{
     flags::Flags,
     instructions::{
         Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
-        JumpCondition as JC,
     },
 };
 
 /// jump to the given address
 /// it can get a condition to jump only if the condition is met
-/// this condition is based on the zero flag
+/// this condition is based on carry and zero flags
 pub struct Jp<'a> {
     pub pc: &'a mut u16,
     pub jump: IT<'a>,

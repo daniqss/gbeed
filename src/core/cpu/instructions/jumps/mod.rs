@@ -1,8 +1,10 @@
 mod jp;
+mod jr;
 
 use std::fmt::Display;
 
 pub use jp::Jp;
+pub use jr::Jr;
 
 #[derive(Debug, PartialEq)]
 pub enum JumpCondition {

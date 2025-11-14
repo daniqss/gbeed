@@ -113,6 +113,7 @@ pub enum InstructionTarget<'a> {
     StackPointerPlusE8(u16, i8),
     JumpToImm16(JumpCondition, u16),
     JumpToHL(u16),
+    JumpToImm8(JumpCondition, i8),
 }
 
 impl Display for InstructionTarget<'_> {
@@ -134,6 +135,7 @@ impl Display for InstructionTarget<'_> {
             InstructionTarget::StackPointerPlusE8(_, e8) => write!(f, "sp+{:+}", e8),
             InstructionTarget::JumpToImm16(cc, addr) => write!(f, "{}${:04X}", cc, addr),
             InstructionTarget::JumpToHL(_) => write!(f, "hl"),
+            InstructionTarget::JumpToImm8(cc, offset) => write!(f, "{}{:+}", cc, offset),
         }
     }
 }
