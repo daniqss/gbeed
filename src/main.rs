@@ -45,7 +45,7 @@ fn main() -> Result<()> {
 
     // Load a font
     let mut font = ttf_context
-        .load_font("./FreeSansBold.ttf", 200)
+        .load_font("./assets/fonts/FreeSansBold.ttf", 200)
         .map_err(Error::Sdl2)?;
     font.set_style(sdl2::ttf::FontStyle::BOLD);
 
