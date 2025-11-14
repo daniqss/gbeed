@@ -114,7 +114,7 @@ impl Memory {
     }
 
     /// read 16 bits little endian word
-    pub fn read_word(&self, address: u16) -> u16 { utils::to_u16(self[address + 1], self[address]) }
+    pub fn read_word(&self, address: u16) -> u16 { utils::to_u16(self[address], self[address + 1]) }
 
     /// write 16 bits little endian word
     pub fn write_word(&mut self, address: u16, value: u16) {

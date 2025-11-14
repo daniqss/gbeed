@@ -1,8 +1,10 @@
+mod call;
 mod jp;
 mod jr;
 
 use std::fmt::Display;
 
+pub use call::Call;
 pub use jp::Jp;
 pub use jr::Jr;
 

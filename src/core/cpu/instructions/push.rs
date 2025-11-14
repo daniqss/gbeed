@@ -1,12 +1,15 @@
 use std::fmt::Write;
 
-use crate::core::cpu::{
-    R16,
-    flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
-    instructions::{
-        Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
-        InstructionTarget as IT,
+use crate::{
+    core::cpu::{
+        R16,
+        flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
+        instructions::{
+            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
+            InstructionResult, InstructionTarget as IT,
+        },
     },
+    utils::{to_u8, to_u16},
 };
 
 /// Push a 16 bit register onto the stack. It is roughly equivalent to the following imaginary instructions:
