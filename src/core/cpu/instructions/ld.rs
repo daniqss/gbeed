@@ -12,16 +12,16 @@ use crate::{
     utils::{high, low, to_u8, to_u16, with_u16},
 };
 
-pub struct LD<'a> {
+pub struct Ld<'a> {
     dst: ID<'a>,
     src: IT<'a>,
 }
 
-impl<'a> LD<'a> {
-    pub fn new(dst: ID<'a>, src: IT<'a>) -> Box<Self> { Box::new(LD { dst, src }) }
+impl<'a> Ld<'a> {
+    pub fn new(dst: ID<'a>, src: IT<'a>) -> Box<Self> { Box::new(Self { dst, src }) }
 }
 
-impl<'a> Instruction<'a> for LD<'a> {
+impl<'a> Instruction<'a> for Ld<'a> {
     fn exec(&mut self) -> InstructionResult {
         // handle cases where srcs are increased and decreased after load
         if let (ID::Register8(dst, reg), IT::PointedByHLD(src, hl)) = (&mut self.dst, &mut self.src) {
@@ -67,12 +67,12 @@ impl<'a> Instruction<'a> for LD<'a> {
             }
             (ID::Register8(dst, _), IT::PointedByRegister16(src, _)) => (*dst, *src, 2, 1),
             (ID::Register8(dst, reg), IT::PointedByN16(src, _)) if *reg == R8::A => (*dst, *src, 4, 3),
-            // sometimes written as `LD [HL+],A`, or `LDI [HL],A`
+            // sometimes written as `Ld [HL+],A`, or `LDI [HL],A`
             (ID::PointedByHLI(bus, hl), IT::Register8(src, reg)) if *reg == R8::A => {
                 with_u16(hl.1, hl.0, |hl| hl.wrapping_add(1));
                 (&mut bus.borrow_mut()[to_u16(*hl.1, *hl.0)], *src, 2, 1)
             }
-            // sometimes written as `LD [HL-],A`, or `LDD [HL],A`
+            // sometimes written as `Ld [HL-],A`, or `LDD [HL],A`
             (ID::PointedByHLD(bus, hl), IT::Register8(src, reg)) if *reg == R8::A => {
                 with_u16(hl.1, hl.0, |hl| hl.wrapping_sub(1));
                 (&mut bus.borrow_mut()[to_u16(*hl.1, *hl.0)], *src, 2, 1)

@@ -2,40 +2,81 @@ mod adc;
 mod add;
 mod and;
 mod bit;
+mod carry;
 mod cp;
 mod cpl;
+mod daa;
 mod dec;
+mod di;
+mod ei;
+mod halt;
 mod inc;
+mod jumps;
 mod ld;
 mod ldh;
 mod nop;
 mod or;
+mod pop;
+mod push;
 mod res;
 mod rl;
+mod rla;
+mod rlc;
+mod rlca;
+mod rr;
+mod rra;
+mod rrc;
+mod rrca;
 mod sbc;
 mod set;
+mod sla;
+mod sra;
+mod srl;
+mod stop;
 mod sub;
+mod swap;
 mod xor;
 
 use std::fmt::{Display, Write};
 
-pub use adc::*;
-pub use add::*;
-pub use and::*;
-pub use bit::*;
-pub use cp::*;
-pub use cpl::*;
-pub use dec::*;
-pub use inc::*;
-pub use ld::*;
-pub use ldh::*;
-pub use nop::*;
-pub use or::*;
-pub use res::*;
-pub use sbc::*;
-pub use set::*;
-pub use sub::*;
-pub use xor::*;
+pub use adc::Adc;
+pub use add::Add;
+pub use and::And;
+pub use bit::Bit;
+pub use carry::*;
+pub use cp::Cp;
+pub use cpl::Cpl;
+pub use daa::Daa;
+pub use dec::Dec;
+pub use di::Di;
+pub use ei::Ei;
+pub use halt::Halt;
+pub use inc::Inc;
+pub use jumps::*;
+pub use ld::Ld;
+pub use ldh::Ldh;
+pub use nop::Nop;
+pub use or::Or;
+pub use pop::Pop;
+pub use push::Push;
+pub use res::Res;
+pub use rl::Rl;
+pub use rla::Rla;
+pub use rlc::Rlc;
+pub use rlca::Rlca;
+pub use rr::Rr;
+pub use rra::Rra;
+pub use rrc::Rrc;
+pub use rrca::Rrca;
+pub use sbc::Sbc;
+pub use set::Set;
+pub use sla::Sla;
+pub use sra::Sra;
+pub use srl::Srl;
+pub use stop::Stop;
+pub use sub::Sub;
+pub use swap::Swap;
+pub use xor::Xor;
 
 use crate::core::{
     cpu::{R8, R16, flags::Flags},
@@ -69,8 +110,12 @@ pub enum InstructionTarget<'a> {
     PointedByRegister16(u8, R16),
     PointedByHLI(u8, (&'a mut u8, &'a mut u8)),
     PointedByHLD(u8, (&'a mut u8, &'a mut u8)),
+    PointedByStackPointer((u8, u8), &'a mut u16),
     StackPointer(u16),
     StackPointerPlusE8(u16, i8),
+    JumpToImm16(JumpCondition, u16),
+    JumpToHL(u16),
+    JumpToImm8(JumpCondition, i8),
 }
 
 impl Display for InstructionTarget<'_> {
@@ -87,8 +132,12 @@ impl Display for InstructionTarget<'_> {
             InstructionTarget::PointedByRegister16(_, reg) => write!(f, "[{}]", reg),
             InstructionTarget::PointedByHLI(_, _) => write!(f, "[hli]"),
             InstructionTarget::PointedByHLD(_, _) => write!(f, "[hld]"),
+            InstructionTarget::PointedByStackPointer(_, _) => write!(f, "[sp]"),
             InstructionTarget::StackPointer(_) => write!(f, "sp"),
             InstructionTarget::StackPointerPlusE8(_, e8) => write!(f, "sp+{:+}", e8),
+            InstructionTarget::JumpToImm16(cc, addr) => write!(f, "{}${:04X}", cc, addr),
+            InstructionTarget::JumpToHL(_) => write!(f, "hl"),
+            InstructionTarget::JumpToImm8(cc, offset) => write!(f, "{}{:+}", cc, offset),
         }
     }
 }
@@ -104,6 +153,7 @@ pub enum InstructionDestination<'a> {
     PointedByRegister16(MemoryBus, u16, R16),
     PointedByHLI(MemoryBus, (&'a mut u8, &'a mut u8)),
     PointedByHLD(MemoryBus, (&'a mut u8, &'a mut u8)),
+    PointedByStackPointer(MemoryBus, &'a mut u16),
     StackPointer(&'a mut u16),
 }
 
@@ -121,6 +171,7 @@ impl Display for InstructionDestination<'_> {
             InstructionDestination::PointedByRegister16(_, _, reg) => write!(f, "[{}]", reg),
             InstructionDestination::PointedByHLI(_, _) => write!(f, "[hli]"),
             InstructionDestination::PointedByHLD(_, _) => write!(f, "[hld]"),
+            InstructionDestination::PointedByStackPointer(_, _) => write!(f, "[sp]"),
             InstructionDestination::StackPointer(_) => write!(f, "sp"),
         }
     }

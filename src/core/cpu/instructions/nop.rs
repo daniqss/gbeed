@@ -6,13 +6,13 @@ use crate::core::cpu::{
 };
 
 /// No OPeration
-pub struct NOP;
+pub struct Nop;
 
-impl NOP {
-    pub fn new() -> Box<Self> { Box::new(NOP) }
+impl Nop {
+    pub fn new() -> Box<Self> { Box::new(Self) }
 }
 
-impl Instruction<'_> for NOP {
+impl Instruction<'_> for Nop {
     fn exec(&mut self) -> InstructionResult { Ok(InstructionEffect::new(1, 1, Flags::none())) }
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "nop") }
 }

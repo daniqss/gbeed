@@ -1,8 +1,8 @@
 /// Convert little-endian u8 pair to u16
 pub fn to_u16(high: u8, low: u8) -> u16 { ((high as u16) << 8) | (low as u16) }
 
-/// Convert u16 to little-endian u8 pair, returning (high, low)
-pub fn to_u8(word: u16) -> (u8, u8) { (high(word), low(word)) }
+/// Convert u16 to little-endian u8 pair, returning (low (tuple.0), high (tuple.1))
+pub fn to_u8(word: u16) -> (u8, u8) { (low(word), high(word)) }
 
 /// Get little-endian high byte from u16
 pub fn high(word: u16) -> u8 { (word >> 8) as u8 }
@@ -22,7 +22,7 @@ where
     F: FnOnce(u16) -> u16,
 {
     let result = f(to_u16(*high, *low));
-    let (new_high, new_low) = to_u8(result);
+    let (new_low, new_high) = to_u8(result);
     *high = new_high;
     *low = new_low;
     (new_high, new_low)
@@ -41,7 +41,7 @@ mod test {
 
     #[test]
     fn test_to_u8() {
-        assert_eq!(to_u8(0x1234), (0x12, 0x34));
+        assert_eq!(to_u8(0x1234), (0x34, 0x12));
         assert_eq!(to_u8(0x0000), (0x00, 0x00));
         assert_eq!(to_u8(0xFFFF), (0xFF, 0xFF));
     }

@@ -12,16 +12,16 @@ use crate::core::{
 /// Load from/to high memory area instruction
 /// Usually used to access memory mapped IO and HRAM,
 /// so the used addresses are between 0xFF00 and 0xFFFF
-pub struct LDH<'a> {
+pub struct Ldh<'a> {
     dst: ID<'a>,
     src: IT<'a>,
 }
 
-impl<'a> LDH<'a> {
+impl<'a> Ldh<'a> {
     pub fn new(dst: ID<'a>, src: IT<'a>) -> Box<Self> { Box::new(Self { dst, src }) }
 }
 
-impl<'a> Instruction<'a> for LDH<'a> {
+impl<'a> Instruction<'a> for Ldh<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (dst, src, address, cycles, len): (&mut u8, u8, Option<u16>, u8, u8) =
             match (&mut self.dst, &self.src) {

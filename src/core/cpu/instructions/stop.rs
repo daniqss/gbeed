@@ -1,0 +1,20 @@
+use crate::core::cpu::{
+    flags::Flags,
+    instructions::{Instruction, InstructionEffect, InstructionResult},
+};
+
+/// In DGM is intended to enter a low power mode, but no licensed cartridge actually uses it
+/// In GBC is used for speed switching
+/// Because GBC support is not currently planned (at least now) we will just implement a Nop
+/// This should be checked when lcd is implemented
+pub struct Stop;
+
+impl Stop {
+    pub fn new() -> Box<Self> { Box::new(Self) }
+}
+
+impl Instruction<'_> for Stop {
+    fn exec(&mut self) -> InstructionResult { Ok(InstructionEffect::new(2, 2, Flags::none())) }
+
+    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "stop") }
+}
