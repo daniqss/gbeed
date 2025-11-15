@@ -29,7 +29,6 @@
           pkgs.clippy
           fenix.packages.${system}.latest.rustfmt
 
-          pkgs.pkg-config
           pkgs.SDL2
           pkgs.SDL2_mixer
           pkgs.SDL2_image
