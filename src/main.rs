@@ -11,12 +11,8 @@ use sdl2::render::TextureQuery;
 
 const SCREEN_WIDTH: u32 = 800;
 const SCREEN_HEIGHT: u32 = 600;
-
-macro_rules! rect(
-    ($x:expr, $y:expr, $w:expr, $h:expr) => (
-        Rect::new($x as i32, $y as i32, $w as u32, $h as u32)
-    )
-);
+const FONT_PATH: &str = "./assets/fonts/CaskaydiaCoveNerdFont-BoldItalic.ttf";
+const WINDOW_TITLE: &str = "gbeed";
 
 fn main() -> Result<()> {
     let mut args = std::env::args().skip(1);
@@ -29,31 +25,25 @@ fn main() -> Result<()> {
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Missing boot room name"))?;
 
     let game_rom = std::fs::read(game_name)?;
-    let boot_room_data = std::fs::read(boot_room_name)?;
+    let _boot_room_data = std::fs::read(boot_room_name)?;
 
     let cartridge = Cartridge::new(&game_rom)?;
 
-    let sdl_context = sdl2::init().map_err(Error::Sdl2)?;
-    let video_subsys = sdl_context.video().map_err(Error::Sdl2)?;
-    let ttf_context = sdl2::ttf::init().map_err(Error::Sdl2)?;
+    let sdl_context = sdl2::init()?;
+    let video_subsys = sdl_context.video()?;
+    let ttf_context = sdl2::ttf::init()?;
 
     let window = video_subsys
-        .window("SDL2_TTF Example", SCREEN_WIDTH, SCREEN_HEIGHT)
+        .window(WINDOW_TITLE, SCREEN_WIDTH, SCREEN_HEIGHT)
         .position_centered()
         .opengl()
-        .build()
-        .map_err(|e| Error::Generic(e.to_string()))?;
+        .build()?;
 
-    let mut canvas = window
-        .into_canvas()
-        .build()
-        .map_err(|e| Error::Sdl2(e.to_string()))?;
+    let mut canvas = window.into_canvas().build()?;
     let texture_creator = canvas.texture_creator();
 
-    // Load a font
-    let mut font = ttf_context
-        .load_font("./assets/fonts/FreeSansBold.ttf", 32)
-        .map_err(Error::Sdl2)?;
+    // load our font
+    let mut font = ttf_context.load_font(FONT_PATH, 32)?;
     font.set_style(sdl2::ttf::FontStyle::BOLD);
 
     let line_spacing = font.recommended_line_spacing() as u32;
@@ -65,7 +55,7 @@ fn main() -> Result<()> {
             let render_line = if line.is_empty() { " " } else { line };
             let surface = font
                 .render(render_line)
-                .blended(Color::RGBA(255, 0, 0, 255))
+                .blended(Color::RGBA(255, 255, 255, 200))
                 .ok()?;
             let texture = texture_creator.create_texture_from_surface(&surface).ok()?;
 
@@ -87,17 +77,15 @@ fn main() -> Result<()> {
     for texture in textures {
         let TextureQuery { width, height, .. } = texture.query();
 
-        let target_rect = rect!(start_x, current_y, width, height);
-        canvas
-            .copy(&texture, None, Some(target_rect))
-            .map_err(|e| Error::Sdl2(e.to_string()))?;
+        let target_rect = Rect::new(start_x as i32, current_y as i32, width, height);
+        canvas.copy(&texture, None, Some(target_rect))?;
         current_y += line_spacing;
     }
 
     canvas.present();
 
     'mainloop: loop {
-        for event in sdl_context.event_pump().map_err(Error::Sdl2)?.poll_iter() {
+        for event in sdl_context.event_pump()?.poll_iter() {
             match event {
                 Event::KeyDown {
                     keycode: Some(Keycode::Escape),
