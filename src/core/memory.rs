@@ -118,9 +118,9 @@ impl Memory {
 
     /// write 16 bits little endian word
     pub fn write_word(&mut self, address: u16, value: u16) {
-        let (high, low) = utils::to_u8(value);
-        self[address + 1] = high;
+        let (low, high) = utils::to_u8(value);
         self[address] = low;
+        self[address + 1] = high;
     }
 }
 

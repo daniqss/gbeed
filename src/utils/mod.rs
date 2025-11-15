@@ -55,7 +55,8 @@ mod test {
         let mut low = 0x34;
         let (new_low, new_high) = with_u16(&mut low, &mut high, |v| v.wrapping_add(1));
         assert_eq!((new_low, new_high), (low, high));
-        assert_eq!((low, high), (0x12, 0x35));
+        assert_eq!((low, high), (0x35, 0x12));
+        assert_eq!(to_u16(low, high), 0x1235);
 
         // test non parameter closure
         let src = 0x6767;

@@ -75,6 +75,7 @@ impl Cpu {
         self.l = 0x00;
         self.pc = 0x0100;
         self.sp = 0x0000;
+        self.ime = false;
         self.cycles = 0;
     }
 
