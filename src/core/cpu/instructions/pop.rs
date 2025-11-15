@@ -28,7 +28,7 @@ impl<'a> Pop<'a> {
 impl<'a> Instruction<'a> for Pop<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (dst, src, sp, flags) = match (&mut self.dst, &mut self.src) {
-            (ID::Register16(dst, R16::AF), IT::PointedByStackPointer(val, sp)) => (
+            (ID::Reg16(dst, R16::AF), IT::PointedByStackPointer(val, sp)) => (
                 dst,
                 *val,
                 sp,
@@ -40,7 +40,7 @@ impl<'a> Instruction<'a> for Pop<'a> {
                     c: Some(val.0 & CARRY_FLAG_MASK != 0),
                 },
             ),
-            (ID::Register16(dst, _), IT::PointedByStackPointer(val, sp)) => (dst, *val, sp, Flags::none()),
+            (ID::Reg16(dst, _), IT::PointedByStackPointer(val, sp)) => (dst, *val, sp, Flags::none()),
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
@@ -76,7 +76,7 @@ mod tests {
         bus.borrow_mut()[sp + 1] = 1;
 
         let mut instr = Pop::new(
-            ID::Register16((&mut f, &mut a), R16::AF),
+            ID::Reg16((&mut f, &mut a), R16::AF),
             IT::PointedByStackPointer((bus.borrow()[sp], bus.borrow()[sp + 1]), &mut sp),
         );
         let effect = instr.exec().unwrap();

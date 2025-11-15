@@ -6,7 +6,7 @@ use crate::{
         instructions::{
             Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
         },
-        registers::{Register8 as R8, Register16 as R16},
+        registers::{Reg8 as R8, Reg16 as R16},
     },
     utils::with_u16,
 };
@@ -25,10 +25,10 @@ impl<'a> Instruction<'a> for Dec<'a> {
         let len = 1;
 
         let (dst, cycles): (&mut u8, u8) = match &mut self.dst {
-            ID::Register8(dst, reg) if *reg != R8::F => (*dst, 1),
+            ID::Reg8(dst, reg) if *reg != R8::F => (*dst, 1),
             ID::PointedByHL(bus, addr) => (&mut bus.borrow_mut()[*addr], 3),
-            ID::Register16(dst, reg) if *reg != R16::AF => {
-                with_u16(dst.1, dst.0, |val| val.wrapping_sub(1));
+            ID::Reg16(dst, reg) if *reg != R16::AF => {
+                with_u16(dst.0, dst.1, |val| val.wrapping_sub(1));
 
                 return Ok(InstructionEffect::new(2, len, Flags::none()));
             }

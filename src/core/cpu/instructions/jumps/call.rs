@@ -45,7 +45,7 @@ impl<'a> Instruction<'a> for Call<'a> {
 
         // push next instruction address onto the stack
         // to know where to return later
-        // we're not using Push instruction to just allow to fetch Push with IT::Register16
+        // we're not using Push instruction to just allow to fetch Push with IT::Reg16
         // maybe this should be changed later
         *self.sp -= 1;
         self.bus.borrow_mut()[*self.sp] = high(self.pc.wrapping_add(len as u16));

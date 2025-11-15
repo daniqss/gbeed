@@ -23,7 +23,7 @@ impl<'a> Rra<'a> {
 impl<'a> Instruction<'a> for Rra<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
-            ID::Register8(r8, reg) if *reg == R8::A => (r8, 1, 1),
+            ID::Reg8(r8, reg) if *reg == R8::A => (r8, 1, 1),
 
             _ => return Err(InstructionError::MalformedInstruction),
         };
@@ -59,7 +59,7 @@ mod tests {
     #[test]
     fn test_rr_no_carry() {
         let mut a = 0b0000_0001;
-        let mut instr = Rra::new(0, ID::Register8(&mut a, R8::A));
+        let mut instr = Rra::new(0, ID::Reg8(&mut a, R8::A));
 
         let result = instr.exec().unwrap();
         assert_eq!(a, 0);
@@ -81,7 +81,7 @@ mod tests {
     fn test_rr_with_carry() {
         let mut a = 0b0011_1000;
 
-        let mut instr = Rra::new(CARRY_FLAG_MASK, ID::Register8(&mut a, R8::A));
+        let mut instr = Rra::new(CARRY_FLAG_MASK, ID::Reg8(&mut a, R8::A));
 
         let result = instr.exec().unwrap();
         assert_eq!(a, 0b1001_1100);

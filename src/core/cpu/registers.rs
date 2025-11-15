@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq)]
-pub enum Register8 {
+pub enum Reg8 {
     A,
     F,
     B,
@@ -12,20 +12,20 @@ pub enum Register8 {
     L,
 }
 
-impl Display for Register8 {
+impl Display for Reg8 {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                Register8::A => "a",
-                Register8::F => "f",
-                Register8::B => "b",
-                Register8::C => "c",
-                Register8::D => "d",
-                Register8::E => "e",
-                Register8::H => "h",
-                Register8::L => "l",
+                Reg8::A => "a",
+                Reg8::F => "f",
+                Reg8::B => "b",
+                Reg8::C => "c",
+                Reg8::D => "d",
+                Reg8::E => "e",
+                Reg8::H => "h",
+                Reg8::L => "l",
             }
         )
     }
@@ -34,23 +34,23 @@ impl Display for Register8 {
 /// not including SP and PC for now
 /// maybe its a good idea, we'll see
 #[derive(Debug, PartialEq)]
-pub enum Register16 {
+pub enum Reg16 {
     AF,
     BC,
     DE,
     HL,
 }
 
-impl Display for Register16 {
+impl Display for Reg16 {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                Register16::AF => "af",
-                Register16::BC => "bc",
-                Register16::DE => "de",
-                Register16::HL => "hl",
+                Reg16::AF => "af",
+                Reg16::BC => "bc",
+                Reg16::DE => "de",
+                Reg16::HL => "hl",
             }
         )
     }

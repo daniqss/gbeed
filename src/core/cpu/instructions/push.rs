@@ -9,7 +9,7 @@ use crate::{
             InstructionResult, InstructionTarget as IT,
         },
     },
-    utils::{to_u8, to_u16},
+    utils::{high, low, to_u8},
 };
 
 /// Push a 16 bit register onto the stack. It is roughly equivalent to the following imaginary instructions:
@@ -37,13 +37,13 @@ impl<'a> Push<'a> {
 impl<'a> Instruction<'a> for Push<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (bus, src, sp) = match (&mut self.dst, &mut self.src) {
-            (ID::PointedByStackPointer(bus, sp), IT::Register16(src, R16::AF)) => {
+            (ID::PointedByStackPointer(bus, sp), IT::Reg16(src, R16::AF)) => {
                 // this is probably useless because no other bit of F should be set
-                let f =
-                    src.0 & (ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK);
-                (bus, (f, src.1), sp)
+                let f = low(*src)
+                    & (ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK);
+                (bus, (f, high(*src)), sp)
             }
-            (ID::PointedByStackPointer(bus, sp), IT::Register16(src, _)) => (bus, *src, sp),
+            (ID::PointedByStackPointer(bus, sp), IT::Reg16(src, _)) => (bus, to_u8(*src), sp),
 
             _ => return Err(InstructionError::MalformedInstruction),
         };
@@ -62,20 +62,21 @@ impl<'a> Instruction<'a> for Push<'a> {
 #[cfg(test)]
 mod tests {
 
-    use crate::core::memory::Memory;
+    use crate::{core::memory::Memory, utils::to_u16};
 
     use super::*;
 
     #[test]
     fn test_push_af() {
         let f = ZERO_FLAG_MASK | CARRY_FLAG_MASK | 1;
-        let a = 1;
+        let a: u8 = 1;
+        let af = to_u16(f, a);
         let mut sp = 0xFFA0;
         let bus = Memory::new(None, None);
 
         let mut push = Push::new(
             ID::PointedByStackPointer(bus.clone(), &mut sp),
-            IT::Register16((f, a), R16::AF),
+            IT::Reg16(af, R16::AF),
         );
 
         let effect = push.exec().unwrap();
@@ -92,12 +93,13 @@ mod tests {
     fn test_push_bc() {
         let c = ZERO_FLAG_MASK | CARRY_FLAG_MASK | 1;
         let b = 1;
+        let bc = to_u16(c, b);
         let mut sp = 0xFFA0;
         let bus = Memory::new(None, None);
 
         let mut push = Push::new(
             ID::PointedByStackPointer(bus.clone(), &mut sp),
-            IT::Register16((c, b), R16::BC),
+            IT::Reg16(bc, R16::BC),
         );
 
         let effect = push.exec().unwrap();

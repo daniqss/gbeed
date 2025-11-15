@@ -19,7 +19,7 @@ impl<'a> Bit<'a> {
 impl<'a> Instruction<'a> for Bit<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (target, cycles, len): (u8, u8, u8) = match &self.target {
-            IT::Register8(r8, reg) if *reg == R8::A => (*r8, 2, 2),
+            IT::Reg8(r8, reg) if *reg == R8::A => (*r8, 2, 2),
             IT::PointedByHL(val) => (*val, 3, 2),
 
             _ => return Err(InstructionError::MalformedInstruction),

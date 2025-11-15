@@ -22,9 +22,9 @@ impl<'a> Cp<'a> {
 impl<'a> Instruction<'a> for Cp<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (subtrahend, cycles, len): (u8, u8, u8) = match &self.src {
-            IT::Register8(r8, _) => (*r8, 1, 1),
+            IT::Reg8(r8, _) => (*r8, 1, 1),
             IT::PointedByHL(val) => (*val, 2, 1),
-            IT::Immediate8(n8) => (*n8, 2, 2),
+            IT::Imm8(n8) => (*n8, 2, 2),
             _ => return Err(InstructionError::MalformedInstruction),
         };
 

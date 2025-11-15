@@ -1,9 +1,6 @@
 use crate::core::cpu::{
-    R8,
     flags::Flags,
-    instructions::{
-        Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
-    },
+    instructions::{Instruction, InstructionEffect, InstructionResult},
 };
 
 /// rotate bits left between a and carry flag
@@ -12,49 +9,41 @@ use crate::core::cpu::{
 /// ┗━━━━━━━━━┛ │ ┗━━━━━━━━━━━━━━━━━━┛ │
 ///             └──────────────────────┘
 pub struct Rlca<'a> {
-    dst: ID<'a>,
+    a: &'a mut u8,
 }
 
 impl<'a> Rlca<'a> {
-    pub fn new(dst: ID<'a>) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(a: &'a mut u8) -> Box<Self> { Box::new(Self { a }) }
 }
 
 impl<'a> Instruction<'a> for Rlca<'a> {
     fn exec(&mut self) -> InstructionResult {
-        let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
-            ID::Register8(r8, reg) if *reg == R8::A => (r8, 1, 1),
-
-            _ => return Err(InstructionError::MalformedInstruction),
-        };
-
-        let last_bit = *dst & 0b1000_0000 != 0;
-        let result = (*dst << 1) | if last_bit { 1 } else { 0 };
+        let last_bit = *self.a & 0b1000_0000 != 0;
+        let result = (*self.a << 1) | if last_bit { 1 } else { 0 };
         let flags = Flags {
             z: Some(false),
             n: Some(false),
             h: Some(false),
             c: Some(last_bit),
         };
-        *dst = result;
+        *self.a = result;
 
-        Ok(InstructionEffect::new(cycles, len, flags))
+        Ok(InstructionEffect::new(1, 1, flags))
     }
 
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
-        write!(w, "rlca {}", self.dst)
-    }
+    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "rlca") }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::core::cpu::{R8, flags::Flags};
+    use crate::core::cpu::flags::Flags;
 
     use super::*;
 
     #[test]
     fn test_rl_no_carry() {
         let mut a = 0b1000_0000;
-        let mut instr = Rlca::new(ID::Register8(&mut a, R8::A));
+        let mut instr = Rlca::new(&mut a);
 
         let result = instr.exec().unwrap();
         assert_eq!(a, 0b0000_0001);
@@ -76,7 +65,7 @@ mod tests {
     fn test_rl_with_carry() {
         let mut a = 0b0011_1000;
 
-        let mut instr = Rlca::new(ID::Register8(&mut a, R8::A));
+        let mut instr = Rlca::new(&mut a);
 
         let result = instr.exec().unwrap();
         assert_eq!(a, 0b0111_0000);

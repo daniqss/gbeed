@@ -22,9 +22,9 @@ impl<'a> Adc<'a> {
 impl<'a> Instruction<'a> for Adc<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (addend, cycles, len) = match &self.addend {
-            IT::Register8(val, reg) if *reg != R8::F => (*val, 1, 1),
+            IT::Reg8(val, reg) if *reg != R8::F => (*val, 1, 1),
             IT::PointedByHL(value) => (*value, 2, 1),
-            IT::Immediate8(n8) => (*n8, 2, 2),
+            IT::Imm8(n8) => (*n8, 2, 2),
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
