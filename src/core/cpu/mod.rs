@@ -170,6 +170,112 @@ impl Cpu {
                     ),
                 )
             }
+            0x21 => Ld::new(
+                ID::Reg16((&mut self.l, &mut self.h), R16::HL),
+                IT::Imm16(self.bus.borrow().read_word(self.pc + 1)),
+            ),
+            0x22 => {
+                let aa = self.a;
+                Ld::new(
+                    ID::PointedByHLI(self.bus.clone(), self.mut_hl()),
+                    IT::Reg8(aa, R8::A),
+                )
+            }
+            0x23 => Inc::new(ID::Reg16(self.mut_hl(), R16::HL)),
+            0x24 => Inc::new(ID::Reg8(&mut self.h, R8::H)),
+            0x25 => Dec::new(ID::Reg8(&mut self.h, R8::H)),
+            0x26 => Ld::new(
+                ID::Reg8(&mut self.h, R8::H),
+                IT::Imm8(self.bus.clone().borrow()[self.pc + 1]),
+            ),
+            0x27 => Daa::new(&mut self.a, &mut self.f),
+            0x28 => {
+                let pc = self.pc;
+                Jr::new(
+                    &mut self.pc,
+                    IT::JumpToImm8(
+                        JC::Zero(self.f & ZERO_FLAG_MASK != 0),
+                        self.bus.clone().borrow()[pc + 1] as i8,
+                    ),
+                )
+            }
+            0x29 => {
+                let hl = self.hl();
+                Add::new(ID::Reg16(self.mut_hl(), R16::HL), IT::Reg16(hl, R16::HL))
+            }
+            0x2A => {
+                let pointed = self.bus.clone().borrow()[self.hl()];
+                Ld::new(
+                    ID::Reg8(&mut self.a, R8::A),
+                    IT::PointedByHLI(pointed, (&mut self.l, &mut self.h)),
+                )
+            }
+            0x2b => Dec::new(ID::Reg16(self.mut_hl(), R16::HL)),
+            0x2C => Inc::new(ID::Reg8(&mut self.l, R8::L)),
+            0x2D => Dec::new(ID::Reg8(&mut self.l, R8::L)),
+            0x2E => Ld::new(
+                ID::Reg8(&mut self.l, R8::L),
+                IT::Imm8(self.bus.clone().borrow()[self.pc + 1]),
+            ),
+            0x2F => Cpl::new(&mut self.a),
+            0x30 => {
+                let ppcc = self.pc;
+                Jr::new(
+                    &mut self.pc,
+                    IT::JumpToImm8(
+                        JC::NotCarry(self.f & CARRY_FLAG_MASK == 0),
+                        self.bus.clone().borrow()[ppcc + 1] as i8,
+                    ),
+                )
+            }
+            0x31 => Ld::new(
+                ID::StackPointer(&mut self.sp),
+                IT::Imm16(self.bus.borrow().read_word(self.pc + 1)),
+            ),
+            0x32 => {
+                let aa = self.a;
+                Ld::new(
+                    ID::PointedByHLD(self.bus.clone(), self.mut_hl()),
+                    IT::Reg8(aa, R8::A),
+                )
+            }
+            0x33 => Inc::new(ID::StackPointer(&mut self.pc)),
+            0x34 => Inc::new(ID::PointedByHL(self.bus.clone(), self.hl())),
+            0x35 => Dec::new(ID::PointedByHL(self.bus.clone(), self.hl())),
+            0x36 => Ld::new(
+                ID::PointedByHL(self.bus.clone(), self.hl()),
+                IT::Imm8(self.bus.clone().borrow()[self.pc + 1]),
+            ),
+            0x37 => Scf::new(),
+            0x38 => {
+                let ppcc = self.pc;
+                Jr::new(
+                    &mut self.pc,
+                    IT::JumpToImm8(
+                        JC::Carry(self.f & CARRY_FLAG_MASK != 0),
+                        self.bus.clone().borrow()[ppcc + 1] as i8,
+                    ),
+                )
+            }
+            0x39 => {
+                let sp = self.sp;
+                Add::new(ID::Reg16(self.mut_hl(), R16::HL), IT::StackPointer(sp))
+            }
+            0x3A => {
+                let pointed = self.bus.clone().borrow()[self.hl()];
+                Ld::new(
+                    ID::Reg8(&mut self.a, R8::A),
+                    IT::PointedByHLD(pointed, (&mut self.l, &mut self.h)),
+                )
+            }
+            0x3B => Dec::new(ID::StackPointer(&mut self.sp)),
+            0x3C => Inc::new(ID::Reg8(&mut self.a, R8::A)),
+            0x3D => Dec::new(ID::Reg8(&mut self.a, R8::A)),
+            0x3E => Ld::new(
+                ID::Reg8(&mut self.a, R8::A),
+                IT::Imm8(self.bus.clone().borrow()[self.pc + 1]),
+            ),
+            0x3F => Ccf::new(self.f & CARRY_FLAG_MASK != 0),
             0x40 => return Err(InstructionError::NoOp(opcode, self.pc)),
             0x41 => Ld::new(ID::Reg8(&mut self.b, R8::B), IT::Reg8(self.c, R8::C)),
             0x42 => Ld::new(ID::Reg8(&mut self.b, R8::B), IT::Reg8(self.d, R8::D)),
@@ -278,7 +384,7 @@ impl Cpu {
                 ID::PointedByHL(self.bus.clone(), self.hl()),
                 IT::Reg8(self.l, R8::L),
             ),
-            0x76 => return Err(InstructionError::NotImplemented(opcode, self.pc)),
+            0x76 => Halt::new(),
             0x77 => Ld::new(
                 ID::PointedByHL(self.bus.clone(), self.hl()),
                 IT::Reg8(self.a, R8::A),
@@ -297,6 +403,7 @@ impl Cpu {
                 )
             }
             0x7F => return Err(InstructionError::NoOp(opcode, self.pc)),
+
             0xC2 => {
                 let ppcc = self.pc;
                 Jp::new(

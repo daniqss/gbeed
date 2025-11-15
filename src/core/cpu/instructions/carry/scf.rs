@@ -6,7 +6,7 @@ use crate::core::cpu::{
 pub struct Scf;
 
 impl Scf {
-    pub fn new(carry: bool) -> Box<Self> { Box::new(Self) }
+    pub fn new() -> Box<Self> { Box::new(Self) }
 }
 
 impl Instruction<'_> for Scf {
