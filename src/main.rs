@@ -8,6 +8,7 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Texture;
 use sdl2::render::TextureQuery;
+use std::io::{self, ErrorKind};
 
 const SCREEN_WIDTH: u32 = 800;
 const SCREEN_HEIGHT: u32 = 600;
@@ -19,10 +20,10 @@ fn main() -> Result<()> {
 
     let game_name = args
         .next()
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Missing game name"))?;
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "Missing game name"))?;
     let boot_room_name = args
         .next()
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Missing boot room name"))?;
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "Missing boot room name"))?;
 
     let game_rom = std::fs::read(game_name)?;
     let _boot_room_data = std::fs::read(boot_room_name)?;
