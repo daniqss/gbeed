@@ -11,12 +11,12 @@ use crate::core::cpu::{
 /// Adds the value of the specified target plus the carry flag to register A
 pub struct Adc<'a> {
     a: &'a mut u8,
-    f: &'a mut u8,
+    f: u8,
     addend: IT<'a>,
 }
 
 impl<'a> Adc<'a> {
-    pub fn new(a: &'a mut u8, f: &'a mut u8, addend: IT<'a>) -> Box<Self> { Box::new(Adc { a, f, addend }) }
+    pub fn new(a: &'a mut u8, f: u8, addend: IT<'a>) -> Box<Self> { Box::new(Adc { a, f, addend }) }
 }
 
 impl<'a> Instruction<'a> for Adc<'a> {
@@ -31,7 +31,7 @@ impl<'a> Instruction<'a> for Adc<'a> {
         // perform the addition
         // wrapping it prevent overflow panics in debug mode
         let mut result = self.a.wrapping_add(addend);
-        result = result.wrapping_add(if (*self.f & CARRY_FLAG_MASK) != 0 { 1 } else { 0 });
+        result = result.wrapping_add(if (self.f & CARRY_FLAG_MASK) != 0 { 1 } else { 0 });
 
         // calculate flags
         let flags = Flags {

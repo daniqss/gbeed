@@ -402,7 +402,116 @@ impl Cpu {
                     IT::PointedByHL(self.bus.clone().borrow()[addr]),
                 )
             }
-            0x7F => return Err(InstructionError::NoOp(opcode, self.pc)),
+            0x7F => {
+                let a = self.a;
+                Ld::new(ID::Reg8(&mut self.a, R8::A), IT::Reg8(a, R8::A))
+            }
+            0x80 => Add::new(ID::Reg8(&mut self.a, R8::A), IT::Reg8(self.b, R8::B)),
+            0x81 => Add::new(ID::Reg8(&mut self.a, R8::A), IT::Reg8(self.c, R8::C)),
+            0x82 => Add::new(ID::Reg8(&mut self.a, R8::A), IT::Reg8(self.d, R8::D)),
+            0x83 => Add::new(ID::Reg8(&mut self.a, R8::A), IT::Reg8(self.e, R8::E)),
+            0x84 => Add::new(ID::Reg8(&mut self.a, R8::A), IT::Reg8(self.h, R8::H)),
+            0x85 => Add::new(ID::Reg8(&mut self.a, R8::A), IT::Reg8(self.l, R8::L)),
+            0x86 => {
+                let pointed = self.bus.clone().borrow()[self.hl()];
+                Add::new(ID::Reg8(&mut self.a, R8::A), IT::PointedByHL(pointed))
+            }
+            0x87 => {
+                let a = self.a;
+                Add::new(ID::Reg8(&mut self.a, R8::A), IT::Reg8(a, R8::A))
+            }
+            0x88 => Adc::new(&mut self.a, self.f, IT::Reg8(self.b, R8::B)),
+            0x89 => Adc::new(&mut self.a, self.f, IT::Reg8(self.c, R8::C)),
+            0x8A => Adc::new(&mut self.a, self.f, IT::Reg8(self.d, R8::D)),
+            0x8B => Adc::new(&mut self.a, self.f, IT::Reg8(self.e, R8::E)),
+            0x8C => Adc::new(&mut self.a, self.f, IT::Reg8(self.h, R8::H)),
+            0x8D => Adc::new(&mut self.a, self.f, IT::Reg8(self.l, R8::L)),
+            0x8E => {
+                let pointed = self.bus.clone().borrow()[self.hl()];
+                Adc::new(&mut self.a, self.f, IT::PointedByHL(pointed))
+            }
+            0x8F => {
+                let a = self.a;
+                Adc::new(&mut self.a, self.f, IT::Reg8(a, R8::A))
+            }
+            0x90 => Sub::new(&mut self.a, IT::Reg8(self.b, R8::B)),
+            0x91 => Sub::new(&mut self.a, IT::Reg8(self.c, R8::C)),
+            0x92 => Sub::new(&mut self.a, IT::Reg8(self.d, R8::D)),
+            0x93 => Sub::new(&mut self.a, IT::Reg8(self.e, R8::E)),
+            0x94 => Sub::new(&mut self.a, IT::Reg8(self.h, R8::H)),
+            0x95 => Sub::new(&mut self.a, IT::Reg8(self.l, R8::L)),
+            0x96 => {
+                let pointed = self.bus.clone().borrow()[self.hl()];
+                Sub::new(&mut self.a, IT::PointedByHL(pointed))
+            }
+            0x97 => {
+                let a = self.a;
+                Sub::new(&mut self.a, IT::Reg8(a, R8::A))
+            }
+            0x98 => Sbc::new(&mut self.a, self.f, IT::Reg8(self.b, R8::B)),
+            0x99 => Sbc::new(&mut self.a, self.f, IT::Reg8(self.c, R8::C)),
+            0x9A => Sbc::new(&mut self.a, self.f, IT::Reg8(self.d, R8::D)),
+            0x9B => Sbc::new(&mut self.a, self.f, IT::Reg8(self.e, R8::E)),
+            0x9C => Sbc::new(&mut self.a, self.f, IT::Reg8(self.h, R8::H)),
+            0x9D => Sbc::new(&mut self.a, self.f, IT::Reg8(self.l, R8::L)),
+            0x9E => {
+                let pointed = self.bus.clone().borrow()[self.hl()];
+                Sbc::new(&mut self.a, self.f, IT::PointedByHL(pointed))
+            }
+            0x9F => {
+                let a = self.a;
+                Sbc::new(&mut self.a, self.f, IT::Reg8(a, R8::A))
+            }
+            0xA0 => And::new(&mut self.a, IT::Reg8(self.b, R8::B)),
+            0xA1 => And::new(&mut self.a, IT::Reg8(self.c, R8::C)),
+            0xA2 => And::new(&mut self.a, IT::Reg8(self.d, R8::D)),
+            0xA3 => And::new(&mut self.a, IT::Reg8(self.e, R8::E)),
+            0xA4 => And::new(&mut self.a, IT::Reg8(self.h, R8::H)),
+            0xA5 => And::new(&mut self.a, IT::Reg8(self.l, R8::L)),
+            0xA6 => {
+                let pointed = self.bus.clone().borrow()[self.hl()];
+                And::new(&mut self.a, IT::PointedByHL(pointed))
+            }
+            0xA7 => {
+                let a = self.a;
+                And::new(&mut self.a, IT::Reg8(a, R8::A))
+            }
+            0xA8 => Xor::new(&mut self.a, IT::Reg8(self.b, R8::B)),
+            0xA9 => Xor::new(&mut self.a, IT::Reg8(self.c, R8::C)),
+            0xAA => Xor::new(&mut self.a, IT::Reg8(self.d, R8::D)),
+            0xAB => Xor::new(&mut self.a, IT::Reg8(self.e, R8::E)),
+            0xAC => Xor::new(&mut self.a, IT::Reg8(self.h, R8::H)),
+            0xAD => Xor::new(&mut self.a, IT::Reg8(self.l, R8::L)),
+            0xAE => {
+                let pointed = self.bus.clone().borrow()[self.hl()];
+                Xor::new(&mut self.a, IT::PointedByHL(pointed))
+            }
+            0xAF => {
+                let a = self.a;
+                Xor::new(&mut self.a, IT::Reg8(a, R8::A))
+            }
+            0xB0 => Or::new(&mut self.a, IT::Reg8(self.b, R8::B)),
+            0xB1 => Or::new(&mut self.a, IT::Reg8(self.c, R8::C)),
+            0xB2 => Or::new(&mut self.a, IT::Reg8(self.d, R8::D)),
+            0xB3 => Or::new(&mut self.a, IT::Reg8(self.e, R8::E)),
+            0xB4 => Or::new(&mut self.a, IT::Reg8(self.h, R8::H)),
+            0xB5 => Or::new(&mut self.a, IT::Reg8(self.l, R8::L)),
+            0xB6 => {
+                let pointed = self.bus.clone().borrow()[self.hl()];
+                Or::new(&mut self.a, IT::PointedByHL(pointed))
+            }
+            0xB7 => {
+                let a = self.a;
+                Or::new(&mut self.a, IT::Reg8(a, R8::A))
+            }
+            0xB8 => Cp::new(self.a, IT::Reg8(self.b, R8::B)),
+            0xB9 => Cp::new(self.a, IT::Reg8(self.c, R8::C)),
+            0xBA => Cp::new(self.a, IT::Reg8(self.d, R8::D)),
+            0xBB => Cp::new(self.a, IT::Reg8(self.e, R8::E)),
+            0xBC => Cp::new(self.a, IT::Reg8(self.h, R8::H)),
+            0xBD => Cp::new(self.a, IT::Reg8(self.l, R8::L)),
+            0xBE => Cp::new(self.a, IT::PointedByHL(self.bus.clone().borrow()[self.hl()])),
+            0xBF => Cp::new(self.a, IT::Reg8(self.a, R8::A)),
 
             0xC2 => {
                 let ppcc = self.pc;
