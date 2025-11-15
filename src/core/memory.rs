@@ -190,5 +190,7 @@ mod test {
         let memory = Memory::new(None, None);
         memory.borrow_mut().write_word(0x1234, 0x5678);
         assert_eq!(memory.borrow().read_word(0x1234), 0x5678);
+        assert_eq!(memory.borrow()[0x1234], 0x78);
+        assert_eq!(memory.borrow()[0x1235], 0x56);
     }
 }

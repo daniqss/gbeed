@@ -14,6 +14,11 @@ pub use ret::Ret;
 pub use reti::Reti;
 pub use rst::Rst;
 
+/// jump condition for conditional jumps
+/// jump Zero if zero flag is set, `self.f & ZERO_FLAG_MASK != 0`
+/// jump NotZero if zero flag is not set, `self.f & ZERO_FLAG_MASK == 0`
+/// jump Carry if carry flag is set
+/// jump NotCarry if carry flag is not set
 #[derive(Debug, PartialEq)]
 pub enum JumpCondition {
     Zero(bool),
