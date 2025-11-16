@@ -1,12 +1,14 @@
 use std::fmt::Write;
 
-use crate::core::cpu::{
-    R16,
-    flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
-    instructions::{
-        Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
-        InstructionTarget as IT,
+use crate::{
+    core::cpu::{
+        R16,
+        flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
+        instructions::{
+            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
+        },
     },
+    utils::to_u8,
 };
 
 /// Pop a 16 bit register from the stack.
@@ -19,39 +21,40 @@ use crate::core::cpu::{
 /// ``````
 pub struct Pop<'a> {
     dst: ID<'a>,
-    src: IT<'a>,
+    src: u16,
+    sp: &'a mut u16,
 }
 
 impl<'a> Pop<'a> {
-    pub fn new(dst: ID<'a>, src: IT<'a>) -> Box<Self> { Box::new(Self { dst, src }) }
+    pub fn new(dst: ID<'a>, src: u16, sp: &'a mut u16) -> Box<Self> { Box::new(Self { dst, src, sp }) }
 }
 impl<'a> Instruction<'a> for Pop<'a> {
     fn exec(&mut self) -> InstructionResult {
-        let (dst, src, sp, flags) = match (&mut self.dst, &mut self.src) {
-            (ID::Reg16(dst, R16::AF), IT::PointedByStackPointer(val, sp)) => (
+        let (low, high) = to_u8(self.src);
+
+        let (dst, flags) = match &mut self.dst {
+            ID::Reg16(dst, R16::AF) => (
                 dst,
-                *val,
-                sp,
                 // set flags according to the bits that are going to pop into F
                 Flags {
-                    z: Some(val.0 & ZERO_FLAG_MASK != 0),
-                    n: Some(val.0 & SUBTRACTION_FLAG_MASK != 0),
-                    h: Some(val.0 & HALF_CARRY_FLAG_MASK != 0),
-                    c: Some(val.0 & CARRY_FLAG_MASK != 0),
+                    z: Some(low & ZERO_FLAG_MASK != 0),
+                    n: Some(low & SUBTRACTION_FLAG_MASK != 0),
+                    h: Some(low & HALF_CARRY_FLAG_MASK != 0),
+                    c: Some(low & CARRY_FLAG_MASK != 0),
                 },
             ),
-            (ID::Reg16(dst, _), IT::PointedByStackPointer(val, sp)) => (dst, *val, sp, Flags::none()),
+            ID::Reg16(dst, _) => (dst, Flags::none()),
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
         // pop [sp] to low register, such as F in AF
-        *dst.0 = src.0;
+        *dst.0 = low;
 
         // pop [sp+1] to high register, such as A in AF
-        *dst.1 = src.1;
+        *dst.1 = high;
 
         // increment stack pointer by 2, one for each byte popped
-        **sp += 2;
+        *self.sp += 2;
 
         Ok(InstructionEffect::new(3, 1, flags))
     }
@@ -77,7 +80,8 @@ mod tests {
 
         let mut instr = Pop::new(
             ID::Reg16((&mut f, &mut a), R16::AF),
-            IT::PointedByStackPointer((bus.borrow()[sp], bus.borrow()[sp + 1]), &mut sp),
+            bus.borrow().read_word(sp),
+            &mut sp,
         );
         let effect = instr.exec().unwrap();
 

@@ -512,7 +512,17 @@ impl Cpu {
             0xBD => Cp::new(self.a, IT::Reg8(self.l, R8::L)),
             0xBE => Cp::new(self.a, IT::PointedByHL(self.bus.clone().borrow()[self.hl()])),
             0xBF => Cp::new(self.a, IT::Reg8(self.a, R8::A)),
-
+            0xC0 => Ret::new(
+                &mut self.pc,
+                &mut self.sp,
+                self.bus.clone(),
+                JC::NotZero(self.f & ZERO_FLAG_MASK == 0),
+            ),
+            0xC1 => Pop::new(
+                ID::Reg16((&mut self.c, &mut self.b), R16::BC),
+                self.bus.borrow().read_word(self.pc),
+                &mut self.sp,
+            ),
             0xC2 => {
                 let ppcc = self.pc;
                 Jp::new(
@@ -523,6 +533,52 @@ impl Cpu {
                     ),
                 )
             }
+            0xC3 => {
+                let ppcc = self.pc;
+                Jp::new(
+                    &mut self.pc,
+                    IT::JumpToImm16(JC::None, self.bus.clone().borrow().read_word(ppcc + 1)),
+                )
+            }
+            0xC4 => {
+                let pc = self.pc;
+                Call::new(
+                    &mut self.pc,
+                    &mut self.sp,
+                    self.bus.clone(),
+                    IT::JumpToImm16(
+                        JC::NotZero(self.f & ZERO_FLAG_MASK == 0),
+                        self.bus.clone().borrow().read_word(pc + 1),
+                    ),
+                )
+            }
+            0xC5 => {
+                let bc = self.bc();
+                Push::new(&mut self.sp, self.bus.clone(), IT::Reg16(bc, R16::BC))
+            }
+            0xC6 => Add::new(
+                ID::Reg8(&mut self.a, R8::A),
+                IT::Imm8(self.bus.clone().borrow()[self.pc + 1]),
+            ),
+            0xC7 => Rst::new(&mut self.pc, &mut self.sp, self.bus.clone(), 0x00),
+            0xC8 => Ret::new(
+                &mut self.pc,
+                &mut self.sp,
+                self.bus.clone(),
+                JC::Zero(self.f & ZERO_FLAG_MASK != 0),
+            ),
+            0xC9 => Ret::new(&mut self.pc, &mut self.sp, self.bus.clone(), JC::None),
+            0xCA => {
+                let ppcc = self.pc;
+                Jp::new(
+                    &mut self.pc,
+                    IT::JumpToImm16(
+                        JC::Zero(self.f & ZERO_FLAG_MASK != 0),
+                        self.bus.clone().borrow().read_word(ppcc + 1),
+                    ),
+                )
+            }
+            // 0xCB => self.fetch_cb(),
             0xE0 => Ldh::new(
                 ID::PointedByN16(self.bus.clone(), self.pc + 1),
                 IT::Reg8(self.a, R8::A),
