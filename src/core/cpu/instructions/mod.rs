@@ -194,6 +194,7 @@ impl InstructionEffect {
 pub enum InstructionError {
     NoOp(u8, u16),
     UnusedOpcode(u8, u16),
+    UnusedCBOpcode(u8, u16),
     AddressOutOfRange(u16, Option<u8>, Option<u16>),
     NotImplemented(u8, u16),
     MalformedInstruction,
@@ -207,6 +208,9 @@ impl std::fmt::Display for InstructionError {
             }
             InstructionError::UnusedOpcode(opcode, pc) => {
                 write!(f, "Unused opcode {:02X} at PC {:04X}", opcode, pc)
+            }
+            InstructionError::UnusedCBOpcode(opcode, pc) => {
+                write!(f, "Unused CB opcode {:02X} at PC {:04X}", opcode, pc)
             }
             InstructionError::AddressOutOfRange(address, opcode, pc) => write!(
                 f,

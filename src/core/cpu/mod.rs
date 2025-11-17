@@ -578,7 +578,13 @@ impl Cpu {
                     ),
                 )
             }
-            // 0xCB => self.fetch_cb(),
+            0xCB => {
+                let cb_opcode = self.bus.borrow()[self.pc + 1];
+                match self.fetch_cb(cb_opcode) {
+                    Ok(instruction) => instruction,
+                    Err(e) => return Err(e),
+                }
+            }
             0xE0 => Ldh::new(
                 ID::PointedByN16(self.bus.clone(), self.pc + 1),
                 IT::Reg8(self.a, R8::A),
@@ -599,6 +605,122 @@ impl Cpu {
                 ),
             ),
             _ => return Err(InstructionError::NotImplemented(opcode, self.pc)),
+        };
+
+        Ok(instruction)
+    }
+
+    fn fetch_cb(&'_ mut self, cb_opcode: u8) -> Result<Box<dyn Instruction<'_> + '_>, InstructionError> {
+        // used bit in res, set and bit instructions
+        let bit = (cb_opcode & 0x38) >> 3;
+
+        let instruction: Box<dyn Instruction> = match cb_opcode {
+            0x00 => Rlc::new(ID::Reg8(&mut self.b, R8::B)),
+            0x01 => Rlc::new(ID::Reg8(&mut self.c, R8::C)),
+            0x02 => Rlc::new(ID::Reg8(&mut self.d, R8::D)),
+            0x03 => Rlc::new(ID::Reg8(&mut self.e, R8::E)),
+            0x04 => Rlc::new(ID::Reg8(&mut self.h, R8::H)),
+            0x05 => Rlc::new(ID::Reg8(&mut self.l, R8::L)),
+            0x06 => Rlc::new(ID::PointedByHL(self.bus.clone(), self.hl())),
+            0x07 => Rlc::new(ID::Reg8(&mut self.a, R8::A)),
+            0x08 => Rrc::new(ID::Reg8(&mut self.b, R8::B)),
+            0x09 => Rrc::new(ID::Reg8(&mut self.c, R8::C)),
+            0x0A => Rrc::new(ID::Reg8(&mut self.d, R8::D)),
+            0x0B => Rrc::new(ID::Reg8(&mut self.e, R8::E)),
+            0x0C => Rrc::new(ID::Reg8(&mut self.h, R8::H)),
+            0x0D => Rrc::new(ID::Reg8(&mut self.l, R8::L)),
+            0x0E => Rrc::new(ID::PointedByHL(self.bus.clone(), self.hl())),
+            0x0F => Rrc::new(ID::Reg8(&mut self.a, R8::A)),
+            0x10 => Rl::new(self.f, ID::Reg8(&mut self.b, R8::B)),
+            0x11 => Rl::new(self.f, ID::Reg8(&mut self.c, R8::C)),
+            0x12 => Rl::new(self.f, ID::Reg8(&mut self.d, R8::D)),
+            0x13 => Rl::new(self.f, ID::Reg8(&mut self.e, R8::E)),
+            0x14 => Rl::new(self.f, ID::Reg8(&mut self.h, R8::H)),
+            0x15 => Rl::new(self.f, ID::Reg8(&mut self.l, R8::L)),
+            0x16 => Rl::new(self.f, ID::PointedByHL(self.bus.clone(), self.hl())),
+            0x17 => Rl::new(self.f, ID::Reg8(&mut self.a, R8::A)),
+            0x18 => Rr::new(self.f, ID::Reg8(&mut self.b, R8::B)),
+            0x19 => Rr::new(self.f, ID::Reg8(&mut self.c, R8::C)),
+            0x1A => Rr::new(self.f, ID::Reg8(&mut self.d, R8::D)),
+            0x1B => Rr::new(self.f, ID::Reg8(&mut self.e, R8::E)),
+            0x1C => Rr::new(self.f, ID::Reg8(&mut self.h, R8::H)),
+            0x1D => Rr::new(self.f, ID::Reg8(&mut self.l, R8::L)),
+            0x1E => Rr::new(self.f, ID::PointedByHL(self.bus.clone(), self.hl())),
+            0x1F => Rr::new(self.f, ID::Reg8(&mut self.a, R8::A)),
+            0x20 => Sla::new(ID::Reg8(&mut self.b, R8::B)),
+            0x21 => Sla::new(ID::Reg8(&mut self.c, R8::C)),
+            0x22 => Sla::new(ID::Reg8(&mut self.d, R8::D)),
+            0x23 => Sla::new(ID::Reg8(&mut self.e, R8::E)),
+            0x24 => Sla::new(ID::Reg8(&mut self.h, R8::H)),
+            0x25 => Sla::new(ID::Reg8(&mut self.l, R8::L)),
+            0x26 => Sla::new(ID::PointedByHL(self.bus.clone(), self.hl())),
+            0x27 => Sla::new(ID::Reg8(&mut self.a, R8::A)),
+            0x28 => Sra::new(ID::Reg8(&mut self.b, R8::B)),
+            0x29 => Sra::new(ID::Reg8(&mut self.c, R8::C)),
+            0x2A => Sra::new(ID::Reg8(&mut self.d, R8::D)),
+            0x2B => Sra::new(ID::Reg8(&mut self.e, R8::E)),
+            0x2C => Sra::new(ID::Reg8(&mut self.h, R8::H)),
+            0x2D => Sra::new(ID::Reg8(&mut self.l, R8::L)),
+            0x2E => Sra::new(ID::PointedByHL(self.bus.clone(), self.hl())),
+            0x2F => Sra::new(ID::Reg8(&mut self.a, R8::A)),
+            0x30 => Swap::new(ID::Reg8(&mut self.b, R8::B)),
+            0x31 => Swap::new(ID::Reg8(&mut self.c, R8::C)),
+            0x32 => Swap::new(ID::Reg8(&mut self.d, R8::D)),
+            0x33 => Swap::new(ID::Reg8(&mut self.e, R8::E)),
+            0x34 => Swap::new(ID::Reg8(&mut self.h, R8::H)),
+            0x35 => Swap::new(ID::Reg8(&mut self.l, R8::L)),
+            0x36 => Swap::new(ID::PointedByHL(self.bus.clone(), self.hl())),
+            0x37 => Swap::new(ID::Reg8(&mut self.a, R8::A)),
+            0x38 => Srl::new(ID::Reg8(&mut self.b, R8::B)),
+            0x39 => Srl::new(ID::Reg8(&mut self.c, R8::C)),
+            0x3A => Srl::new(ID::Reg8(&mut self.d, R8::D)),
+            0x3B => Srl::new(ID::Reg8(&mut self.e, R8::E)),
+            0x3C => Srl::new(ID::Reg8(&mut self.h, R8::H)),
+            0x3D => Srl::new(ID::Reg8(&mut self.l, R8::L)),
+            0x3E => Srl::new(ID::PointedByHL(self.bus.clone(), self.hl())),
+            0x3F => Srl::new(ID::Reg8(&mut self.a, R8::A)),
+            0x40..=0x7F => Bit::new(
+                bit,
+                match cb_opcode & 0x07 {
+                    0 => IT::Reg8(self.b, R8::B),
+                    1 => IT::Reg8(self.c, R8::C),
+                    2 => IT::Reg8(self.d, R8::D),
+                    3 => IT::Reg8(self.e, R8::E),
+                    4 => IT::Reg8(self.h, R8::H),
+                    5 => IT::Reg8(self.l, R8::L),
+                    6 => IT::PointedByHL(self.bus.clone().borrow()[self.hl()]),
+                    7 => IT::Reg8(self.a, R8::A),
+                    _ => return Err(InstructionError::UnusedCBOpcode(cb_opcode, self.pc)),
+                },
+            ),
+            0x80..=0xBF => Res::new(
+                bit,
+                match cb_opcode & 0x07 {
+                    0 => ID::Reg8(&mut self.b, R8::B),
+                    1 => ID::Reg8(&mut self.c, R8::C),
+                    2 => ID::Reg8(&mut self.d, R8::D),
+                    3 => ID::Reg8(&mut self.e, R8::E),
+                    4 => ID::Reg8(&mut self.h, R8::H),
+                    5 => ID::Reg8(&mut self.l, R8::L),
+                    6 => ID::PointedByHL(self.bus.clone(), self.hl()),
+                    7 => ID::Reg8(&mut self.a, R8::A),
+                    _ => return Err(InstructionError::UnusedCBOpcode(cb_opcode, self.pc)),
+                },
+            ),
+            0xC0..=0xFF => Set::new(
+                bit,
+                match cb_opcode & 0x0F {
+                    0 => ID::Reg8(&mut self.b, R8::B),
+                    1 => ID::Reg8(&mut self.c, R8::C),
+                    2 => ID::Reg8(&mut self.d, R8::D),
+                    3 => ID::Reg8(&mut self.e, R8::E),
+                    4 => ID::Reg8(&mut self.h, R8::H),
+                    5 => ID::Reg8(&mut self.l, R8::L),
+                    6 => ID::PointedByHL(self.bus.clone(), self.hl()),
+                    7 => ID::Reg8(&mut self.a, R8::A),
+                    _ => return Err(InstructionError::UnusedCBOpcode(cb_opcode, self.pc)),
+                },
+            ),
         };
 
         Ok(instruction)
