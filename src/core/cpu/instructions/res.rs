@@ -18,7 +18,7 @@ impl<'a> Res<'a> {
 impl<'a> Instruction<'a> for Res<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
-            ID::Register8(r8, _) => (r8, 2, 2),
+            ID::Reg8(r8, _) => (r8, 2, 2),
             ID::PointedByHL(bus, addr) => (&mut bus.borrow_mut()[*addr], 4, 2),
 
             _ => return Err(InstructionError::MalformedInstruction),

@@ -22,7 +22,7 @@ impl<'a> Rr<'a> {
 impl<'a> Instruction<'a> for Rr<'a> {
     fn exec(&mut self) -> InstructionResult {
         let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
-            ID::Register8(r8, _) => (r8, 2, 2),
+            ID::Reg8(r8, _) => (r8, 2, 2),
             ID::PointedByHL(bus, addr) => (&mut bus.borrow_mut()[*addr], 4, 2),
 
             _ => return Err(InstructionError::MalformedInstruction),
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn test_rr_no_carry() {
         let mut a = 0b0000_0001;
-        let mut instr = Rr::new(0, ID::Register8(&mut a, R8::A));
+        let mut instr = Rr::new(0, ID::Reg8(&mut a, R8::A));
 
         let result = instr.exec().unwrap();
         assert_eq!(a, 0);

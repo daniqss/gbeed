@@ -99,18 +99,17 @@ impl Display for dyn Instruction<'_> {
 /// maybe we should remove non Dst variants, use always references an use it as mutable or not depending on the context
 #[derive(Debug, PartialEq)]
 pub enum InstructionTarget<'a> {
-    Immediate8(u8),
-    Immediate16(u16),
+    Imm8(u8),
+    Imm16(u16),
     SignedImm(i8),
-    Register8(u8, R8),
-    Register16((u8, u8), R16),
+    Reg8(u8, R8),
+    Reg16(u16, R16),
     PointedByHL(u8),
     PointedByN16(u8, u16),
     PointedByCPlusFF00(u8, u16),
-    PointedByRegister16(u8, R16),
+    PointedByReg16(u8, R16),
     PointedByHLI(u8, (&'a mut u8, &'a mut u8)),
     PointedByHLD(u8, (&'a mut u8, &'a mut u8)),
-    PointedByStackPointer((u8, u8), &'a mut u16),
     StackPointer(u16),
     StackPointerPlusE8(u16, i8),
     JumpToImm16(JumpCondition, u16),
@@ -121,18 +120,17 @@ pub enum InstructionTarget<'a> {
 impl Display for InstructionTarget<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InstructionTarget::Immediate8(n8) => write!(f, "${:02X}", n8),
-            InstructionTarget::Immediate16(n16) => write!(f, "${:04X}", n16),
+            InstructionTarget::Imm8(n8) => write!(f, "${:02X}", n8),
+            InstructionTarget::Imm16(n16) => write!(f, "${:04X}", n16),
             InstructionTarget::SignedImm(e8) => write!(f, "{:+}", e8),
-            InstructionTarget::Register8(_, reg) => write!(f, "{}", reg),
-            InstructionTarget::Register16(_, reg) => write!(f, "{}", reg),
+            InstructionTarget::Reg8(_, reg) => write!(f, "{}", reg),
+            InstructionTarget::Reg16(_, reg) => write!(f, "{}", reg),
             InstructionTarget::PointedByHL(_) => write!(f, "[hl]"),
             InstructionTarget::PointedByN16(_, address) => write!(f, "[${:04X}]", address),
             InstructionTarget::PointedByCPlusFF00(_, address) => write!(f, "[${:04X}]", address),
-            InstructionTarget::PointedByRegister16(_, reg) => write!(f, "[{}]", reg),
+            InstructionTarget::PointedByReg16(_, reg) => write!(f, "[{}]", reg),
             InstructionTarget::PointedByHLI(_, _) => write!(f, "[hli]"),
             InstructionTarget::PointedByHLD(_, _) => write!(f, "[hld]"),
-            InstructionTarget::PointedByStackPointer(_, _) => write!(f, "[sp]"),
             InstructionTarget::StackPointer(_) => write!(f, "sp"),
             InstructionTarget::StackPointerPlusE8(_, e8) => write!(f, "sp+{:+}", e8),
             InstructionTarget::JumpToImm16(cc, addr) => write!(f, "{}${:04X}", cc, addr),
@@ -146,14 +144,12 @@ impl Display for InstructionTarget<'_> {
 pub enum InstructionDestination<'a> {
     PointedByHL(MemoryBus, u16),
     PointedByN16(MemoryBus, u16),
-    PointedByN16AndNext(MemoryBus, u16),
     PointedByCPlusFF00(MemoryBus, u16),
-    Register8(&'a mut u8, R8),
-    Register16((&'a mut u8, &'a mut u8), R16),
-    PointedByRegister16(MemoryBus, u16, R16),
+    Reg8(&'a mut u8, R8),
+    Reg16((&'a mut u8, &'a mut u8), R16),
+    PointedByReg16(MemoryBus, u16, R16),
     PointedByHLI(MemoryBus, (&'a mut u8, &'a mut u8)),
     PointedByHLD(MemoryBus, (&'a mut u8, &'a mut u8)),
-    PointedByStackPointer(MemoryBus, &'a mut u16),
     StackPointer(&'a mut u16),
 }
 
@@ -162,16 +158,14 @@ impl Display for InstructionDestination<'_> {
         match self {
             InstructionDestination::PointedByHL(_, _) => write!(f, "[hl]"),
             InstructionDestination::PointedByN16(_, address) => write!(f, "[${:04X}]", address),
-            InstructionDestination::PointedByN16AndNext(_, address)
-            | InstructionDestination::PointedByCPlusFF00(_, address) => {
+            InstructionDestination::PointedByCPlusFF00(_, address) => {
                 write!(f, "[${:04X}]", address)
             }
-            InstructionDestination::Register8(_, reg) => write!(f, "{}", reg),
-            InstructionDestination::Register16(_, reg) => write!(f, "{}", reg),
-            InstructionDestination::PointedByRegister16(_, _, reg) => write!(f, "[{}]", reg),
+            InstructionDestination::Reg8(_, reg) => write!(f, "{}", reg),
+            InstructionDestination::Reg16(_, reg) => write!(f, "{}", reg),
+            InstructionDestination::PointedByReg16(_, _, reg) => write!(f, "[{}]", reg),
             InstructionDestination::PointedByHLI(_, _) => write!(f, "[hli]"),
             InstructionDestination::PointedByHLD(_, _) => write!(f, "[hld]"),
-            InstructionDestination::PointedByStackPointer(_, _) => write!(f, "[sp]"),
             InstructionDestination::StackPointer(_) => write!(f, "sp"),
         }
     }
@@ -192,8 +186,9 @@ impl InstructionEffect {
 /// Errors that can occur during instruction execution
 #[derive(Debug)]
 pub enum InstructionError {
-    NoOp(u8, u16),
     UnusedOpcode(u8, u16),
+    OutOfRangeOpcode(u8, u16),
+    OutOfRangeCBOpcode(u8, u16),
     AddressOutOfRange(u16, Option<u8>, Option<u16>),
     NotImplemented(u8, u16),
     MalformedInstruction,
@@ -202,11 +197,14 @@ pub enum InstructionError {
 impl std::fmt::Display for InstructionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InstructionError::NoOp(opcode, pc) => {
-                write!(f, "No operation for opcode {:02X} at PC {:04X}", opcode, pc)
-            }
             InstructionError::UnusedOpcode(opcode, pc) => {
                 write!(f, "Unused opcode {:02X} at PC {:04X}", opcode, pc)
+            }
+            InstructionError::OutOfRangeOpcode(opcode, pc) => {
+                write!(f, "Out of range opcode {:02X} at PC {:04X}", opcode, pc)
+            }
+            InstructionError::OutOfRangeCBOpcode(opcode, pc) => {
+                write!(f, "Out of range CB opcode {:02X} at PC {:04X}", opcode, pc)
             }
             InstructionError::AddressOutOfRange(address, opcode, pc) => write!(
                 f,
