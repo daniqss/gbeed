@@ -9,7 +9,7 @@ use crate::{
         },
         registers::{Reg8 as R8, Reg16 as R16},
     },
-    utils::{high, low, to_u8, to_u16, with_u16},
+    utils::{low, to_u8, to_u16, with_u16},
 };
 
 pub struct Ld<'a> {
@@ -86,9 +86,10 @@ impl<'a> Instruction<'a> for Ld<'a> {
                 **dst = *src;
                 return Ok(InstructionEffect::new(3, 3, Flags::none()));
             }
-            (ID::PointedByN16AndNext(bus, addr), IT::StackPointer(src)) => {
-                bus.borrow_mut()[addr.wrapping_add(1)] = high(*src);
-                bus.borrow_mut()[*addr] = low(*src);
+            (ID::PointedByN16(bus, addr), IT::StackPointer(src)) => {
+                // bus.borrow_mut()[addr.wrapping_add(1)] = high(*src);
+                // bus.borrow_mut()[*addr] = low(*src);
+                bus.borrow_mut().write_word(*addr, *src);
 
                 return Ok(InstructionEffect::new(5, 3, Flags::none()));
             }

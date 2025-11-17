@@ -54,7 +54,7 @@ impl<'a> Instruction<'a> for Pop<'a> {
         *dst.1 = high;
 
         // increment stack pointer by 2, one for each byte popped
-        *self.sp += 2;
+        *self.sp = self.sp.wrapping_add(2);
 
         Ok(InstructionEffect::new(3, 1, flags))
     }

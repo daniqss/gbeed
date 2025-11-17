@@ -31,7 +31,16 @@ impl<'a> Instruction<'a> for Ret<'a> {
             _ => 2,
         };
 
-        Ok(InstructionEffect::new(cycles, 1, Flags::none()))
+        if !should_return {
+            return Ok(InstructionEffect::new(cycles, 1, Flags::none()));
+        }
+
+        let return_addr = self.bus.borrow().read_word(*self.sp);
+        *self.pc = return_addr;
+        *self.sp = self.sp.wrapping_add(2);
+
+        // it actually uses 1 byte, but as it jumps, we'll leave it as 0
+        Ok(InstructionEffect::new(cycles, 0, Flags::none()))
     }
 
     // this probably is gonna look wrong

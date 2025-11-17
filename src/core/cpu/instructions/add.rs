@@ -9,7 +9,7 @@ use crate::{
             InstructionResult, InstructionTarget as IT,
         },
     },
-    utils::{high, low, to_u16, with_u16},
+    utils::{high, low, with_u16},
 };
 
 /// Add instruction

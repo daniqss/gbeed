@@ -1,5 +1,5 @@
 use crate::core::cpu::{
-    flags::{CARRY_FLAG_MASK, Flags},
+    flags::Flags,
     instructions::{Instruction, InstructionEffect, InstructionResult},
 };
 
@@ -36,7 +36,7 @@ impl<'a> Instruction<'a> for Rla<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::cpu::{R8, flags::Flags};
+    use crate::core::cpu::flags::Flags;
 
     use super::*;
 

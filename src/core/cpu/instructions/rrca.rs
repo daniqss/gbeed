@@ -1,9 +1,6 @@
 use crate::core::cpu::{
-    R8,
     flags::Flags,
-    instructions::{
-        Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
-    },
+    instructions::{Instruction, InstructionEffect, InstructionResult},
 };
 
 /// rotate bits left between A and carry flag
@@ -39,7 +36,7 @@ impl<'a> Instruction<'a> for Rrca<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::cpu::{R8, flags::Flags};
+    use crate::core::cpu::flags::Flags;
 
     use super::*;
 
