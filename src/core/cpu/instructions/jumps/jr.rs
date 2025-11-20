@@ -29,8 +29,10 @@ impl<'a> Instruction<'a> for Jr<'a> {
                 // cast i8 offset to u16 to perform addition
                 let offset = if should_jump { *offset as i16 as u16 } else { 0 };
                 let cycles = if should_jump { 3 } else { 2 };
+                // TODO: return len as 0 if jumped?
+                let len = if should_jump { 0 } else { 2 };
 
-                (offset, cycles, 2)
+                (offset, cycles, len)
             }
 
             _ => return Err(InstructionError::MalformedInstruction),

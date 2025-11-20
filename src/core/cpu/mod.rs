@@ -239,7 +239,7 @@ impl Cpu {
                     IT::Reg8(aa, R8::A),
                 )
             }
-            0x33 => Inc::new(ID::StackPointer(&mut self.pc)),
+            0x33 => Inc::new(ID::StackPointer(&mut self.sp)),
             0x34 => Inc::new(ID::PointedByHL(self.bus.clone(), self.hl())),
             0x35 => Dec::new(ID::PointedByHL(self.bus.clone(), self.hl())),
             0x36 => Ld::new(

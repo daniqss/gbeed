@@ -42,7 +42,8 @@ impl<'a> Instruction<'a> for Rst<'a> {
         // implicit jump to called address
         *self.pc = self.vec as u16;
 
-        Ok(InstructionEffect::new(4, 1, Flags::none()))
+        // TODO: return 0 instead of 1 len to avoid pc increment after instruction?
+        Ok(InstructionEffect::new(4, 0, Flags::none()))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {

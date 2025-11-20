@@ -34,6 +34,5 @@ impl<'a> Instruction<'a> for Reti<'a> {
         Ok(InstructionEffect::new(4, 0, Flags::none()))
     }
 
-    // this probably is gonna look wrong
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "reti") }
 }

@@ -27,11 +27,13 @@ impl<'a> Instruction<'a> for Jp<'a> {
 
                 let addr = if should_jump { *addr } else { *self.pc };
                 let cycles = if should_jump { 4 } else { 3 };
+                // TODO: return len as 0 if jumped?
+                let len = if should_jump { 0 } else { 3 };
 
-                (addr, cycles, 3)
+                (addr, cycles, len)
             }
 
-            IT::JumpToHL(addr) => (*addr, 1, 1),
+            IT::JumpToHL(addr) => (*addr, 1, 0),
 
             _ => return Err(InstructionError::MalformedInstruction),
         };
