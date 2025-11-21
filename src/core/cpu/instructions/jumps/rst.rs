@@ -28,10 +28,13 @@ impl<'a> Rst<'a> {
 
 impl<'a> Instruction<'a> for Rst<'a> {
     fn exec(&mut self) -> InstructionResult {
-        [0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38]
-            .iter()
-            .position(|&x| x == self.vec)
-            .ok_or(InstructionError::MalformedInstruction)?;
+        // [0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38]
+        //     .iter()
+        //     .position(|&x| x == self.vec)
+        //     .ok_or(InstructionError::MalformedInstruction)?;
+        if self.vec & 0x07 != 0 {
+            return Err(InstructionError::MalformedInstruction);
+        }
 
         // maybe this logic should be shared with call
         *self.sp -= 1;

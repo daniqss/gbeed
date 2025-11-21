@@ -24,7 +24,7 @@ impl Dmg {
 
         Dmg {
             cpu: Cpu::new(memory_bus.clone()),
-            ppu: Ppu::new(memory_bus.clone()),
+            ppu: Ppu::new(),
             memory_bus,
             cartridge,
         }
