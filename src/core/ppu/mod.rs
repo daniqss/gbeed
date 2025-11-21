@@ -1,3 +1,9 @@
+mod display;
+mod sprite;
+
+use display::Display;
+pub use sprite::Sprite;
+
 /// LCD Control Register (R/W) bits
 const LCD_DISPLAY_ENABLE: u8 = 0x80;
 const WINDOW_TILE_MAP_ADDRESS: u8 = 0x40;
@@ -28,31 +34,35 @@ pub struct Ppu {
     lcd_status: u8,
     scroll_y: u8,
     scroll_x: u8,
-    lcd_y: u8,
-    lcd_y_compare: u8,
+    ly: u8,
+    lyc: u8,
     dma: u8,
     bg_palette: u8,
     objp_0: u8,
     objp_1: u8,
     wy: u8,
     wx: u8,
+
+    display: Display,
 }
 
 impl Ppu {
     pub fn new() -> Self {
         Self {
-            lcd_control: 0,
+            lcd_control: 0x91,
             lcd_status: 0,
             scroll_y: 0,
             scroll_x: 0,
-            lcd_y: 0,
-            lcd_y_compare: 0,
+            ly: 0,
+            lyc: 0,
             dma: 0,
-            bg_palette: 0,
-            objp_0: 0,
-            objp_1: 0,
+            bg_palette: 0xFC,
+            objp_0: 0xFF,
+            objp_1: 0xFF,
             wy: 0,
             wx: 0,
+
+            display: Display::new(),
         }
     }
 
