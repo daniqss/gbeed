@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 thiserror = "2.0.17"
+paste = "1.0.15"
 
 [dependencies.sdl2]
 version = "0.38"

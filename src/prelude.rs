@@ -1,3 +1,4 @@
+pub use crate::bit_accessors;
 pub use crate::error::Error;
 pub use crate::utils;
 

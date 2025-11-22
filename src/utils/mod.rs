@@ -1,3 +1,5 @@
+pub mod macros;
+
 /// Convert little-endian u8 pair to u16
 pub fn to_u16(low: u8, high: u8) -> u16 { ((high as u16) << 8) | (low as u16) }
 
