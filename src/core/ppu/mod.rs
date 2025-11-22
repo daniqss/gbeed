@@ -1,8 +1,9 @@
 mod display;
 mod sprite;
 
+use std::{cell::RefCell, rc::Rc};
+
 use display::Display;
-pub use sprite::Sprite;
 
 /// LCD Control Register (R/W) bits
 const LCD_DISPLAY_ENABLE: u8 = 0x80;
@@ -29,6 +30,7 @@ macro_rules! bit_getters {
     };
 }
 
+#[derive(Debug)]
 pub struct Ppu {
     lcd_control: u8,
     lcd_status: u8,
@@ -47,8 +49,8 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Self {
             lcd_control: 0x91,
             lcd_status: 0,
             scroll_y: 0,
@@ -63,7 +65,7 @@ impl Ppu {
             wx: 0,
 
             display: Display::new(),
-        }
+        }))
     }
 
     // lcd_control bit getters

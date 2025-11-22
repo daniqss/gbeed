@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::prelude::*;
+use crate::{core::ppu::Ppu, prelude::*};
 
 /// addressable memory size
 pub const ADDRESABLE_MEMORY: usize = 0xFFFF; // 64KB
@@ -71,10 +71,16 @@ pub struct Memory {
     pub io_registers: [u8; (IO_REGISTERS_END - IO_REGISTERS_START + 1) as usize],
     pub hram: [u8; (HRAM_END - HRAM_START + 1) as usize],
     pub interrupt_enable: u8,
+
+    ppu: Option<Rc<RefCell<Ppu>>>,
 }
 
 impl Memory {
-    pub fn new(game_rom: Option<Vec<u8>>, boot_rom: Option<Vec<u8>>) -> MemoryBus {
+    pub fn new(
+        game_rom: Option<Vec<u8>>,
+        boot_rom: Option<Vec<u8>>,
+        ppu: Option<Rc<RefCell<Ppu>>>,
+    ) -> MemoryBus {
         let mut rom = [0u8; (ROM_BANKNN_END as usize) + 1];
 
         // copy first from boot rom, and then from game
@@ -110,6 +116,8 @@ impl Memory {
             io_registers: [0; (IO_REGISTERS_END - IO_REGISTERS_START + 1) as usize],
             hram: [0; (HRAM_END - HRAM_START + 1) as usize],
             interrupt_enable: 0,
+
+            ppu,
         }))
     }
 
@@ -140,12 +148,15 @@ impl Index<u16> for Memory {
                 &self.ram[offset]
             }
             OAM_START..=OAM_END => &self.oam_ram[(address - OAM_START) as usize],
+            NOT_USABLE_START..=NOT_USABLE_END => unreachable!(
+                "Read to prohibited memory region [{}, {}]",
+                NOT_USABLE_START, NOT_USABLE_END
+            ),
             IO_REGISTERS_START..=IO_REGISTERS_END => {
                 &self.io_registers[(address - IO_REGISTERS_START) as usize]
             }
             HRAM_START..=HRAM_END => &self.hram[(address - HRAM_START) as usize],
             INTERRUPT_ENABLE_REGISTER => &self.interrupt_enable,
-            _ => unreachable!(),
         }
     }
 }
@@ -164,7 +175,10 @@ impl IndexMut<u16> for Memory {
                 &mut self.ram[offset]
             }
             OAM_START..=OAM_END => &mut self.oam_ram[(address - OAM_START) as usize],
-            NOT_USABLE_START..=NOT_USABLE_END => unreachable!("Write to prohibited memory region FEA0–FEFF"),
+            NOT_USABLE_START..=NOT_USABLE_END => unreachable!(
+                "Write to prohibited memory region [{}, {}]",
+                NOT_USABLE_START, NOT_USABLE_END
+            ),
             IO_REGISTERS_START..=IO_REGISTERS_END => {
                 &mut self.io_registers[(address - IO_REGISTERS_START) as usize]
             }
@@ -180,14 +194,14 @@ mod test {
 
     #[test]
     fn test_read_write_byte() {
-        let memory = Memory::new(None, None);
+        let memory = Memory::new(None, None, None);
         memory.borrow_mut()[0x1234] = 0x56;
         assert_eq!(memory.borrow()[0x1234], 0x56);
     }
 
     #[test]
     fn test_read_write_word() {
-        let memory = Memory::new(None, None);
+        let memory = Memory::new(None, None, None);
         memory.borrow_mut().write_word(0x1234, 0x5678);
         assert_eq!(memory.borrow().read_word(0x1234), 0x5678);
         assert_eq!(memory.borrow()[0x1234], 0x78);

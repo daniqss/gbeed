@@ -73,7 +73,7 @@ mod tests {
         let mut f = 0;
         let mut a = 0;
         let mut sp = 0xFF00;
-        let bus = Memory::new(None, None);
+        let bus = Memory::new(None, None, None);
 
         bus.borrow_mut()[sp] = ZERO_FLAG_MASK | CARRY_FLAG_MASK;
         bus.borrow_mut()[sp + 1] = 1;

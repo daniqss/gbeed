@@ -4,6 +4,8 @@ mod license;
 pub mod memory;
 mod ppu;
 
+use std::{cell::RefCell, rc::Rc};
+
 pub use cartrigde::Cartridge;
 use cpu::Cpu;
 use memory::MemoryBus;
@@ -13,19 +15,20 @@ use crate::core::memory::Memory;
 
 pub struct Dmg {
     pub cartridge: Cartridge,
-    pub memory_bus: MemoryBus,
+    pub bus: MemoryBus,
     pub cpu: Cpu,
-    pub ppu: Ppu,
+    pub ppu: Rc<RefCell<Ppu>>,
 }
 
 impl Dmg {
     pub fn new(cartridge: Cartridge, game_rom: Vec<u8>, boot_rom: Vec<u8>) -> Dmg {
-        let memory_bus = Memory::new(Some(game_rom), Some(boot_rom));
+        let ppu = Ppu::new();
+        let bus = Memory::new(Some(game_rom), Some(boot_rom), Some(ppu.clone()));
 
         Dmg {
-            cpu: Cpu::new(memory_bus.clone()),
-            ppu: Ppu::new(),
-            memory_bus,
+            cpu: Cpu::new(),
+            ppu: ppu,
+            bus,
             cartridge,
         }
     }
@@ -34,9 +37,9 @@ impl Dmg {
 
     pub fn run(&mut self) {
         loop {
-            let opcode = self.memory_bus.borrow()[self.cpu.pc];
+            let opcode = self.bus.borrow()[self.cpu.pc];
 
-            let mut instruction = match self.cpu.fetch(opcode) {
+            let mut instruction = match self.cpu.fetch(self.bus.clone(), opcode) {
                 Ok(instr) => instr,
                 Err(e) => {
                     eprintln!("Error fetching instruction: {}", e);
