@@ -25,7 +25,19 @@ pub struct Dmg {
 impl Dmg {
     pub fn new(cartridge: Cartridge, game_rom: Vec<u8>, boot_rom: Vec<u8>) -> Dmg {
         let ppu = Ppu::new();
-        let bus = Memory::new(Some(game_rom), Some(boot_rom), Some(ppu.clone()));
+
+        let registers = HardwareRegisters {
+            joypad: Rc::new(RefCell::new(registers::joypad::Joypad::default())),
+            // serial: Rc::new(RefCell::new(registers::serial::Serial {})),
+            interrupt_flag: 0,
+            // sound: Rc::new(RefCell::new(registers::sound::SoundController {})),
+            // timer: Rc::new(RefCell::new(registers::timer::TimerController {})),
+            ppu: ppu.clone(),
+            boot: 0,
+            interrupt_enable: 0,
+        };
+
+        let bus = Memory::new(Some(game_rom), Some(boot_rom), Some(registers));
 
         Dmg {
             cpu: Cpu::new(),

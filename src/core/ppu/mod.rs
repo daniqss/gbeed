@@ -1,9 +1,13 @@
 mod display;
 mod sprite;
 
-use crate::prelude::*;
+use crate::{core::MemoryMappedRegister, prelude::*};
 use display::Display;
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    ops::{Index, IndexMut},
+    rc::Rc,
+};
 
 /// LCD Control Register (R/W) bits
 const LCD_DISPLAY_ENABLE: u8 = 0x80;
@@ -87,4 +91,48 @@ impl Ppu {
 
     // maybe its not best way to implement this
     pub fn get_mode(&self) -> bool { if self.lcd_status & 0x03 == 0 { false } else { true } }
+}
+
+impl MemoryMappedRegister for Ppu {}
+
+impl Index<u16> for Ppu {
+    type Output = u8;
+
+    fn index(&self, address: u16) -> &Self::Output {
+        match address {
+            0xFF40 => &self.lcd_control,
+            0xFF41 => &self.lcd_status,
+            0xFF42 => &self.scroll_y,
+            0xFF43 => &self.scroll_x,
+            0xFF44 => &self.ly,
+            0xFF45 => &self.lyc,
+            0xFF46 => &self.dma,
+            0xFF47 => &self.bg_palette,
+            0xFF48 => &self.objp_0,
+            0xFF49 => &self.objp_1,
+            0xFF4A => &self.wy,
+            0xFF4B => &self.wx,
+            _ => unreachable!("Ppu will never index {:04X}", address),
+        }
+    }
+}
+
+impl IndexMut<u16> for Ppu {
+    fn index_mut(&mut self, address: u16) -> &mut Self::Output {
+        match address {
+            0xFF40 => &mut self.lcd_control,
+            0xFF41 => &mut self.lcd_status,
+            0xFF42 => &mut self.scroll_y,
+            0xFF43 => &mut self.scroll_x,
+            0xFF44 => &mut self.ly,
+            0xFF45 => &mut self.lyc,
+            0xFF46 => &mut self.dma,
+            0xFF47 => &mut self.bg_palette,
+            0xFF48 => &mut self.objp_0,
+            0xFF49 => &mut self.objp_1,
+            0xFF4A => &mut self.wy,
+            0xFF4B => &mut self.wx,
+            _ => unreachable!("Ppu will never index {:04X}", address),
+        }
+    }
 }

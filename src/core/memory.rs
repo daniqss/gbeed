@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{core::ppu::Ppu, prelude::*};
+use crate::{core::HardwareRegisters, prelude::*};
 
 /// addressable memory size
 pub const ADDRESABLE_MEMORY: usize = 0xFFFF; // 64KB
@@ -72,14 +72,14 @@ pub struct Memory {
     pub hram: [u8; (HRAM_END - HRAM_START + 1) as usize],
     pub interrupt_enable: u8,
 
-    ppu: Option<Rc<RefCell<Ppu>>>,
+    registers: Option<HardwareRegisters>,
 }
 
 impl Memory {
     pub fn new(
         game_rom: Option<Vec<u8>>,
         boot_rom: Option<Vec<u8>>,
-        ppu: Option<Rc<RefCell<Ppu>>>,
+        registers: Option<HardwareRegisters>,
     ) -> MemoryBus {
         let mut rom = [0u8; (ROM_BANKNN_END as usize) + 1];
 
@@ -117,7 +117,7 @@ impl Memory {
             hram: [0; (HRAM_END - HRAM_START + 1) as usize],
             interrupt_enable: 0,
 
-            ppu,
+            registers,
         }))
     }
 
@@ -180,6 +180,13 @@ impl IndexMut<u16> for Memory {
                 NOT_USABLE_START, NOT_USABLE_END
             ),
             IO_REGISTERS_START..=IO_REGISTERS_END => {
+                let pointed_val = match (&self.registers, address) {
+                    (Some(regs), 0xFF00) => regs.joypad.borrow()[0],
+
+                    _ => self.io_registers[(address - IO_REGISTERS_START) as usize],
+                };
+
+                self.io_registers[(address - IO_REGISTERS_START) as usize] = pointed_val;
                 &mut self.io_registers[(address - IO_REGISTERS_START) as usize]
             }
             HRAM_START..=HRAM_END => &mut self.hram[(address - HRAM_START) as usize],
