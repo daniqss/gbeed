@@ -1,9 +1,9 @@
 mod display;
 mod sprite;
 
-use std::{cell::RefCell, rc::Rc};
-
+use crate::prelude::*;
 use display::Display;
+use std::{cell::RefCell, rc::Rc};
 
 /// LCD Control Register (R/W) bits
 const LCD_DISPLAY_ENABLE: u8 = 0x80;
@@ -22,15 +22,7 @@ const MODE_1_VBLANK_INTERRUPT: u8 = 0x10;
 const MODE_0_HBLANK_INTERRUPT: u8 = 0x08;
 const LYC_EQ_LY_FLAG: u8 = 0x04;
 
-/// Macro used to generate easy bit getter functions
-macro_rules! bit_getters {
-    ($reg_name:ident, $bit:ident, $fn_name:ident) => {
-        #[inline]
-        pub fn $fn_name(&self) -> bool { (self.$reg_name & $bit) != 0 }
-    };
-}
-
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Ppu {
     lcd_control: u8,
     lcd_status: u8,
@@ -64,26 +56,34 @@ impl Ppu {
             wy: 0,
             wx: 0,
 
-            display: Display::new(),
+            display: Display::default(),
         }))
     }
 
-    // lcd_control bit getters
-    bit_getters!(lcd_control, LCD_DISPLAY_ENABLE, lcd_display_enable);
-    bit_getters!(lcd_control, WINDOW_TILE_MAP_ADDRESS, window_tile_map_address);
-    bit_getters!(lcd_control, WINDOW_ENABLE, window_enable);
-    bit_getters!(lcd_control, BG_AND_WINDOW_TILE_DATA, bg_and_window_tile_data);
-    bit_getters!(lcd_control, BG_TILE_MAP_ADDRESS, bg_tile_map_address);
-    bit_getters!(lcd_control, OBJ_SIZE, obj_size);
-    bit_getters!(lcd_control, OBJ_ENABLE, obj_enable);
-    bit_getters!(lcd_control, BG_ENABLE, bg_enable);
+    // lcd_control bit access functions
+    bit_accessors! {
+        target: lcd_control;
 
-    // ldc_status bit getters
-    bit_getters!(lcd_status, LYC_EQ_LY_INTERRUPT, lyc_eq_ly_interrupt);
-    bit_getters!(lcd_status, MODE_2_OAM_INTERRUPT, mode_2_oam_interrupt);
-    bit_getters!(lcd_status, MODE_1_VBLANK_INTERRUPT, mode_1_vblank_interrupt);
-    bit_getters!(lcd_status, MODE_0_HBLANK_INTERRUPT, mode_0_hblank_interrupt);
-    bit_getters!(lcd_status, LYC_EQ_LY_FLAG, lyc_eq_ly_flag);
+        LCD_DISPLAY_ENABLE,
+        WINDOW_TILE_MAP_ADDRESS,
+        WINDOW_ENABLE,
+        BG_AND_WINDOW_TILE_DATA,
+        BG_TILE_MAP_ADDRESS,
+        OBJ_SIZE,
+        OBJ_ENABLE,
+        BG_ENABLE
+    }
+
+    // lcd_status bit access functions
+    bit_accessors! {
+        target: lcd_status;
+
+        LYC_EQ_LY_INTERRUPT,
+        MODE_2_OAM_INTERRUPT,
+        MODE_1_VBLANK_INTERRUPT,
+        MODE_0_HBLANK_INTERRUPT,
+        LYC_EQ_LY_FLAG
+    }
 
     // maybe its not best way to implement this
     pub fn get_mode(&self) -> bool { if self.lcd_status & 0x03 == 0 { false } else { true } }
