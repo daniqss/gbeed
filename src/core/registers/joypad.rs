@@ -1,7 +1,6 @@
-use std::ops::{Index, IndexMut};
-
 use crate::bit_accessors;
-use crate::core::MemoryMappedRegister;
+
+pub const JOYPAD_ADDR: u16 = 0xFF00;
 
 pub const SELECT_BUTTONS: u8 = 0x20;
 pub const SELECT_DIRECTIONS: u8 = 0x10;
@@ -19,7 +18,7 @@ pub const INPUT_RIGHT_A: u8 = 0x01;
 /// | Left  | B      | P11 |
 /// | Right | A      | P10 |
 #[derive(Debug, Default)]
-pub struct Joypad(u8);
+pub struct Joypad(pub u8);
 
 impl Joypad {
     bit_accessors! {
@@ -32,18 +31,6 @@ impl Joypad {
         INPUT_LEFT_B,
         INPUT_RIGHT_A
     }
-}
-
-impl MemoryMappedRegister for Joypad {}
-
-impl Index<u16> for Joypad {
-    type Output = u8;
-
-    fn index(&self, _addr: u16) -> &Self::Output { &self.0 }
-}
-
-impl IndexMut<u16> for Joypad {
-    fn index_mut(&mut self, _addr: u16) -> &mut Self::Output { &mut self.0 }
 }
 
 #[cfg(test)]

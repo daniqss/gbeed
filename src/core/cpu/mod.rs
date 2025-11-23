@@ -35,7 +35,7 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new() -> Cpu {
+    pub fn new(start_at_boot: bool) -> Cpu {
         Cpu {
             a: 0x00,
             f: 0x00,
@@ -45,7 +45,7 @@ impl Cpu {
             e: 0x00,
             h: 0x00,
             l: 0x00,
-            pc: 0x0100,
+            pc: if start_at_boot { 0x0000 } else { 0x0100 },
             sp: 0x0000,
 
             cycles: 0,
@@ -702,8 +702,6 @@ impl Cpu {
         bus: MemoryBus,
         cb_opcode: u8,
     ) -> Result<Box<dyn Instruction<'_> + '_>, InstructionError> {
-        let bus_ref = bus.borrow();
-
         // used bit in res, set and bit instructions
         let bit = (cb_opcode & 0x38) >> 3;
 
@@ -781,7 +779,7 @@ impl Cpu {
                     3 => IT::Reg8(self.e, R8::E),
                     4 => IT::Reg8(self.h, R8::H),
                     5 => IT::Reg8(self.l, R8::L),
-                    6 => IT::PointedByHL(bus_ref[self.hl()]),
+                    6 => IT::PointedByHL(bus.borrow()[self.hl()]),
                     7 => IT::Reg8(self.a, R8::A),
                     _ => return Err(InstructionError::OutOfRangeCBOpcode(cb_opcode, self.pc)),
                 },

@@ -1,4 +1,6 @@
 use gbeed::Cartridge;
+use gbeed::Dmg;
+use gbeed::Joypad;
 use gbeed::prelude::*;
 extern crate sdl2;
 
@@ -9,6 +11,7 @@ use sdl2::rect::Rect;
 use sdl2::render::Texture;
 use sdl2::render::TextureQuery;
 use std::io::{self, ErrorKind};
+use std::ops::DerefMut;
 
 const SCREEN_WIDTH: u32 = 800;
 const SCREEN_HEIGHT: u32 = 600;
@@ -26,7 +29,7 @@ fn main() -> Result<()> {
         .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "Missing boot room name"))?;
 
     let game_rom = std::fs::read(game_name)?;
-    let _boot_room_data = std::fs::read(boot_room_name)?;
+    let boot_room_data = std::fs::read(boot_room_name)?;
 
     let cartridge = Cartridge::new(&game_rom)?;
 
@@ -85,6 +88,8 @@ fn main() -> Result<()> {
 
     canvas.present();
 
+    let mut gameboy = Dmg::new(Some(cartridge), Some(game_rom), Some(boot_room_data));
+
     'mainloop: loop {
         for event in sdl_context.event_pump()?.poll_iter() {
             match event {
@@ -93,10 +98,66 @@ fn main() -> Result<()> {
                     ..
                 }
                 | Event::Quit { .. } => break 'mainloop,
+                Event::KeyDown {
+                    keycode: Some(key), ..
+                } => {
+                    update_joypad(true, key, gameboy.joypad.borrow_mut().deref_mut());
+                }
+
+                Event::KeyUp {
+                    keycode: Some(key), ..
+                } => {
+                    update_joypad(false, key, gameboy.joypad.borrow_mut().deref_mut());
+                }
                 _ => {}
             }
+
+            gameboy.run();
+            std::thread::sleep(std::time::Duration::from_millis(46));
         }
     }
 
     Ok(())
+}
+
+fn update_joypad(is_down: bool, key: Keycode, jp: &mut Joypad) {
+    match key {
+        Keycode::W => {
+            jp.set_select_directions(is_down);
+            jp.set_input_up_select(is_down)
+        }
+        Keycode::S => {
+            jp.set_select_directions(is_down);
+            jp.set_input_down_start(is_down)
+        }
+        Keycode::A => {
+            jp.set_select_directions(is_down);
+            jp.set_input_left_b(is_down)
+        }
+        Keycode::D => {
+            jp.set_select_directions(is_down);
+            jp.set_input_right_a(is_down)
+        }
+        // a
+        Keycode::J => {
+            jp.set_select_buttons(is_down);
+            jp.set_input_right_a(is_down)
+        }
+        // b
+        Keycode::X => {
+            jp.set_select_buttons(is_down);
+            jp.set_input_left_b(is_down)
+        }
+        // start
+        Keycode::Return => {
+            jp.set_select_buttons(is_down);
+            jp.set_input_down_start(is_down)
+        }
+        // select
+        Keycode::RShift => {
+            jp.set_select_buttons(is_down);
+            jp.set_input_up_select(is_down)
+        }
+        _ => {}
+    }
 }

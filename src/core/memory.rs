@@ -180,9 +180,8 @@ impl IndexMut<u16> for Memory {
                 NOT_USABLE_START, NOT_USABLE_END
             ),
             IO_REGISTERS_START..=IO_REGISTERS_END => {
-                let pointed_val = match (&self.registers, address) {
-                    (Some(regs), 0xFF00) => regs.joypad.borrow()[0],
-
+                let pointed_val = match &self.registers {
+                    Some(regs) => regs.read(address),
                     _ => self.io_registers[(address - IO_REGISTERS_START) as usize],
                 };
 
