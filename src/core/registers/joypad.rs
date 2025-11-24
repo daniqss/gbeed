@@ -1,6 +1,6 @@
 use crate::bit_accessors;
 
-pub const JOYPAD_ADDR: u16 = 0xFF00;
+pub const JOYP: u16 = 0xFF00;
 
 pub const SELECT_BUTTONS: u8 = 0x20;
 pub const SELECT_DIRECTIONS: u8 = 0x10;

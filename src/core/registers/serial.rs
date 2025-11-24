@@ -1,8 +1,7 @@
-use crate::bit_accessors;
-use std::ops::{Index, IndexMut};
+use crate::prelude::*;
 
-pub const SB_REGISTER: u16 = 0xFF01;
-pub const SC_REGISTER: u16 = 0xFF02;
+pub const SB: u16 = 0xFF01;
+pub const SC: u16 = 0xFF02;
 
 pub const SC_TRANSFER_START: u8 = 0x80;
 pub const SC_CLOCK_SPEED: u8 = 0x02;

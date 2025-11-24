@@ -13,7 +13,9 @@ use memory::MemoryBus;
 use ppu::Ppu;
 pub use registers::*;
 
-pub use crate::core::{joypad::Joypad, memory::Memory, serial::Serial, timer::TimerController};
+pub use crate::core::{
+    interrupts::Interrupt, joypad::Joypad, memory::Memory, serial::Serial, timer::TimerController,
+};
 
 pub struct Dmg {
     pub cartridge: Option<Cartridge>,
@@ -26,21 +28,23 @@ pub struct Dmg {
 
 impl Dmg {
     pub fn new(cartridge: Option<Cartridge>, game_rom: Option<Vec<u8>>, boot_rom: Option<Vec<u8>>) -> Dmg {
-        let ppu = Ppu::new();
-        let timer = TimerController::new();
         let joypad = Rc::new(RefCell::new(Joypad::default()));
         let serial = Rc::new(RefCell::new(Serial::new()));
+        let timer = TimerController::new();
+        let interrupt_flag = Interrupt::new();
+        let ppu = Ppu::new();
+        let interrupt_enable = Interrupt::new();
 
         let registers = HardwareRegisters {
             joypad: joypad.clone(),
             serial: serial.clone(),
             timer: timer.clone(),
-            interrupt_flag: 0,
+            interrupt_flag: interrupt_flag.clone(),
             // sound: Rc::new(RefCell::new(registers::sound::SoundController {})),
             // timer: Rc::new(RefCell::new(registers::timer::TimerController {})),
             ppu: ppu.clone(),
             boot: 0,
-            interrupt_enable: 0,
+            interrupt_enable: interrupt_enable.clone(),
         };
 
         let start_at_boot = boot_rom.is_some();
