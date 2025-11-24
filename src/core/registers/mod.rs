@@ -1,7 +1,6 @@
 pub(crate) mod interrupts;
 pub(crate) mod joypad;
 pub(crate) mod serial;
-pub(crate) mod sound;
 pub(crate) mod timer;
 
 use crate::prelude::*;
