@@ -1,16 +1,18 @@
+mod apu;
 mod cartrigde;
 mod cpu;
 mod license;
-pub mod memory;
+mod memory;
 mod ppu;
 mod registers;
 
 use std::{cell::RefCell, rc::Rc};
 
+pub use apu::Apu;
 pub use cartrigde::Cartridge;
-use cpu::Cpu;
+pub use cpu::Cpu;
 use memory::MemoryBus;
-use ppu::Ppu;
+pub use ppu::Ppu;
 pub use registers::*;
 
 pub use crate::core::{
