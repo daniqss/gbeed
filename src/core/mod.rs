@@ -26,6 +26,8 @@ pub struct Dmg {
     pub ppu: Rc<RefCell<Ppu>>,
     pub joypad: Rc<RefCell<Joypad>>,
     pub serial: Rc<RefCell<Serial>>,
+    pub timer: Rc<RefCell<TimerController>>,
+    pub apu: Rc<RefCell<Apu>>,
 }
 
 impl Dmg {
@@ -33,6 +35,7 @@ impl Dmg {
         let joypad = Rc::new(RefCell::new(Joypad::default()));
         let serial = Rc::new(RefCell::new(Serial::new()));
         let timer = TimerController::new();
+        let apu = Apu::new();
         let interrupt_flag = Interrupt::new();
         let ppu = Ppu::new();
         let interrupt_enable = Interrupt::new();
@@ -41,11 +44,9 @@ impl Dmg {
             joypad: joypad.clone(),
             serial: serial.clone(),
             timer: timer.clone(),
+            apu: apu.clone(),
             interrupt_flag: interrupt_flag.clone(),
-            // sound: Rc::new(RefCell::new(registers::sound::SoundController {})),
-            // timer: Rc::new(RefCell::new(registers::timer::TimerController {})),
             ppu: ppu.clone(),
-            boot: 0,
             interrupt_enable: interrupt_enable.clone(),
         };
 
@@ -59,6 +60,8 @@ impl Dmg {
             serial,
             bus,
             cartridge,
+            timer,
+            apu,
         }
     }
 

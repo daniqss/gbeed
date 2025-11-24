@@ -32,6 +32,7 @@ pub const IO_REGISTERS_END: u16 = 0xFF7F;
 pub const HRAM_START: u16 = 0xFF80;
 pub const HRAM_END: u16 = 0xFFFE;
 pub const INTERRUPT_ENABLE_REGISTER: u16 = 0xFFFF;
+pub const BOOT_REGISTER: u16 = 0xFF50;
 
 pub fn is_high_address(address: u16) -> bool {
     address >= IO_REGISTERS_START && address <= INTERRUPT_ENABLE_REGISTER
@@ -73,6 +74,7 @@ pub struct Memory {
     pub interrupt_enable: u8,
 
     registers: Option<HardwareRegisters>,
+    pub bank: u8,
 }
 
 impl Memory {
@@ -118,6 +120,7 @@ impl Memory {
             interrupt_enable: 0,
 
             registers,
+            bank: 0,
         }))
     }
 
@@ -129,6 +132,13 @@ impl Memory {
         let (low, high) = utils::to_u8(value);
         self[address] = low;
         self[address + 1] = high;
+    }
+
+    fn unmap_boot_rom(&mut self) {
+        if let Some(game) = &self.game_rom {
+            let game_len = game.len().min((ROM_BANKNN_END + 1) as usize);
+            self.rom[..game_len].copy_from_slice(&game[..game_len]);
+        }
     }
 }
 
@@ -149,12 +159,13 @@ impl Index<u16> for Memory {
             }
             OAM_START..=OAM_END => &self.oam_ram[(address - OAM_START) as usize],
             NOT_USABLE_START..=NOT_USABLE_END => unreachable!(
-                "Read to prohibited memory region [{}, {}]",
-                NOT_USABLE_START, NOT_USABLE_END
+                "Read to prohibited memory region [{}, {}] with address {:04X}",
+                NOT_USABLE_START, NOT_USABLE_END, address
             ),
             IO_REGISTERS_START..=IO_REGISTERS_END => {
                 &self.io_registers[(address - IO_REGISTERS_START) as usize]
             }
+            BOOT_REGISTER => &self.bank,
             HRAM_START..=HRAM_END => &self.hram[(address - HRAM_START) as usize],
             INTERRUPT_ENABLE_REGISTER => &self.interrupt_enable,
         }
@@ -176,8 +187,8 @@ impl IndexMut<u16> for Memory {
             }
             OAM_START..=OAM_END => &mut self.oam_ram[(address - OAM_START) as usize],
             NOT_USABLE_START..=NOT_USABLE_END => unreachable!(
-                "Write to prohibited memory region [{}, {}]",
-                NOT_USABLE_START, NOT_USABLE_END
+                "Write to prohibited memory region [{:04X}, {:04X}] with address {:04X}",
+                NOT_USABLE_START, NOT_USABLE_END, address
             ),
             IO_REGISTERS_START..=IO_REGISTERS_END => {
                 let pointed_val = match &self.registers {
@@ -187,6 +198,11 @@ impl IndexMut<u16> for Memory {
 
                 self.io_registers[(address - IO_REGISTERS_START) as usize] = pointed_val;
                 &mut self.io_registers[(address - IO_REGISTERS_START) as usize]
+            }
+            // TODO: needs refactor to actually reach the pattern
+            BOOT_REGISTER => {
+                self.unmap_boot_rom();
+                &mut self.bank
             }
             HRAM_START..=HRAM_END => &mut self.hram[(address - HRAM_START) as usize],
             INTERRUPT_ENABLE_REGISTER => &mut self.interrupt_enable,

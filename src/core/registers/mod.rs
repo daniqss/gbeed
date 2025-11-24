@@ -8,17 +8,16 @@ use std::fmt::Debug;
 
 use joypad::Joypad;
 
-use crate::core::{interrupts::*, joypad::*, ppu::*, serial::*, timer::*};
+use crate::core::{apu::*, interrupts::*, joypad::*, ppu::*, serial::*, timer::*};
 
 #[derive(Debug)]
 pub struct HardwareRegisters {
     pub joypad: Rc<RefCell<Joypad>>,
     pub serial: Rc<RefCell<Serial>>,
     pub interrupt_flag: Rc<RefCell<Interrupt>>,
-    // pub sound: HardwareRegister,
+    pub apu: Rc<RefCell<Apu>>,
     pub timer: Rc<RefCell<TimerController>>,
     pub ppu: Rc<RefCell<Ppu>>,
-    pub boot: u8,
     pub interrupt_enable: Rc<RefCell<Interrupt>>,
 }
 
@@ -28,7 +27,7 @@ impl HardwareRegisters {
         serial: Rc<RefCell<Serial>>,
         timer: Rc<RefCell<TimerController>>,
         interrupt_flag: Rc<RefCell<Interrupt>>,
-        // sound: Rc<RefCell<SoundController>>,
+        apu: Rc<RefCell<Apu>>,
         ppu: Rc<RefCell<Ppu>>,
         interrupt_enable: Rc<RefCell<Interrupt>>,
     ) -> Self {
@@ -36,10 +35,9 @@ impl HardwareRegisters {
             joypad,
             serial,
             interrupt_flag,
-            // sound,
+            apu,
             timer,
             ppu,
-            boot: 0,
             interrupt_enable,
         }
     }
@@ -62,7 +60,7 @@ impl HardwareRegisters {
             // interrupt flag
             IF => self.interrupt_flag.borrow().0,
 
-            0xFF50 => self.boot,
+            0xF100..=0xF2FF => self.apu.borrow()[address],
 
             // interrupt enable
             IE => self.interrupt_enable.borrow().0,
