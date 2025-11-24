@@ -1,57 +1,61 @@
 mod apu;
 mod cartrigde;
 mod cpu;
+mod interrupts;
+mod joypad;
 mod license;
 mod memory;
 mod ppu;
-mod registers;
+mod serial;
+mod timer;
 
-use std::{cell::RefCell, rc::Rc};
+pub use crate::prelude::*;
 
 pub use apu::Apu;
 pub use cartrigde::Cartridge;
 pub use cpu::Cpu;
-use memory::MemoryBus;
+pub use interrupts::Interrupt;
+pub use joypad::Joypad;
+pub use memory::{
+    HRAM_END, HRAM_START, INTERRUPT_ENABLE_REGISTER, IO_REGISTERS_END, IO_REGISTERS_START, Memory,
+    NOT_USABLE_END, ROM_BANK00_START, ROM_BANKNN_END,
+};
 pub use ppu::Ppu;
-pub use registers::*;
+pub use serial::Serial;
+pub use timer::TimerController;
 
-pub use crate::core::{
-    interrupts::Interrupt, joypad::Joypad, memory::Memory, serial::Serial, timer::TimerController,
+use self::{
+    interrupts::IF,
+    joypad::JOYP,
+    serial::{SB, SC},
+    timer::{DIV, TAC, TIMA, TMA},
 };
 
 pub struct Dmg {
-    pub cartridge: Option<Cartridge>,
-    pub bus: MemoryBus,
+    pub bus: Memory,
     pub cpu: Cpu,
-    pub ppu: Rc<RefCell<Ppu>>,
-    pub joypad: Rc<RefCell<Joypad>>,
-    pub serial: Rc<RefCell<Serial>>,
-    pub timer: Rc<RefCell<TimerController>>,
-    pub apu: Rc<RefCell<Apu>>,
+    pub ppu: Ppu,
+    pub joypad: Joypad,
+    pub serial: Serial,
+    pub timer: TimerController,
+    pub apu: Apu,
+    pub interrupt_flag: Interrupt,
+    pub interrupt_enable: Interrupt,
+    pub bank: u8,
 }
 
 impl Dmg {
-    pub fn new(cartridge: Option<Cartridge>, game_rom: Option<Vec<u8>>, boot_rom: Option<Vec<u8>>) -> Dmg {
-        let joypad = Rc::new(RefCell::new(Joypad::default()));
-        let serial = Rc::new(RefCell::new(Serial::new()));
+    pub fn new(game: Option<Cartridge>, boot_rom: Option<Vec<u8>>) -> Dmg {
+        let joypad = Joypad::default();
+        let serial = Serial::new();
         let timer = TimerController::new();
         let apu = Apu::new();
         let interrupt_flag = Interrupt::new();
         let ppu = Ppu::new();
         let interrupt_enable = Interrupt::new();
 
-        let registers = HardwareRegisters {
-            joypad: joypad.clone(),
-            serial: serial.clone(),
-            timer: timer.clone(),
-            apu: apu.clone(),
-            interrupt_flag: interrupt_flag.clone(),
-            ppu: ppu.clone(),
-            interrupt_enable: interrupt_enable.clone(),
-        };
-
         let start_at_boot = boot_rom.is_some();
-        let bus = Memory::new(game_rom, boot_rom, Some(registers));
+        let bus = Memory::new(game, boot_rom);
 
         Dmg {
             cpu: Cpu::new(start_at_boot),
@@ -59,18 +63,20 @@ impl Dmg {
             joypad,
             serial,
             bus,
-            cartridge,
             timer,
             apu,
+            interrupt_flag,
+            interrupt_enable,
+            bank: 0,
         }
     }
 
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     pub fn run(&mut self) {
-        let opcode = self.bus.borrow()[self.cpu.pc];
+        let opcode = self.bus[self.cpu.pc];
 
-        let mut instruction = match self.cpu.fetch(self.bus.clone(), opcode) {
+        let mut instruction = match self.cpu.fetch(self.bus, opcode) {
             Ok(instr) => instr,
             Err(e) => {
                 eprintln!("Error fetching instruction: {}", e);
@@ -113,6 +119,70 @@ impl Dmg {
         {
             println!("{}", self.cpu);
             println!("{}", self.cpu.cycles);
+        }
+    }
+}
+
+impl Index<u16> for Dmg {
+    type Output = u8;
+
+    fn index(&self, addr: u16) -> &Self::Output {
+        match addr {
+            ROM_BANK00_START..=NOT_USABLE_END => &self.bus[addr],
+            IO_REGISTERS_START..=IO_REGISTERS_END => match addr {
+                JOYP => &self.joypad.0,
+
+                SB => &self.serial.sb,
+                SC => &self.serial.sc,
+
+                DIV => &self.timer.divider,
+                TIMA => &self.timer.timer_counter,
+                TMA => &self.timer.timer_modulo,
+                TAC => &self.timer.timer_control,
+
+                IF => &self.interrupt_flag.0,
+
+                0xF100..=0xF1FF => &self.apu[addr],
+
+                0xFF40..=0xFF4B => &self.ppu[addr],
+
+                0xFF50 => &self.bank,
+
+                _ => unreachable!(),
+            },
+            HRAM_START..=HRAM_END => &self.bus[addr],
+            INTERRUPT_ENABLE_REGISTER => &self.interrupt_enable.0,
+        }
+    }
+}
+
+impl IndexMut<u16> for Dmg {
+    fn index_mut(&mut self, addr: u16) -> &mut Self::Output {
+        match addr {
+            ROM_BANK00_START..=NOT_USABLE_END => &mut self.bus[addr],
+            IO_REGISTERS_START..=IO_REGISTERS_END => match addr {
+                JOYP => &mut self.joypad.0,
+
+                SB => &mut self.serial.sb,
+                SC => &mut self.serial.sc,
+
+                DIV => &mut self.timer.divider,
+                TIMA => &mut self.timer.timer_counter,
+                TMA => &mut self.timer.timer_modulo,
+                TAC => &mut self.timer.timer_control,
+
+                IF => &mut self.interrupt_flag.0,
+
+                0xF100..=0xF1FF => &mut self.apu[addr],
+
+                0xFF40..=0xFF4B => &mut self.ppu[addr],
+
+                0xFF50 => &mut self.bank,
+
+                _ => unreachable!(),
+            },
+            HRAM_START..=HRAM_END => &mut self.bus[addr],
+            INTERRUPT_ENABLE_REGISTER => &mut self.interrupt_enable.0,
         }
     }
 }

@@ -59,8 +59,8 @@ pub struct Apu {
 }
 
 impl Apu {
-    pub fn new() -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self {
+    pub fn new() -> Self {
+        Self {
             nr10: 0x80,
             nr11: 0xBF,
             nr12: 0xF3,
@@ -80,7 +80,7 @@ impl Apu {
             nr51: 0xF3,
             nr52: 0xF1,
             ..Default::default()
-        }))
+        }
     }
 
     bit_accessors! {

@@ -28,10 +28,8 @@ fn main() -> Result<()> {
         .next()
         .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "Missing boot room name"))?;
 
-    let game_rom = std::fs::read(game_name)?;
+    let game = Cartridge::new(std::fs::read(game_name)?)?;
     let boot_room_data = std::fs::read(boot_room_name)?;
-
-    let cartridge = Cartridge::new(&game_rom)?;
 
     let sdl_context = sdl2::init()?;
     let video_subsys = sdl_context.video()?;
@@ -53,7 +51,7 @@ fn main() -> Result<()> {
     let line_spacing = font.recommended_line_spacing() as u32;
     let mut max_width = 0u32;
 
-    let textures: Vec<Texture<'_>> = format!("{}", cartridge)
+    let textures: Vec<Texture<'_>> = format!("{}", game)
         .lines()
         .filter_map(|line| {
             let render_line = if line.is_empty() { " " } else { line };
@@ -88,7 +86,7 @@ fn main() -> Result<()> {
 
     canvas.present();
 
-    let mut gameboy = Dmg::new(Some(cartridge), Some(game_rom), Some(boot_room_data));
+    let mut gameboy = Dmg::new(Some(game), Some(boot_room_data));
 
     'mainloop: loop {
         for event in sdl_context.event_pump()?.poll_iter() {

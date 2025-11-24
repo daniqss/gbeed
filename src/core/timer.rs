@@ -20,13 +20,13 @@ pub struct TimerController {
 }
 
 impl TimerController {
-    pub fn new() -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(TimerController {
+    pub fn new() -> Self {
+        TimerController {
             divider: 0,
             timer_counter: 0,
             timer_modulo: 0,
             timer_control: 0,
-        }))
+        }
     }
 
     bit_accessors!(

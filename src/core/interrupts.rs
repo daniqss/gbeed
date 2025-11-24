@@ -20,7 +20,7 @@ pub const VBLANK_INTERRUPT: u8 = 0x01;
 pub struct Interrupt(pub u8);
 
 impl Interrupt {
-    pub fn new() -> Rc<RefCell<Self>> { Rc::new(RefCell::new(Interrupt(0))) }
+    pub fn new() -> Self { Interrupt(0) }
 
     bit_accessors! {
         target: 0;

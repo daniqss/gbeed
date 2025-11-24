@@ -78,10 +78,7 @@ pub use sub::Sub;
 pub use swap::Swap;
 pub use xor::Xor;
 
-use crate::core::{
-    cpu::{R8, R16, flags::Flags},
-    memory::MemoryBus,
-};
+use crate::core::cpu::{R8, R16, flags::Flags};
 
 /// Represents a CPU instruction.
 /// The instruction can be executed and can provide its disassembly representation

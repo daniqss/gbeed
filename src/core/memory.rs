@@ -1,15 +1,9 @@
-use std::{
-    cell::RefCell,
-    ops::{Index, IndexMut},
-    rc::Rc,
-};
-
-use crate::{core::HardwareRegisters, prelude::*};
+use crate::{Cartridge, prelude::*};
 
 /// addressable memory size
 pub const ADDRESABLE_MEMORY: usize = 0xFFFF; // 64KB
 pub const ROM_BANK00_START: u16 = 0x0000;
-// in DMG, in CGB it
+// in DMG, in CGB 256 + 1792, splited in two parts, with the cartridge header in the middle
 pub const BOOT_ROM_END: u16 = 0x0100;
 pub const ROM_BANK00_END: u16 = 0x3FFF;
 pub const ROM_BANKNN_START: u16 = 0x4000;
@@ -39,14 +33,13 @@ pub fn is_high_address(address: u16) -> bool {
     address >= IO_REGISTERS_START && address <= INTERRUPT_ENABLE_REGISTER
 }
 
-pub type MemoryBus = Rc<RefCell<Memory>>;
-
 /// # Memory bus
 /// different parts of the hardware access different parts of the memory map
 /// This memory is distributed among the various hardware components
 /// from this 16 bits address memory bus we can access all the memory mapped components
 ///
 /// __table from [Pan Docs](https://gbdev.io/pandocs/Memory_Map.html)__
+///
 /// Start       | End       | Description                                                       | Notes
 /// ------------|-----------|------------------------------------------------------------------ |----------
 /// 0000        | 3FFF      | 16 KiB ROM bank 00                                                | From cartridge, usually a fixed bank
@@ -63,44 +56,36 @@ pub type MemoryBus = Rc<RefCell<Memory>>;
 /// FFFF        | FFFF      | [Interrupt](#Interrupts) Enable register (IE)                     |
 #[derive(Debug)]
 pub struct Memory {
-    pub game_rom: Option<Vec<u8>>,
+    pub game: Option<Cartridge>,
     pub boot_rom: Option<Vec<u8>>,
+
     pub rom: [u8; (ROM_BANKNN_END + 1) as usize],
     pub ram: [u8; (WRAM_BANKN_END - WRAM_BANK0_START + 1) as usize],
     pub vram: [u8; (VRAM_END - VRAM_START + 1) as usize],
     pub external_ram: [u8; (EXTERNAL_RAM_END - EXTERNAL_RAM_START + 1) as usize],
     pub oam_ram: [u8; (OAM_END - OAM_START + 1) as usize],
-    pub io_registers: [u8; (IO_REGISTERS_END - IO_REGISTERS_START + 1) as usize],
     pub hram: [u8; (HRAM_END - HRAM_START + 1) as usize],
-    pub interrupt_enable: u8,
-
-    registers: Option<HardwareRegisters>,
-    pub bank: u8,
 }
 
 impl Memory {
-    pub fn new(
-        game_rom: Option<Vec<u8>>,
-        boot_rom: Option<Vec<u8>>,
-        registers: Option<HardwareRegisters>,
-    ) -> MemoryBus {
+    pub fn new(game: Option<Cartridge>, boot_rom: Option<Vec<u8>>) -> Memory {
         let mut rom = [0u8; (ROM_BANKNN_END as usize) + 1];
 
         // copy first from boot rom, and then from game
         // both initial copies are required in real hardware for nintendo logo check from boot rom and cartridge
         // used in real hardware to required games to have a nintendo logo in rom and allow nintendo to sue them if they're not allow (trademark violation)
-        match (&game_rom, &boot_rom) {
+        match (&game, &boot_rom) {
             (Some(game), Some(boot)) => {
                 let boot_len = boot.len().min(BOOT_ROM_END as usize);
                 rom[..boot_len].copy_from_slice(&boot[..boot_len]);
 
-                let game_len = game.len().min((ROM_BANKNN_END + 1) as usize);
-                rom[boot_len..game_len].copy_from_slice(&game[boot_len..game_len]);
+                let game_len = game.rom.len().min((ROM_BANKNN_END + 1) as usize);
+                rom[boot_len..game_len].copy_from_slice(&game.rom[boot_len..game_len]);
             }
             // copy only game if no boot rom is provided
             (Some(game), None) => {
-                let game_len = game.len().min(rom.len());
-                rom[..game_len].copy_from_slice(&game[..game_len]);
+                let game_len = game.rom.len().min(rom.len());
+                rom[..game_len].copy_from_slice(&game.rom[..game_len]);
             }
             (None, Some(boot)) => {
                 let boot_len = boot.len().min(BOOT_ROM_END as usize);
@@ -108,21 +93,17 @@ impl Memory {
             }
             _ => {}
         };
-        Rc::new(RefCell::new(Memory {
-            game_rom,
+
+        Memory {
+            game,
             boot_rom,
             rom,
             ram: [0; (WRAM_BANKN_END - WRAM_BANK0_START + 1) as usize],
             vram: [0; (VRAM_END - VRAM_START + 1) as usize],
             external_ram: [0; (EXTERNAL_RAM_END - EXTERNAL_RAM_START + 1) as usize],
             oam_ram: [0; (OAM_END - OAM_START + 1) as usize],
-            io_registers: [0; (IO_REGISTERS_END - IO_REGISTERS_START + 1) as usize],
             hram: [0; (HRAM_END - HRAM_START + 1) as usize],
-            interrupt_enable: 0,
-
-            registers,
-            bank: 0,
-        }))
+        }
     }
 
     /// read 16 bits little endian word
@@ -142,9 +123,9 @@ impl Memory {
     /// ```
     /// Next instruction will be the first `nop` in 0x0100, in the cartridge rom
     fn unmap_boot_rom(&mut self) {
-        if let Some(game) = &self.game_rom {
-            let game_len = game.len().min((ROM_BANKNN_END + 1) as usize);
-            self.rom[..game_len].copy_from_slice(&game[..game_len]);
+        if let Some(game) = &self.game {
+            let game_len = game.rom.len().min((ROM_BANKNN_END + 1) as usize);
+            self.rom[..game_len].copy_from_slice(&game.rom[..game_len]);
         }
     }
 }
@@ -169,12 +150,9 @@ impl Index<u16> for Memory {
                 "Read to prohibited memory region [{}, {}] with address {:04X}",
                 NOT_USABLE_START, NOT_USABLE_END, address
             ),
-            IO_REGISTERS_START..=IO_REGISTERS_END => {
-                &self.io_registers[(address - IO_REGISTERS_START) as usize]
-            }
-            BOOT_REGISTER => &self.bank,
             HRAM_START..=HRAM_END => &self.hram[(address - HRAM_START) as usize],
-            INTERRUPT_ENABLE_REGISTER => &self.interrupt_enable,
+
+            _ => unreachable!("Read of address {address:04X} should have been handled by other components"),
         }
     }
 }
@@ -188,31 +166,11 @@ impl IndexMut<u16> for Memory {
                 &mut self.external_ram[(address - EXTERNAL_RAM_START) as usize]
             }
             WRAM_BANK0_START..=WRAM_BANKN_END => &mut self.ram[(address - WRAM_BANK0_START) as usize],
-            ECHO_RAM_START..=ECHO_RAM_END => {
-                let offset = (address - ECHO_RAM_START) as usize;
-                &mut self.ram[offset]
-            }
+            ECHO_RAM_START..=ECHO_RAM_END => &mut self.ram[(address - ECHO_RAM_START) as usize],
             OAM_START..=OAM_END => &mut self.oam_ram[(address - OAM_START) as usize],
-            NOT_USABLE_START..=NOT_USABLE_END => unreachable!(
-                "Write to prohibited memory region [{:04X}, {:04X}] with address {:04X}",
-                NOT_USABLE_START, NOT_USABLE_END, address
-            ),
-            IO_REGISTERS_START..=IO_REGISTERS_END => {
-                let pointed_val = match &self.registers {
-                    Some(regs) => regs.read(address),
-                    _ => self.io_registers[(address - IO_REGISTERS_START) as usize],
-                };
-
-                self.io_registers[(address - IO_REGISTERS_START) as usize] = pointed_val;
-                &mut self.io_registers[(address - IO_REGISTERS_START) as usize]
-            }
-            // TODO: needs refactor to actually reach the pattern
-            BOOT_REGISTER => {
-                self.unmap_boot_rom();
-                &mut self.bank
-            }
             HRAM_START..=HRAM_END => &mut self.hram[(address - HRAM_START) as usize],
-            INTERRUPT_ENABLE_REGISTER => &mut self.interrupt_enable,
+
+            _ => unreachable!("Read of address {address:04X} should have been handled by other components"),
         }
     }
 }
@@ -223,17 +181,17 @@ mod test {
 
     #[test]
     fn test_read_write_byte() {
-        let memory = Memory::new(None, None, None);
-        memory.borrow_mut()[0x1234] = 0x56;
-        assert_eq!(memory.borrow()[0x1234], 0x56);
+        let mut memory = Memory::new(None, None);
+        memory[0x1234] = 0x56;
+        assert_eq!(memory[0x1234], 0x56);
     }
 
     #[test]
     fn test_read_write_word() {
-        let memory = Memory::new(None, None, None);
-        memory.borrow_mut().write_word(0x1234, 0x5678);
-        assert_eq!(memory.borrow().read_word(0x1234), 0x5678);
-        assert_eq!(memory.borrow()[0x1234], 0x78);
-        assert_eq!(memory.borrow()[0x1235], 0x56);
+        let mut memory = Memory::new(None, None);
+        memory.write_word(0x1234, 0x5678);
+        assert_eq!(memory.read_word(0x1234), 0x5678);
+        assert_eq!(memory[0x1234], 0x78);
+        assert_eq!(memory[0x1235], 0x56);
     }
 }

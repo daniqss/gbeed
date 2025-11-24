@@ -49,6 +49,8 @@ pub enum CartridgeType {
 
 #[derive(Debug)]
 pub struct Cartridge {
+    pub rom: Vec<u8>,
+
     is_pre_sgb: bool,
     license: Option<String>,
     title: String,
@@ -63,7 +65,7 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
-    pub fn new(game_rom: &Vec<u8>) -> Result<Self> {
+    pub fn new(game_rom: Vec<u8>) -> Result<Self> {
         let cartridge = Self {
             is_pre_sgb: get_license(&game_rom).0,
             license: get_license(&game_rom).1,
@@ -80,9 +82,11 @@ impl Cartridge {
             header_checksum: game_rom[HEADER_CHECKSUM],
             global_checksum: ((game_rom[GLOBAL_CHECKSUM_START] as u16) << 8)
                 | (game_rom[GLOBAL_CHECKSUM_END] as u16),
+
+            rom: game_rom,
         };
 
-        match cartridge.check_global_checksum(&game_rom) {
+        match cartridge.check_global_checksum() {
             Ok(_) => Ok(cartridge),
             Err(e) => Err(e),
         }
@@ -90,8 +94,8 @@ impl Cartridge {
 
     /// # Header checksum
     /// Checked by real hardware by the boot ROM
-    pub fn check_header_checksum(&self, game_rom: &Vec<u8>) -> Result<()> {
-        let header_sum = game_rom[TITLE_START..=GAME_VERSION]
+    pub fn check_header_checksum(&self) -> Result<()> {
+        let header_sum = self.rom[TITLE_START..=GAME_VERSION]
             .iter()
             .fold(0u8, |acc, &b| acc.wrapping_sub(b).wrapping_sub(1));
 
@@ -107,8 +111,8 @@ impl Cartridge {
     /// # Global checksum
     /// Not actually checked by real hardware
     /// We'll use in Cartridge creation for now to verify correct file parsing and integrity
-    pub fn check_global_checksum(&self, game_rom: &Vec<u8>) -> Result<()> {
-        let cartridge_sum: u16 = game_rom.iter().enumerate().fold(0u16, |acc, (i, &b)| {
+    pub fn check_global_checksum(&self) -> Result<()> {
+        let cartridge_sum: u16 = self.rom.iter().enumerate().fold(0u16, |acc, (i, &b)| {
             match i != GLOBAL_CHECKSUM_START && i != GLOBAL_CHECKSUM_END {
                 true => acc.wrapping_add(b as u16),
                 false => acc,

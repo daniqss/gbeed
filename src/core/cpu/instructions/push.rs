@@ -75,7 +75,7 @@ mod tests {
         let a: u8 = 1;
         let af = to_u16(f, a);
         let mut sp = 0xFFA0;
-        let bus = Memory::new(None, None, None);
+        let bus = Memory::new(None, None);
 
         let mut push = Push::new(&mut sp, bus.clone(), IT::Reg16(af, R16::AF));
 
@@ -95,7 +95,7 @@ mod tests {
         let b = 1;
         let bc = to_u16(c, b);
         let mut sp = 0xFFA0;
-        let bus = Memory::new(None, None, None);
+        let bus = Memory::new(None, None);
 
         let mut push = Push::new(&mut sp, bus.clone(), IT::Reg16(bc, R16::BC));
 

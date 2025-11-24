@@ -79,7 +79,7 @@ mod tests {
     fn test_rr_with_carry() {
         let addr = 0xFF00;
         let value = 0b0011_1000;
-        let bus = Memory::new(None, None, None);
+        let bus = Memory::new(None, None);
         bus.borrow_mut()[addr] = value;
 
         let mut instr = Rrc::new(ID::PointedByHL(bus.clone(), addr));

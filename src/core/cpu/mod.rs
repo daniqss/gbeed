@@ -5,7 +5,7 @@ mod registers;
 use crate::{
     core::{
         cpu::flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK},
-        memory::{IO_REGISTERS_START, MemoryBus},
+        memory::IO_REGISTERS_START,
     },
     utils::to_u16,
 };

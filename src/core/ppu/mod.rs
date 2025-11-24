@@ -3,7 +3,6 @@ mod sprite;
 
 use crate::prelude::*;
 use display::Display;
-use std::{cell::RefCell, rc::Rc};
 
 /// LCD Control Register (R/W) bits
 const LCD_DISPLAY_ENABLE: u8 = 0x80;
@@ -41,8 +40,8 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new() -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self {
+    pub fn new() -> Self {
+        Self {
             lcd_control: 0x91,
             lcd_status: 0,
             scroll_y: 0,
@@ -57,7 +56,7 @@ impl Ppu {
             wx: 0,
 
             display: Display::default(),
-        }))
+        }
     }
 
     // lcd_control bit access functions
@@ -87,4 +86,46 @@ impl Ppu {
 
     // maybe its not best way to implement this
     pub fn get_mode(&self) -> bool { if self.lcd_status & 0x03 == 0 { false } else { true } }
+}
+
+impl Index<u16> for Ppu {
+    type Output = u8;
+
+    fn index(&self, address: u16) -> &Self::Output {
+        match address {
+            0xFF40 => &self.lcd_control,
+            0xFF41 => &self.lcd_status,
+            0xFF42 => &self.scroll_y,
+            0xFF43 => &self.scroll_x,
+            0xFF44 => &self.ly,
+            0xFF45 => &self.lyc,
+            0xFF46 => &self.dma,
+            0xFF47 => &self.bg_palette,
+            0xFF48 => &self.objp_0,
+            0xFF49 => &self.objp_1,
+            0xFF4A => &self.wy,
+            0xFF4B => &self.wx,
+            _ => panic!("PPU: Invalid read address {:#06X}", address),
+        }
+    }
+}
+
+impl IndexMut<u16> for Ppu {
+    fn index_mut(&mut self, address: u16) -> &mut Self::Output {
+        match address {
+            0xFF40 => &mut self.lcd_control,
+            0xFF41 => &mut self.lcd_status,
+            0xFF42 => &mut self.scroll_y,
+            0xFF43 => &mut self.scroll_x,
+            0xFF44 => &mut self.ly,
+            0xFF45 => &mut self.lyc,
+            0xFF46 => &mut self.dma,
+            0xFF47 => &mut self.bg_palette,
+            0xFF48 => &mut self.objp_0,
+            0xFF49 => &mut self.objp_1,
+            0xFF4A => &mut self.wy,
+            0xFF4B => &mut self.wx,
+            _ => panic!("PPU: Invalid read address {:#06X}", address),
+        }
+    }
 }
