@@ -36,8 +36,10 @@ impl<'a> Instruction<'a> for Call<'a> {
 
                 let addr = if should_call { *addr } else { *self.pc };
                 let cycles = if should_call { 6 } else { 3 };
+                // TODO: return len as 0 if called?
+                let len = if should_call { 0 } else { 3 };
 
-                (addr, cycles, 3)
+                (addr, cycles, len)
             }
 
             _ => return Err(InstructionError::MalformedInstruction),
@@ -55,6 +57,7 @@ impl<'a> Instruction<'a> for Call<'a> {
         // implicit jump to called address
         *self.pc = addr;
 
+        // return len as 0 if called?
         Ok(InstructionEffect::new(cycles, len, Flags::none()))
     }
 

@@ -1,49 +1,85 @@
+mod apu;
 mod cartrigde;
 mod cpu;
 mod license;
-pub mod memory;
+mod memory;
 mod ppu;
+mod registers;
 
+use std::{cell::RefCell, rc::Rc};
+
+pub use apu::Apu;
 pub use cartrigde::Cartridge;
-use cpu::Cpu;
+pub use cpu::Cpu;
 use memory::MemoryBus;
-use ppu::Ppu;
+pub use ppu::Ppu;
+pub use registers::*;
 
-use crate::core::memory::Memory;
+pub use crate::core::{
+    interrupts::Interrupt, joypad::Joypad, memory::Memory, serial::Serial, timer::TimerController,
+};
 
 pub struct Dmg {
-    pub cartridge: Cartridge,
-    pub memory_bus: MemoryBus,
+    pub cartridge: Option<Cartridge>,
+    pub bus: MemoryBus,
     pub cpu: Cpu,
-    pub ppu: Ppu,
+    pub ppu: Rc<RefCell<Ppu>>,
+    pub joypad: Rc<RefCell<Joypad>>,
+    pub serial: Rc<RefCell<Serial>>,
+    pub timer: Rc<RefCell<TimerController>>,
+    pub apu: Rc<RefCell<Apu>>,
 }
 
 impl Dmg {
-    pub fn new(cartridge: Cartridge, game_rom: Vec<u8>, boot_rom: Vec<u8>) -> Dmg {
-        let memory_bus = Memory::new(Some(game_rom), Some(boot_rom));
+    pub fn new(cartridge: Option<Cartridge>, game_rom: Option<Vec<u8>>, boot_rom: Option<Vec<u8>>) -> Dmg {
+        let joypad = Rc::new(RefCell::new(Joypad::default()));
+        let serial = Rc::new(RefCell::new(Serial::new()));
+        let timer = TimerController::new();
+        let apu = Apu::new();
+        let interrupt_flag = Interrupt::new();
+        let ppu = Ppu::new();
+        let interrupt_enable = Interrupt::new();
+
+        let registers = HardwareRegisters {
+            joypad: joypad.clone(),
+            serial: serial.clone(),
+            timer: timer.clone(),
+            apu: apu.clone(),
+            interrupt_flag: interrupt_flag.clone(),
+            ppu: ppu.clone(),
+            interrupt_enable: interrupt_enable.clone(),
+        };
+
+        let start_at_boot = boot_rom.is_some();
+        let bus = Memory::new(game_rom, boot_rom, Some(registers));
 
         Dmg {
-            cpu: Cpu::new(memory_bus.clone()),
-            ppu: Ppu::new(memory_bus.clone()),
-            memory_bus,
+            cpu: Cpu::new(start_at_boot),
+            ppu,
+            joypad,
+            serial,
+            bus,
             cartridge,
+            timer,
+            apu,
         }
     }
 
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     pub fn run(&mut self) {
-        loop {
-            let opcode = self.memory_bus.borrow()[self.cpu.pc];
+        let opcode = self.bus.borrow()[self.cpu.pc];
 
-            let mut instruction = match self.cpu.fetch(opcode) {
-                Ok(instr) => instr,
-                Err(e) => {
-                    eprintln!("Error fetching instruction: {}", e);
-                    break;
-                }
-            };
+        let mut instruction = match self.cpu.fetch(self.bus.clone(), opcode) {
+            Ok(instr) => instr,
+            Err(e) => {
+                eprintln!("Error fetching instruction: {}", e);
+                return;
+            }
+        };
 
+        #[cfg(debug_assertions)]
+        {
             let writer = &mut String::new();
             match instruction.disassembly(writer) {
                 Ok(_) => println!("{}", writer),
@@ -51,28 +87,32 @@ impl Dmg {
                     eprintln!("Error disassembling instruction: {}", e);
                 }
             }
+        }
 
-            let (cycles, len, flags) = match instruction.exec() {
-                Ok(effect) => (effect.cycles as usize, effect.len as u16, effect.flags),
-                Err(e) => {
-                    eprintln!("Error executing instruction: {}", e);
-                    break;
-                }
-            };
+        let (cycles, len, flags) = match instruction.exec() {
+            Ok(effect) => (effect.cycles as usize, effect.len as u16, effect.flags),
+            Err(e) => {
+                eprintln!("Error executing instruction: {}", e);
+                return;
+            }
+        };
 
-            // explicitly drop the instruction to release borrow references
-            // after actually making changes to the CPU state and return the effect
-            // maybe in the future we must implement a better way to handle this
-            // using reference counting for registers I guess
-            // which would be ez, because we already have registers enums
-            // so changing that to a type/struct that holds Rc<RefCell<u8>> would be easy
-            drop(instruction);
+        // explicitly drop the instruction to release borrow references
+        // after actually making changes to the CPU state and return the effect
+        // maybe in the future we must implement a better way to handle this
+        // using reference counting for registers I guess
+        // which would be ez, because we already have registers enums
+        // so changing that to a type/struct that holds Rc<RefCell<u8>> would be easy
+        drop(instruction);
 
-            self.cpu.cycles = self.cpu.cycles.wrapping_add(cycles);
-            self.cpu.pc = self.cpu.pc.wrapping_add(len);
-            flags.apply(&mut self.cpu.f);
+        self.cpu.cycles = self.cpu.cycles.wrapping_add(cycles);
+        self.cpu.pc = self.cpu.pc.wrapping_add(len);
+        flags.apply(&mut self.cpu.f);
 
-            std::thread::sleep(std::time::Duration::from_secs(1));
+        #[cfg(debug_assertions)]
+        {
+            println!("{}", self.cpu);
+            println!("{}", self.cpu.cycles);
         }
     }
 }

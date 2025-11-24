@@ -4,11 +4,12 @@ use std::{
     rc::Rc,
 };
 
-use crate::prelude::*;
+use crate::{core::HardwareRegisters, prelude::*};
 
 /// addressable memory size
 pub const ADDRESABLE_MEMORY: usize = 0xFFFF; // 64KB
 pub const ROM_BANK00_START: u16 = 0x0000;
+// in DMG, in CGB it
 pub const BOOT_ROM_END: u16 = 0x0100;
 pub const ROM_BANK00_END: u16 = 0x3FFF;
 pub const ROM_BANKNN_START: u16 = 0x4000;
@@ -32,6 +33,7 @@ pub const IO_REGISTERS_END: u16 = 0xFF7F;
 pub const HRAM_START: u16 = 0xFF80;
 pub const HRAM_END: u16 = 0xFFFE;
 pub const INTERRUPT_ENABLE_REGISTER: u16 = 0xFFFF;
+pub const BOOT_REGISTER: u16 = 0xFF50;
 
 pub fn is_high_address(address: u16) -> bool {
     address >= IO_REGISTERS_START && address <= INTERRUPT_ENABLE_REGISTER
@@ -71,10 +73,17 @@ pub struct Memory {
     pub io_registers: [u8; (IO_REGISTERS_END - IO_REGISTERS_START + 1) as usize],
     pub hram: [u8; (HRAM_END - HRAM_START + 1) as usize],
     pub interrupt_enable: u8,
+
+    registers: Option<HardwareRegisters>,
+    pub bank: u8,
 }
 
 impl Memory {
-    pub fn new(game_rom: Option<Vec<u8>>, boot_rom: Option<Vec<u8>>) -> MemoryBus {
+    pub fn new(
+        game_rom: Option<Vec<u8>>,
+        boot_rom: Option<Vec<u8>>,
+        registers: Option<HardwareRegisters>,
+    ) -> MemoryBus {
         let mut rom = [0u8; (ROM_BANKNN_END as usize) + 1];
 
         // copy first from boot rom, and then from game
@@ -110,6 +119,9 @@ impl Memory {
             io_registers: [0; (IO_REGISTERS_END - IO_REGISTERS_START + 1) as usize],
             hram: [0; (HRAM_END - HRAM_START + 1) as usize],
             interrupt_enable: 0,
+
+            registers,
+            bank: 0,
         }))
     }
 
@@ -121,6 +133,19 @@ impl Memory {
         let (low, high) = utils::to_u8(value);
         self[address] = low;
         self[address + 1] = high;
+    }
+
+    /// unmaps boot rom when boot reaches pc = 0x00FE, when load 1 in bank register (0xFF50)
+    /// ```asm
+    /// ld a, $01
+    /// ld [0xFF50], a
+    /// ```
+    /// Next instruction will be the first `nop` in 0x0100, in the cartridge rom
+    fn unmap_boot_rom(&mut self) {
+        if let Some(game) = &self.game_rom {
+            let game_len = game.len().min((ROM_BANKNN_END + 1) as usize);
+            self.rom[..game_len].copy_from_slice(&game[..game_len]);
+        }
     }
 }
 
@@ -140,12 +165,16 @@ impl Index<u16> for Memory {
                 &self.ram[offset]
             }
             OAM_START..=OAM_END => &self.oam_ram[(address - OAM_START) as usize],
+            NOT_USABLE_START..=NOT_USABLE_END => unreachable!(
+                "Read to prohibited memory region [{}, {}] with address {:04X}",
+                NOT_USABLE_START, NOT_USABLE_END, address
+            ),
             IO_REGISTERS_START..=IO_REGISTERS_END => {
                 &self.io_registers[(address - IO_REGISTERS_START) as usize]
             }
+            BOOT_REGISTER => &self.bank,
             HRAM_START..=HRAM_END => &self.hram[(address - HRAM_START) as usize],
             INTERRUPT_ENABLE_REGISTER => &self.interrupt_enable,
-            _ => unreachable!(),
         }
     }
 }
@@ -164,9 +193,23 @@ impl IndexMut<u16> for Memory {
                 &mut self.ram[offset]
             }
             OAM_START..=OAM_END => &mut self.oam_ram[(address - OAM_START) as usize],
-            NOT_USABLE_START..=NOT_USABLE_END => unreachable!("Write to prohibited memory region FEA0–FEFF"),
+            NOT_USABLE_START..=NOT_USABLE_END => unreachable!(
+                "Write to prohibited memory region [{:04X}, {:04X}] with address {:04X}",
+                NOT_USABLE_START, NOT_USABLE_END, address
+            ),
             IO_REGISTERS_START..=IO_REGISTERS_END => {
+                let pointed_val = match &self.registers {
+                    Some(regs) => regs.read(address),
+                    _ => self.io_registers[(address - IO_REGISTERS_START) as usize],
+                };
+
+                self.io_registers[(address - IO_REGISTERS_START) as usize] = pointed_val;
                 &mut self.io_registers[(address - IO_REGISTERS_START) as usize]
+            }
+            // TODO: needs refactor to actually reach the pattern
+            BOOT_REGISTER => {
+                self.unmap_boot_rom();
+                &mut self.bank
             }
             HRAM_START..=HRAM_END => &mut self.hram[(address - HRAM_START) as usize],
             INTERRUPT_ENABLE_REGISTER => &mut self.interrupt_enable,
@@ -180,14 +223,14 @@ mod test {
 
     #[test]
     fn test_read_write_byte() {
-        let memory = Memory::new(None, None);
+        let memory = Memory::new(None, None, None);
         memory.borrow_mut()[0x1234] = 0x56;
         assert_eq!(memory.borrow()[0x1234], 0x56);
     }
 
     #[test]
     fn test_read_write_word() {
-        let memory = Memory::new(None, None);
+        let memory = Memory::new(None, None, None);
         memory.borrow_mut().write_word(0x1234, 0x5678);
         assert_eq!(memory.borrow().read_word(0x1234), 0x5678);
         assert_eq!(memory.borrow()[0x1234], 0x78);
