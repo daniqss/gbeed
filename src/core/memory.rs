@@ -9,6 +9,7 @@ use crate::{core::HardwareRegisters, prelude::*};
 /// addressable memory size
 pub const ADDRESABLE_MEMORY: usize = 0xFFFF; // 64KB
 pub const ROM_BANK00_START: u16 = 0x0000;
+// in DMG, in CGB it
 pub const BOOT_ROM_END: u16 = 0x0100;
 pub const ROM_BANK00_END: u16 = 0x3FFF;
 pub const ROM_BANKNN_START: u16 = 0x4000;
@@ -134,6 +135,12 @@ impl Memory {
         self[address + 1] = high;
     }
 
+    /// unmaps boot rom when boot reaches pc = 0x00FE, when load 1 in bank register (0xFF50)
+    /// ```asm
+    /// ld a, $01
+    /// ld [0xFF50], a
+    /// ```
+    /// Next instruction will be the first `nop` in 0x0100, in the cartridge rom
     fn unmap_boot_rom(&mut self) {
         if let Some(game) = &self.game_rom {
             let game_len = game.len().min((ROM_BANKNN_END + 1) as usize);

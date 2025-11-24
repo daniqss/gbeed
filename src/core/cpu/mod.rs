@@ -37,7 +37,7 @@ pub struct Cpu {
 impl Cpu {
     pub fn new(start_at_boot: bool) -> Cpu {
         Cpu {
-            a: 0x00,
+            a: if start_at_boot { 0x01 } else { 0x00 },
             f: 0x00,
             b: 0x00,
             c: 0x00,
