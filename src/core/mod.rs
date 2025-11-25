@@ -31,6 +31,7 @@ use self::{
     timer::{DIV, TAC, TIMA, TMA},
 };
 
+#[derive(Debug, Default)]
 pub struct Dmg {
     pub bus: Memory,
     pub cpu: Cpu,
@@ -76,7 +77,7 @@ impl Dmg {
     pub fn run(&mut self) {
         let opcode = self.bus[self.cpu.pc];
 
-        let mut instruction = match self.cpu.fetch(self.bus, opcode) {
+        let mut instruction = match self.cpu.fetch(&self.bus, opcode) {
             Ok(instr) => instr,
             Err(e) => {
                 eprintln!("Error fetching instruction: {}", e);
@@ -95,7 +96,7 @@ impl Dmg {
             }
         }
 
-        let (cycles, len, flags) = match instruction.exec() {
+        let (cycles, len, flags) = match instruction.exec(self) {
             Ok(effect) => (effect.cycles as usize, effect.len as u16, effect.flags),
             Err(e) => {
                 eprintln!("Error executing instruction: {}", e);

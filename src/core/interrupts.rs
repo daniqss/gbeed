@@ -16,7 +16,7 @@ pub const VBLANK_INTERRUPT: u8 = 0x01;
 /// # Interrupt Enable Register
 /// Controls whether specific interrupts are **allowed** to be serviced.
 /// Even if requested in `IF`, the handler won't run unless the corresponding bit here is 1.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Interrupt(pub u8);
 
 impl Interrupt {

@@ -3,6 +3,7 @@ mod instructions;
 mod registers;
 
 use crate::{
+    Memory,
     core::{
         cpu::flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK},
         memory::IO_REGISTERS_START,
@@ -14,9 +15,10 @@ use registers::{Reg8 as R8, Reg16 as R16};
 use std::fmt::{self, Display, Formatter};
 
 /// # CPU
-/// Gameboy CPU, with a mix of Intel 8080 and Zilog Z80 features and instruction set.
+/// Gameboy CPU, with a mix of Intel 8080 and Zilog Z80 features and instruction set, the Sharp LR35902.
 /// Most of its register are 8-bits ones, that are commonly used as pairs to perform 16-bits operations.
 /// The only 16-bits registers are the stack pointer (SP) and the program counter (PC).
+#[derive(Debug, Default)]
 pub struct Cpu {
     pub a: u8,
     pub f: u8,
@@ -79,28 +81,16 @@ impl Cpu {
 
     /// Execute instruction based on the opcode.
     /// Return a result with the effect of the instruction or an instruction error (e.g unused opcode)
-    pub fn fetch(
-        &'_ mut self,
-        bus: MemoryBus,
-        opcode: u8,
-    ) -> Result<Box<dyn Instruction<'_> + '_>, InstructionError> {
-        let bus_ref = bus.borrow_mut();
-
+    pub fn fetch(&mut self, bus: &Memory, opcode: u8) -> Result<Box<dyn Instruction>, InstructionError> {
         let instruction: Box<dyn Instruction> = match opcode {
             0x00 => Nop::new(),
-            0x01 => Ld::new(
-                ID::Reg16((&mut self.c, &mut self.b), R16::BC),
-                IT::Imm16(bus_ref.read_word(self.pc + 1)),
-            ),
-            0x02 => Ld::new(
-                ID::PointedByReg16(bus.clone(), self.bc(), R16::BC),
-                IT::Reg8(self.a, R8::A),
-            ),
-            0x03 => Inc::new(ID::Reg16(self.mut_bc(), R16::BC)),
-            0x04 => Inc::new(ID::Reg8(&mut self.b, R8::B)),
-            0x05 => Dec::new(ID::Reg8(&mut self.b, R8::B)),
-            0x06 => Ld::new(ID::Reg8(&mut self.b, R8::B), IT::Imm8(bus_ref[self.pc + 1])),
-            0x07 => Rlca::new(&mut self.a),
+            0x01 => Ld::new(ID::Reg16(R16::BC), IT::Imm16(bus.read_word(self.pc + 1))),
+            0x02 => Ld::new(ID::PointedByReg16(self.bc(), R16::BC), IT::Reg8(self.a, R8::A)),
+            0x03 => Inc::new(ID::Reg16(R16::BC)),
+            0x04 => Inc::new(ID::Reg8(R8::B)),
+            0x05 => Dec::new(ID::Reg8(R8::B)),
+            0x06 => Ld::new(ID::Reg8(R8::B), IT::Imm8(bus[self.pc + 1])),
+            0x07 => Rlca::new(),
             0x08 => Ld::new(
                 ID::PointedByN16(bus.clone(), bus_ref.read_word(self.pc + 1)),
                 IT::StackPointer(self.sp),

@@ -175,6 +175,10 @@ impl IndexMut<u16> for Memory {
     }
 }
 
+impl Default for Memory {
+    fn default() -> Self { Memory::new(None, None) }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

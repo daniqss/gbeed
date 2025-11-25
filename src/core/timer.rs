@@ -11,7 +11,7 @@ pub const TIMER_START: u8 = 0x04;
 /// controlls the frequency at which time counter is incremented
 pub const INPUT_CLOCK_SELECT: u8 = 0x03;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct TimerController {
     pub divider: u8,
     pub timer_counter: u8,
