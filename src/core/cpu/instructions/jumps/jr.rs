@@ -1,9 +1,12 @@
 use std::fmt::Write;
 
-use crate::core::cpu::{
-    flags::Flags,
-    instructions::{
-        Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+use crate::{
+    Dmg,
+    core::cpu::{
+        flags::Flags,
+        instructions::{
+            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+        },
     },
 };
 
@@ -11,17 +14,16 @@ use crate::core::cpu::{
 /// it can get a condition to jump only if the condition is met
 /// the condition is based on carry and zero flags
 /// the address is encoded as a signed 8 bit immediate value
-pub struct Jr<'a> {
-    pub pc: &'a mut u16,
-    pub jump: IT<'a>,
+pub struct Jr {
+    pub jump: IT,
 }
 
-impl<'a> Jr<'a> {
-    pub fn new(pc: &'a mut u16, jump: IT<'a>) -> Box<Self> { Box::new(Self { pc, jump }) }
+impl Jr {
+    pub fn new(jump: IT) -> Box<Self> { Box::new(Self { jump }) }
 }
 
-impl<'a> Instruction<'a> for Jr<'a> {
-    fn exec(&mut self) -> InstructionResult {
+impl Instruction for Jr {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (offset, cycles, len) = match &self.jump {
             IT::JumpToImm8(cc, offset) => {
                 let should_jump = cc.should_jump();
@@ -38,7 +40,7 @@ impl<'a> Instruction<'a> for Jr<'a> {
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
-        *self.pc = self.pc.wrapping_add(offset);
+        gb.cpu.pc = gb.cpu.pc.wrapping_add(offset);
 
         Ok(InstructionEffect::new(cycles, len, Flags::none()))
     }

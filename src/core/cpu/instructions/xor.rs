@@ -1,23 +1,25 @@
 use std::fmt::Write;
 
-use crate::core::cpu::{
-    flags::{Flags, check_zero},
-    instructions::{
-        Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+use crate::{
+    Dmg,
+    core::cpu::{
+        flags::{Flags, check_zero},
+        instructions::{
+            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+        },
     },
 };
 
-pub struct Xor<'a> {
-    a: &'a mut u8,
-    src: IT<'a>,
+pub struct Xor {
+    src: IT,
 }
 
-impl<'a> Xor<'a> {
-    pub fn new(a: &'a mut u8, src: IT<'a>) -> Box<Self> { Box::new(Self { a, src }) }
+impl Xor {
+    pub fn new(src: IT) -> Box<Self> { Box::new(Self { src }) }
 }
 
-impl<'a> Instruction<'a> for Xor<'a> {
-    fn exec(&mut self) -> InstructionResult {
+impl Instruction for Xor {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (src, cycles, len): (u8, u8, u8) = match &self.src {
             IT::Reg8(r8, _) => (*r8, 1, 1),
             IT::PointedByHL(val) => (*val, 2, 1),
@@ -25,14 +27,14 @@ impl<'a> Instruction<'a> for Xor<'a> {
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
-        let result = *self.a ^ src;
+        let result = gb.cpu.a ^ src;
         let flags = Flags {
             z: Some(check_zero(result)),
             n: Some(false),
             h: Some(false),
             c: Some(false),
         };
-        *self.a = result;
+        gb.cpu.a = result;
 
         Ok(InstructionEffect::new(cycles, len, flags))
     }

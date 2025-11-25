@@ -1,27 +1,29 @@
 use std::fmt::Write;
 
-use crate::core::cpu::{
-    R8,
-    flags::{Flags, check_borrow_hc, check_zero},
-    instructions::{
-        Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+use crate::{
+    Dmg,
+    core::cpu::{
+        R8,
+        flags::{Flags, check_borrow_hc, check_zero},
+        instructions::{
+            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+        },
     },
 };
 
 /// Subtraction instruction
 /// Subtracts the value of the specified target from register A
 /// Always sets the subtraction flag, sets zero flag if result is zero, and sets half-carry and carry flags if there is a borrow in bits 4
-pub struct Sub<'a> {
-    a: &'a mut u8,
-    subtrahend: IT<'a>,
+pub struct Sub {
+    subtrahend: IT,
 }
 
-impl<'a> Sub<'a> {
-    pub fn new(a: &'a mut u8, subtrahend: IT<'a>) -> Box<Self> { Box::new(Sub { a, subtrahend }) }
+impl Sub {
+    pub fn new(subtrahend: IT) -> Box<Self> { Box::new(Sub { subtrahend }) }
 }
 
-impl<'a> Instruction<'a> for Sub<'a> {
-    fn exec(&mut self) -> InstructionResult {
+impl Instruction for Sub {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (subtrahend, cycles, len) = match &self.subtrahend {
             IT::Reg8(val, reg) if *reg != R8::F => (*val, 1, 1),
             IT::PointedByHL(value) => (*value, 2, 1),
@@ -30,16 +32,16 @@ impl<'a> Instruction<'a> for Sub<'a> {
         };
 
         // perform the subtraction
-        let (result, did_borrow) = self.a.overflowing_sub(subtrahend);
+        let (result, did_borrow) = gb.cpu.a.overflowing_sub(subtrahend);
 
         let flags = Flags {
             z: Some(check_zero(result)),
             n: Some(true),
-            h: Some(check_borrow_hc(*self.a, subtrahend)),
+            h: Some(check_borrow_hc(gb.cpu.a, subtrahend)),
             c: Some(did_borrow),
         };
 
-        *self.a = result;
+        gb.cpu.a = result;
 
         Ok(InstructionEffect::new(cycles, len, flags))
     }
@@ -57,12 +59,12 @@ mod tests {
 
     #[test]
     fn test_sub_zero_result() {
-        let mut a = 20;
-        let subtrahend = IT::Imm8(20);
-        let mut instr = Sub::new(&mut a, subtrahend);
+        let mut gb = Dmg::default();
+        gb.cpu.a = 20;
+        let mut instr = Sub::new(IT::Imm8(20));
 
-        let result = instr.exec().unwrap();
-        assert_eq!(a, 0);
+        let result = instr.exec(&mut gb).unwrap();
+        assert_eq!(gb.cpu.a, 0);
 
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len, 2);
@@ -79,13 +81,14 @@ mod tests {
 
     #[test]
     fn test_sub_set_half_carry() {
-        let mut a = 0b0001_0000;
+        let mut gb = Dmg::default();
+        gb.cpu.a = 0b0001_0000;
         let subtrahend = IT::Reg8(0b0000_0001, R8::B);
 
-        let mut instr = Sub::new(&mut a, subtrahend);
-        let result = instr.exec().unwrap();
+        let mut instr = Sub::new(subtrahend);
+        let result = instr.exec(&mut gb).unwrap();
 
-        assert_eq!(a, 0x0F);
+        assert_eq!(gb.cpu.a, 0x0F);
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len, 1);
         assert_eq!(
@@ -101,13 +104,14 @@ mod tests {
 
     #[test]
     fn test_sub_set_carry() {
-        let mut a = 0x10;
+        let mut gb = Dmg::default();
+        gb.cpu.a = 0x10;
         let subtrahend = IT::PointedByHL(0x20);
 
-        let mut instr = Sub::new(&mut a, subtrahend);
-        let result = instr.exec().unwrap();
+        let mut instr = Sub::new(subtrahend);
+        let result = instr.exec(&mut gb).unwrap();
 
-        assert_eq!(a, 0xF0);
+        assert_eq!(gb.cpu.a, 0xF0);
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len, 1);
         assert_eq!(

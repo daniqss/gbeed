@@ -9,6 +9,10 @@ mod ppu;
 mod serial;
 mod timer;
 
+use crate::core::{
+    cpu::{R8, R16},
+    memory::Accessable,
+};
 pub use crate::prelude::*;
 
 pub use apu::Apu;
@@ -77,7 +81,7 @@ impl Dmg {
     pub fn run(&mut self) {
         let opcode = self.bus[self.cpu.pc];
 
-        let mut instruction = match self.cpu.fetch(&self.bus, opcode) {
+        let mut instruction = match Cpu::fetch(self, opcode) {
             Ok(instr) => instr,
             Err(e) => {
                 eprintln!("Error fetching instruction: {}", e);
@@ -186,4 +190,29 @@ impl IndexMut<u16> for Dmg {
             INTERRUPT_ENABLE_REGISTER => &mut self.interrupt_enable.0,
         }
     }
+}
+
+impl Accessable<u16, u16> for Dmg {
+    fn read16(&self, addr: u16) -> u16 { utils::to_u16(self[addr], self[addr + 1]) }
+
+    fn write16(&mut self, addr: u16, value: u16) {
+        let (low, high) = utils::to_u8(value);
+        self[addr] = low;
+        self[addr + 1] = high;
+    }
+}
+
+impl Index<R8> for Dmg {
+    type Output = u8;
+
+    fn index(&self, reg: R8) -> &Self::Output { &self.cpu[reg] }
+}
+
+impl IndexMut<R8> for Dmg {
+    fn index_mut(&mut self, reg: R8) -> &mut Self::Output { &mut self.cpu[reg] }
+}
+
+impl Accessable<R8, &R16> for Dmg {
+    fn read16(&self, reg: &R16) -> u16 { self.cpu.read16(reg) }
+    fn write16(&mut self, reg: &R16, value: u16) { self.cpu.write16(reg, value) }
 }

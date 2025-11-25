@@ -33,6 +33,13 @@ pub fn is_high_address(address: u16) -> bool {
     address >= IO_REGISTERS_START && address <= INTERRUPT_ENABLE_REGISTER
 }
 
+/// # Memory mapped trait for addressable components
+/// This trait allows to read and write from Dmg and its components, indexing it with a memory address or a Cpu register
+pub trait Accessable<Address8, Address16>: Index<Address8, Output = u8> + IndexMut<Address8> {
+    fn read16(&self, addr: Address16) -> u16;
+    fn write16(&mut self, addr: Address16, value: u16);
+}
+
 /// # Memory bus
 /// different parts of the hardware access different parts of the memory map
 /// This memory is distributed among the various hardware components
@@ -106,16 +113,6 @@ impl Memory {
         }
     }
 
-    /// read 16 bits little endian word
-    pub fn read_word(&self, address: u16) -> u16 { utils::to_u16(self[address], self[address + 1]) }
-
-    /// write 16 bits little endian word
-    pub fn write_word(&mut self, address: u16, value: u16) {
-        let (low, high) = utils::to_u8(value);
-        self[address] = low;
-        self[address + 1] = high;
-    }
-
     /// unmaps boot rom when boot reaches pc = 0x00FE, when load 1 in bank register (0xFF50)
     /// ```asm
     /// ld a, $01
@@ -181,6 +178,8 @@ impl Default for Memory {
 
 #[cfg(test)]
 mod test {
+    use crate::Dmg;
+
     use super::*;
 
     #[test]
@@ -192,10 +191,11 @@ mod test {
 
     #[test]
     fn test_read_write_word() {
-        let mut memory = Memory::new(None, None);
-        memory.write_word(0x1234, 0x5678);
-        assert_eq!(memory.read_word(0x1234), 0x5678);
-        assert_eq!(memory[0x1234], 0x78);
-        assert_eq!(memory[0x1235], 0x56);
+        let mut gb = Dmg::default();
+        gb.write16(0x1234, 0x5678);
+
+        assert_eq!(gb.read16(0x1234), 0x5678);
+        assert_eq!(gb[0x1234], 0x78);
+        assert_eq!(gb[0x1235], 0x56);
     }
 }
