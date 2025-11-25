@@ -107,14 +107,14 @@ pub enum InstructionTarget {
     Reg16(u16, R16),
     PointedByHL(u8),
     PointedByN16(u8, u16),
-    PointedByCPlusFF00(u8, u8),
+    PointedByCPlusFF00(u8, u16),
     PointedByReg16(u8, R16),
     PointedByHLI(u8),
     PointedByHLD(u8),
     StackPointer,
-    StackPointerPlusE8(i8),
+    StackPointerPlusE8(u16, i8),
     JumpToImm16(JumpCondition, u16),
-    JumpToHL,
+    JumpToHL(u16),
     JumpToImm8(JumpCondition, i8),
 }
 
@@ -133,9 +133,9 @@ impl Display for InstructionTarget {
             InstructionTarget::PointedByHLI(_) => write!(f, "[hli]"),
             InstructionTarget::PointedByHLD(_) => write!(f, "[hld]"),
             InstructionTarget::StackPointer => write!(f, "sp"),
-            InstructionTarget::StackPointerPlusE8(e8) => write!(f, "sp{:+}", e8),
+            InstructionTarget::StackPointerPlusE8(_, e8) => write!(f, "sp{:+}", e8),
             InstructionTarget::JumpToImm16(jc, n16) => write!(f, "{}${:04X}", jc, n16),
-            InstructionTarget::JumpToHL => write!(f, "hl"),
+            InstructionTarget::JumpToHL(_) => write!(f, "hl"),
             InstructionTarget::JumpToImm8(jc, e8) => write!(f, "{}{:+}", jc, e8),
         }
     }
@@ -143,21 +143,21 @@ impl Display for InstructionTarget {
 
 #[derive(Debug)]
 pub enum InstructionDestination {
-    PointedByHL,
+    PointedByHL(u16),
     PointedByN16(u16),
     PointedByCPlusFF00(u16),
     Reg8(R8),
     Reg16(R16),
     PointedByReg16(u16, R16),
-    PointedByHLI,
-    PointedByHLD,
+    PointedByHLI(u16),
+    PointedByHLD(u16),
     StackPointer,
 }
 
 impl Display for InstructionDestination {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            InstructionDestination::PointedByHL => write!(f, "[hl]"),
+            InstructionDestination::PointedByHL(_) => write!(f, "[hl]"),
             InstructionDestination::PointedByN16(addr) => write!(f, "[${:04X}]", addr),
             InstructionDestination::PointedByCPlusFF00(addr) => {
                 write!(f, "[${:04X}]", addr)
@@ -165,8 +165,8 @@ impl Display for InstructionDestination {
             InstructionDestination::Reg8(reg) => write!(f, "{}", reg),
             InstructionDestination::Reg16(reg) => write!(f, "{}", reg),
             InstructionDestination::PointedByReg16(_, reg) => write!(f, "[{}]", reg),
-            InstructionDestination::PointedByHLI => write!(f, "[hli]"),
-            InstructionDestination::PointedByHLD => write!(f, "[hld]"),
+            InstructionDestination::PointedByHLI(_) => write!(f, "[hli]"),
+            InstructionDestination::PointedByHLD(_) => write!(f, "[hld]"),
             InstructionDestination::StackPointer => write!(f, "sp"),
         }
     }

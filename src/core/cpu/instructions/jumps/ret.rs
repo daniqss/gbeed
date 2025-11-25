@@ -2,9 +2,12 @@ use std::fmt::Write;
 
 use crate::{
     Dmg,
-    core::cpu::{
-        flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition as JC},
+    core::{
+        cpu::{
+            flags::Flags,
+            instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition as JC},
+        },
+        memory::Accessable,
     },
 };
 
@@ -30,7 +33,7 @@ impl Instruction for Ret {
             return Ok(InstructionEffect::new(cycles, 1, Flags::none()));
         }
 
-        let return_addr = gb.bus.read_word(gb.cpu.sp);
+        let return_addr = gb.read16(gb.cpu.sp);
         gb.cpu.pc = return_addr;
         gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
 

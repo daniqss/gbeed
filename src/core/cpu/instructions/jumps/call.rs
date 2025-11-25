@@ -1,40 +1,33 @@
 use std::fmt::Write;
 
 use crate::{
-    core::{
-        cpu::{
-            flags::Flags,
-            instructions::{
-                Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
-            },
+    Dmg,
+    core::cpu::{
+        flags::Flags,
+        instructions::{
+            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
         },
-        memory::MemoryBus,
     },
     utils::{high, low},
 };
 
 /// call given address
 /// pushes the next instruction address on the stack, and then jumps to it
-pub struct Call<'a> {
-    pub pc: &'a mut u16,
-    pub sp: &'a mut u16,
-    pub bus: MemoryBus,
-    pub call: IT<'a>,
+pub struct Call {
+    pub call: IT,
 }
 
-impl<'a> Call<'a> {
-    pub fn new(pc: &'a mut u16, sp: &'a mut u16, bus: MemoryBus, call: IT<'a>) -> Box<Self> {
-        Box::new(Self { pc, sp, bus, call })
-    }
+impl Call {
+    pub fn new(call: IT) -> Box<Self> { Box::new(Self { call }) }
 }
 
-impl<'a> Instruction<'a> for Call<'a> {
-    fn exec(&mut self) -> InstructionResult {
+impl Instruction for Call {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (addr, cycles, len) = match &self.call {
             IT::JumpToImm16(cc, addr) => {
                 let should_call = cc.should_jump();
 
-                let addr = if should_call { *addr } else { *self.pc };
+                let addr = if should_call { *addr } else { gb.cpu.pc };
                 let cycles = if should_call { 6 } else { 3 };
                 // TODO: return len as 0 if called?
                 let len = if should_call { 0 } else { 3 };
@@ -49,13 +42,14 @@ impl<'a> Instruction<'a> for Call<'a> {
         // to know where to return later
         // we're not using Push instruction to just allow to fetch Push with IT::Reg16
         // maybe this should be changed later
-        *self.sp -= 1;
-        self.bus.borrow_mut()[*self.sp] = high(self.pc.wrapping_add(len as u16));
-        *self.sp -= 1;
-        self.bus.borrow_mut()[*self.sp] = low(self.pc.wrapping_add(len as u16));
+        let mut sp = gb.cpu.sp.wrapping_sub(1);
+        gb[sp] = high(gb.cpu.sp.wrapping_add(len as u16));
+        sp = sp.wrapping_sub(1);
+        gb[sp] = low(gb.cpu.pc.wrapping_add(len as u16));
+        gb.cpu.sp = sp;
 
         // implicit jump to called address
-        *self.pc = addr;
+        gb.cpu.pc = addr;
 
         // return len as 0 if called?
         Ok(InstructionEffect::new(cycles, len, Flags::none()))

@@ -1,15 +1,13 @@
 use std::fmt::Write;
 
 use crate::{
-    core::{
-        cpu::{
-            R16,
-            flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
-            instructions::{
-                Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
-            },
+    Dmg,
+    core::cpu::{
+        R16,
+        flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
+        instructions::{
+            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
         },
-        memory::MemoryBus,
     },
     utils::{high, low, to_u8},
 };
@@ -27,18 +25,16 @@ use crate::{
 /// ld [sp], b  ; B, D or H
 /// dec sp
 /// ld [sp], c   ; C, E or L
-pub struct Push<'a> {
-    sp: &'a mut u16,
-    bus: MemoryBus,
-    src: IT<'a>,
+pub struct Push {
+    src: IT,
 }
 
-impl<'a> Push<'a> {
-    pub fn new(sp: &'a mut u16, bus: MemoryBus, src: IT<'a>) -> Box<Self> { Box::new(Self { sp, bus, src }) }
+impl Push {
+    pub fn new(src: IT) -> Box<Self> { Box::new(Self { src }) }
 }
 
-impl<'a> Instruction<'a> for Push<'a> {
-    fn exec(&mut self) -> InstructionResult {
+impl Instruction for Push {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let src = match &mut self.src {
             IT::Reg16(src, R16::AF) => {
                 // this is probably useless because no other bit of F should be set
@@ -51,10 +47,15 @@ impl<'a> Instruction<'a> for Push<'a> {
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
-        *self.sp -= 1;
-        self.bus.borrow_mut()[*self.sp] = src.1;
-        *self.sp -= 1;
-        self.bus.borrow_mut()[*self.sp] = src.0;
+        // let src = to_u16(src.0, src.1);
+        let mut sp = gb.cpu.sp.wrapping_sub(1);
+        gb[sp] = src.1;
+        sp = sp.wrapping_sub(1);
+        gb[sp] = src.0;
+        gb.cpu.sp = sp;
+        // with u16 functions
+        // gb.cpu.sp = gb.cpu.sp.wrapping_sub(2);
+        // gb.write16(gb.cpu.sp, src);
 
         Ok(InstructionEffect::new(4, 1, Flags::none()))
     }
@@ -65,47 +66,43 @@ impl<'a> Instruction<'a> for Push<'a> {
 #[cfg(test)]
 mod tests {
 
-    use crate::{core::memory::Memory, utils::to_u16};
-
     use super::*;
 
     #[test]
     fn test_push_af() {
-        let f = ZERO_FLAG_MASK | CARRY_FLAG_MASK | 1;
-        let a: u8 = 1;
-        let af = to_u16(f, a);
-        let mut sp = 0xFFA0;
-        let bus = Memory::new(None, None);
+        let mut gb = Dmg::default();
+        gb.cpu.f = ZERO_FLAG_MASK | CARRY_FLAG_MASK | 1;
+        gb.cpu.a = 1;
+        gb.cpu.sp = 0xFFA0;
 
-        let mut push = Push::new(&mut sp, bus.clone(), IT::Reg16(af, R16::AF));
+        let mut push = Push::new(IT::Reg16(gb.cpu.af(), R16::AF));
 
-        let effect = push.exec().unwrap();
+        let effect = push.exec(&mut gb).unwrap();
 
         assert_eq!(effect.cycles, 4);
         assert_eq!(effect.len, 1);
-        assert_eq!(bus.borrow()[sp], ZERO_FLAG_MASK | CARRY_FLAG_MASK);
-        assert_eq!(bus.borrow()[sp + 1], a);
-        assert_eq!(sp, 0xFFA0 - 2);
+        assert_eq!(gb[gb.cpu.sp], ZERO_FLAG_MASK | CARRY_FLAG_MASK);
+        assert_eq!(gb[gb.cpu.sp + 1], gb.cpu.a);
+        assert_eq!(gb.cpu.sp, 0xFFA0 - 2);
         assert_eq!(effect.flags, Flags::none());
     }
 
     #[test]
     fn test_push_bc() {
-        let c = ZERO_FLAG_MASK | CARRY_FLAG_MASK | 1;
-        let b = 1;
-        let bc = to_u16(c, b);
-        let mut sp = 0xFFA0;
-        let bus = Memory::new(None, None);
+        let mut gb = Dmg::default();
+        gb.cpu.c = ZERO_FLAG_MASK | CARRY_FLAG_MASK | 1;
+        gb.cpu.b = 1;
+        gb.cpu.sp = 0xFFA0;
 
-        let mut push = Push::new(&mut sp, bus.clone(), IT::Reg16(bc, R16::BC));
+        let mut push = Push::new(IT::Reg16(gb.cpu.bc(), R16::BC));
 
-        let effect = push.exec().unwrap();
+        let effect = push.exec(&mut gb).unwrap();
 
         assert_eq!(effect.cycles, 4);
         assert_eq!(effect.len, 1);
-        assert_eq!(bus.borrow()[sp], c);
-        assert_eq!(bus.borrow()[sp + 1], b);
-        assert_eq!(sp, 0xFFA0 - 2);
+        assert_eq!(gb[gb.cpu.sp], gb.cpu.c);
+        assert_eq!(gb[gb.cpu.sp + 1], gb.cpu.b);
+        assert_eq!(gb.cpu.sp, 0xFFA0 - 2);
         assert_eq!(effect.flags, Flags::none());
     }
 }

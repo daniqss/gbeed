@@ -1,6 +1,9 @@
-use crate::core::cpu::{
-    flags::Flags,
-    instructions::{Instruction, InstructionEffect, InstructionResult},
+use crate::{
+    Dmg,
+    core::cpu::{
+        flags::Flags,
+        instructions::{Instruction, InstructionEffect, InstructionResult},
+    },
 };
 
 /// rotate bits left between r8 and carry flag
@@ -8,25 +11,24 @@ use crate::core::cpu::{
 /// ┌─╂─   C   ←╂─╂─  b7  ←   ...  ←  b0  ←╂─┐
 /// │ ┗━━━━━━━━━┛ ┗━━━━━━━━━━━━━━━━━━━━━━━━┛ │
 /// └────────────────────────────────────────┘
-pub struct Rla<'a> {
+pub struct Rla {
     carry: bool,
-    a: &'a mut u8,
 }
 
-impl<'a> Rla<'a> {
-    pub fn new(carry: bool, a: &'a mut u8) -> Box<Self> { Box::new(Self { carry, a }) }
+impl Rla {
+    pub fn new(carry: bool) -> Box<Self> { Box::new(Self { carry }) }
 }
 
-impl<'a> Instruction<'a> for Rla<'a> {
-    fn exec(&mut self) -> InstructionResult {
-        let result = (*self.a << 1) | if self.carry { 1 } else { 0 };
+impl Instruction for Rla {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        let result = (gb.cpu.a << 1) | if self.carry { 1 } else { 0 };
         let flags = Flags {
             z: Some(false),
             n: Some(false),
             h: Some(false),
-            c: Some(*self.a & 0b1000_0000 != 0),
+            c: Some(gb.cpu.a & 0b1000_0000 != 0),
         };
-        *self.a = result;
+        gb.cpu.a = result;
 
         Ok(InstructionEffect::new(1, 1, flags))
     }
@@ -42,11 +44,12 @@ mod tests {
 
     #[test]
     fn test_rl_no_carry() {
-        let mut a = 0b1000_0000;
-        let mut instr = Rla::new(false, &mut a);
+        let mut gb = Dmg::default();
+        gb.cpu.a = 0b1000_0000;
+        let mut instr = Rla::new(false);
 
-        let result = instr.exec().unwrap();
-        assert_eq!(a, 0b0000_0000);
+        let result = instr.exec(&mut gb).unwrap();
+        assert_eq!(gb.cpu.a, 0b0000_0000);
 
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len, 1);
@@ -63,12 +66,13 @@ mod tests {
 
     #[test]
     fn test_rl_with_carry() {
-        let mut a = 0b0011_1000;
+        let mut gb = Dmg::default();
+        gb.cpu.a = 0b0011_1000;
 
-        let mut instr = Rla::new(true, &mut a);
+        let mut instr = Rla::new(true);
 
-        let result = instr.exec().unwrap();
-        assert_eq!(a, 0b0111_0001);
+        let result = instr.exec(&mut gb).unwrap();
+        assert_eq!(gb.cpu.a, 0b0111_0001);
 
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len, 1);

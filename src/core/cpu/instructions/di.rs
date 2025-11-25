@@ -1,20 +1,21 @@
-use crate::core::cpu::{
-    flags::Flags,
-    instructions::{Instruction, InstructionEffect, InstructionResult},
+use crate::{
+    Dmg,
+    core::cpu::{
+        flags::Flags,
+        instructions::{Instruction, InstructionEffect, InstructionResult},
+    },
 };
 
 /// disable interrupts
-pub struct Di<'a> {
-    ime: &'a mut bool,
+pub struct Di {}
+
+impl Di {
+    pub fn new() -> Box<Self> { Box::new(Self {}) }
 }
 
-impl<'a> Di<'a> {
-    pub fn new(ime: &'a mut bool) -> Box<Self> { Box::new(Self { ime }) }
-}
-
-impl<'a> Instruction<'a> for Di<'a> {
-    fn exec(&mut self) -> InstructionResult {
-        *self.ime = false;
+impl Instruction for Di {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        gb.cpu.ime = false;
         Ok(InstructionEffect::new(1, 1, Flags::none()))
     }
 

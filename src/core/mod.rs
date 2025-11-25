@@ -202,17 +202,17 @@ impl Accessable<u16, u16> for Dmg {
     }
 }
 
-impl Index<R8> for Dmg {
+impl Index<&R8> for Dmg {
     type Output = u8;
 
-    fn index(&self, reg: R8) -> &Self::Output { &self.cpu[reg] }
+    fn index(&self, reg: &R8) -> &Self::Output { &self.cpu[reg] }
 }
 
-impl IndexMut<R8> for Dmg {
-    fn index_mut(&mut self, reg: R8) -> &mut Self::Output { &mut self.cpu[reg] }
+impl IndexMut<&R8> for Dmg {
+    fn index_mut(&mut self, reg: &R8) -> &mut Self::Output { &mut self.cpu[reg] }
 }
 
-impl Accessable<R8, &R16> for Dmg {
+impl Accessable<&R8, &R16> for Dmg {
     fn read16(&self, reg: &R16) -> u16 { self.cpu.read16(reg) }
     fn write16(&mut self, reg: &R16, value: u16) { self.cpu.write16(reg, value) }
 }

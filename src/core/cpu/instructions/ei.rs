@@ -1,22 +1,23 @@
-use crate::core::cpu::{
-    flags::Flags,
-    instructions::{Instruction, InstructionEffect, InstructionResult},
+use crate::{
+    Dmg,
+    core::cpu::{
+        flags::Flags,
+        instructions::{Instruction, InstructionEffect, InstructionResult},
+    },
 };
 
 /// enable interrupts
 /// actually ime should be set AFTER the next instruction is executed
 /// but let's hope it works the same
-pub struct Ei<'a> {
-    ime: &'a mut bool,
+pub struct Ei {}
+
+impl Ei {
+    pub fn new() -> Box<Self> { Box::new(Self {}) }
 }
 
-impl<'a> Ei<'a> {
-    pub fn new(ime: &'a mut bool) -> Box<Self> { Box::new(Self { ime }) }
-}
-
-impl<'a> Instruction<'a> for Ei<'a> {
-    fn exec(&mut self) -> InstructionResult {
-        *self.ime = true;
+impl Instruction for Ei {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        gb.cpu.ime = true;
         Ok(InstructionEffect::new(1, 1, Flags::none()))
     }
 
