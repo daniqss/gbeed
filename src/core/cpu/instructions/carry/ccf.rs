@@ -1,6 +1,9 @@
-use crate::core::cpu::{
-    flags::Flags,
-    instructions::{Instruction, InstructionEffect, InstructionResult},
+use crate::{
+    Dmg,
+    core::cpu::{
+        flags::Flags,
+        instructions::{Instruction, InstructionEffect, InstructionResult},
+    },
 };
 
 pub struct Ccf {
@@ -11,8 +14,8 @@ impl Ccf {
     pub fn new(carry: bool) -> Box<Self> { Box::new(Self { carry }) }
 }
 
-impl Instruction<'_> for Ccf {
-    fn exec(&mut self) -> InstructionResult {
+impl Instruction for Ccf {
+    fn exec(&mut self, _gb: &mut Dmg) -> InstructionResult {
         Ok(InstructionEffect::new(
             1,
             1,

@@ -1,6 +1,9 @@
-use crate::core::cpu::{
-    flags::Flags,
-    instructions::{Instruction, InstructionEffect, InstructionResult},
+use crate::{
+    Dmg,
+    core::cpu::{
+        flags::Flags,
+        instructions::{Instruction, InstructionEffect, InstructionResult},
+    },
 };
 
 /// In DGM is intended to enter a low power mode, but no licensed cartridge actually uses it
@@ -13,8 +16,8 @@ impl Stop {
     pub fn new() -> Box<Self> { Box::new(Self) }
 }
 
-impl Instruction<'_> for Stop {
-    fn exec(&mut self) -> InstructionResult { Ok(InstructionEffect::new(2, 2, Flags::none())) }
+impl Instruction for Stop {
+    fn exec(&mut self, _gb: &mut Dmg) -> InstructionResult { Ok(InstructionEffect::new(2, 2, Flags::none())) }
 
     fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "stop") }
 }

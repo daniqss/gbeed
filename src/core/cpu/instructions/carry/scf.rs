@@ -1,6 +1,9 @@
-use crate::core::cpu::{
-    flags::Flags,
-    instructions::{Instruction, InstructionEffect, InstructionResult},
+use crate::{
+    Dmg,
+    core::cpu::{
+        flags::Flags,
+        instructions::{Instruction, InstructionEffect, InstructionResult},
+    },
 };
 
 pub struct Scf;
@@ -9,8 +12,8 @@ impl Scf {
     pub fn new() -> Box<Self> { Box::new(Self) }
 }
 
-impl Instruction<'_> for Scf {
-    fn exec(&mut self) -> InstructionResult {
+impl Instruction for Scf {
+    fn exec(&mut self, _gb: &mut Dmg) -> InstructionResult {
         Ok(InstructionEffect::new(
             1,
             1,

@@ -23,7 +23,7 @@ impl<'a> Add<'a> {
 }
 
 impl<'a> Instruction<'a> for Add<'a> {
-    fn exec(&mut self) -> InstructionResult {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (dst, addend, cycles, len): (&mut u8, u8, u8, u8) = match (&mut self.dst, &self.addend) {
             (ID::Reg8(a, _), IT::Reg8(r8, reg)) if *reg != R8::F => (a, *r8, 1, 1),
             (ID::Reg8(a, _), IT::Imm8(n8)) => (a, *n8, 2, 2),

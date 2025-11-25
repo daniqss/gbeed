@@ -20,7 +20,7 @@ impl<'a> Adc<'a> {
 }
 
 impl<'a> Instruction<'a> for Adc<'a> {
-    fn exec(&mut self) -> InstructionResult {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (addend, cycles, len) = match &self.addend {
             IT::Reg8(val, reg) if *reg != R8::F => (*val, 1, 1),
             IT::PointedByHL(value) => (*value, 2, 1),

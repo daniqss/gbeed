@@ -1,6 +1,9 @@
-use crate::core::cpu::{
-    flags::Flags,
-    instructions::{Instruction, InstructionEffect, InstructionResult},
+use crate::{
+    Dmg,
+    core::cpu::{
+        flags::Flags,
+        instructions::{Instruction, InstructionEffect, InstructionResult},
+    },
 };
 
 /// TODO: This should be implemented with interruptions management
@@ -10,8 +13,8 @@ impl Halt {
     pub fn new() -> Box<Self> { Box::new(Self) }
 }
 
-impl Instruction<'_> for Halt {
-    fn exec(&mut self) -> InstructionResult { Ok(InstructionEffect::new(2, 2, Flags::none())) }
+impl Instruction for Halt {
+    fn exec(&mut self, _gb: &mut Dmg) -> InstructionResult { Ok(InstructionEffect::new(2, 2, Flags::none())) }
 
     fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "halt") }
 }

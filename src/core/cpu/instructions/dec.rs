@@ -1,39 +1,44 @@
 use std::fmt::Write;
 
 use crate::{
-    core::cpu::{
-        flags::{Flags, check_borrow_hc, check_zero},
-        instructions::{
-            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
+    Dmg,
+    core::{
+        cpu::{
+            flags::{Flags, check_borrow_hc, check_zero},
+            instructions::{
+                Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
+                InstructionResult,
+            },
+            registers::{Reg8 as R8, Reg16 as R16},
         },
-        registers::{Reg8 as R8, Reg16 as R16},
+        memory::Accessable,
     },
-    utils::with_u16,
 };
 
 /// decrement the dst value by one
-pub struct Dec<'a> {
-    dst: ID<'a>,
+pub struct Dec {
+    dst: ID,
 }
 
-impl<'a> Dec<'a> {
-    pub fn new(dst: ID<'a>) -> Box<Self> { Box::new(Dec { dst }) }
+impl Dec {
+    pub fn new(dst: ID) -> Box<Self> { Box::new(Dec { dst }) }
 }
 
-impl<'a> Instruction<'a> for Dec<'a> {
-    fn exec(&mut self) -> InstructionResult {
+impl Instruction for Dec {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let len = 1;
 
         let (dst, cycles): (&mut u8, u8) = match &mut self.dst {
-            ID::Reg8(dst, reg) if *reg != R8::F => (*dst, 1),
-            ID::PointedByHL(bus, addr) => (&mut bus.borrow_mut()[*addr], 3),
-            ID::Reg16(dst, reg) if *reg != R16::AF => {
-                with_u16(dst.0, dst.1, |val| val.wrapping_sub(1));
+            ID::Reg8(reg) if *reg != R8::F => (&mut gb[&*reg], 1),
+            ID::PointedByHL(addr) => (&mut gb[*addr], 3),
+            ID::Reg16(reg) if *reg != R16::AF => {
+                let r16 = gb.read16(&*reg);
+                gb.write16(&*reg, r16.wrapping_sub(1));
 
                 return Ok(InstructionEffect::new(2, len, Flags::none()));
             }
-            ID::StackPointer(dst) => {
-                **dst = dst.wrapping_sub(1);
+            ID::StackPointer => {
+                gb.cpu.sp = gb.cpu.sp.wrapping_sub(1);
 
                 return Ok(InstructionEffect::new(2, len, Flags::none()));
             }

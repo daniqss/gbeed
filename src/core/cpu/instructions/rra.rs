@@ -18,7 +18,7 @@ impl<'a> Rra<'a> {
 }
 
 impl<'a> Instruction<'a> for Rra<'a> {
-    fn exec(&mut self) -> InstructionResult {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let result = (*self.a >> 1) | if self.carry { 1 << 7 } else { 0 };
         let flags = Flags {
             z: Some(false),

@@ -1,23 +1,26 @@
-use crate::core::cpu::{
-    R8,
-    flags::{Flags, check_zero},
-    instructions::{
-        Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+use crate::{
+    Dmg,
+    core::cpu::{
+        R8,
+        flags::{Flags, check_zero},
+        instructions::{
+            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+        },
     },
 };
 
 /// Test bit u3 in target
-pub struct Bit<'a> {
+pub struct Bit {
     bit: u8,
-    target: IT<'a>,
+    target: IT,
 }
 
-impl<'a> Bit<'a> {
-    pub fn new(bit: u8, target: IT<'a>) -> Box<Self> { Box::new(Bit { bit, target }) }
+impl Bit {
+    pub fn new(bit: u8, target: IT) -> Box<Self> { Box::new(Bit { bit, target }) }
 }
 
-impl<'a> Instruction<'a> for Bit<'a> {
-    fn exec(&mut self) -> InstructionResult {
+impl Instruction for Bit {
+    fn exec(&mut self, _gb: &mut Dmg) -> InstructionResult {
         let (target, cycles, len): (u8, u8, u8) = match &self.target {
             IT::Reg8(r8, reg) if *reg != R8::A => (*r8, 2, 2),
             IT::PointedByHL(val) => (*val, 3, 2),

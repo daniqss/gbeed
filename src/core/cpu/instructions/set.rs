@@ -16,7 +16,7 @@ impl<'a> Set<'a> {
 }
 
 impl<'a> Instruction<'a> for Set<'a> {
-    fn exec(&mut self) -> InstructionResult {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
             ID::Reg8(r8, _) => (r8, 2, 2),
             ID::PointedByHL(bus, addr) => (&mut bus.borrow_mut()[*addr], 4, 2),

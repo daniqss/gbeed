@@ -22,7 +22,7 @@ impl<'a> Ld<'a> {
 }
 
 impl<'a> Instruction<'a> for Ld<'a> {
-    fn exec(&mut self) -> InstructionResult {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         // handle cases where srcs are increased and decreased after load
         if let (ID::Reg8(dst, reg), IT::PointedByHLD(src, hl)) = (&mut self.dst, &mut self.src) {
             if *reg != R8::A {
