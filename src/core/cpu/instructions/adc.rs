@@ -1,25 +1,27 @@
 use std::fmt::Write;
 
 use super::InstructionTarget as IT;
-use crate::core::cpu::{
-    R8,
-    flags::{CARRY_FLAG_MASK, Flags, check_overflow_cy, check_overflow_hc, check_zero},
-    instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
+use crate::{
+    Dmg,
+    core::cpu::{
+        R8,
+        flags::{Flags, check_overflow_cy, check_overflow_hc, check_zero},
+        instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
+    },
 };
 
 /// Add with carry instruction
 /// Adds the value of the specified target plus the carry flag to register A
-pub struct Adc<'a> {
-    a: &'a mut u8,
-    f: u8,
-    addend: IT<'a>,
+pub struct Adc {
+    carry: bool,
+    addend: IT,
 }
 
-impl<'a> Adc<'a> {
-    pub fn new(a: &'a mut u8, f: u8, addend: IT<'a>) -> Box<Self> { Box::new(Adc { a, f, addend }) }
+impl Adc {
+    pub fn new(carry: bool, addend: IT) -> Box<Self> { Box::new(Adc { carry, addend }) }
 }
 
-impl<'a> Instruction<'a> for Adc<'a> {
+impl Instruction for Adc {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (addend, cycles, len) = match &self.addend {
             IT::Reg8(val, reg) if *reg != R8::F => (*val, 1, 1),
@@ -30,18 +32,18 @@ impl<'a> Instruction<'a> for Adc<'a> {
 
         // perform the addition
         // wrapping it prevent overflow panics in debug mode
-        let mut result = self.a.wrapping_add(addend);
-        result = result.wrapping_add(if (self.f & CARRY_FLAG_MASK) != 0 { 1 } else { 0 });
+        let mut result = gb.cpu.a.wrapping_add(addend);
+        result = result.wrapping_add(if self.carry { 1 } else { 0 });
 
         // calculate flags
         let flags = Flags {
             z: Some(check_zero(result)),
             n: Some(false),
-            h: Some(check_overflow_hc(result, *self.a)),
-            c: Some(check_overflow_cy(result, *self.a)),
+            h: Some(check_overflow_hc(result, gb.cpu.a)),
+            c: Some(check_overflow_cy(result, gb.cpu.a)),
         };
 
-        *self.a = result;
+        gb.cpu.a = result;
 
         Ok(InstructionEffect::new(cycles, len, flags))
     }

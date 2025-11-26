@@ -115,6 +115,7 @@ impl Cpu {
     pub fn de(&self) -> u16 { to_u16(self.e, self.d) }
     pub fn hl(&self) -> u16 { to_u16(self.l, self.h) }
 
+    #[inline]
     pub fn carry(&self) -> bool {
         if self.f & CARRY_FLAG_MASK != 0 {
             true
@@ -122,6 +123,8 @@ impl Cpu {
             false
         }
     }
+    #[inline]
+
     pub fn not_carry(&self) -> bool {
         if self.f & CARRY_FLAG_MASK == 0 {
             true
@@ -129,7 +132,9 @@ impl Cpu {
             false
         }
     }
+    #[inline]
     pub fn zero(&self) -> bool { if self.f & ZERO_FLAG_MASK != 0 { true } else { false } }
+    #[inline]
     pub fn not_zero(&self) -> bool { if self.f & ZERO_FLAG_MASK == 0 { true } else { false } }
 
     pub fn reset(&mut self) {
@@ -150,7 +155,7 @@ impl Cpu {
     /// Execute instruction based on the opcode.
     /// Return a result with the effect of the instruction or an instruction error (e.g unused opcode)
     pub fn fetch(gb: &mut Dmg, opcode: u8) -> FetchResult {
-        let cpu = gb.cpu;
+        let cpu = &gb.cpu;
 
         let instruction: Box<dyn Instruction> = match opcode {
             0x00 => Nop::new(),
@@ -383,7 +388,7 @@ impl Cpu {
             }
             0xCC => Call::new(IT::JumpToImm16(JC::Zero(cpu.zero()), gb.read16(cpu.pc + 1))),
             0xCD => Call::new(IT::JumpToImm16(JC::None, gb.read16(cpu.pc + 1))),
-            0xCE => Adc::new(cpu.f, IT::Imm8(gb[cpu.pc + 1])),
+            0xCE => Adc::new(cpu.carry(), IT::Imm8(gb[cpu.pc + 1])),
             0xCF => Rst::new(0x08),
             0xD0 => Ret::new(JC::NotCarry(cpu.not_carry())),
             0xD1 => Pop::new(ID::Reg16(R16::DE)),

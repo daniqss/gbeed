@@ -1,6 +1,9 @@
-use crate::core::cpu::{
-    flags::Flags,
-    instructions::{Instruction, InstructionEffect, InstructionResult},
+use crate::{
+    Dmg,
+    core::cpu::{
+        flags::Flags,
+        instructions::{Instruction, InstructionEffect, InstructionResult},
+    },
 };
 
 /// rotate bits left between r8 and carry flag
@@ -8,25 +11,24 @@ use crate::core::cpu::{
 /// ┌─╂→ b7 → ... → b0 ─╂─╂→   C   ─╂─┐
 /// │ ┗━━━━━━━━━━━━━━━━━┛ ┗━━━━━━━━━┛ │
 /// └─────────────────────────────────┘
-pub struct Rra<'a> {
+pub struct Rra {
     carry: bool,
-    a: &'a mut u8,
 }
 
-impl<'a> Rra<'a> {
-    pub fn new(carry: bool, a: &'a mut u8) -> Box<Self> { Box::new(Self { carry, a }) }
+impl Rra {
+    pub fn new(carry: bool) -> Box<Self> { Box::new(Self { carry }) }
 }
 
-impl<'a> Instruction<'a> for Rra<'a> {
+impl Instruction for Rra {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let result = (*self.a >> 1) | if self.carry { 1 << 7 } else { 0 };
+        let result = (gb.cpu.a >> 1) | if self.carry { 1 << 7 } else { 0 };
         let flags = Flags {
             z: Some(false),
             n: Some(false),
             h: Some(false),
-            c: Some(*self.a & 0b0000_0001 != 0),
+            c: Some(gb.cpu.a & 0b0000_0001 != 0),
         };
-        *self.a = result;
+        gb.cpu.a = result;
 
         Ok(InstructionEffect::new(1, 1, flags))
     }
@@ -42,11 +44,12 @@ mod tests {
 
     #[test]
     fn test_rr_no_carry() {
-        let mut a = 0b0000_0001;
-        let mut instr = Rra::new(false, &mut a);
+        let mut gb = Dmg::default();
+        gb.cpu.a = 0b0000_0001;
+        let mut instr = Rra::new(false);
 
-        let result = instr.exec().unwrap();
-        assert_eq!(a, 0);
+        let result = instr.exec(&mut gb).unwrap();
+        assert_eq!(gb.cpu.a, 0);
 
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len, 1);
@@ -63,12 +66,13 @@ mod tests {
 
     #[test]
     fn test_rr_with_carry() {
-        let mut a = 0b0011_1000;
+        let mut gb = Dmg::default();
+        gb.cpu.a = 0b0011_1000;
 
-        let mut instr = Rra::new(true, &mut a);
+        let mut instr = Rra::new(true);
 
-        let result = instr.exec().unwrap();
-        assert_eq!(a, 0b1001_1100);
+        let result = instr.exec(&mut gb).unwrap();
+        assert_eq!(gb.cpu.a, 0b1001_1100);
 
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len, 1);
