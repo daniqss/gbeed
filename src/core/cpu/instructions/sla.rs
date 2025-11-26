@@ -1,8 +1,11 @@
-use crate::core::cpu::{
-    R8,
-    flags::Flags,
-    instructions::{
-        Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
+use crate::{
+    Dmg,
+    core::cpu::{
+        R8,
+        flags::Flags,
+        instructions::{
+            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
+        },
     },
 };
 
@@ -11,19 +14,19 @@ use crate::core::cpu::{
 /// ┏━ Flags ━┓ ┏━━━━━━━ r8 | [hl] ━━━━━━┓
 /// ┃    C   ←╂─╂─   b7  ←  ...  ←  b0  ←╂─ 0
 /// ┗━━━━━━━━━┛ ┗━━━━━━━━━━━━━━━━━━━━━━━━┛
-pub struct Sla<'a> {
-    dst: ID<'a>,
+pub struct Sla {
+    dst: ID,
 }
 
-impl<'a> Sla<'a> {
-    pub fn new(dst: ID<'a>) -> Box<Self> { Box::new(Self { dst }) }
+impl Sla {
+    pub fn new(dst: ID) -> Box<Self> { Box::new(Self { dst }) }
 }
 
-impl<'a> Instruction<'a> for Sla<'a> {
+impl Instruction for Sla {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
-            ID::Reg8(r8, reg) if *reg != R8::F => (r8, 2, 2),
-            ID::PointedByHL(bus, addr) => (&mut bus.borrow_mut()[*addr], 4, 2),
+            ID::Reg8(reg) if *reg != R8::F => (&mut gb[&*reg], 2, 2),
+            ID::PointedByHL(addr) => (&mut gb[*addr], 4, 2),
             _ => return Err(InstructionError::MalformedInstruction),
         };
 

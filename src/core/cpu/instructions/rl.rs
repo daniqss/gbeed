@@ -24,7 +24,7 @@ impl Rl {
 
 impl Instruction for Rl {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
+        let (dst, cycles, len): (&mut u8, u8, u8) = match &self.dst {
             ID::Reg8(r8) => (&mut gb[&*r8], 2, 2),
             ID::PointedByHL(addr) => (&mut gb[*addr], 4, 2),
 
@@ -82,7 +82,7 @@ mod tests {
         let addr = 0xFF00;
         gb[addr] = 0b0011_1000;
 
-        let mut instr = Rl::new(true, ID::PointedByHL(gb.cpu.hl()));
+        let mut instr = Rl::new(true, ID::PointedByHL(addr));
 
         let result = instr.exec(&mut gb).unwrap();
         assert_eq!(gb[addr], 0b0111_0001);

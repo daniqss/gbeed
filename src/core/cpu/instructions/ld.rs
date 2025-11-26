@@ -1,104 +1,109 @@
 use std::fmt::Write;
 
 use crate::{
-    core::cpu::{
-        flags::{Flags, check_overflow_cy, check_overflow_hc},
-        instructions::{
-            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
-            InstructionResult, InstructionTarget as IT,
+    Dmg,
+    core::{
+        cpu::{
+            flags::{Flags, check_overflow_cy, check_overflow_hc},
+            instructions::{
+                Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
+                InstructionResult, InstructionTarget as IT,
+            },
+            registers::{Reg8 as R8, Reg16 as R16},
         },
-        registers::{Reg8 as R8, Reg16 as R16},
+        memory::Accessable,
     },
-    utils::{low, to_u8, to_u16, with_u16},
+    utils::low,
 };
 
-pub struct Ld<'a> {
-    dst: ID<'a>,
-    src: IT<'a>,
+pub struct Ld {
+    dst: ID,
+    src: IT,
 }
 
-impl<'a> Ld<'a> {
-    pub fn new(dst: ID<'a>, src: IT<'a>) -> Box<Self> { Box::new(Self { dst, src }) }
+impl Ld {
+    pub fn new(dst: ID, src: IT) -> Box<Self> { Box::new(Self { dst, src }) }
 }
 
-impl<'a> Instruction<'a> for Ld<'a> {
+impl Instruction for Ld {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         // handle cases where srcs are increased and decreased after load
-        if let (ID::Reg8(dst, reg), IT::PointedByHLD(src, hl)) = (&mut self.dst, &mut self.src) {
-            if *reg != R8::A {
-                return Err(InstructionError::MalformedInstruction);
-            }
+        // if let (ID::Reg8(dst, reg), IT::PointedByHLD(src, hl)) = (&mut self.dst, &mut self.src) {
+        //     if *reg != R8::A {
+        //         return Err(InstructionError::MalformedInstruction);
+        //     }
 
-            **dst = *src;
+        //     **dst = *src;
 
-            with_u16(hl.0, hl.1, |hl| hl.wrapping_add(1));
-            return Ok(InstructionEffect::new(2, 1, Flags::none()));
-        }
-        if let (ID::Reg8(dst, reg), IT::PointedByHLI(src, hl)) = (&mut self.dst, &mut self.src) {
-            if *reg != R8::A {
-                return Err(InstructionError::MalformedInstruction);
-            }
+        //     with_u16(hl.0, hl.1, |hl| hl.wrapping_add(1));
+        //     return Ok(InstructionEffect::new(2, 1, Flags::none()));
+        // }
+        // if let (ID::Reg8(dst, reg), IT::PointedByHLI(src, hl)) = (&mut self.dst, &mut self.src) {
+        //     if *reg != R8::A {
+        //         return Err(InstructionError::MalformedInstruction);
+        //     }
 
-            **dst = *src;
+        //     **dst = *src;
 
-            with_u16(hl.0, hl.1, |hl| hl.wrapping_sub(1));
-            return Ok(InstructionEffect::new(2, 1, Flags::none()));
-        }
+        //     with_u16(hl.0, hl.1, |hl| hl.wrapping_sub(1));
+        //     return Ok(InstructionEffect::new(2, 1, Flags::none()));
+        // }
 
         // u8 loads
         let (dst, src, cycles, len): (&mut u8, u8, u8, u8) = match (&mut self.dst, &self.src) {
-            (ID::Reg8(dst, _), IT::Reg8(src, _)) => (*dst, *src, 1, 1),
-            (ID::Reg8(dst, _), IT::Imm8(src)) => (*dst, *src, 2, 2),
-            (ID::Reg16(dst, _), IT::Imm16(src)) => {
-                let (high, low) = to_u8(*src);
-                *dst.0 = high;
-                *dst.1 = low;
+            (ID::Reg8(reg), IT::Reg8(src, _)) => (&mut gb[&*reg], *src, 1, 1),
+            (ID::Reg8(reg), IT::Imm8(src)) => (&mut gb[&*reg], *src, 2, 2),
+            (ID::Reg16(reg), IT::Imm16(src)) => {
+                gb.cpu.write16(reg, *src);
 
                 return Ok(InstructionEffect::new(3, 3, Flags::none()));
             }
-            (ID::PointedByHL(bus, addr), IT::Reg8(src, _)) => (&mut bus.borrow_mut()[*addr], *src, 2, 1),
-            (ID::PointedByHL(bus, addr), IT::Imm8(src)) => (&mut bus.borrow_mut()[*addr], *src, 3, 2),
-            (ID::Reg8(dst, _), IT::PointedByHL(src)) => (*dst, *src, 2, 1),
-            (ID::PointedByReg16(bus, addr, _), IT::Reg8(src, reg)) if *reg == R8::A => {
-                (&mut bus.borrow_mut()[*addr], *src, 2, 1)
+            (ID::PointedByHL(addr), IT::Reg8(src, _)) => (&mut gb[*addr], *src, 2, 1),
+            (ID::PointedByHL(addr), IT::Imm8(src)) => (&mut gb[*addr], *src, 3, 2),
+            (ID::Reg8(reg), IT::PointedByHL(src)) => (&mut gb[&*reg], *src, 2, 1),
+            (ID::PointedByReg16(addr, _), IT::Reg8(src, reg)) if *reg == R8::A => {
+                (&mut gb[*addr], *src, 2, 1)
             }
-            (ID::PointedByN16(bus, addr), IT::Reg8(src, reg)) if *reg == R8::A => {
-                (&mut bus.borrow_mut()[*addr], *src, 4, 3)
+            (ID::PointedByN16(addr), IT::Reg8(src, reg)) if *reg == R8::A => (&mut gb[*addr], *src, 4, 3),
+            (ID::Reg8(R8::A), IT::PointedByReg16(src, _)) => (&mut gb[&R8::A], *src, 2, 1),
+            (ID::Reg8(R8::A), IT::PointedByN16(src, _)) => (&mut gb[&R8::A], *src, 4, 3),
+            (ID::Reg8(R8::A), IT::PointedByHLI(src)) => {
+                gb.write16(&R16::HL, gb.cpu.hl().wrapping_add(1));
+                (&mut gb[&R8::A], *src, 2, 1)
             }
-            (ID::Reg8(dst, _), IT::PointedByReg16(src, _)) => (*dst, *src, 2, 1),
-            (ID::Reg8(dst, reg), IT::PointedByN16(src, _)) if *reg == R8::A => (*dst, *src, 4, 3),
+            (ID::Reg8(R8::A), IT::PointedByHLD(src)) => {
+                gb.write16(&R16::HL, gb.cpu.hl().wrapping_sub(1));
+                (&mut gb[&R8::A], *src, 2, 1)
+            }
             // sometimes written as `Ld [HL+],A`, or `LDI [HL],A`
-            (ID::PointedByHLI(bus, hl), IT::Reg8(src, reg)) if *reg == R8::A => {
-                with_u16(hl.0, hl.1, |hl| hl.wrapping_add(1));
-                (&mut bus.borrow_mut()[to_u16(*hl.0, *hl.1)], *src, 2, 1)
+            (ID::PointedByHLI(addr), IT::Reg8(src, reg)) if *reg == R8::A => {
+                gb.write16(&R16::HL, gb.cpu.hl().wrapping_add(1));
+                (&mut gb[*addr], *src, 2, 1)
             }
             // sometimes written as `Ld [HL-],A`, or `LDD [HL],A`
-            (ID::PointedByHLD(bus, hl), IT::Reg8(src, reg)) if *reg == R8::A => {
-                with_u16(hl.0, hl.1, |hl| hl.wrapping_sub(1));
-                (&mut bus.borrow_mut()[to_u16(*hl.0, *hl.1)], *src, 2, 1)
+            (ID::PointedByHLD(addr), IT::Reg8(src, reg)) if *reg == R8::A => {
+                gb.write16(&R16::HL, gb.cpu.hl().wrapping_sub(1));
+                (&mut gb[*addr], *src, 2, 1)
             }
 
             // stack manipulation load instructions
 
             // we'll do this load hear surpass the generic handling
             // with u8 destinations
-            (ID::StackPointer(dst), IT::Imm16(src)) => {
-                **dst = *src;
+            (ID::StackPointer, IT::Imm16(src)) => {
+                gb.cpu.sp = *src;
                 return Ok(InstructionEffect::new(3, 3, Flags::none()));
             }
-            (ID::PointedByN16(bus, addr), IT::StackPointer(src)) => {
-                // bus.borrow_mut()[addr.wrapping_add(1)] = high(*src);
-                // bus.borrow_mut()[*addr] = low(*src);
-                bus.borrow_mut().write_word(*addr, *src);
-
+            (ID::PointedByN16(addr), IT::StackPointer(src)) => {
+                gb.write16(*addr, *src);
                 return Ok(InstructionEffect::new(5, 3, Flags::none()));
             }
             // add the 8 bit signed immediate to the SP register and store the result in HL register pair
             // half carries come from Z80 with binary coded decimal, that worked with nibbles (4 bits)
             // also surpass the generic handling
-            (ID::Reg16(dst, R16::HL), IT::StackPointerPlusE8(sp, e8)) => {
+            (ID::Reg16(R16::HL), IT::StackPointerPlusE8(sp, e8)) => {
                 let src = sp.wrapping_add(*e8 as i16 as u16);
-                with_u16(dst.0, dst.1, |_| src);
+                gb.write16(&R16::HL, src);
 
                 // the carries are computed on the low byte only, not the full u16
                 let flags = Flags {
@@ -110,8 +115,8 @@ impl<'a> Instruction<'a> for Ld<'a> {
 
                 return Ok(InstructionEffect::new(3, 2, flags));
             }
-            (ID::StackPointer(dst), IT::Reg16(src, R16::HL)) => {
-                **dst = *src;
+            (ID::StackPointer, IT::Reg16(src, R16::HL)) => {
+                gb.cpu.sp = *src;
                 return Ok(InstructionEffect::new(2, 1, Flags::none()));
             }
 

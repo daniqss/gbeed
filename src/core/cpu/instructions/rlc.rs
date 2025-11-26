@@ -1,7 +1,10 @@
-use crate::core::cpu::{
-    flags::{Flags, check_zero},
-    instructions::{
-        Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
+use crate::{
+    Dmg,
+    core::cpu::{
+        flags::{Flags, check_zero},
+        instructions::{
+            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
+        },
     },
 };
 
@@ -10,19 +13,19 @@ use crate::core::cpu::{
 /// ┃    C   ←╂─┬─╂─   b7  ←  ...  ←  b0  ←╂─┐
 /// ┗━━━━━━━━━┛ │ ┗━━━━━━━━━━━━━━━━━━━━━━━━┛ │
 ///             └────────────────────────────┘
-pub struct Rlc<'a> {
-    dst: ID<'a>,
+pub struct Rlc {
+    dst: ID,
 }
 
-impl<'a> Rlc<'a> {
-    pub fn new(dst: ID<'a>) -> Box<Self> { Box::new(Self { dst }) }
+impl Rlc {
+    pub fn new(dst: ID) -> Box<Self> { Box::new(Self { dst }) }
 }
 
-impl<'a> Instruction<'a> for Rlc<'a> {
+impl Instruction for Rlc {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
-            ID::Reg8(r8, _) => (r8, 2, 2),
-            ID::PointedByHL(bus, addr) => (&mut bus.borrow_mut()[*addr], 4, 2),
+            ID::Reg8(reg) => (&mut gb[&*reg], 2, 2),
+            ID::PointedByHL(addr) => (&mut gb[*addr], 4, 2),
 
             _ => return Err(InstructionError::MalformedInstruction),
         };
@@ -47,20 +50,18 @@ impl<'a> Instruction<'a> for Rlc<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{
-        cpu::{R8, flags::Flags},
-        memory::Memory,
-    };
+    use crate::core::cpu::{R8, flags::Flags};
 
     use super::*;
 
     #[test]
     fn test_rl_no_carry() {
-        let mut a = 0b1000_0000;
-        let mut instr = Rlc::new(ID::Reg8(&mut a, R8::A));
+        let mut gb = Dmg::default();
+        gb.cpu.a = 0b1000_0000;
+        let mut instr = Rlc::new(ID::Reg8(R8::A));
 
-        let result = instr.exec().unwrap();
-        assert_eq!(a, 0b0000_0001);
+        let result = instr.exec(&mut gb).unwrap();
+        assert_eq!(gb.cpu.a, 0b0000_0001);
 
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len, 2);
@@ -77,15 +78,15 @@ mod tests {
 
     #[test]
     fn test_rl_with_carry() {
+        let mut gb = Dmg::default();
         let addr = 0xFF00;
         let value = 0b0011_1000;
-        let bus = Memory::new(None, None);
-        bus.borrow_mut()[addr] = value;
+        gb[addr] = value;
 
-        let mut instr = Rlc::new(ID::PointedByHL(bus.clone(), addr));
+        let mut instr = Rlc::new(ID::PointedByHL(addr));
 
-        let result = instr.exec().unwrap();
-        assert_eq!(bus.borrow()[addr], 0b0111_0000);
+        let result = instr.exec(&mut gb).unwrap();
+        assert_eq!(gb[addr], 0b0111_0000);
 
         assert_eq!(result.cycles, 4);
         assert_eq!(result.len, 2);

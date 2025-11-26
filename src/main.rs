@@ -11,7 +11,6 @@ use sdl2::rect::Rect;
 use sdl2::render::Texture;
 use sdl2::render::TextureQuery;
 use std::io::{self, ErrorKind};
-use std::ops::DerefMut;
 
 const SCREEN_WIDTH: u32 = 800;
 const SCREEN_HEIGHT: u32 = 600;
@@ -99,13 +98,13 @@ fn main() -> Result<()> {
                 Event::KeyDown {
                     keycode: Some(key), ..
                 } => {
-                    update_joypad(true, key, gameboy.joypad.borrow_mut().deref_mut());
+                    update_joypad(true, key, &mut gameboy.joypad);
                 }
 
                 Event::KeyUp {
                     keycode: Some(key), ..
                 } => {
-                    update_joypad(false, key, gameboy.joypad.borrow_mut().deref_mut());
+                    update_joypad(false, key, &mut gameboy.joypad);
                 }
                 _ => {}
             }
