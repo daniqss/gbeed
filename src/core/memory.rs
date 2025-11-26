@@ -1,7 +1,7 @@
 use crate::{Cartridge, prelude::*};
 
 /// addressable memory size
-pub const ADDRESABLE_MEMORY: usize = 0xFFFF; // 64KB
+pub const ADDRESABLE_MEMORY: u16 = 0xFFFF; // 64KB
 pub const ROM_BANK00_START: u16 = 0x0000;
 // in DMG, in CGB 256 + 1792, splited in two parts, with the cartridge header in the middle
 pub const BOOT_ROM_END: u16 = 0x0100;
@@ -26,12 +26,9 @@ pub const IO_REGISTERS_START: u16 = 0xFF00;
 pub const IO_REGISTERS_END: u16 = 0xFF7F;
 pub const HRAM_START: u16 = 0xFF80;
 pub const HRAM_END: u16 = 0xFFFE;
-pub const INTERRUPT_ENABLE_REGISTER: u16 = 0xFFFF;
 pub const BOOT_REGISTER: u16 = 0xFF50;
 
-pub fn is_high_address(address: u16) -> bool {
-    address >= IO_REGISTERS_START && address <= INTERRUPT_ENABLE_REGISTER
-}
+pub fn is_high_address(address: u16) -> bool { address >= IO_REGISTERS_START && address <= ADDRESABLE_MEMORY }
 
 /// # Memory mapped trait for addressable components
 /// This trait allows to read and write from Dmg and its components, indexing it with a memory address or a Cpu register

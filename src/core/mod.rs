@@ -9,11 +9,15 @@ mod ppu;
 mod serial;
 mod timer;
 
-use crate::core::{
-    cpu::{R8, R16},
-    memory::Accessable,
-};
 pub use crate::prelude::*;
+use crate::{
+    core::{
+        cpu::{R8, R16},
+        interrupts::IE,
+        memory::Accessable,
+    },
+    utils::with_u16,
+};
 
 pub use apu::Apu;
 pub use cartrigde::Cartridge;
@@ -21,8 +25,8 @@ pub use cpu::Cpu;
 pub use interrupts::Interrupt;
 pub use joypad::Joypad;
 pub use memory::{
-    HRAM_END, HRAM_START, INTERRUPT_ENABLE_REGISTER, IO_REGISTERS_END, IO_REGISTERS_START, Memory,
-    NOT_USABLE_END, ROM_BANK00_START, ROM_BANKNN_END,
+    HRAM_END, HRAM_START, IO_REGISTERS_END, IO_REGISTERS_START, Memory, NOT_USABLE_END, ROM_BANK00_START,
+    ROM_BANKNN_END,
 };
 pub use ppu::Ppu;
 pub use serial::Serial;
@@ -156,7 +160,7 @@ impl Index<u16> for Dmg {
                 _ => unreachable!(),
             },
             HRAM_START..=HRAM_END => &self.bus[addr],
-            INTERRUPT_ENABLE_REGISTER => &self.interrupt_enable.0,
+            IE => &self.interrupt_enable.0,
         }
     }
 }
@@ -187,7 +191,7 @@ impl IndexMut<u16> for Dmg {
                 _ => unreachable!(),
             },
             HRAM_START..=HRAM_END => &mut self.bus[addr],
-            INTERRUPT_ENABLE_REGISTER => &mut self.interrupt_enable.0,
+            IE => &mut self.interrupt_enable.0,
         }
     }
 }
@@ -205,14 +209,51 @@ impl Accessable<u16, u16> for Dmg {
 impl Index<&R8> for Dmg {
     type Output = u8;
 
-    fn index(&self, reg: &R8) -> &Self::Output { &self.cpu[reg] }
+    fn index(&self, reg: &R8) -> &Self::Output {
+        match reg {
+            R8::A => &self.cpu.a,
+            R8::F => &self.cpu.f,
+            R8::B => &self.cpu.b,
+            R8::C => &self.cpu.c,
+            R8::D => &self.cpu.d,
+            R8::E => &self.cpu.e,
+            R8::H => &self.cpu.h,
+            R8::L => &self.cpu.l,
+        }
+    }
 }
 
 impl IndexMut<&R8> for Dmg {
-    fn index_mut(&mut self, reg: &R8) -> &mut Self::Output { &mut self.cpu[reg] }
+    fn index_mut(&mut self, reg: &R8) -> &mut Self::Output {
+        match reg {
+            R8::A => &mut self.cpu.a,
+            R8::F => &mut self.cpu.f,
+            R8::B => &mut self.cpu.b,
+            R8::C => &mut self.cpu.c,
+            R8::D => &mut self.cpu.d,
+            R8::E => &mut self.cpu.e,
+            R8::H => &mut self.cpu.h,
+            R8::L => &mut self.cpu.l,
+        }
+    }
 }
 
 impl Accessable<&R8, &R16> for Dmg {
-    fn read16(&self, reg: &R16) -> u16 { self.cpu.read16(reg) }
-    fn write16(&mut self, reg: &R16, value: u16) { self.cpu.write16(reg, value) }
+    fn read16(&self, reg: &R16) -> u16 {
+        match reg {
+            R16::AF => self.cpu.af(),
+            R16::BC => self.cpu.bc(),
+            R16::DE => self.cpu.de(),
+            R16::HL => self.cpu.hl(),
+        }
+    }
+
+    fn write16(&mut self, reg: &R16, value: u16) {
+        match reg {
+            R16::AF => with_u16(&mut self.cpu.f, &mut self.cpu.a, |_| value),
+            R16::BC => with_u16(&mut self.cpu.c, &mut self.cpu.b, |_| value),
+            R16::DE => with_u16(&mut self.cpu.e, &mut self.cpu.d, |_| value),
+            R16::HL => with_u16(&mut self.cpu.l, &mut self.cpu.h, |_| value),
+        };
+    }
 }

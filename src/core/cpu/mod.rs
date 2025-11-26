@@ -8,8 +8,7 @@ use crate::{
         cpu::flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK},
         memory::{Accessable, IO_REGISTERS_START},
     },
-    prelude::*,
-    utils::{to_u16, with_u16},
+    utils::to_u16,
 };
 use instructions::{InstructionDestination as ID, InstructionTarget as IT, JumpCondition as JC, *};
 pub use registers::{Reg8 as R8, Reg16 as R16};
@@ -37,58 +36,6 @@ pub struct Cpu {
 
     pub cycles: usize,
     pub ime: bool,
-}
-
-impl Index<&R8> for Cpu {
-    type Output = u8;
-
-    fn index(&self, reg: &R8) -> &Self::Output {
-        match reg {
-            R8::A => &self.a,
-            R8::F => &self.f,
-            R8::B => &self.b,
-            R8::C => &self.c,
-            R8::D => &self.d,
-            R8::E => &self.e,
-            R8::H => &self.h,
-            R8::L => &self.l,
-        }
-    }
-}
-
-impl IndexMut<&R8> for Cpu {
-    fn index_mut(&mut self, reg: &R8) -> &mut Self::Output {
-        match reg {
-            R8::A => &mut self.a,
-            R8::F => &mut self.f,
-            R8::B => &mut self.b,
-            R8::C => &mut self.c,
-            R8::D => &mut self.d,
-            R8::E => &mut self.e,
-            R8::H => &mut self.h,
-            R8::L => &mut self.l,
-        }
-    }
-}
-
-impl Accessable<&R8, &R16> for Cpu {
-    fn read16(&self, reg: &R16) -> u16 {
-        match reg {
-            R16::AF => self.af(),
-            R16::BC => self.bc(),
-            R16::DE => self.de(),
-            R16::HL => self.hl(),
-        }
-    }
-
-    fn write16(&mut self, reg: &R16, value: u16) {
-        match reg {
-            R16::AF => with_u16(&mut self.f, &mut self.a, |_| value),
-            R16::BC => with_u16(&mut self.c, &mut self.b, |_| value),
-            R16::DE => with_u16(&mut self.e, &mut self.d, |_| value),
-            R16::HL => with_u16(&mut self.l, &mut self.h, |_| value),
-        };
-    }
 }
 
 impl Cpu {

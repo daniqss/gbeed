@@ -54,7 +54,7 @@ impl Instruction for Ld {
             (ID::Reg8(reg), IT::Reg8(src, _)) => (&mut gb[&*reg], *src, 1, 1),
             (ID::Reg8(reg), IT::Imm8(src)) => (&mut gb[&*reg], *src, 2, 2),
             (ID::Reg16(reg), IT::Imm16(src)) => {
-                gb.cpu.write16(reg, *src);
+                gb.write16(&*reg, *src);
 
                 return Ok(InstructionEffect::new(3, 3, Flags::none()));
             }
