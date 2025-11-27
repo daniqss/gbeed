@@ -24,24 +24,31 @@ impl Jr {
 
 impl Instruction for Jr {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let (offset, cycles, len) = match &self.jump {
+        let (result, cycles, len) = match &self.jump {
             IT::JumpToImm8(cc, offset) => {
                 let should_jump = cc.should_jump();
 
                 if should_jump {
                     // cast i8 offset to u16 to perform addition
                     // offset is relative to the next instruction
-                    let offset = (*offset as i16 as u16).wrapping_add(2);
-                    (offset, 3, 0)
+                    let result = if *offset & 0x80 != 0 {
+                        let mut e8: u8 = !offset;
+                        e8 = e8.wrapping_add(1);
+
+                        gb.cpu.pc.wrapping_add(2).wrapping_sub(e8 as u16)
+                    } else {
+                        gb.cpu.pc.wrapping_add(2).wrapping_add(*offset as u16)
+                    };
+                    (result, 3, 0)
                 } else {
-                    (0, 2, 2)
+                    (gb.cpu.pc, 2, 2)
                 }
             }
 
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
-        gb.cpu.pc = gb.cpu.pc.wrapping_add(offset);
+        gb.cpu.pc = result;
 
         Ok(InstructionEffect::new(cycles, len, Flags::none()))
     }
@@ -63,7 +70,7 @@ mod test {
         let mut gb = Dmg::default();
         gb.cpu.pc = 0x100;
         let pc = gb.cpu.pc;
-        let e8: i8 = -7;
+        let e8: u8 = 0x07;
         gb[pc + 1] = e8 as u8;
 
         let mut instr = Jr::new(IT::JumpToImm8(JC::None, e8));
@@ -79,15 +86,22 @@ mod test {
         let mut gb = Dmg::default();
         gb.cpu.pc = 0x100;
         let pc = gb.cpu.pc;
-        let e8: i8 = 5;
-        gb[pc + 1] = e8 as u8;
+
+        // e8 = 0xF4 = -12
+        let e8: u8 = 0xF4;
+        gb[pc + 1] = e8;
+
         // zero flag is not set, so it should jump
         gb.cpu.f = !ZERO_FLAG_MASK;
 
         let mut instr = Jr::new(IT::JumpToImm8(JC::NotZero(gb.cpu.not_zero()), e8));
         let result = instr.exec(&mut gb).unwrap();
 
-        assert_eq!(gb.cpu.pc, pc.wrapping_add((e8 + 2) as u16));
+        // interpret e8 as signed i8
+        let offset = e8 as i8 as i16;
+        let expected_pc = (pc as i16 + 2 + offset) as u16;
+
+        assert_eq!(gb.cpu.pc, expected_pc);
         assert_eq!(result.cycles, 3);
         assert_eq!(result.len, 0);
     }
@@ -97,7 +111,7 @@ mod test {
         let mut gb = Dmg::default();
         gb.cpu.pc = 0x100;
         let pc = gb.cpu.pc;
-        let e8: i8 = -3;
+        let e8: u8 = 0x64;
         gb[pc + 1] = e8 as u8;
         // carry is not set, so it should not jump
         gb.cpu.f = !CARRY_FLAG_MASK;
