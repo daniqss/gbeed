@@ -87,8 +87,8 @@ mod test {
         gb.cpu.pc = 0x100;
         let pc = gb.cpu.pc;
 
-        // e8 = 0xF4 = -12
-        let e8: u8 = 0xF4;
+        // e8 = 0xFA = -6
+        let e8: u8 = 0xFA;
         gb[pc + 1] = e8;
 
         // zero flag is not set, so it should jump
