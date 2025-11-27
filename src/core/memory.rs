@@ -116,7 +116,7 @@ impl Memory {
     /// ld [0xFF50], a
     /// ```
     /// Next instruction will be the first `nop` in 0x0100, in the cartridge rom
-    fn unmap_boot_rom(&mut self) {
+    pub fn unmap_boot_rom(&mut self) {
         if let Some(game) = &self.game {
             let game_len = game.rom.len().min((ROM_BANKNN_END + 1) as usize);
             self.rom[..game_len].copy_from_slice(&game.rom[..game_len]);

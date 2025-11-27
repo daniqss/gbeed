@@ -186,7 +186,13 @@ impl IndexMut<u16> for Dmg {
 
                 0xFF40..=0xFF4B => &mut self.ppu[addr],
 
-                0xFF50 => &mut self.bank,
+                0xFF50 => {
+                    if self.bank == 0 {
+                        self.bus.unmap_boot_rom();
+                    }
+
+                    &mut self.bank
+                }
 
                 _ => unreachable!(),
             },

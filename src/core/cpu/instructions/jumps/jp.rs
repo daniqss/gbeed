@@ -47,3 +47,78 @@ impl Instruction for Jp {
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "jp {}", self.jump) }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::core::{
+        cpu::{
+            R16,
+            flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK},
+            instructions::JumpCondition as JC,
+        },
+        memory::Accessable,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_jump_to_hl() {
+        let mut gb = Dmg::default();
+        gb.write16(&R16::HL, 0x1234);
+
+        let mut instr = Jp::new(IT::JumpToHL(gb.cpu.hl()));
+        let result = instr.exec(&mut gb).unwrap();
+
+        assert_eq!(gb.cpu.pc, 0x1234);
+        assert_eq!(result.cycles, 1);
+        assert_eq!(result.len, 0);
+    }
+
+    #[test]
+    fn test_jump_n16() {
+        let mut gb = Dmg::default();
+        gb.cpu.pc = 0x100;
+        gb.write16(gb.cpu.pc + 1, 0x200);
+
+        let mut instr = Jp::new(IT::JumpToImm16(JC::None, gb.read16(gb.cpu.pc + 1)));
+        let result = instr.exec(&mut gb).unwrap();
+
+        assert_eq!(gb.cpu.pc, 0x200);
+        assert_eq!(result.cycles, 4);
+        assert_eq!(result.len, 0);
+    }
+
+    #[test]
+    fn test_jump_with_jc() {
+        let mut gb = Dmg::default();
+        gb.cpu.pc = 0x100;
+        gb.cpu.f = ZERO_FLAG_MASK;
+        gb.write16(gb.cpu.pc + 1, 0x200);
+
+        let mut instr = Jp::new(IT::JumpToImm16(JC::Zero(gb.cpu.zero()), gb.read16(gb.cpu.pc + 1)));
+        let result = instr.exec(&mut gb).unwrap();
+
+        assert_eq!(gb.cpu.pc, 0x200);
+        assert_eq!(result.cycles, 4);
+        assert_eq!(result.len, 0);
+    }
+
+    #[test]
+    fn test_no_jump_with_jc() {
+        let mut gb = Dmg::default();
+        gb.cpu.pc = 0x100;
+        // carry is set, so it should not jump
+        gb.cpu.f = CARRY_FLAG_MASK;
+        gb.write16(gb.cpu.pc + 1, 0x200);
+
+        let mut instr = Jp::new(IT::JumpToImm16(
+            JC::NotCarry(gb.cpu.not_carry()),
+            gb.read16(gb.cpu.pc + 1),
+        ));
+        let result = instr.exec(&mut gb).unwrap();
+
+        assert_eq!(gb.cpu.pc, 0x100);
+        assert_eq!(result.cycles, 3);
+        assert_eq!(result.len, 3);
+    }
+}
