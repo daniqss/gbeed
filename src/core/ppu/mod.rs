@@ -4,6 +4,9 @@ mod sprite;
 use crate::prelude::*;
 use display::Display;
 
+pub const PPU_REGISTER_START: u16 = 0xFF40;
+pub const PPU_REGISTER_END: u16 = 0xFF4B;
+
 /// LCD Control Register (R/W) bits
 const LCD_DISPLAY_ENABLE: u8 = 0x80;
 const WINDOW_TILE_MAP_ADDRESS: u8 = 0x40;

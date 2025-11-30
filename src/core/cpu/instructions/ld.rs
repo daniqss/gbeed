@@ -27,28 +27,6 @@ impl Ld {
 
 impl Instruction for Ld {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        // handle cases where srcs are increased and decreased after load
-        // if let (ID::Reg8(dst, reg), IT::PointedByHLD(src, hl)) = (&mut self.dst, &mut self.src) {
-        //     if *reg != R8::A {
-        //         return Err(InstructionError::MalformedInstruction);
-        //     }
-
-        //     **dst = *src;
-
-        //     with_u16(hl.0, hl.1, |hl| hl.wrapping_add(1));
-        //     return Ok(InstructionEffect::new(2, 1, Flags::none()));
-        // }
-        // if let (ID::Reg8(dst, reg), IT::PointedByHLI(src, hl)) = (&mut self.dst, &mut self.src) {
-        //     if *reg != R8::A {
-        //         return Err(InstructionError::MalformedInstruction);
-        //     }
-
-        //     **dst = *src;
-
-        //     with_u16(hl.0, hl.1, |hl| hl.wrapping_sub(1));
-        //     return Ok(InstructionEffect::new(2, 1, Flags::none()));
-        // }
-
         // u8 loads
         let (dst, src, cycles, len): (&mut u8, u8, u8, u8) = match (&mut self.dst, &self.src) {
             (ID::Reg8(reg), IT::Reg8(src, _)) => (&mut gb[&*reg], *src, 1, 1),
@@ -66,7 +44,10 @@ impl Instruction for Ld {
             }
             (ID::PointedByN16(addr), IT::Reg8(src, reg)) if *reg == R8::A => (&mut gb[*addr], *src, 4, 3),
             (ID::Reg8(R8::A), IT::PointedByReg16(src, _)) => (&mut gb[&R8::A], *src, 2, 1),
-            (ID::Reg8(R8::A), IT::PointedByN16(src, _)) => (&mut gb[&R8::A], *src, 4, 3),
+            (ID::Reg8(R8::A), IT::PointedByN16(addr)) => {
+                let src = gb[*addr];
+                (&mut gb[&R8::A], src, 4, 3)
+            }
             (ID::Reg8(R8::A), IT::PointedByHLI(src)) => {
                 gb.write16(&R16::HL, gb.cpu.hl().wrapping_add(1));
                 (&mut gb[&R8::A], *src, 2, 1)

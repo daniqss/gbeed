@@ -1,5 +1,8 @@
 use crate::prelude::*;
 
+pub const APU_REGISTER_START: u16 = 0xFF10;
+pub const APU_REGISTER_END: u16 = 0xFF3F;
+
 const AUDIO_ON_OFF: u8 = 0x80;
 const CH4_ON_FLAG: u8 = 0x08;
 const CH3_ON_FLAG: u8 = 0x04;

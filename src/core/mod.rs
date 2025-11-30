@@ -12,9 +12,11 @@ mod timer;
 pub use crate::prelude::*;
 use crate::{
     core::{
+        apu::{APU_REGISTER_END, APU_REGISTER_START},
         cpu::{R8, R16},
         interrupts::IE,
         memory::Accessable,
+        ppu::{PPU_REGISTER_END, PPU_REGISTER_START},
     },
     utils::with_u16,
 };
@@ -38,6 +40,8 @@ use self::{
     serial::{SB, SC},
     timer::{DIV, TAC, TIMA, TMA},
 };
+
+const BANK_REGISTER: u16 = 0xFF50;
 
 #[derive(Debug, Default)]
 pub struct Dmg {
@@ -151,11 +155,11 @@ impl Index<u16> for Dmg {
 
                 IF => &self.interrupt_flag.0,
 
-                0xF100..=0xF1FF => &self.apu[addr],
+                APU_REGISTER_START..=APU_REGISTER_END => &self.apu[addr],
 
-                0xFF40..=0xFF4B => &self.ppu[addr],
+                PPU_REGISTER_START..=PPU_REGISTER_END => &self.ppu[addr],
 
-                0xFF50 => &self.bank,
+                BANK_REGISTER => &self.bank,
 
                 _ => unreachable!(),
             },
@@ -182,7 +186,7 @@ impl IndexMut<u16> for Dmg {
 
                 IF => &mut self.interrupt_flag.0,
 
-                0xF100..=0xF1FF => &mut self.apu[addr],
+                0xF100..=0xFF26 => &mut self.apu[addr],
 
                 0xFF40..=0xFF4B => &mut self.ppu[addr],
 

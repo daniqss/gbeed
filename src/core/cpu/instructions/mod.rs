@@ -82,7 +82,10 @@ pub use xor::Xor;
 
 use crate::{
     Dmg,
-    core::cpu::{R8, R16, flags::Flags},
+    core::{
+        IO_REGISTERS_START,
+        cpu::{R8, R16, flags::Flags},
+    },
 };
 
 /// Represents a CPU instruction.
@@ -108,8 +111,9 @@ pub enum InstructionTarget {
     Reg8(u8, R8),
     Reg16(u16, R16),
     PointedByHL(u8),
-    PointedByN16(u8, u16),
-    PointedByCPlusFF00(u8, u16),
+    PointedByN16(u16),
+    PointedByA8(u8),
+    PointedByCPlusFF00,
     PointedByReg16(u8, R16),
     PointedByHLI(u8),
     PointedByHLD(u8),
@@ -129,8 +133,9 @@ impl Display for InstructionTarget {
             InstructionTarget::Reg8(_, reg) => write!(f, "{}", reg),
             InstructionTarget::Reg16(_, reg) => write!(f, "{}", reg),
             InstructionTarget::PointedByHL(_) => write!(f, "[hl]"),
-            InstructionTarget::PointedByN16(_, addr) => write!(f, "[${:04X}]", addr),
-            InstructionTarget::PointedByCPlusFF00(_, addr) => write!(f, "[${:04X}]", addr),
+            InstructionTarget::PointedByN16(addr) => write!(f, "[${:04X}]", addr),
+            InstructionTarget::PointedByA8(addr) => write!(f, "[${:04X}]", IO_REGISTERS_START + *addr as u16),
+            InstructionTarget::PointedByCPlusFF00 => write!(f, "[c]"),
             InstructionTarget::PointedByReg16(_, reg) => write!(f, "[{}]", reg),
             InstructionTarget::PointedByHLI(_) => write!(f, "[hli]"),
             InstructionTarget::PointedByHLD(_) => write!(f, "[hld]"),
@@ -147,7 +152,8 @@ impl Display for InstructionTarget {
 pub enum InstructionDestination {
     PointedByHL(u16),
     PointedByN16(u16),
-    PointedByCPlusFF00(u16),
+    PointedByA8(u8),
+    PointedByCPlusFF00,
     Reg8(R8),
     Reg16(R16),
     PointedByReg16(u16, R16),
@@ -161,8 +167,11 @@ impl Display for InstructionDestination {
         match self {
             InstructionDestination::PointedByHL(_) => write!(f, "[hl]"),
             InstructionDestination::PointedByN16(addr) => write!(f, "[${:04X}]", addr),
-            InstructionDestination::PointedByCPlusFF00(addr) => {
-                write!(f, "[${:04X}]", addr)
+            InstructionDestination::PointedByA8(addr) => {
+                write!(f, "[${:04X}]", IO_REGISTERS_START + *addr as u16)
+            }
+            InstructionDestination::PointedByCPlusFF00 => {
+                write!(f, "[c]")
             }
             InstructionDestination::Reg8(reg) => write!(f, "{}", reg),
             InstructionDestination::Reg16(reg) => write!(f, "{}", reg),
@@ -192,7 +201,7 @@ pub enum InstructionError {
     UnusedOpcode(u8, u16),
     OutOfRangeOpcode(u8, u16),
     OutOfRangeCBOpcode(u8, u16),
-    AddressOutOfRange(u16, Option<u8>, Option<u16>),
+    AddressOutOfRange { addr: u16, op: u8, pc: u16 },
     NotImplemented(u8, u16),
     MalformedInstruction,
 }
@@ -209,12 +218,10 @@ impl std::fmt::Display for InstructionError {
             InstructionError::OutOfRangeCBOpcode(opcode, pc) => {
                 write!(f, "Out of range CB opcode {:02X} at PC {:04X}", opcode, pc)
             }
-            InstructionError::AddressOutOfRange(address, opcode, pc) => write!(
+            InstructionError::AddressOutOfRange { addr, op, pc } => write!(
                 f,
                 "Address out of range {:04X} for opcode {:02X} at PC {:04X}",
-                address,
-                opcode.unwrap_or(0x00),
-                pc.unwrap_or(0x0000),
+                addr, op, pc
             ),
             InstructionError::NotImplemented(opcode, pc) => {
                 write!(f, "Opcode not implemented {:02X} at PC {:04X}", opcode, pc)

@@ -117,6 +117,8 @@ impl Memory {
     /// ```
     /// Next instruction will be the first `nop` in 0x0100, in the cartridge rom
     pub fn unmap_boot_rom(&mut self) {
+        // unreachable!("Boot ROM unmapping not implemented yet");
+
         if let Some(game) = &self.game {
             let game_len = game.rom.len().min((ROM_BANKNN_END + 1) as usize);
             self.rom[..game_len].copy_from_slice(&game.rom[..game_len]);
