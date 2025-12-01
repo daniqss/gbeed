@@ -109,7 +109,7 @@ fn main() -> Result<()> {
                 _ => {}
             }
 
-            gameboy.run();
+            let _ = gameboy.run();
             std::thread::sleep(std::time::Duration::from_millis(46));
         }
     }

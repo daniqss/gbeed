@@ -174,6 +174,7 @@ fn test_disassembly_boot() -> Result<()> {
     let mut gb = Dmg::new(None, Some(boot_rom));
     let mut init_ram = false;
     let mut set_audio = false;
+    let mut setup_logo = false;
 
     loop {
         let instr = gb.run()?;
@@ -204,12 +205,27 @@ fn test_disassembly_boot() -> Result<()> {
             set_audio = true;
         }
 
-        if init_ram && set_audio {
+        // set up logo
+        if gb.cpu.pc == 0x0053 && !setup_logo {
+            println!("Cpu after setting up logo: {}", gb.cpu);
+            assert_eq!(gb.cpu.af(), 0x0DC0);
+            assert_eq!(gb.cpu.bc(), 0x0000);
+            assert_eq!(gb.cpu.de(), 0x00E0);
+            assert_eq!(gb.cpu.hl(), 0x990F);
+            assert_eq!(gb.cpu.sp, 0xFFFE);
+            assert_eq!(gb.cpu.cycles, 66482);
+
+            setup_logo = true;
+        }
+
+        if init_ram && set_audio && setup_logo {
             println!("Cpu during boot: {}", gb.cpu);
             println!("Executing instruction at {:04X}: {}", gb.cpu.pc, instr);
+            break;
         }
     }
 
-    assert_eq!(gb.cpu.pc, 0x0100);
+    // rest of the boot rom should be tested after implementing ppu
+    assert_eq!(gb.cpu.pc, 0x0053);
     Ok(())
 }
