@@ -97,8 +97,8 @@ impl Dmg {
             }
         };
 
-        #[cfg(debug_assertions)]
-        println!("Executing instruction at {:04X}: {}", self.cpu.pc, instruction);
+        // #[cfg(debug_assertions)]
+        // println!("Executing instruction at {:04X}: {}", self.cpu.pc, instruction);
 
         let effect = match instruction.exec(self) {
             Ok(effect) => effect,
@@ -118,8 +118,8 @@ impl Dmg {
         };
         effect.flags.apply(&mut self.cpu.f);
 
-        #[cfg(debug_assertions)]
-        println!("CPU State after execution: {}", self.cpu);
+        // #[cfg(debug_assertions)]
+        // println!("CPU State after execution: {}", self.cpu);
     }
 }
 
