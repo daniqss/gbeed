@@ -2,7 +2,7 @@
   description = "DMG Game Boy Emulator for embedded devices";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     fenix.url = "github:nix-community/fenix";
   };
 
@@ -37,7 +37,18 @@
         ];
 
         RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
-        SDL_VIDEODRIVER = "wayland";
+
+        # used to set SDL_VIDEODRIVER depending on the graphical session
+        # if not set, SDL2 will fall to x11 in both wayland and x11
+        shellHook = ''
+          if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
+            export SDL_VIDEODRIVER=wayland
+          elif [ "$XDG_SESSION_TYPE" = "x11" ] || [ -n "$DISPLAY" ]; then
+            export SDL_VIDEODRIVER=x11
+          else
+            export SDL_VIDEODRIVER=kmsdrm
+          fi
+        '';
       };
     });
   };
