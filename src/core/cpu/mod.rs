@@ -10,7 +10,7 @@ use crate::{
     },
     utils::to_u16,
 };
-pub use instructions::Len;
+pub use instructions::{Instruction, Len};
 use instructions::{InstructionDestination as ID, InstructionTarget as IT, JumpCondition as JC, *};
 pub use registers::{Reg8 as R8, Reg16 as R16};
 use std::fmt::{self, Display, Formatter};
@@ -497,8 +497,8 @@ impl Display for Cpu {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(
             f,
-            "a: {:02X} f: {:02X} b: {:02X} c: {:02X} d: {:02X} e: {:02X} h: {:02X} l: {:02X} pc: {:04X} sp: {:04X}",
-            self.a, self.f, self.b, self.c, self.d, self.e, self.h, self.l, self.pc, self.sp
+            "a: {:02X} f: {:02X} b: {:02X} c: {:02X} d: {:02X} e: {:02X} h: {:02X} l: {:02X} pc: {:04X} sp: {:04X}, cycles: {}",
+            self.a, self.f, self.b, self.c, self.d, self.e, self.h, self.l, self.pc, self.sp, self.cycles
         )
     }
 }

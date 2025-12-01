@@ -36,7 +36,7 @@ impl Instruction for Call {
 
                 sp = sp.wrapping_sub(1);
                 gb[sp] = low(return_addr);
-                gb.cpu.sp = gb.cpu.sp;
+                gb.cpu.sp = sp;
 
                 gb.cpu.pc = *addr;
 

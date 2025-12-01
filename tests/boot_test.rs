@@ -134,14 +134,9 @@ use gbeed::prelude::*;
 ///
 /// Addr_00A8:
 /// 	;Nintendo Logo
-/// 	.DB $CE,$ED,$66,$66,$CC,$0D,$00,$0B,$03,$73,$00,$83,$00,$0C,$00,$0D
-/// 	.DB $00,$08,$11,$1F,$88,$89,$00,$0E,$DC,$CC,$6E,$E6,$DD,$DD,$D9,$99
-/// 	.DB $BB,$BB,$67,$63,$6E,$0E,$EC,$CC,$DD,$DC,$99,$9F,$BB,$B9,$33,$3E
 ///
 /// Addr_00D8:
-/// 	;More video data (the tile data for ®)
-/// 	.DB $3C,$42,$B9,$A5,$B9,$A5,$42,$3C
-///
+/// 	;More video data (the tile data for ®)///
 /// 	; ===== Nintendo logo comparison routine =====
 ///
 /// Addr_00E0:
@@ -175,12 +170,13 @@ use gbeed::prelude::*;
 #[test]
 fn test_disassembly_boot() -> Result<()> {
     let boot_rom = include_bytes!("../dmg_rom.bin").to_vec();
+    // it actually needs a game to compare the logos
     let mut gb = Dmg::new(None, Some(boot_rom));
     let mut init_ram = false;
     let mut set_audio = false;
 
     loop {
-        gb.run();
+        let instr = gb.run()?;
 
         // std::thread::sleep(std::time::Duration::from_millis(16));
 
@@ -191,6 +187,7 @@ fn test_disassembly_boot() -> Result<()> {
             assert_eq!(gb.cpu.h, 0x7F);
             assert_eq!(gb.cpu.l, 0xFF);
             assert_eq!(gb.cpu.sp, 0xFFFE);
+            assert_eq!(gb.cpu.cycles, 57350);
 
             init_ram = true;
         }
@@ -202,9 +199,14 @@ fn test_disassembly_boot() -> Result<()> {
             assert_eq!(gb.cpu.c, 0x12);
             assert_eq!(gb.cpu.hl(), 0xFF24);
             assert_eq!(gb[gb.cpu.hl()], 0x77);
+            assert_eq!(gb.cpu.cycles, 57372);
 
             set_audio = true;
-            break;
+        }
+
+        if init_ram && set_audio {
+            println!("Cpu during boot: {}", gb.cpu);
+            println!("Executing instruction at {:04X}: {}", gb.cpu.pc, instr);
         }
     }
 

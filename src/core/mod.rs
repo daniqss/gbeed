@@ -13,7 +13,7 @@ pub use crate::prelude::*;
 use crate::{
     core::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
-        cpu::{Len, R8, R16},
+        cpu::{Instruction, Len, R8, R16},
         interrupts::IE,
         memory::Accessable,
         ppu::{PPU_REGISTER_END, PPU_REGISTER_START},
@@ -86,30 +86,25 @@ impl Dmg {
 
     pub fn reset(&mut self) { self.cpu.reset(); }
 
-    pub fn run(&mut self) {
+    /// Modifies the DMG state by executing one CPU instruction, and return the executed instruction
+    pub fn run(&mut self) -> Result<Box<dyn Instruction>> {
         let opcode = self[self.cpu.pc];
 
         let mut instruction = match Cpu::fetch(self, opcode) {
             Ok(instr) => instr,
-            Err(e) => {
-                eprintln!("Error fetching instruction: {}", e);
-                return;
-            }
+            Err(e) => Err(Error::Generic(format!(
+                "Error fetching instruction at {:04X}: {}",
+                self.cpu.pc, e
+            )))?,
         };
-
-        // #[cfg(debug_assertions)]
-        // println!("Executing instruction at {:04X}: {}", self.cpu.pc, instruction);
 
         let effect = match instruction.exec(self) {
             Ok(effect) => effect,
-            Err(e) => {
-                eprintln!("Error executing instruction: {}", e);
-                return;
-            }
+            Err(e) => Err(Error::Generic(format!(
+                "Error executing instruction at {:04X}: {}",
+                self.cpu.pc, e
+            )))?,
         };
-
-        // #[cfg(debug_assertions)]
-        // println!("Effect: {:?}", effect);
 
         self.cpu.cycles = self.cpu.cycles.wrapping_add(effect.cycles as usize);
         self.cpu.pc = match effect.len {
@@ -118,8 +113,7 @@ impl Dmg {
         };
         effect.flags.apply(&mut self.cpu.f);
 
-        // #[cfg(debug_assertions)]
-        // println!("CPU State after execution: {}", self.cpu);
+        Ok(instruction)
     }
 }
 
