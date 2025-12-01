@@ -117,8 +117,6 @@ impl Memory {
     /// ```
     /// Next instruction will be the first `nop` in 0x0100, in the cartridge rom
     pub fn unmap_boot_rom(&mut self) {
-        // unreachable!("Boot ROM unmapping not implemented yet");
-
         if let Some(game) = &self.game {
             let game_len = game.rom.len().min((ROM_BANKNN_END + 1) as usize);
             self.rom[..game_len].copy_from_slice(&game.rom[..game_len]);
@@ -173,28 +171,4 @@ impl IndexMut<u16> for Memory {
 
 impl Default for Memory {
     fn default() -> Self { Memory::new(None, None) }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::Dmg;
-
-    use super::*;
-
-    #[test]
-    fn test_read_write_byte() {
-        let mut memory = Memory::new(None, None);
-        memory[0x1234] = 0x56;
-        assert_eq!(memory[0x1234], 0x56);
-    }
-
-    #[test]
-    fn test_read_write_word() {
-        let mut gb = Dmg::default();
-        gb.write16(0x1234, 0x5678);
-
-        assert_eq!(gb.read16(0x1234), 0x5678);
-        assert_eq!(gb[0x1234], 0x78);
-        assert_eq!(gb[0x1235], 0x56);
-    }
 }

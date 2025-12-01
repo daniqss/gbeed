@@ -109,8 +109,8 @@ fn main() -> Result<()> {
                 _ => {}
             }
 
-            let _ = gameboy.run();
-            std::thread::sleep(std::time::Duration::from_millis(46));
+            // let _ = gameboy.run();
+            // std::thread::sleep(std::time::Duration::from_millis(46));
         }
     }
 
