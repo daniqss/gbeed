@@ -39,7 +39,6 @@
         RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
 
         # used to set SDL_VIDEODRIVER depending on the graphical session
-        # if not set, SDL2 will fall to x11 in both wayland and x11
         shellHook = ''
           if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
             export SDL_VIDEODRIVER=wayland
