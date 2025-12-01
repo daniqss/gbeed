@@ -85,7 +85,7 @@ mod tests {
         assert_eq!(gb.cpu.f, ZERO_FLAG_MASK | CARRY_FLAG_MASK);
         assert_eq!(gb.cpu.sp, 0xFF02);
         assert_eq!(effect.cycles, 3);
-        assert_eq!(effect.len, 1);
+        assert_eq!(effect.len(), 1);
         assert_eq!(
             effect.flags,
             Flags {

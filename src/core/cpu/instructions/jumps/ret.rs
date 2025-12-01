@@ -37,8 +37,7 @@ impl Instruction for Ret {
         gb.cpu.pc = return_addr;
         gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
 
-        // it actually uses 1 byte, but as it jumps, we'll leave it as 0
-        Ok(InstructionEffect::new(cycles, 0, Flags::none()))
+        Ok(InstructionEffect::with_jump(cycles, 1, Flags::none()))
     }
 
     // this probably is gonna look wrong

@@ -10,6 +10,7 @@ use crate::{
     },
     utils::to_u16,
 };
+pub use instructions::Len;
 use instructions::{InstructionDestination as ID, InstructionTarget as IT, JumpCondition as JC, *};
 pub use registers::{Reg8 as R8, Reg16 as R16};
 use std::fmt::{self, Display, Formatter};
@@ -63,26 +64,13 @@ impl Cpu {
     pub fn hl(&self) -> u16 { to_u16(self.l, self.h) }
 
     #[inline]
-    pub fn carry(&self) -> bool {
-        if self.f & CARRY_FLAG_MASK != 0 {
-            true
-        } else {
-            false
-        }
-    }
+    pub fn carry(&self) -> bool { self.f & CARRY_FLAG_MASK != 0 }
     #[inline]
-
-    pub fn not_carry(&self) -> bool {
-        if self.f & CARRY_FLAG_MASK == 0 {
-            true
-        } else {
-            false
-        }
-    }
+    pub fn not_carry(&self) -> bool { self.f & CARRY_FLAG_MASK == 0 }
     #[inline]
-    pub fn zero(&self) -> bool { if self.f & ZERO_FLAG_MASK != 0 { true } else { false } }
+    pub fn zero(&self) -> bool { self.f & ZERO_FLAG_MASK != 0 }
     #[inline]
-    pub fn not_zero(&self) -> bool { if self.f & ZERO_FLAG_MASK == 0 { true } else { false } }
+    pub fn not_zero(&self) -> bool { self.f & ZERO_FLAG_MASK == 0 }
 
     pub fn reset(&mut self) {
         self.a = 0x00;

@@ -13,7 +13,7 @@ pub use crate::prelude::*;
 use crate::{
     core::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
-        cpu::{R8, R16},
+        cpu::{Len, R8, R16},
         interrupts::IE,
         memory::Accessable,
         ppu::{PPU_REGISTER_END, PPU_REGISTER_START},
@@ -87,7 +87,7 @@ impl Dmg {
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     pub fn run(&mut self) {
-        let opcode = self.bus[self.cpu.pc];
+        let opcode = self[self.cpu.pc];
 
         let mut instruction = match Cpu::fetch(self, opcode) {
             Ok(instr) => instr,
@@ -98,41 +98,28 @@ impl Dmg {
         };
 
         #[cfg(debug_assertions)]
-        {
-            let writer = &mut String::new();
-            match instruction.disassembly(writer) {
-                Ok(_) => println!("{}", writer),
-                Err(e) => {
-                    eprintln!("Error disassembling instruction: {}", e);
-                }
-            }
-        }
+        println!("Executing instruction at {:04X}: {}", self.cpu.pc, instruction);
 
-        let (cycles, len, flags) = match instruction.exec(self) {
-            Ok(effect) => (effect.cycles as usize, effect.len as u16, effect.flags),
+        let effect = match instruction.exec(self) {
+            Ok(effect) => effect,
             Err(e) => {
                 eprintln!("Error executing instruction: {}", e);
                 return;
             }
         };
 
-        // explicitly drop the instruction to release borrow references
-        // after actually making changes to the CPU state and return the effect
-        // maybe in the future we must implement a better way to handle this
-        // using reference counting for registers I guess
-        // which would be ez, because we already have registers enums
-        // so changing that to a type/struct that holds Rc<RefCell<u8>> would be easy
-        drop(instruction);
+        // #[cfg(debug_assertions)]
+        // println!("Effect: {:?}", effect);
 
-        self.cpu.cycles = self.cpu.cycles.wrapping_add(cycles);
-        self.cpu.pc = self.cpu.pc.wrapping_add(len);
-        flags.apply(&mut self.cpu.f);
+        self.cpu.cycles = self.cpu.cycles.wrapping_add(effect.cycles as usize);
+        self.cpu.pc = match effect.len {
+            Len::Jump(_) => self.cpu.pc,
+            Len::AddLen(len) => self.cpu.pc.wrapping_add(len as u16),
+        };
+        effect.flags.apply(&mut self.cpu.f);
 
         #[cfg(debug_assertions)]
-        {
-            println!("{}", self.cpu);
-            println!("{}", self.cpu.cycles);
-        }
+        println!("CPU State after execution: {}", self.cpu);
     }
 }
 

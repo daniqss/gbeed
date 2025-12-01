@@ -183,16 +183,45 @@ impl Display for InstructionDestination {
     }
 }
 
+/// solves the issue of overriding jumps with instruction length addition to pc
+#[derive(Debug)]
+pub enum Len {
+    Jump(u8),
+    AddLen(u8),
+}
+
 /// Effect of executing a instruction
 /// Instructions also "effect" their operands but those are represented as parameters using references
+#[derive(Debug)]
 pub struct InstructionEffect {
     pub cycles: u8,
-    pub len: u8,
+    pub len: Len,
     pub flags: Flags,
 }
 
 impl InstructionEffect {
-    pub fn new(cycles: u8, len: u8, flags: Flags) -> Self { Self { cycles, len, flags } }
+    pub fn new(cycles: u8, len: u8, flags: Flags) -> Self {
+        Self {
+            cycles,
+            len: Len::AddLen(len),
+            flags,
+        }
+    }
+
+    pub fn with_jump(cycles: u8, len: u8, flags: Flags) -> Self {
+        Self {
+            cycles,
+            len: Len::Jump(len),
+            flags,
+        }
+    }
+
+    pub fn len(&self) -> u8 {
+        match &self.len {
+            Len::Jump(len) => *len,
+            Len::AddLen(len) => *len,
+        }
+    }
 }
 
 /// Errors that can occur during instruction execution

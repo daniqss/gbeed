@@ -80,7 +80,7 @@ mod tests {
         let effect = push.exec(&mut gb).unwrap();
 
         assert_eq!(effect.cycles, 4);
-        assert_eq!(effect.len, 1);
+        assert_eq!(effect.len(), 1);
         assert_eq!(gb[gb.cpu.sp], ZERO_FLAG_MASK | CARRY_FLAG_MASK);
         assert_eq!(gb[gb.cpu.sp + 1], gb.cpu.a);
         assert_eq!(gb.cpu.sp, 0xFFA0 - 2);
@@ -99,7 +99,7 @@ mod tests {
         let effect = push.exec(&mut gb).unwrap();
 
         assert_eq!(effect.cycles, 4);
-        assert_eq!(effect.len, 1);
+        assert_eq!(effect.len(), 1);
         assert_eq!(gb[gb.cpu.sp], gb.cpu.c);
         assert_eq!(gb[gb.cpu.sp + 1], gb.cpu.b);
         assert_eq!(gb.cpu.sp, 0xFFA0 - 2);

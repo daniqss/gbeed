@@ -40,7 +40,7 @@ impl Instruction for Call {
 
                 gb.cpu.pc = *addr;
 
-                Ok(InstructionEffect::new(6, 0, Flags::none()))
+                Ok(InstructionEffect::with_jump(6, 3, Flags::none()))
             }
 
             _ => Err(InstructionError::MalformedInstruction),

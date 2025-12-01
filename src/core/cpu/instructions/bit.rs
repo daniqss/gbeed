@@ -1,7 +1,6 @@
 use crate::{
     Dmg,
     core::cpu::{
-        R8,
         flags::{Flags, check_zero},
         instructions::{
             Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
@@ -22,7 +21,7 @@ impl Bit {
 impl Instruction for Bit {
     fn exec(&mut self, _gb: &mut Dmg) -> InstructionResult {
         let (target, cycles, len): (u8, u8, u8) = match &self.target {
-            IT::Reg8(r8, reg) if *reg != R8::A => (*r8, 2, 2),
+            IT::Reg8(r8, _) => (*r8, 2, 2),
             IT::PointedByHL(val) => (*val, 3, 2),
 
             _ => return Err(InstructionError::MalformedInstruction),

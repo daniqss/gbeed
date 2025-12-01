@@ -39,8 +39,7 @@ impl Instruction for Rst {
         // implicit jump to called address
         gb.cpu.pc = self.vec as u16;
 
-        // TODO: return 0 instead of 1 len to avoid pc increment after instruction?
-        Ok(InstructionEffect::new(4, 0, Flags::none()))
+        Ok(InstructionEffect::with_jump(4, 1, Flags::none()))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {

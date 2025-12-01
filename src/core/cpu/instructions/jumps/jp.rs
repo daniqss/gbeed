@@ -29,20 +29,19 @@ impl Instruction for Jp {
 
                 let addr = if should_jump { *addr } else { gb.cpu.pc };
                 let cycles = if should_jump { 4 } else { 3 };
-                // TODO: return len as 0 if jumped?
-                let len = if should_jump { 0 } else { 3 };
+                let len = 3;
 
                 (addr, cycles, len)
             }
 
-            IT::JumpToHL(addr) => (*addr, 1, 0),
+            IT::JumpToHL(addr) => (*addr, 1, 1),
 
             _ => return Err(InstructionError::MalformedInstruction),
         };
 
         gb.cpu.pc = addr;
 
-        Ok(InstructionEffect::new(cycles, len, Flags::none()))
+        Ok(InstructionEffect::with_jump(cycles, len, Flags::none()))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "jp {}", self.jump) }
@@ -71,7 +70,7 @@ mod test {
 
         assert_eq!(gb.cpu.pc, 0x1234);
         assert_eq!(result.cycles, 1);
-        assert_eq!(result.len, 0);
+        assert_eq!(result.len(), 1);
     }
 
     #[test]
@@ -85,7 +84,7 @@ mod test {
 
         assert_eq!(gb.cpu.pc, 0x200);
         assert_eq!(result.cycles, 4);
-        assert_eq!(result.len, 0);
+        assert_eq!(result.len(), 3);
     }
 
     #[test]
@@ -100,7 +99,7 @@ mod test {
 
         assert_eq!(gb.cpu.pc, 0x200);
         assert_eq!(result.cycles, 4);
-        assert_eq!(result.len, 0);
+        assert_eq!(result.len(), 3);
     }
 
     #[test]
@@ -119,6 +118,6 @@ mod test {
 
         assert_eq!(gb.cpu.pc, 0x100);
         assert_eq!(result.cycles, 3);
-        assert_eq!(result.len, 3);
+        assert_eq!(result.len(), 3);
     }
 }

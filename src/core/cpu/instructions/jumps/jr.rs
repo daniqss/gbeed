@@ -27,6 +27,7 @@ impl Instruction for Jr {
         let (result, cycles, len) = match &self.jump {
             IT::JumpToImm8(cc, offset) => {
                 let should_jump = cc.should_jump();
+                gb.cpu.pc = gb.cpu.pc.wrapping_add(2);
 
                 if should_jump {
                     // cast i8 offset to u16 to perform addition
@@ -35,11 +36,11 @@ impl Instruction for Jr {
                         let mut e8: u8 = !offset;
                         e8 = e8.wrapping_add(1);
 
-                        gb.cpu.pc.wrapping_add(2).wrapping_sub(e8 as u16)
+                        gb.cpu.pc.wrapping_sub(e8 as u16)
                     } else {
-                        gb.cpu.pc.wrapping_add(2).wrapping_add(*offset as u16)
+                        gb.cpu.pc.wrapping_add(*offset as u16)
                     };
-                    (result, 3, 0)
+                    (result, 3, 2)
                 } else {
                     (gb.cpu.pc, 2, 2)
                 }
@@ -50,7 +51,7 @@ impl Instruction for Jr {
 
         gb.cpu.pc = result;
 
-        Ok(InstructionEffect::new(cycles, len, Flags::none()))
+        Ok(InstructionEffect::with_jump(cycles, len, Flags::none()))
     }
 
     fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "jr {}", self.jump) }
@@ -78,7 +79,7 @@ mod test {
 
         assert_eq!(gb.cpu.pc, pc.wrapping_add((e8 + 2) as u16));
         assert_eq!(result.cycles, 3);
-        assert_eq!(result.len, 0);
+        assert_eq!(result.len(), 2);
     }
 
     #[test]
@@ -103,7 +104,7 @@ mod test {
 
         assert_eq!(gb.cpu.pc, expected_pc);
         assert_eq!(result.cycles, 3);
-        assert_eq!(result.len, 0);
+        assert_eq!(result.len(), 2);
     }
 
     #[test]
@@ -119,8 +120,8 @@ mod test {
         let mut instr = Jr::new(IT::JumpToImm8(JC::Carry(gb.cpu.carry()), e8));
         let result = instr.exec(&mut gb).unwrap();
 
-        assert_eq!(gb.cpu.pc, pc);
+        assert_eq!(gb.cpu.pc, pc + 2);
         assert_eq!(result.cycles, 2);
-        assert_eq!(result.len, 2);
+        assert_eq!(result.len(), 2);
     }
 }

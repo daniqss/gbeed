@@ -68,7 +68,7 @@ mod tests {
 
         assert_eq!(gb.cpu.a, 0);
         assert_eq!(result.cycles, 2);
-        assert_eq!(result.len, 2);
+        assert_eq!(result.len(), 2);
         assert_eq!(
             result.flags,
             Flags {
@@ -91,7 +91,7 @@ mod tests {
 
         assert_eq!(gb.cpu.a, 0b0000_1101);
         assert_eq!(result.cycles, 1);
-        assert_eq!(result.len, 1);
+        assert_eq!(result.len(), 1);
         assert_eq!(
             result.flags,
             Flags {
@@ -114,7 +114,7 @@ mod tests {
 
         assert_eq!(gb.cpu.a, 0xF0);
         assert_eq!(result.cycles, 2);
-        assert_eq!(result.len, 1);
+        assert_eq!(result.len(), 1);
         assert_eq!(
             result.flags,
             Flags {
