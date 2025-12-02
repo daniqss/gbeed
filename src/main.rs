@@ -34,13 +34,14 @@ fn main() -> Result<()> {
     let video_subsys = sdl_context.video()?;
     let ttf_context = sdl2::ttf::init()?;
 
+    let display_mode = video_subsys.desktop_display_mode(0)?;
     let window = video_subsys
-        .window(WINDOW_TITLE, SCREEN_WIDTH, SCREEN_HEIGHT)
-        .position_centered()
-        .opengl()
+        .window(WINDOW_TITLE, display_mode.w as u32, display_mode.h as u32)
+        .resizable()
         .build()?;
 
-    let mut canvas = window.into_canvas().build()?;
+    let mut canvas = window.into_canvas().software().build()?;
+    canvas.set_blend_mode(sdl2::render::BlendMode::None);
     let texture_creator = canvas.texture_creator();
 
     // load our font
@@ -54,10 +55,7 @@ fn main() -> Result<()> {
         .lines()
         .filter_map(|line| {
             let render_line = if line.is_empty() { " " } else { line };
-            let surface = font
-                .render(render_line)
-                .blended(Color::RGBA(255, 255, 255, 200))
-                .ok()?;
+            let surface = font.render(render_line).solid(Color::RGB(255, 255, 255)).ok()?;
             let texture = texture_creator.create_texture_from_surface(&surface).ok()?;
 
             let TextureQuery { width, .. } = texture.query();
