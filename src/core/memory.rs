@@ -155,6 +155,13 @@ impl IndexMut<u16> for Memory {
     fn index_mut(&mut self, address: u16) -> &mut Self::Output {
         match address {
             ROM_BANK00_START..=ROM_BANKNN_END => &mut self.rom[address as usize],
+
+            // TODO: Tiles are always indexed using an 8-bit integer, but the addressing method may differ:
+            // - The “$8000 method” uses $8000 as its base pointer and uses an unsigned addressing, meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
+            // - The “$8800 method” uses $9000 as its base pointer and uses a signed addressing, meaning that tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1; or, to put it differently, “$8800 addressing” takes tiles 0-127 from block 2 and tiles 128-255 from block 1.
+            // (You can notice that block 1 is shared by both addressing methods)
+            //
+            // Objects always use “$8000 addressing”, but the BG and Window can use either mode, controlled by LCDC bit 4
             VRAM_START..=VRAM_END => &mut self.vram[(address - VRAM_START) as usize],
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
                 &mut self.external_ram[(address - EXTERNAL_RAM_START) as usize]
