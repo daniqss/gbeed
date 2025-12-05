@@ -1,3 +1,4 @@
+mod fifo;
 mod sprite;
 
 use crate::prelude::*;
@@ -40,18 +41,6 @@ pub enum LCDMode {
     Drawing = 3,
     HBlank = 0,
     VBlank = 1,
-}
-
-impl From<u8> for LCDMode {
-    fn from(value: u8) -> Self {
-        match value & 0x03 {
-            0 => LCDMode::HBlank,
-            1 => LCDMode::VBlank,
-            2 => LCDMode::OAMScan,
-            3 => LCDMode::Drawing,
-            _ => unreachable!("LCD cannot have mode than two bits"),
-        }
-    }
 }
 
 // pub struct PixelFifo {
@@ -143,7 +132,15 @@ impl Ppu {
     }
 
     // maybe its not best way to implement this
-    pub fn get_mode(&self) -> u8 { self.lcd_status & 0x03 }
+    pub fn get_mode(&self) -> LCDMode {
+        match self.lcd_status & 0x03 {
+            0 => LCDMode::HBlank,
+            1 => LCDMode::VBlank,
+            2 => LCDMode::OAMScan,
+            3 => LCDMode::Drawing,
+            _ => unreachable!("LCD cannot have mode than two bits"),
+        }
+    }
 
     // pub fn update_palette(colors: &mut [u32; 4], palette: u8) {
     //     for i in 0..4 {
@@ -151,14 +148,36 @@ impl Ppu {
     //     }
     // }
 
-    pub fn tick(&mut self) {
-        self.dots += 1;
+    ///            |  20 dots  | 43+ dots  | 51- dots
+    /// -------------------------------------------------
+    /// 144 lines  | Oam       | Pixel     |
+    ///            | Search    | Transfer  | HBlank
+    /// -------------------------------------------------
+    /// 10 lines   |             VBlank              
+    pub fn step(&mut self, instruction_cycles: u8) {
+        if !self.lcd_display_enable() {
+            return;
+        }
+        self.dots += instruction_cycles as usize;
 
-        match self.get_mode().into() {
+        // dma transfers should be handled here
+
+        // look current mode
+        match self.get_mode() {
             LCDMode::OAMScan => {}
             LCDMode::Drawing => {}
             LCDMode::HBlank => {}
-            LCDMode::VBlank => {}
+            LCDMode::VBlank => {
+                if self.dots >= 456 {
+                    self.dots -= 456;
+                    self.ly += 1;
+
+                    if self.ly > 153 {
+                        self.ly = 0;
+                        self.frames += 1;
+                    }
+                }
+            }
         }
     }
 }
