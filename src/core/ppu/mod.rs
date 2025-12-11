@@ -1,7 +1,11 @@
 mod fifo;
 mod sprite;
 
-use crate::prelude::*;
+use crate::{
+    Dmg,
+    core::memory::{OAM_END, OAM_START},
+    prelude::*,
+};
 
 pub const PPU_REGISTER_START: u16 = 0xFF40;
 pub const PPU_REGISTER_END: u16 = 0xFF4B;
@@ -154,31 +158,50 @@ impl Ppu {
     ///            | Search    | Transfer  | HBlank
     /// -------------------------------------------------
     /// 10 lines   |             VBlank              
-    pub fn step(&mut self, instruction_cycles: u8) {
-        if !self.lcd_display_enable() {
+    pub fn step(gb: &mut Dmg, instruction_cycles: u8) {
+        if !gb.ppu.lcd_display_enable() {
             return;
         }
-        self.dots += instruction_cycles as usize;
+        gb.ppu.dots += instruction_cycles as usize;
 
-        // dma transfers should be handled here
+        // this should be done on register writes
+        if gb.ppu.dma != 0 {
+            Ppu::dma_transfer(gb);
+        }
 
         // look current mode
-        match self.get_mode() {
+        match gb.ppu.get_mode() {
             LCDMode::OAMScan => {}
             LCDMode::Drawing => {}
             LCDMode::HBlank => {}
             LCDMode::VBlank => {
-                if self.dots >= 456 {
-                    self.dots -= 456;
-                    self.ly += 1;
+                if gb.ppu.dots >= 456 {
+                    gb.ppu.dots -= 456;
+                    gb.ppu.ly += 1;
 
-                    if self.ly > 153 {
-                        self.ly = 0;
-                        self.frames += 1;
+                    if gb.ppu.ly > 153 {
+                        gb.ppu.ly = 0;
+                        gb.ppu.frames += 1;
                     }
                 }
             }
         }
+    }
+
+    /// Writing to DMA register will copy from ROM or RAM to OAM memory
+    /// It will take 160 dots or 320 at double speed
+    /// CPU can access only HRAM and PPU can't access OAM
+    /// Most games transfer to HRAM code to continue execution in CPU, and execute DMA transfer in VBlank
+    fn dma_transfer(gb: &mut Dmg) {
+        // address from data will be copied
+        let src_addr: u16 = (gb.ppu.dma << 8) as u16;
+
+        for i in 0..(OAM_END - OAM_START + 1) {
+            let byte = gb[(src_addr + i) as u16];
+            gb[(OAM_START + i) as u16] = byte;
+        }
+
+        gb.ppu.dma = 0;
     }
 }
 
