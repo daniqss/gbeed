@@ -5,6 +5,7 @@ use crate::{
     Dmg,
     core::memory::{OAM_END, OAM_START},
     prelude::*,
+    utils::to_u16,
 };
 
 pub const PPU_REGISTER_START: u16 = 0xFF40;
@@ -82,7 +83,9 @@ pub struct Ppu {
 }
 
 impl Default for Ppu {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Ppu {
@@ -152,8 +155,10 @@ impl Ppu {
     //     }
     // }
 
+    /// # Step the PPU by the number of cycles the last instruction took
+    ///
     ///            |  20 dots  | 43+ dots  | 51- dots
-    /// -------------------------------------------------
+    /// -----------:-------------------------------------
     /// 144 lines  | Oam       | Pixel     |
     ///            | Search    | Transfer  | HBlank
     /// -------------------------------------------------
@@ -194,7 +199,7 @@ impl Ppu {
     /// Most games transfer to HRAM code to continue execution in CPU, and execute DMA transfer in VBlank
     fn dma_transfer(gb: &mut Dmg) {
         // address from data will be copied
-        let src_addr: u16 = (gb.ppu.dma << 8) as u16;
+        let src_addr: u16 = to_u16(0, gb.ppu.dma);
 
         for i in 0..(OAM_END - OAM_START + 1) {
             let byte = gb[(src_addr + i) as u16];

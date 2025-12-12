@@ -169,7 +169,7 @@ use gbeed::prelude::*;
 /// ```
 #[test]
 fn test_disassembly_boot() -> Result<()> {
-    let boot_rom = include_bytes!("../dmg_rom.bin").to_vec();
+    let boot_rom = include_bytes!("../dmg_boot.bin").to_vec();
     // it actually needs a game to compare the logos
     let mut gb = Dmg::new(None, Some(boot_rom));
     let mut init_ram = false;
