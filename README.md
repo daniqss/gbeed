@@ -4,10 +4,15 @@ WIP DMG Game Boy emulator for embedded devices. This project aims to provide a s
 
 ## How to use
 ### Dependencies
-This project uses `nix` flakes, and are the recommended way to manage dependencies. If both are installed and properly configured, using the project should be as easy as:
+This project uses `nix` flakes, and are the recommended way to manage dependencies. If installed and properly configured, using the project should be as easy as:
 ```sh
 nix develop .
 just run -- <game_rom> <boot_rom>   # just passes flags directly to cargo adding necessary features
+```
+
+If flakes are not enabled, you can use:
+```sh
+nix develop --experimental-features "nix-command flakes" .
 ```
 
 If you have `direnv` installed and configured, just entering the project directory will automatically load the development environment after the first `direnv allow`
@@ -15,11 +20,6 @@ If you have `direnv` installed and configured, just entering the project directo
 > direnv: error .envrc is blocked. Run `direnv allow` to approve its content
 direnv allow
 just run -- <game_rom> <boot_rom>
-```
-
-If flakes are not enabled, you can use:
-```sh
-nix develop --experimental-features "nix-command flakes" .
 ```
 
 If you're not using nix, the dependencies must be installed manually, and according to the wanted environment. All dependencies are listed in the `flake.nix` file. For example, if you're using Debian in x11, you will need to install the rust toolchain with `rustc >= 1.91.1` and the raylib dependencies

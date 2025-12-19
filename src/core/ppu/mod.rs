@@ -83,9 +83,7 @@ pub struct Ppu {
 }
 
 impl Default for Ppu {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 impl Ppu {
@@ -155,14 +153,14 @@ impl Ppu {
     //     }
     // }
 
-    /// # Step the PPU by the number of cycles the last instruction took
-    ///
-    ///            |  20 dots  | 43+ dots  | 51- dots
-    /// -----------:-------------------------------------
-    /// 144 lines  | Oam       | Pixel     |
-    ///            | Search    | Transfer  | HBlank
-    /// -------------------------------------------------
-    /// 10 lines   |             VBlank              
+    // # Step the PPU by the number of cycles the last instruction took
+    //
+    //            |  20 dots  | 43+ dots  | 51- dots
+    // -----------:-------------------------------------
+    // 144 lines  | Oam       | Pixel     |
+    //            | Search    | Transfer  | HBlank
+    // -------------------------------------------------
+    // 10 lines   |             VBlank
     pub fn step(gb: &mut Dmg, instruction_cycles: u8) {
         if !gb.ppu.lcd_display_enable() {
             return;
