@@ -7,7 +7,6 @@ edition = "2024"
 thiserror = "2.0.17"
 paste = "1.0.15"
 
-[dependencies.sdl2]
-version = "0.38"
-default-features = false
-features = ["mixer", "image", "ttf", "gfx"]
+[dependencies.raylib]
+git = "https://github.com/raylib-rs/raylib-rs"
+version = "5.7.0"
