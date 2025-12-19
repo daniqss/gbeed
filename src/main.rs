@@ -7,10 +7,19 @@ use raylib::prelude::*;
 
 use std::io::{self, ErrorKind};
 
-const SCREEN_WIDTH: u32 = 800;
-const SCREEN_HEIGHT: u32 = 600;
-const FONT_PATH: &str = "./assets/fonts/CaskaydiaCoveNerdFont-BoldItalic.ttf";
+// we should distinguish between desktop arm and armv6 32 bits of the raspberry pi zero
+#[cfg(target_arch = "arm")]
+const SCREEN_WIDTH: i32 = 400;
+#[cfg(not(target_arch = "arm"))]
+const SCREEN_WIDTH: i32 = 1920;
+#[cfg(target_arch = "arm")]
+const SCREEN_HEIGHT: i32 = 240;
+#[cfg(not(target_arch = "arm"))]
+const SCREEN_HEIGHT: i32 = 1080;
+#[cfg(target_arch = "arm")]
 const WINDOW_TITLE: &str = "gbeed";
+#[cfg(not(target_arch = "arm"))]
+const WINDOW_TITLE: &str = "gbeed -- desktop";
 
 fn main() -> Result<()> {
     let mut args = std::env::args().skip(1);
@@ -24,13 +33,11 @@ fn main() -> Result<()> {
 
     let game = Cartridge::new(std::fs::read(game_name)?)?;
     let boot_room_data = std::fs::read(boot_room_name)?;
+    let mut gb = Dmg::new(Some(game), Some(boot_room_data));
 
-    // let mut dmg = Dmg::new(Some(game), Some(boot_room_data));
-
-    let (w, h) = (1920, 1080);
     let (mut rl, thread) = raylib::init()
-        .size(w, h)
-        .title("gbeed -- desktop")
+        .size(SCREEN_WIDTH, SCREEN_HEIGHT)
+        .title(WINDOW_TITLE)
         .resizable()
         .build();
     let black = Color::new(0, 0, 0, 255);
@@ -39,53 +46,53 @@ fn main() -> Result<()> {
     while !rl.window_should_close() {
         rl.draw(&thread, |mut d| {
             d.clear_background(ray_white);
-            for (i, line) in format!("{}", game).lines().enumerate() {
-                d.draw_text(line, 10, 10 + i as i32 * 20, 20, black);
+
+            if let Some(game) = &gb.bus.game {
+                for (i, line) in format!("{}", game).lines().enumerate() {
+                    d.draw_text(line, 10, 10 + i as i32 * 20, 20, black);
+                }
             }
         });
+        update_joypad(&mut gb.joypad, rl.get_key_pressed());
     }
 
     Ok(())
 }
 
-// fn update_joypad(is_down: bool, key: Keycode, jp: &mut Joypad) {
-//     match key {
-//         Keycode::W => {
-//             jp.set_select_directions(is_down);
-//             jp.set_input_up_select(is_down)
-//         }
-//         Keycode::S => {
-//             jp.set_select_directions(is_down);
-//             jp.set_input_down_start(is_down)
-//         }
-//         Keycode::A => {
-//             jp.set_select_directions(is_down);
-//             jp.set_input_left_b(is_down)
-//         }
-//         Keycode::D => {
-//             jp.set_select_directions(is_down);
-//             jp.set_input_right_a(is_down)
-//         }
-//         // a
-//         Keycode::J => {
-//             jp.set_select_buttons(is_down);
-//             jp.set_input_right_a(is_down)
-//         }
-//         // b
-//         Keycode::X => {
-//             jp.set_select_buttons(is_down);
-//             jp.set_input_left_b(is_down)
-//         }
-//         // start
-//         Keycode::Return => {
-//             jp.set_select_buttons(is_down);
-//             jp.set_input_down_start(is_down)
-//         }
-//         // select
-//         Keycode::RShift => {
-//             jp.set_select_buttons(is_down);
-//             jp.set_input_up_select(is_down)
-//         }
-//         _ => {}
-//     }
-// }
+fn update_joypad(jp: &mut Joypad, key: Option<KeyboardKey>) {
+    match key {
+        Some(KeyboardKey::KEY_UP | KeyboardKey::KEY_W) => {
+            jp.set_select_directions(true);
+            jp.set_input_up_select(true)
+        }
+        Some(KeyboardKey::KEY_DOWN | KeyboardKey::KEY_S) => {
+            jp.set_select_directions(true);
+            jp.set_input_down_start(true)
+        }
+        Some(KeyboardKey::KEY_LEFT | KeyboardKey::KEY_A) => {
+            jp.set_select_directions(true);
+            jp.set_input_left_b(true)
+        }
+        Some(KeyboardKey::KEY_RIGHT | KeyboardKey::KEY_D) => {
+            jp.set_select_directions(true);
+            jp.set_input_right_a(true)
+        }
+        Some(KeyboardKey::KEY_J) => {
+            jp.set_select_buttons(true);
+            jp.set_input_right_a(true)
+        }
+        Some(KeyboardKey::KEY_X) => {
+            jp.set_select_buttons(true);
+            jp.set_input_left_b(true)
+        }
+        Some(KeyboardKey::KEY_ENTER) => {
+            jp.set_select_buttons(true);
+            jp.set_input_down_start(true)
+        }
+        Some(KeyboardKey::KEY_RIGHT_SHIFT) | Some(KeyboardKey::KEY_LEFT_SHIFT) => {
+            jp.set_select_buttons(true);
+            jp.set_input_up_select(true)
+        }
+        _ => {}
+    }
+}
