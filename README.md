@@ -29,7 +29,7 @@ If you're not using nix, the dependencies must be installed manually, and accord
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # raylib dependencies
-sudo apt install build-essential git libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libxkbcommon-dev libdrm-dev libgbm-dev
+sudo apt install build-essential cmake clang git libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libxkbcommon-dev libdrm-dev libgbm-dev
 ```
 
 To build and run the project without just, in x11 you can just `cargo run -- <game_rom> <boot_rom>`, but in other environments you will need the to add the corresponding features, as are used in `justfile`.
@@ -40,7 +40,8 @@ The flake exposes three different shells for different display environments. Dir
 - `wayland`: `nix develop .#wayland`
 - `drm`: `nix develop .#drm`
 
-The default shell is `x11`, because will at least run in wayland sessions too using xwayland
+The default shell is `x11`, because will at least run in wayland sessions too using xwayland.
+DRM support is by now only tested in AMD hardware. In Nvidia both `opengl_es_20` and `opengl_es_30` segfault at init (`dic 20 13:12:41 stoneward kernel: gbeed[6765]: segfault at 0 ip 00007fa29f9b4d31 sp 00007fff9c2052d0 error 4 in libnvidia-egl-gbm.so.1.1.2[1d31,7fa29f9b4000+3000] likely on CPU 0 (core 0, socket 0)`).
 
 ### How to run tests
 To run the tests, you can use just:
