@@ -23,9 +23,9 @@ const BG_ENABLE: u8 = 0x01;
 
 /// LCDC Status Register (R/W) bits
 const LYC_EQ_LY_INTERRUPT: u8 = 0x40;
-const MODE_2_OAM_INTERRUPT: u8 = 0x20;
-const MODE_1_VBLANK_INTERRUPT: u8 = 0x10;
-const MODE_0_HBLANK_INTERRUPT: u8 = 0x08;
+const OAM_INTERRUPT: u8 = 0x20;
+const VBLANK_INTERRUPT: u8 = 0x10;
+const HBLANK_INTERRUPT: u8 = 0x08;
 const LYC_EQ_LY_FLAG: u8 = 0x04;
 
 // screen dimensions
@@ -150,9 +150,9 @@ impl Ppu {
         target: lcd_status;
 
         LYC_EQ_LY_INTERRUPT,
-        MODE_2_OAM_INTERRUPT,
-        MODE_1_VBLANK_INTERRUPT,
-        MODE_0_HBLANK_INTERRUPT,
+        OAM_INTERRUPT,
+        VBLANK_INTERRUPT,
+        HBLANK_INTERRUPT,
         LYC_EQ_LY_FLAG
     }
 
@@ -169,7 +169,7 @@ impl Ppu {
     }
 
     #[inline]
-    fn set_mode(&mut self, mode: LCDMode) { self.lcd_status = (self.lcd_status & 0xFC) | mode; }
+    fn set_mode(&mut self, mode: LCDMode) { self.lcd_status = (self.lcd_status & 0xFC) | mode as u8; }
 
     #[inline]
     /// If LY equals LYC, the LYC=LY flag in STAT register is set.
@@ -225,7 +225,7 @@ impl Ppu {
                 }
 
                 // set interrupt flag if hblank interrupt is needed
-                if gb.ppu.mode_0_hblank_interrupt() {
+                if gb.ppu.hblank_interrupt() {
                     gb.interrupt_enable.set_lcd_stat_interrupt(true);
                 }
 
@@ -238,36 +238,67 @@ impl Ppu {
                 // check for LYC=LY coincidence
                 Ppu::ly_equals_lyc_check(gb);
 
-                // TODO: not finish yet
                 let next_mode = if gb.ppu.ly == DMG_SCREEN_HEIGHT as u8 {
+                    // frame draw is finished
+                    if gb.ppu.vblank_interrupt() {
+                        gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                    }
+
                     LCDMode::VBlank
-                } else {
+                }
+                // frame not done yet
+                else {
+                    if gb.ppu.oam_interrupt() {
+                        gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                    }
                     LCDMode::OAMScan
                 };
 
                 Some(next_mode)
             }
 
-            LCDMode::VBlank if gb.ppu.dots >= VBLANK_DOTS => {
-                gb.ppu.ly += 1;
-
-                if gb.ppu.ly > 153 {
-                    gb.ppu.ly = 0;
-                    gb.ppu.frames += 1;
+            LCDMode::VBlank => {
+                // set VBlank interrupt at the start of VBlank period
+                if gb.ppu.lcd_display_enable() && gb.ppu.ly >= DMG_SCREEN_HEIGHT as u8 {
+                    gb.interrupt_enable.set_vblank_interrupt(true);
                 }
 
-                // not yet mmmm
-                None
+                if gb.ppu.dots >= FINISH_VBLANK_DOTS {
+                    gb.ppu.ly += 1;
+
+                    // check for LYC=LY coincidence
+                    Ppu::ly_equals_lyc_check(gb);
+
+                    // if we finished all VBlank lines, go to next frame
+                    if gb.ppu.ly >= 153 {
+                        gb.ppu.ly = 0;
+                        gb.ppu.frames += 1;
+
+                        if gb.ppu.oam_interrupt() {
+                            gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                        }
+                        Some(LCDMode::OAMScan)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
             }
+
             // continue in the same mode
             _ => None,
         };
 
-        // update mode in memory and reset dots
+        // reset dots and update mode in memory
         if let Some(next_mode) = next_mode {
             gb.ppu.dots -= mode.reset_cycles_at_finish();
             gb.ppu.set_mode(next_mode);
         }
+    }
+
+    fn render_scanline(gb: &mut Dmg) {
+        // TODO
     }
 
     /// Writing to DMA register will copy from ROM or RAM to OAM memory

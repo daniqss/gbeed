@@ -1,0 +1,3 @@
+{
+  "rust-analyzer.cargo.features": ["raylib/wayland", "raylib/USE_EXTERNAL_GLFW"]
+}
