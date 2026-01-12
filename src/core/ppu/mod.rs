@@ -32,7 +32,15 @@ const LYC_EQ_LY_FLAG: u8 = 0x04;
 const DMG_SCREEN_WIDTH: usize = 160;
 const DMG_SCREEN_HEIGHT: usize = 144;
 
+const DOTS_PER_SCANLINE: usize = 456;
+const SCANLINES_PER_FRAME: usize = 154;
+
 const COLORS: [u32; 4] = [0xC4CFA1, 0x8B956D, 0x4D533C, 0x1F1F1F];
+
+const FINISH_OAM_SCAN_DOTS: usize = 80;
+const FINISH_DRAWING_DOTS: usize = 172;
+const FINISH_HBLANK_DOTS: usize = 204;
+const FINISH_VBLANK_DOTS: usize = 456;
 
 /// Represents the current mode of the LCD display
 ///   Mode                  | Action                                     | Duration                             | Accessible video memory
@@ -42,10 +50,21 @@ const COLORS: [u32; 4] = [0xC4CFA1, 0x8B956D, 0x4D533C, 0x1F1F1F];
 ///   0 - Horizontal Blank  | Waiting until the end of the scanline      | 376 - mode 3's duration              | VRAM, OAM, CGB palettes
 ///   1 - Vertical Blank    | Waiting until the next frame               | 4560 dots (10 scanlines)             | VRAM, OAM, CGB palettes
 pub enum LCDMode {
-    OAMScan = 4,
+    OAMScan = 2,
     Drawing = 3,
     HBlank = 0,
     VBlank = 1,
+}
+
+impl LCDMode {
+    pub fn reset_cycles_at_finish(&self) -> usize {
+        match self {
+            LCDMode::OAMScan => FINISH_OAM_SCAN_DOTS,
+            LCDMode::Drawing => FINISH_DRAWING_DOTS,
+            LCDMode::HBlank => FINISH_HBLANK_DOTS,
+            LCDMode::VBlank => FINISH_VBLANK_DOTS,
+        }
+    }
 }
 
 // pub struct PixelFifo {
@@ -68,6 +87,7 @@ pub struct Ppu {
     lcd_status: u8,
     scroll_y: u8,
     scroll_x: u8,
+    /// currently drawn line
     ly: u8,
     lyc: u8,
     dma: u8,
@@ -137,13 +157,32 @@ impl Ppu {
     }
 
     // maybe its not best way to implement this
-    pub fn get_mode(&self) -> LCDMode {
+    #[inline]
+    fn get_mode(&self) -> LCDMode {
         match self.lcd_status & 0x03 {
             0 => LCDMode::HBlank,
             1 => LCDMode::VBlank,
             2 => LCDMode::OAMScan,
             3 => LCDMode::Drawing,
             _ => unreachable!("LCD cannot have mode than two bits"),
+        }
+    }
+
+    #[inline]
+    fn set_mode(&mut self, mode: LCDMode) { self.lcd_status = (self.lcd_status & 0xFC) | mode; }
+
+    #[inline]
+    /// If LY equals LYC, the LYC=LY flag in STAT register is set.
+    /// And if the corresponding interrupt is enabled, the LCD STAT interrupt is requested.
+    fn ly_equals_lyc_check(gb: &mut Dmg) {
+        if gb.ppu.ly == gb.ppu.lyc {
+            gb.ppu.set_lyc_eq_ly_flag(true);
+
+            if gb.ppu.lyc_eq_ly_interrupt() {
+                gb.interrupt_enable.set_lcd_stat_interrupt(true);
+            }
+        } else {
+            gb.ppu.set_lyc_eq_ly_flag(false);
         }
     }
 
@@ -172,22 +211,62 @@ impl Ppu {
             Ppu::dma_transfer(gb);
         }
 
-        // look current mode
-        match gb.ppu.get_mode() {
-            LCDMode::OAMScan => {}
-            LCDMode::Drawing => {}
-            LCDMode::HBlank => {}
-            LCDMode::VBlank => {
-                if gb.ppu.dots >= 456 {
-                    gb.ppu.dots -= 456;
-                    gb.ppu.ly += 1;
+        let mode = gb.ppu.get_mode();
 
-                    if gb.ppu.ly > 153 {
-                        gb.ppu.ly = 0;
-                        gb.ppu.frames += 1;
-                    }
+        // look current mode
+        let next_mode = match mode {
+            LCDMode::OAMScan if gb.ppu.dots >= FINISH_OAM_SCAN_DOTS => Some(LCDMode::Drawing),
+
+            LCDMode::Drawing if gb.ppu.dots >= FINISH_DRAWING_DOTS => {
+                // render scanline if we're not at the bottom of the screen yet
+                if gb.ppu.ly < DMG_SCREEN_HEIGHT as u8 {
+                    // render scanline
+                    Ppu::render_scanline(gb);
                 }
+
+                // set interrupt flag if hblank interrupt is needed
+                if gb.ppu.mode_0_hblank_interrupt() {
+                    gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                }
+
+                Some(LCDMode::HBlank)
             }
+
+            LCDMode::HBlank if gb.ppu.dots >= FINISH_HBLANK_DOTS => {
+                gb.ppu.ly += 1;
+
+                // check for LYC=LY coincidence
+                Ppu::ly_equals_lyc_check(gb);
+
+                // TODO: not finish yet
+                let next_mode = if gb.ppu.ly == DMG_SCREEN_HEIGHT as u8 {
+                    LCDMode::VBlank
+                } else {
+                    LCDMode::OAMScan
+                };
+
+                Some(next_mode)
+            }
+
+            LCDMode::VBlank if gb.ppu.dots >= VBLANK_DOTS => {
+                gb.ppu.ly += 1;
+
+                if gb.ppu.ly > 153 {
+                    gb.ppu.ly = 0;
+                    gb.ppu.frames += 1;
+                }
+
+                // not yet mmmm
+                None
+            }
+            // continue in the same mode
+            _ => None,
+        };
+
+        // update mode in memory and reset dots
+        if let Some(next_mode) = next_mode {
+            gb.ppu.dots -= mode.reset_cycles_at_finish();
+            gb.ppu.set_mode(next_mode);
         }
     }
 
