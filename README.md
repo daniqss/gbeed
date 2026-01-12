@@ -24,7 +24,6 @@ just run -- <game_rom> <boot_rom>
 
 If you're not using nix, the dependencies must be installed manually, and according to the wanted environment. All dependencies are listed in the `flake.nix` file. For example, if you're using Debian in x11, you will need to install the rust toolchain with `rustc >= 1.91.1` and the raylib dependencies
 ```sh
-# TODO: test this
 # rust toolchain, recommended way is using rustup to manage rust versions
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
