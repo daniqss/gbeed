@@ -3,7 +3,10 @@ mod sprite;
 
 use crate::{
     Dmg,
-    core::memory::{OAM_END, OAM_START},
+    core::{
+        memory::{OAM_END, OAM_START, VRAM_START},
+        ppu::sprite::{MAX_SPRITES_IN_OAM, MAX_SPRITES_PER_LINE, Sprite},
+    },
     prelude::*,
     utils::to_u16,
 };
@@ -29,13 +32,11 @@ const HBLANK_INTERRUPT: u8 = 0x08;
 const LYC_EQ_LY_FLAG: u8 = 0x04;
 
 // screen dimensions
-const DMG_SCREEN_WIDTH: usize = 160;
-const DMG_SCREEN_HEIGHT: usize = 144;
+pub const DMG_SCREEN_WIDTH: usize = 160;
+pub const DMG_SCREEN_HEIGHT: usize = 144;
 
 const DOTS_PER_SCANLINE: usize = 456;
 const SCANLINES_PER_FRAME: usize = 154;
-
-const COLORS: [u32; 4] = [0xC4CFA1, 0x8B956D, 0x4D533C, 0x1F1F1F];
 
 const FINISH_OAM_SCAN_DOTS: usize = 80;
 const FINISH_DRAWING_DOTS: usize = 172;
@@ -156,7 +157,6 @@ impl Ppu {
         LYC_EQ_LY_FLAG
     }
 
-    // maybe its not best way to implement this
     #[inline]
     fn get_mode(&self) -> LCDMode {
         match self.lcd_status & 0x03 {
@@ -205,7 +205,6 @@ impl Ppu {
             return;
         }
         gb.ppu.dots += instruction_cycles as usize;
-
         // this should be done on register writes
         if gb.ppu.dma != 0 {
             Ppu::dma_transfer(gb);
@@ -221,7 +220,7 @@ impl Ppu {
                 // render scanline if we're not at the bottom of the screen yet
                 if gb.ppu.ly < DMG_SCREEN_HEIGHT as u8 {
                     // render scanline
-                    Ppu::render_scanline(gb);
+                    Ppu::draw_scanline(gb);
                 }
 
                 // set interrupt flag if hblank interrupt is needed
@@ -270,7 +269,7 @@ impl Ppu {
                     Ppu::ly_equals_lyc_check(gb);
 
                     // if we finished all VBlank lines, go to next frame
-                    if gb.ppu.ly >= 153 {
+                    if gb.ppu.ly > SCANLINES_PER_FRAME as u8 - 1 {
                         gb.ppu.ly = 0;
                         gb.ppu.frames += 1;
 
@@ -297,8 +296,97 @@ impl Ppu {
         }
     }
 
-    fn render_scanline(gb: &mut Dmg) {
-        // TODO
+    pub fn draw_scanline(gb: &mut Dmg) {
+        // draw background
+        // Ppu::draw_background(gb);
+
+        // draw window
+        // Ppu::draw_window(gb);
+
+        // draw sprites
+        if gb.ppu.obj_enable() {
+            Ppu::draw_sprites(gb)
+        };
+    }
+
+    fn draw_sprites(gb: &mut Dmg) {
+        let current_line = gb.ppu.ly;
+        let sprite_height = if gb.ppu.obj_size() { 16 } else { 8 };
+        let mut drawn_sprites = 0u8;
+        let mut sprites_count = 0u8;
+
+        while drawn_sprites < MAX_SPRITES_PER_LINE && sprites_count < MAX_SPRITES_IN_OAM {
+            let oam_addr = OAM_START + (sprites_count as u16) * 4;
+            let sprite = Sprite::from_oam(gb, oam_addr);
+
+            // is sprite in current line?
+            if current_line < sprite.ypos || current_line >= sprite.ypos + sprite_height {
+                sprites_count += 1;
+                continue;
+            }
+
+            let mut line_in_sprite = if sprite.yflip() {
+                sprite_height - 1 - (current_line - sprite.ypos)
+            } else {
+                current_line - sprite.ypos
+            };
+
+            // adjust if sprite is 8x16
+            let mut tile_index = sprite.tile_index;
+            if sprite_height == 16 {
+                tile_index &= 0xFE;
+                if line_in_sprite >= 8 {
+                    tile_index += 1;
+                    line_in_sprite -= 8;
+                }
+            }
+
+            let tile_addr = VRAM_START + (tile_index as u16) * 16 + (line_in_sprite as u16) * 2;
+            let low_tile_byte = gb[tile_addr];
+            let high_tile_byte = gb[tile_addr + 1];
+
+            let palette = if sprite.palette_number() {
+                gb.ppu.obj1_palette
+            } else {
+                gb.ppu.obj0_palette
+            };
+
+            // maybe we can use this tile draw for bg and windows
+            for pixel in 0..8 {
+                let bit_index = if sprite.xflip() { pixel } else { 7 - pixel };
+
+                let low_bit = (low_tile_byte >> bit_index) & 0x01;
+                let high_bit = (high_tile_byte >> bit_index) & 0x01;
+                let color_id = (high_bit << 1) | low_bit;
+
+                // transparent pixel
+                if color_id == 0 {
+                    continue;
+                }
+
+                // out of screen
+                let screen_x = sprite.xpos.wrapping_add(pixel);
+                if screen_x >= DMG_SCREEN_WIDTH as u8 {
+                    continue;
+                }
+
+                // sprite under de background
+                if sprite.priority() {
+                    let bg_pixel = gb.ppu.framebuffer[current_line as usize][screen_x as usize];
+                    if bg_pixel != gb.colors[0] {
+                        continue;
+                    }
+                }
+
+                let shade = (palette >> (color_id * 2)) & 0x03;
+                let color = gb.colors[shade as usize];
+
+                gb.ppu.framebuffer[current_line as usize][screen_x as usize] = color;
+            }
+
+            drawn_sprites += 1;
+            sprites_count += 1;
+        }
     }
 
     /// Writing to DMA register will copy from ROM or RAM to OAM memory
