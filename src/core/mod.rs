@@ -42,7 +42,6 @@ use self::{
 };
 
 const BANK_REGISTER: u16 = 0xFF50;
-const DEFAULT_DMG_COLORS: [u32; 4] = [0xC4CFA1, 0x8B956D, 0x4D533C, 0x1F1F1F];
 
 #[derive(Debug, Default)]
 pub struct Dmg {
@@ -56,8 +55,6 @@ pub struct Dmg {
     pub interrupt_flag: Interrupt,
     pub interrupt_enable: Interrupt,
     pub bank: u8,
-
-    pub colors: [u32; 4],
 }
 
 impl Dmg {
@@ -84,8 +81,6 @@ impl Dmg {
             interrupt_flag,
             interrupt_enable,
             bank: 0,
-
-            colors: DEFAULT_DMG_COLORS,
         }
     }
 

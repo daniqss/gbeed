@@ -41,7 +41,12 @@ const SCANLINES_PER_FRAME: usize = 154;
 const FINISH_OAM_SCAN_DOTS: usize = 80;
 const FINISH_DRAWING_DOTS: usize = 172;
 const FINISH_HBLANK_DOTS: usize = 204;
-const FINISH_VBLANK_DOTS: usize = 456;
+const FINISH_VBLANK_DOTS: usize = DOTS_PER_SCANLINE;
+
+const DEFAULT_DMG_COLORS: [u32; 4] = [0xC4CFA1, 0x8B956D, 0x4D533C, 0x1F1F1F];
+
+const DEFAULT_WINDOW_BASE_ADDR: u16 = 0x9800;
+const COND_WINDOW_BASE_ADDR: u16 = 0x9C00;
 
 /// Represents the current mode of the LCD display
 ///   Mode                  | Action                                     | Duration                             | Accessible video memory
@@ -97,10 +102,11 @@ pub struct Ppu {
     obj1_palette: u8,
     wy: u8,
     wx: u8,
+    window_line_counter: u8,
 
     framebuffer: [[u32; DMG_SCREEN_WIDTH]; DMG_SCREEN_HEIGHT],
-    double_buffer: [[u32; DMG_SCREEN_WIDTH]; DMG_SCREEN_HEIGHT],
-    bg_buffer: [[u32; 256]; 256],
+
+    pub colors: [u32; 4],
 }
 
 impl Default for Ppu {
@@ -125,10 +131,11 @@ impl Ppu {
             obj1_palette: 0xFF,
             wy: 0,
             wx: 0,
+            window_line_counter: 0,
 
             framebuffer: [[0; DMG_SCREEN_WIDTH]; DMG_SCREEN_HEIGHT],
-            double_buffer: [[0; DMG_SCREEN_WIDTH]; DMG_SCREEN_HEIGHT],
-            bg_buffer: [[0; 256]; 256],
+
+            colors: DEFAULT_DMG_COLORS,
         }
     }
 
@@ -186,11 +193,10 @@ impl Ppu {
         }
     }
 
-    // pub fn update_palette(colors: &mut [u32; 4], palette: u8) {
-    //     for i in 0..4 {
-    //         colors[i] = COLORS[((palette >> (i * 2)) & 0x03) as usize];
-    //     }
-    // }
+    pub fn get_color(&self, palette: u8, color_id: u8) -> u32 {
+        let shade = (palette >> (color_id * 2)) & 0x03;
+        self.colors[shade as usize]
+    }
 
     // # Step the PPU by the number of cycles the last instruction took
     //
@@ -301,7 +307,9 @@ impl Ppu {
         // Ppu::draw_background(gb);
 
         // draw window
-        // Ppu::draw_window(gb);
+        if gb.ppu.window_enable() {
+            Ppu::draw_window(gb);
+        }
 
         // draw sprites
         if gb.ppu.obj_enable() {
@@ -373,19 +381,90 @@ impl Ppu {
                 // sprite under de background
                 if sprite.priority() {
                     let bg_pixel = gb.ppu.framebuffer[current_line as usize][screen_x as usize];
-                    if bg_pixel != gb.colors[0] {
+                    if bg_pixel != gb.ppu.colors[0] {
                         continue;
                     }
                 }
 
-                let shade = (palette >> (color_id * 2)) & 0x03;
-                let color = gb.colors[shade as usize];
-
-                gb.ppu.framebuffer[current_line as usize][screen_x as usize] = color;
+                gb.ppu.framebuffer[current_line as usize][screen_x as usize] =
+                    gb.ppu.get_color(palette, color_id);
             }
 
             drawn_sprites += 1;
             sprites_count += 1;
+        }
+    }
+
+    fn draw_window(gb: &mut Dmg) {
+        // window enable check is done in draw_scanline
+
+        let current_line = gb.ppu.ly;
+        let window_y = gb.ppu.wy;
+        let window_x = gb.ppu.wx as isize - 7;
+
+        if current_line < window_y {
+            return;
+        }
+
+        if current_line == window_y {
+            gb.ppu.window_line_counter = 0;
+        }
+
+        let tile_map_base = if gb.ppu.window_tile_map_address() {
+            COND_WINDOW_BASE_ADDR
+        } else {
+            DEFAULT_WINDOW_BASE_ADDR
+        };
+
+        let mut window_rendered = false;
+
+        for pixel in 0..DMG_SCREEN_WIDTH {
+            if (pixel as isize) < window_x {
+                continue;
+            }
+
+            window_rendered = true;
+
+            let window_column = (pixel as isize) - window_x;
+            let tile_x = window_column / 8;
+            let tile_y = gb.ppu.window_line_counter as isize / 8;
+
+            let tile_index = tile_y * 32 + tile_x;
+
+            let tile_address_in_map = tile_map_base + tile_index as u16;
+            let tile_number = gb[tile_address_in_map];
+
+            // The "$8000 method" uses $8000 as its base pointer and uses an unsigned addressing,
+            // meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
+            //
+            // The "$8800 method" uses $9000 as its base pointer and uses a signed addressing,
+            // meaning that tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1; or, to put it differently,
+            // "$8800 addressing" takes tiles 0-127 from block 2 and tiles 128-255 from block 1.
+            let tile_data_base = if gb.ppu.bg_and_window_tile_data() || tile_number >= 128 {
+                0x8000
+            } else {
+                0x9000
+            };
+
+            let tile_address = tile_data_base + (tile_number as u16) * 16;
+            let line_in_tile = gb.ppu.window_line_counter % 8;
+
+            let first_byte = gb[tile_address + (line_in_tile as u16) * 2];
+            let second_byte = gb[tile_address + (line_in_tile as u16) * 2 + 1];
+
+            let bit_index = 7 - (window_column % 8);
+
+            let low_pixel = (first_byte >> bit_index) & 0x01;
+            let high_pixel = (second_byte >> bit_index) & 0x01;
+
+            let color_id = (high_pixel << 1) | low_pixel;
+            let color = gb.ppu.get_color(gb.ppu.bg_palette, color_id);
+
+            gb.ppu.framebuffer[current_line as usize][pixel] = color;
+        }
+
+        if window_rendered {
+            gb.ppu.window_line_counter += 1;
         }
     }
 
