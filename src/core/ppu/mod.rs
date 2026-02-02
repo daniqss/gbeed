@@ -397,7 +397,6 @@ impl Ppu {
 
     fn draw_window(gb: &mut Dmg) {
         // window enable check is done in draw_scanline
-
         let current_line = gb.ppu.ly;
         let window_y = gb.ppu.wy;
         let window_x = gb.ppu.wx as isize - 7;
@@ -422,7 +421,6 @@ impl Ppu {
             if (pixel as isize) < window_x {
                 continue;
             }
-
             window_rendered = true;
 
             let window_column = (pixel as isize) - window_x;
@@ -445,8 +443,8 @@ impl Ppu {
             } else {
                 0x9000
             };
-
             let tile_address = tile_data_base + (tile_number as u16) * 16;
+
             let line_in_tile = gb.ppu.window_line_counter % 8;
 
             let first_byte = gb[tile_address + (line_in_tile as u16) * 2];
@@ -454,8 +452,8 @@ impl Ppu {
 
             let bit_index = 7 - (window_column % 8);
 
-            let low_pixel = (first_byte >> bit_index) & 0x01;
-            let high_pixel = (second_byte >> bit_index) & 0x01;
+            let low_pixel = (first_byte >> bit_index) & 1;
+            let high_pixel = (second_byte >> bit_index) & 1;
 
             let color_id = (high_pixel << 1) | low_pixel;
             let color = gb.ppu.get_color(gb.ppu.bg_palette, color_id);
@@ -465,6 +463,57 @@ impl Ppu {
 
         if window_rendered {
             gb.ppu.window_line_counter += 1;
+        }
+    }
+
+    fn draw_bg(gb: &mut Dmg) {
+        let current_line = gb.ppu.ly;
+        let scroll_x = gb.ppu.scroll_x;
+        let scroll_y = gb.ppu.scroll_y;
+
+        let tile_map_base = if gb.ppu.bg_tile_map_address() {
+            COND_WINDOW_BASE_ADDR
+        } else {
+            DEFAULT_WINDOW_BASE_ADDR
+        };
+
+        for pixel in 0..DMG_SCREEN_WIDTH {
+            let bg_x = (pixel as u8).wrapping_add(scroll_x);
+            let bg_y = (current_line).wrapping_add(scroll_y);
+            let tile_x = bg_x >> 3;
+            let tile_y = bg_y >> 3;
+
+            let tile_index = tile_y * 32 + tile_x;
+            let tile_address_in_map = tile_map_base + tile_index as u16;
+            let tile_number = gb[tile_address_in_map];
+
+            // The "$8000 method" uses $8000 as its base pointer and uses an unsigned addressing,
+            // meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
+            //
+            // The "$8800 method" uses $9000 as its base pointer and uses a signed addressing,
+            // meaning that tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1; or, to put it differently,
+            // "$8800 addressing" takes tiles 0-127 from block 2 and tiles 128-255 from block 1.
+            let tile_data_base = if gb.ppu.bg_and_window_tile_data() || tile_number >= 128 {
+                0x8000
+            } else {
+                0x9000
+            };
+            let tile_address = tile_data_base + (tile_number as u16) * 16;
+
+            let line_in_tile = gb.ppu.window_line_counter % 8;
+
+            let first_byte = gb[tile_address + (line_in_tile as u16) * 2];
+            let second_byte = gb[tile_address + (line_in_tile as u16) * 2 + 1];
+
+            let bit_index = 7 - (bg_x % 8);
+
+            let low_pixel = (first_byte >> bit_index) & 0xb1;
+            let high_pixel = (second_byte >> bit_index) & 0xb1;
+
+            let color_id = (high_pixel << 1) | low_pixel;
+            let color = gb.ppu.get_color(gb.ppu.bg_palette, color_id);
+
+            gb.ppu.framebuffer[current_line as usize][pixel] = color;
         }
     }
 
