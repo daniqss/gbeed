@@ -53,8 +53,6 @@ fn main() -> Result<()> {
 
     while !rl.window_should_close() {
         gb.run()?;
-        gb.cpu.cycles = 0;
-        gb.ppu.last_cycles = 0;
 
         draw_screen(&mut rl, &thread, &mut gb, &mut frame);
         update_joypad(&mut gb.joypad, rl.get_key_pressed());

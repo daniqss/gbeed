@@ -91,7 +91,13 @@ impl Dmg {
         // one frame (70224 cycles)
         while self.cpu.cycles < 70224 {
             let _instr = self.step()?;
+            if self.cpu.pc == 0x0100 {
+                println!("just arrive to game rom start");
+                std::thread::sleep(std::time::Duration::from_millis(500));
+            }
         }
+        self.cpu.cycles = 0;
+        self.ppu.last_cycles = 0;
 
         Ok(())
     }

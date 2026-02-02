@@ -1,3 +1,4 @@
+use gbeed::Cartridge;
 use gbeed::Dmg;
 use gbeed::prelude::*;
 
@@ -170,16 +171,16 @@ use gbeed::prelude::*;
 #[test]
 fn test_disassembly_boot() -> Result<()> {
     let boot_rom_data = std::fs::read("dmg_boot.bin")?;
+    let game_data = std::fs::read("sml2.gb")?;
+    let game = Cartridge::new(game_data)?;
     // it actually needs a game to compare the logos
-    let mut gb = Dmg::new(None, Some(boot_rom_data));
+    let mut gb = Dmg::new(Some(game), Some(boot_rom_data));
     let mut init_ram = false;
     let mut set_audio = false;
     let mut setup_logo = false;
 
     loop {
         let instr = gb.step()?;
-
-        // std::thread::sleep(std::time::Duration::from_millis(16));
 
         // finish initing ram
         if gb.cpu.pc == 0x000C && !init_ram {
@@ -219,13 +220,16 @@ fn test_disassembly_boot() -> Result<()> {
         }
 
         if init_ram && set_audio && setup_logo {
-            println!("Cpu during boot: {}", gb.cpu);
-            println!("Executing instruction at {:04X}: {}", gb.cpu.pc, instr);
+            println!("Boot sequence in progress... Cpu: {}", gb.cpu);
+            println!("Current instruction: {}", instr);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+
+        if gb.cpu.pc == 0x0100 {
+            println!("Boot sequence completed successfully!");
             break;
         }
     }
 
-    // rest of the boot rom should be tested after implementing ppu
-    assert_eq!(gb.cpu.pc, 0x0053);
     Ok(())
 }
