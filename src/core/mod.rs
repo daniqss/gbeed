@@ -13,7 +13,7 @@ pub use crate::prelude::*;
 use crate::{
     core::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
-        cpu::{Instruction, Len, R8, R16},
+        cpu::{Len, R8, R16},
         interrupts::IE,
         memory::Accessable,
         ppu::{PPU_REGISTER_END, PPU_REGISTER_START},
@@ -87,33 +87,45 @@ impl Dmg {
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     /// Modifies the DMG state by executing one CPU instruction, and return the executed instruction
-    pub fn run(&mut self) -> Result<Box<dyn Instruction>> {
-        let opcode = self[self.cpu.pc];
+    pub fn run(&mut self) -> Result<()> {
+        // one frame (70224 cycles)
+        while self.cpu.cycles < 70224 {
+            // cpu
+            let opcode = self[self.cpu.pc];
 
-        let mut instruction = match Cpu::fetch(self, opcode) {
-            Ok(instr) => instr,
-            Err(e) => Err(Error::Generic(format!(
-                "Error fetching instruction at {:04X}: {}",
-                self.cpu.pc, e
-            )))?,
-        };
+            let mut instruction = match Cpu::fetch(self, opcode) {
+                Ok(instr) => instr,
+                Err(e) => Err(Error::Generic(format!(
+                    "Error fetching instruction at {:04X}: {}",
+                    self.cpu.pc, e
+                )))?,
+            };
 
-        let effect = match instruction.exec(self) {
-            Ok(effect) => effect,
-            Err(e) => Err(Error::Generic(format!(
-                "Error executing instruction at {:04X}: {}",
-                self.cpu.pc, e
-            )))?,
-        };
+            let effect = match instruction.exec(self) {
+                Ok(effect) => effect,
+                Err(e) => Err(Error::Generic(format!(
+                    "Error executing instruction at {:04X}: {}",
+                    self.cpu.pc, e
+                )))?,
+            };
 
-        self.cpu.cycles = self.cpu.cycles.wrapping_add(effect.cycles as usize);
-        self.cpu.pc = match effect.len {
-            Len::Jump(_) => self.cpu.pc,
-            Len::AddLen(len) => self.cpu.pc.wrapping_add(len as u16),
-        };
-        effect.flags.apply(&mut self.cpu.f);
+            let cycles = self.cpu.cycles.wrapping_add(effect.cycles as usize);
 
-        Ok(instruction)
+            self.cpu.cycles = cycles;
+            self.cpu.pc = match effect.len {
+                Len::Jump(_) => self.cpu.pc,
+                Len::AddLen(len) => self.cpu.pc.wrapping_add(len as u16),
+            };
+            effect.flags.apply(&mut self.cpu.f);
+
+            // ppu
+            Ppu::step(self, cycles);
+
+            // timer
+            self.timer.step(cycles);
+        }
+
+        Ok(())
     }
 }
 

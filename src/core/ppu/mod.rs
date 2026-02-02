@@ -206,11 +206,11 @@ impl Ppu {
     //            | Search    | Transfer  | HBlank
     // -------------------------------------------------
     // 10 lines   |             VBlank
-    pub fn step(gb: &mut Dmg, instruction_cycles: u8) {
+    pub fn step(gb: &mut Dmg, instruction_cycles: usize) {
         if !gb.ppu.lcd_display_enable() {
             return;
         }
-        gb.ppu.dots += instruction_cycles as usize;
+        gb.ppu.dots += instruction_cycles;
         // this should be done on register writes
         if gb.ppu.dma != 0 {
             Ppu::dma_transfer(gb);
