@@ -177,7 +177,7 @@ fn test_disassembly_boot() -> Result<()> {
     let mut setup_logo = false;
 
     loop {
-        let instr = gb.run()?;
+        let instr = gb.step()?;
 
         // std::thread::sleep(std::time::Duration::from_millis(16));
 

@@ -5,7 +5,7 @@ mod interrupts;
 mod joypad;
 mod license;
 mod memory;
-mod ppu;
+pub mod ppu;
 mod serial;
 mod timer;
 
@@ -13,7 +13,7 @@ pub use crate::prelude::*;
 use crate::{
     core::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
-        cpu::{Len, R8, R16},
+        cpu::{Instruction, Len, R8, R16},
         interrupts::IE,
         memory::Accessable,
         ppu::{PPU_REGISTER_END, PPU_REGISTER_START},
@@ -90,42 +90,47 @@ impl Dmg {
     pub fn run(&mut self) -> Result<()> {
         // one frame (70224 cycles)
         while self.cpu.cycles < 70224 {
-            // cpu
-            let opcode = self[self.cpu.pc];
-
-            let mut instruction = match Cpu::fetch(self, opcode) {
-                Ok(instr) => instr,
-                Err(e) => Err(Error::Generic(format!(
-                    "Error fetching instruction at {:04X}: {}",
-                    self.cpu.pc, e
-                )))?,
-            };
-
-            let effect = match instruction.exec(self) {
-                Ok(effect) => effect,
-                Err(e) => Err(Error::Generic(format!(
-                    "Error executing instruction at {:04X}: {}",
-                    self.cpu.pc, e
-                )))?,
-            };
-
-            let cycles = self.cpu.cycles.wrapping_add(effect.cycles as usize);
-
-            self.cpu.cycles = cycles;
-            self.cpu.pc = match effect.len {
-                Len::Jump(_) => self.cpu.pc,
-                Len::AddLen(len) => self.cpu.pc.wrapping_add(len as u16),
-            };
-            effect.flags.apply(&mut self.cpu.f);
-
-            // ppu
-            Ppu::step(self, cycles);
-
-            // timer
-            self.timer.step(cycles);
+            let _instr = self.step()?;
         }
 
         Ok(())
+    }
+
+    pub fn step(&mut self) -> Result<Box<dyn Instruction>> {
+        let opcode = self[self.cpu.pc];
+
+        let mut instruction = match Cpu::fetch(self, opcode) {
+            Ok(instr) => instr,
+            Err(e) => Err(Error::Generic(format!(
+                "Error fetching instruction at {:04X}: {}",
+                self.cpu.pc, e
+            )))?,
+        };
+
+        let effect = match instruction.exec(self) {
+            Ok(effect) => effect,
+            Err(e) => Err(Error::Generic(format!(
+                "Error executing instruction at {:04X}: {}",
+                self.cpu.pc, e
+            )))?,
+        };
+
+        let cycles = self.cpu.cycles.wrapping_add(effect.cycles as usize);
+
+        self.cpu.cycles = cycles;
+        self.cpu.pc = match effect.len {
+            Len::Jump(_) => self.cpu.pc,
+            Len::AddLen(len) => self.cpu.pc.wrapping_add(len as u16),
+        };
+        effect.flags.apply(&mut self.cpu.f);
+
+        // ppu
+        Ppu::step(self, cycles);
+
+        // timer
+        self.timer.step(cycles);
+
+        Ok(instruction)
     }
 }
 

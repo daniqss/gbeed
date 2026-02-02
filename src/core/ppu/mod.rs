@@ -104,7 +104,9 @@ pub struct Ppu {
     wx: u8,
     window_line_counter: u8,
 
-    framebuffer: [[u32; DMG_SCREEN_WIDTH]; DMG_SCREEN_HEIGHT],
+    pub last_cycles: usize,
+
+    pub framebuffer: [[u32; DMG_SCREEN_WIDTH]; DMG_SCREEN_HEIGHT],
 
     pub colors: [u32; 4],
 }
@@ -132,6 +134,8 @@ impl Ppu {
             wy: 0,
             wx: 0,
             window_line_counter: 0,
+
+            last_cycles: 0,
 
             framebuffer: [[0; DMG_SCREEN_WIDTH]; DMG_SCREEN_HEIGHT],
 
@@ -206,10 +210,18 @@ impl Ppu {
     //            | Search    | Transfer  | HBlank
     // -------------------------------------------------
     // 10 lines   |             VBlank
-    pub fn step(gb: &mut Dmg, instruction_cycles: usize) {
+    pub fn step(gb: &mut Dmg, cycles: usize) {
         if !gb.ppu.lcd_display_enable() {
             return;
         }
+
+        let instruction_cycles = if cycles >= gb.ppu.last_cycles {
+            cycles - gb.ppu.last_cycles
+        } else {
+            cycles
+        };
+        gb.ppu.last_cycles = cycles;
+
         gb.ppu.dots += instruction_cycles;
         // this should be done on register writes
         if gb.ppu.dma != 0 {
@@ -304,7 +316,7 @@ impl Ppu {
 
     pub fn draw_scanline(gb: &mut Dmg) {
         // draw background
-        // Ppu::draw_background(gb);
+        Ppu::draw_bg(gb);
 
         // draw window
         if gb.ppu.window_enable() {
@@ -483,7 +495,7 @@ impl Ppu {
             let tile_x = bg_x >> 3;
             let tile_y = bg_y >> 3;
 
-            let tile_index = tile_y * 32 + tile_x;
+            let tile_index: usize = tile_y as usize * 32 + tile_x as usize;
             let tile_address_in_map = tile_map_base + tile_index as u16;
             let tile_number = gb[tile_address_in_map];
 
@@ -507,8 +519,8 @@ impl Ppu {
 
             let bit_index = 7 - (bg_x % 8);
 
-            let low_pixel = (first_byte >> bit_index) & 0xb1;
-            let high_pixel = (second_byte >> bit_index) & 0xb1;
+            let low_pixel = (first_byte >> bit_index) & 1;
+            let high_pixel = (second_byte >> bit_index) & 1;
 
             let color_id = (high_pixel << 1) | low_pixel;
             let color = gb.ppu.get_color(gb.ppu.bg_palette, color_id);
