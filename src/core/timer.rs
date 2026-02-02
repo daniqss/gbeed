@@ -13,6 +13,8 @@ pub const INPUT_CLOCK_SELECT: u8 = 0x03;
 
 #[derive(Debug, Default)]
 pub struct TimerController {
+    pub cycles: usize,
+
     pub divider: u8,
     pub timer_counter: u8,
     pub timer_modulo: u8,
@@ -22,6 +24,8 @@ pub struct TimerController {
 impl TimerController {
     pub fn new() -> Self {
         TimerController {
+            cycles: 0,
+
             divider: 0,
             timer_counter: 0,
             timer_modulo: 0,
@@ -40,7 +44,7 @@ impl TimerController {
         CLOCKS_SPEEDS[index]
     }
 
-    /// possible speeds:
+    /// Possible speeds in DMG, SGB2, CGB in normal-speed mode:
     /// - 00 -> 4096 Hz
     /// - 01 -> 262144 Hz
     /// - 10 -> 65536 Hz
@@ -50,5 +54,15 @@ impl TimerController {
             panic!("Invalid clock speed: {}", speed);
         }
         self.timer_control = (self.timer_control & !INPUT_CLOCK_SELECT) | speed;
+    }
+
+    // probably different in GBC double speed mode??
+    pub fn step(&mut self, cycles: usize) {
+        self.cycles += cycles;
+
+        if self.cycles >= 256 {
+            self.cycles -= 256;
+            self.divider = self.divider.wrapping_add(1);
+        }
     }
 }

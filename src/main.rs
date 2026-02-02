@@ -1,6 +1,8 @@
 use gbeed::Cartridge;
 use gbeed::Dmg;
 use gbeed::Joypad;
+use gbeed::core::ppu::DMG_SCREEN_HEIGHT;
+use gbeed::core::ppu::DMG_SCREEN_WIDTH;
 use gbeed::prelude::*;
 
 use raylib::prelude::*;
@@ -40,23 +42,78 @@ fn main() -> Result<()> {
         .title(WINDOW_TITLE)
         .resizable()
         .build();
-    let black = Color::new(0, 0, 0, 255);
-    let ray_white = Color::new(255, 255, 255, 255);
+    rl.set_target_fps(60);
+
+    let mut frame_image =
+        Image::gen_image_color(DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32, Color::BLACK);
+    frame_image.set_format(raylib::ffi::PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
+    let mut frame = rl
+        .load_texture_from_image(&thread, &frame_image)
+        .expect("Failed to load texture");
 
     while !rl.window_should_close() {
-        rl.draw(&thread, |mut d| {
-            d.clear_background(ray_white);
+        gb.run()?;
 
-            if let Some(game) = &gb.bus.game {
-                for (i, line) in format!("{}", game).lines().enumerate() {
-                    d.draw_text(line, 10, 10 + i as i32 * 20, 20, black);
-                }
-            }
-        });
+        draw_screen(&mut rl, &thread, &mut gb, &mut frame);
         update_joypad(&mut gb.joypad, rl.get_key_pressed());
     }
 
     Ok(())
+}
+
+fn _draw_cartridge(rl: &mut RaylibHandle, thread: &RaylibThread, gb: &Dmg) {
+    let white = Color::new(255, 255, 255, 255);
+
+    rl.draw(&thread, |mut d| {
+        // d.clear_background(ray_white);
+
+        if let Some(game) = &gb.bus.game {
+            for (i, line) in format!("{}", game).lines().enumerate() {
+                d.draw_text(line, 10, 10 + i as i32 * 20, 20, white);
+            }
+        }
+    });
+}
+
+fn draw_screen(rl: &mut RaylibHandle, thread: &RaylibThread, gb: &mut Dmg, texture: &mut Texture2D) {
+    let mut pixels = Vec::with_capacity(DMG_SCREEN_WIDTH * DMG_SCREEN_HEIGHT * 4);
+
+    for y in 0..DMG_SCREEN_HEIGHT {
+        for x in 0..DMG_SCREEN_WIDTH {
+            let color = gb.ppu.framebuffer[y][x];
+            pixels.push(((color >> 16) & 0xFF) as u8);
+            pixels.push(((color >> 8) & 0xFF) as u8);
+            pixels.push((color & 0xFF) as u8);
+        }
+    }
+
+    let _ = texture.update_texture(&pixels);
+
+    rl.draw(&thread, |mut d| {
+        d.clear_background(Color::BLACK);
+
+        let screen_w = d.get_screen_width() as f32;
+        let screen_h = d.get_screen_height() as f32;
+        let scale = (screen_w / DMG_SCREEN_WIDTH as f32).min(screen_h / DMG_SCREEN_HEIGHT as f32);
+
+        let dest_w = DMG_SCREEN_WIDTH as f32 * scale;
+        let dest_h = DMG_SCREEN_HEIGHT as f32 * scale;
+        let dest_x = (screen_w - dest_w) / 2.0;
+        let dest_y = (screen_h - dest_h) / 2.0;
+
+        d.draw_texture_pro(
+            texture,
+            Rectangle::new(0.0, 0.0, DMG_SCREEN_WIDTH as f32, DMG_SCREEN_HEIGHT as f32),
+            Rectangle::new(dest_x, dest_y, dest_w, dest_h),
+            Vector2::new(0.0, 0.0),
+            0.0,
+            Color::WHITE,
+        );
+
+        d.draw_fps(10, screen_h as i32 - 20);
+    });
+
+    // draw_cartridge(rl, thread, gb);
 }
 
 fn update_joypad(jp: &mut Joypad, key: Option<KeyboardKey>) {
