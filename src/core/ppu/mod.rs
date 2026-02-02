@@ -512,7 +512,7 @@ impl Ppu {
             };
             let tile_address = tile_data_base + (tile_number as u16) * 16;
 
-            let line_in_tile = gb.ppu.window_line_counter % 8;
+            let line_in_tile = bg_y % 8;
 
             let first_byte = gb[tile_address + (line_in_tile as u16) * 2];
             let second_byte = gb[tile_address + (line_in_tile as u16) * 2 + 1];

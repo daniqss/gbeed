@@ -9,8 +9,6 @@ use raylib::prelude::*;
 
 use std::io::{self, ErrorKind};
 
-static DRAW_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-
 // we should distinguish between desktop arm and armv6 32 bits of the raspberry pi zero
 #[cfg(target_arch = "arm")]
 const SCREEN_WIDTH: i32 = 400;
@@ -47,7 +45,7 @@ fn main() -> Result<()> {
     rl.set_target_fps(60);
 
     let mut image = Image::gen_image_color(DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32, Color::BLACK);
-    image.set_format(raylib::ffi::PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    image.set_format(raylib::ffi::PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
     let mut texture = rl
         .load_texture_from_image(&thread, &image)
         .expect("Failed to load texture");
@@ -64,7 +62,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn draw_cartridge(rl: &mut RaylibHandle, thread: &RaylibThread, gb: &Dmg) {
+fn _draw_cartridge(rl: &mut RaylibHandle, thread: &RaylibThread, gb: &Dmg) {
     let white = Color::new(255, 255, 255, 255);
 
     rl.draw(&thread, |mut d| {
@@ -79,10 +77,7 @@ fn draw_cartridge(rl: &mut RaylibHandle, thread: &RaylibThread, gb: &Dmg) {
 }
 
 fn draw_screen(rl: &mut RaylibHandle, thread: &RaylibThread, gb: &mut Dmg, texture: &mut Texture2D) {
-    let count = DRAW_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    println!("Draw call number: {}", count);
-
-    let mut pixels = Vec::with_capacity(DMG_SCREEN_WIDTH * DMG_SCREEN_HEIGHT * 3);
+    let mut pixels = Vec::with_capacity(DMG_SCREEN_WIDTH * DMG_SCREEN_HEIGHT * 4);
 
     for y in 0..DMG_SCREEN_HEIGHT {
         for x in 0..DMG_SCREEN_WIDTH {
