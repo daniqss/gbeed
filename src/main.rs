@@ -44,10 +44,11 @@ fn main() -> Result<()> {
         .build();
     rl.set_target_fps(60);
 
-    let mut image = Image::gen_image_color(DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32, Color::BLACK);
-    image.set_format(raylib::ffi::PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
-    let mut texture = rl
-        .load_texture_from_image(&thread, &image)
+    let mut frame_image =
+        Image::gen_image_color(DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32, Color::BLACK);
+    frame_image.set_format(raylib::ffi::PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
+    let mut frame = rl
+        .load_texture_from_image(&thread, &frame_image)
         .expect("Failed to load texture");
 
     while !rl.window_should_close() {
@@ -55,7 +56,7 @@ fn main() -> Result<()> {
         gb.cpu.cycles = 0;
         gb.ppu.last_cycles = 0;
 
-        draw_screen(&mut rl, &thread, &mut gb, &mut texture);
+        draw_screen(&mut rl, &thread, &mut gb, &mut frame);
         update_joypad(&mut gb.joypad, rl.get_key_pressed());
     }
 
