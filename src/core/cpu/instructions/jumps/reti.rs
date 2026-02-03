@@ -22,7 +22,7 @@ impl Instruction for Reti {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.ime = true;
 
-        let return_addr = gb.read16(gb.cpu.sp);
+        let return_addr = gb.load(gb.cpu.sp);
         gb.cpu.pc = return_addr;
         gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
 

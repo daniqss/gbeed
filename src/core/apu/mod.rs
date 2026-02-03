@@ -1,7 +1,29 @@
-use crate::prelude::*;
+use crate::{core::MemoryMapped, mem_range, prelude::*};
 
-pub const APU_REGISTER_START: u16 = 0xFF10;
-pub const APU_REGISTER_END: u16 = 0xFF3F;
+mem_range!(APU_REGISTER, 0xFF10, 0xFF3F);
+
+const NR10: u16 = 0xFF10;
+const NR11: u16 = 0xFF11;
+const NR12: u16 = 0xFF12;
+const NR13: u16 = 0xFF13;
+const NR14: u16 = 0xFF14;
+const NOT_USED_15: u16 = 0xFF15;
+const NR21: u16 = 0xFF16;
+const NR22: u16 = 0xFF17;
+const NR23: u16 = 0xFF18;
+const NR24: u16 = 0xFF19;
+const NR30: u16 = 0xFF1A;
+const NR31: u16 = 0xFF1B;
+const NR32: u16 = 0xFF1C;
+const NR33: u16 = 0xFF1D;
+const NR34: u16 = 0xFF1E;
+const NR41: u16 = 0xFF20;
+const NR42: u16 = 0xFF21;
+const NR43: u16 = 0xFF22;
+const NR44: u16 = 0xFF23;
+const NR50: u16 = 0xFF24;
+const NR51: u16 = 0xFF25;
+const NR52: u16 = 0xFF26;
 
 const AUDIO_ON_OFF: u8 = 0x80;
 const CH4_ON_FLAG: u8 = 0x08;
@@ -114,66 +136,68 @@ impl Apu {
     pub fn is_active(&self) -> bool { self.nr52 & AUDIO_ON_OFF != 0 }
 }
 
-impl Index<u16> for Apu {
-    type Output = u8;
-
-    fn index(&self, address: u16) -> &Self::Output {
+impl MemoryMapped<u16> for Apu {
+    fn read(&self, address: u16) -> u8 {
         match address {
-            0xFF10 => &self.nr10,
-            0xFF11 => &self.nr11,
-            0xFF12 => &self.nr12,
-            0xFF13 => &self.nr13,
-            0xFF14 => &self.nr14,
-            0xFF16 => &self.nr21,
-            0xFF17 => &self.nr22,
-            0xFF18 => &self.nr23,
-            0xFF19 => &self.nr24,
-            0xFF1A => &self.nr30,
-            0xFF1B => &self.nr31,
-            0xFF1C => &self.nr32,
-            0xFF1D => &self.nr33,
-            0xFF1E => &self.nr34,
-            0xFF20 => &self.nr41,
-            0xFF21 => &self.nr42,
-            0xFF22 => &self.nr43,
-            0xFF23 => &self.nr44,
-            0xFF24 => &self.nr50,
-            0xFF25 => &self.nr51,
-            0xFF26 => &self.nr52,
-            addr @ 0xFF30..=0xFF3F => &self.wave_ram[(addr - 0xFF30) as usize],
-            _ => panic!("Invalid APU register read at address {:04X}", address),
+            NR10 => self.nr10,
+            NR11 => self.nr11,
+            NR12 => self.nr12,
+            NR13 => self.nr13,
+            NR14 => self.nr14,
+            NOT_USED_15 => 0xFF,
+            NR21 => self.nr21,
+            NR22 => self.nr22,
+            NR23 => self.nr23,
+            NR24 => self.nr24,
+            NR30 => self.nr30,
+            NR31 => self.nr31,
+            NR32 => self.nr32,
+            NR33 => self.nr33,
+            NR34 => self.nr34,
+            NR41 => self.nr41,
+            NR42 => self.nr42,
+            NR43 => self.nr43,
+            NR44 => self.nr44,
+            NR50 => self.nr50,
+            NR51 => self.nr51,
+            NR52 => self.nr52,
+            addr @ 0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize],
+
+            _ => unreachable!(
+                "Apu: read of address {address:04X} should have been handled by other components"
+            ),
         }
     }
-}
 
-impl IndexMut<u16> for Apu {
-    fn index_mut(&mut self, address: u16) -> &mut Self::Output {
+    fn write(&mut self, address: u16, value: u8) {
         match address {
-            0xFF10 => &mut self.nr10,
-            0xFF11 => &mut self.nr11,
-            0xFF12 => &mut self.nr12,
-            0xFF13 => &mut self.nr13,
-            0xFF14 => &mut self.nr14,
-            0xFF16 => &mut self.nr21,
-            0xFF17 => &mut self.nr22,
-            0xFF18 => &mut self.nr23,
-            0xFF19 => &mut self.nr24,
-            0xFF1A => &mut self.nr30,
-            0xFF1B => &mut self.nr31,
-            0xFF1C => &mut self.nr32,
-            0xFF1D => &mut self.nr33,
-            0xFF1E => &mut self.nr34,
-            0xFF20 => &mut self.nr41,
-            0xFF21 => &mut self.nr42,
-            0xFF22 => &mut self.nr43,
-            0xFF23 => &mut self.nr44,
-            0xFF24 => &mut self.nr50,
-            0xFF25 => &mut self.nr51,
-            // TODO: if(byte & 0x80) sound.nr52 |= 0x80; else sound.nr52 &= 0x7F;???
-            // should not be necessary but just in case
-            0xFF26 => &mut self.nr52,
-            addr @ 0xFF30..=0xFF3F => &mut self.wave_ram[(addr - 0xFF30) as usize],
-            _ => panic!("Invalid APU register read at address {:04X}", address),
+            NR10 => self.nr10 = value,
+            NR11 => self.nr11 = value,
+            NR12 => self.nr12 = value,
+            NR13 => self.nr13 = value,
+            NR14 => self.nr14 = value,
+            NR21 => self.nr21 = value,
+            NR22 => self.nr22 = value,
+            NR23 => self.nr23 = value,
+            NR24 => self.nr24 = value,
+            NR30 => self.nr30 = value,
+            NR31 => self.nr31 = value,
+            NR32 => self.nr32 = value,
+            NR33 => self.nr33 = value,
+            NR34 => self.nr34 = value,
+            NR41 => self.nr41 = value,
+            NR42 => self.nr42 = value,
+            NR43 => self.nr43 = value,
+            NR44 => self.nr44 = value,
+            NR50 => self.nr50 = value,
+            NR51 => self.nr51 = value,
+            // audio master control, if turning off audio, disable all channels
+            NR52 => self.nr52 = (value & AUDIO_ON_OFF) | (self.nr52 & 0x7F),
+            addr @ 0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize] = value,
+
+            _ => unreachable!(
+                "Apu: write of address {address:04X} should have been handled by other components"
+            ),
         }
     }
 }

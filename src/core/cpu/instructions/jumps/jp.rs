@@ -50,12 +50,12 @@ impl Instruction for Jp {
 #[cfg(test)]
 mod test {
     use crate::core::{
+        MemoryMapped,
         cpu::{
-            R16,
+            Reg,
             flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK},
             instructions::JumpCondition as JC,
         },
-        memory::Accessable,
     };
 
     use super::*;
@@ -63,7 +63,7 @@ mod test {
     #[test]
     fn test_jump_to_hl() {
         let mut gb = Dmg::default();
-        gb.write16(&R16::HL, 0x1234);
+        gb.store(&Reg::HL, 0x1234);
 
         let mut instr = Jp::new(IT::JumpToHL(gb.cpu.hl()));
         let result = instr.exec(&mut gb).unwrap();
@@ -77,9 +77,9 @@ mod test {
     fn test_jump_n16() {
         let mut gb = Dmg::default();
         gb.cpu.pc = 0x100;
-        gb.write16(gb.cpu.pc + 1, 0x200);
+        gb.store(gb.cpu.pc + 1, 0x200);
 
-        let mut instr = Jp::new(IT::JumpToImm16(JC::None, gb.read16(gb.cpu.pc + 1)));
+        let mut instr = Jp::new(IT::JumpToImm16(JC::None, gb.load(gb.cpu.pc + 1)));
         let result = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.pc, 0x200);
@@ -92,9 +92,9 @@ mod test {
         let mut gb = Dmg::default();
         gb.cpu.pc = 0x100;
         gb.cpu.f = ZERO_FLAG_MASK;
-        gb.write16(gb.cpu.pc + 1, 0x200);
+        gb.store(gb.cpu.pc + 1, 0x200);
 
-        let mut instr = Jp::new(IT::JumpToImm16(JC::Zero(gb.cpu.zero()), gb.read16(gb.cpu.pc + 1)));
+        let mut instr = Jp::new(IT::JumpToImm16(JC::Zero(gb.cpu.zero()), gb.load(gb.cpu.pc + 1)));
         let result = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.pc, 0x200);
@@ -108,11 +108,11 @@ mod test {
         gb.cpu.pc = 0x100;
         // carry is set, so it should not jump
         gb.cpu.f = CARRY_FLAG_MASK;
-        gb.write16(gb.cpu.pc + 1, 0x200);
+        gb.store(gb.cpu.pc + 1, 0x200);
 
         let mut instr = Jp::new(IT::JumpToImm16(
             JC::NotCarry(gb.cpu.not_carry()),
-            gb.read16(gb.cpu.pc + 1),
+            gb.load(gb.cpu.pc + 1),
         ));
         let result = instr.exec(&mut gb).unwrap();
 

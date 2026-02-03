@@ -3,7 +3,7 @@ use std::fmt::Write;
 use crate::{
     Dmg,
     core::cpu::{
-        R16,
+        Reg,
         flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
         instructions::{
             Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
@@ -36,7 +36,7 @@ impl Push {
 impl Instruction for Push {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let src = match &mut self.src {
-            IT::Reg16(src, R16::AF) => {
+            IT::Reg16(src, Reg::AF) => {
                 // this is probably useless because no other bit of F should be set
                 let f = low(*src)
                     & (ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK);
@@ -55,7 +55,7 @@ impl Instruction for Push {
         gb.cpu.sp = sp;
         // with u16 functions
         // gb.cpu.sp = gb.cpu.sp.wrapping_sub(2);
-        // gb.write16(gb.cpu.sp, src);
+        // gb.store(gb.cpu.sp, src);
 
         Ok(InstructionEffect::new(4, 1, Flags::none()))
     }
@@ -75,7 +75,7 @@ mod tests {
         gb.cpu.a = 1;
         gb.cpu.sp = 0xFFA0;
 
-        let mut push = Push::new(IT::Reg16(gb.cpu.af(), R16::AF));
+        let mut push = Push::new(IT::Reg16(gb.cpu.af(), Reg::AF));
 
         let effect = push.exec(&mut gb).unwrap();
 
@@ -94,7 +94,7 @@ mod tests {
         gb.cpu.b = 1;
         gb.cpu.sp = 0xFFA0;
 
-        let mut push = Push::new(IT::Reg16(gb.cpu.bc(), R16::BC));
+        let mut push = Push::new(IT::Reg16(gb.cpu.bc(), Reg::BC));
 
         let effect = push.exec(&mut gb).unwrap();
 

@@ -8,7 +8,7 @@ use crate::{
     Dmg,
     core::{
         IO_REGISTERS_START,
-        cpu::{R8, flags::Flags, instructions::Instruction},
+        cpu::{Reg, flags::Flags, instructions::Instruction},
         memory::is_high_address,
     },
 };
@@ -29,23 +29,23 @@ impl Instruction for Ldh {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (dst, src, addr, cycles, len): (&mut u8, u8, Option<u16>, u8, u8) = match (&self.dst, &self.src) {
             // copy the src value in register A to the byte at 16 bits immediate address (that must be between 0xFF00 and 0xFFFF)
-            (ID::PointedByA8(addr), IT::Reg8(src, reg)) if *reg == R8::A => {
+            (ID::PointedByA8(addr), IT::Reg8(src, reg)) if *reg == Reg::A => {
                 let addr = IO_REGISTERS_START + (*addr as u16);
                 (&mut gb[addr], *src, Some(addr), 3, 2)
             }
             // copy the src value in register A to the byte at address 0xFF00 + value in register C
-            (ID::PointedByCPlusFF00, IT::Reg8(src, reg)) if *reg == R8::A => {
+            (ID::PointedByCPlusFF00, IT::Reg8(src, reg)) if *reg == Reg::A => {
                 let addr = gb.cpu.c as u16 + IO_REGISTERS_START;
                 (&mut gb[addr], *src, Some(addr), 2, 1)
             }
             // copy the src byte addressed by 16 bits immediate (that must be between 0xFF00 and 0xFFFF) into dst register A
-            (ID::Reg8(reg), IT::PointedByA8(addr)) if *reg == R8::A => {
+            (ID::Reg8(reg), IT::PointedByA8(addr)) if *reg == Reg::A => {
                 let addr = IO_REGISTERS_START + (*addr as u16);
                 let pointed = gb[addr];
                 (&mut gb[reg], pointed, Some(addr), 3, 2)
             }
             // copy the src byte addressed by 0xFF00 + C into dst register A
-            (ID::Reg8(reg), IT::PointedByCPlusFF00) if *reg == R8::A => {
+            (ID::Reg8(reg), IT::PointedByCPlusFF00) if *reg == Reg::A => {
                 let addr = gb.cpu.c as u16 + IO_REGISTERS_START;
                 let pointed = gb[addr];
                 (&mut gb[reg], pointed, Some(addr), 2, 1)

@@ -2,10 +2,13 @@ use std::fmt::Write;
 
 use crate::{
     Dmg,
-    core::cpu::{
-        flags::Flags,
-        instructions::{
-            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+    core::{
+        MemoryMapped,
+        cpu::{
+            flags::Flags,
+            instructions::{
+                Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+            },
         },
     },
     utils::{high, low},
@@ -32,10 +35,10 @@ impl Instruction for Call {
                 let return_addr = gb.cpu.pc.wrapping_add(3);
 
                 let mut sp = gb.cpu.sp.wrapping_sub(1);
-                gb[sp] = high(return_addr);
+                gb.write(sp, high(return_addr));
 
                 sp = sp.wrapping_sub(1);
-                gb[sp] = low(return_addr);
+                gb.write(sp, low(return_addr));
                 gb.cpu.sp = sp;
 
                 gb.cpu.pc = *addr;

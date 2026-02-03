@@ -4,7 +4,7 @@ use super::InstructionTarget as IT;
 use crate::{
     Dmg,
     core::cpu::{
-        R8,
+        Reg,
         flags::{Flags, check_overflow_cy, check_overflow_hc, check_zero},
         instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
     },
@@ -24,7 +24,7 @@ impl Adc {
 impl Instruction for Adc {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (addend, cycles, len) = match &self.addend {
-            IT::Reg8(val, reg) if *reg != R8::F => (*val, 1, 1),
+            IT::Reg8(val, reg) if *reg != Reg::F => (*val, 1, 1),
             IT::PointedByHL(value) => (*value, 2, 1),
             IT::Imm8(n8) => (*n8, 2, 2),
             _ => return Err(InstructionError::MalformedInstruction),

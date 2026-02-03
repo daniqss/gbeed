@@ -33,7 +33,7 @@ impl Instruction for Ret {
             return Ok(InstructionEffect::new(cycles, 1, Flags::none()));
         }
 
-        let return_addr = gb.read16(gb.cpu.sp);
+        let return_addr = gb.load(gb.cpu.sp);
         gb.cpu.pc = return_addr;
         gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
 

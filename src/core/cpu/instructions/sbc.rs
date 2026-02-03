@@ -4,7 +4,7 @@ use super::InstructionTarget as IT;
 use crate::{
     Dmg,
     core::cpu::{
-        R8,
+        Reg,
         flags::{Flags, check_borrow_hc, check_zero},
         instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
     },
@@ -23,7 +23,7 @@ impl Sbc {
 impl Instruction for Sbc {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (subtrahend, cycles, len) = match &self.subtrahend {
-            IT::Reg8(val, reg) if *reg != R8::F => (*val, 1, 1),
+            IT::Reg8(val, reg) if *reg != Reg::F => (*val, 1, 1),
             IT::PointedByHL(value) => (*value, 2, 1),
             IT::Imm8(n8) => (*n8, 2, 2),
             _ => return Err(InstructionError::MalformedInstruction),
@@ -84,7 +84,7 @@ mod tests {
     fn test_sbc_set_half_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0b0001_0000;
-        let subtrahend = IT::Reg8(0b0000_00011, R8::B);
+        let subtrahend = IT::Reg8(0b0000_00011, Reg::B);
 
         let mut sbc = Sbc::new(false, subtrahend);
         let result = sbc.exec(&mut gb).unwrap();

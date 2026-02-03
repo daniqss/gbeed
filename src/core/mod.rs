@@ -13,11 +13,12 @@ pub use crate::prelude::*;
 use crate::{
     core::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
-        cpu::{Instruction, Len, R8, R16},
-        interrupts::IE,
+        cpu::{Instruction, Len, Reg},
         ppu::{PPU_REGISTER_END, PPU_REGISTER_START},
+        serial::{SERIAL_REGISTER_END, SERIAL_REGISTER_START},
+        timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
     },
-    utils::with_u16,
+    utils::{high, low, to_u16, with_u16},
 };
 
 pub use apu::Apu;
@@ -28,14 +29,9 @@ pub use joypad::Joypad;
 pub use memory::*;
 pub use ppu::Ppu;
 pub use serial::Serial;
-pub use timer::TimerController;
+pub use timer::Timer;
 
-use self::{
-    interrupts::IF,
-    joypad::JOYP,
-    serial::{SB, SC},
-    timer::{DIV, TAC, TIMA, TMA},
-};
+use self::{interrupts::IF, joypad::JOYP};
 
 const BANK_REGISTER: u16 = 0xFF50;
 
@@ -46,7 +42,7 @@ pub struct Dmg {
     pub ppu: Ppu,
     pub joypad: Joypad,
     pub serial: Serial,
-    pub timer: TimerController,
+    pub timer: Timer,
     pub apu: Apu,
     pub interrupt_flag: Interrupt,
     pub interrupt_enable: Interrupt,
@@ -57,7 +53,7 @@ impl Dmg {
     pub fn new(game: Option<Cartridge>, boot_rom: Option<Vec<u8>>) -> Dmg {
         let joypad = Joypad::default();
         let serial = Serial::new();
-        let timer = TimerController::new();
+        let timer = Timer::new();
         let apu = Apu::new();
         let interrupt_flag = Interrupt::new();
         let ppu = Ppu::new();
@@ -100,7 +96,7 @@ impl Dmg {
     }
 
     pub fn step(&mut self) -> Result<Box<dyn Instruction>> {
-        let opcode = self[self.cpu.pc];
+        let opcode = self.read(self.cpu.pc);
 
         let mut instruction = match Cpu::fetch(self, opcode) {
             Ok(instr) => instr,
@@ -137,76 +133,7 @@ impl Dmg {
     }
 }
 
-impl Index<u16> for Dmg {
-    type Output = u8;
-
-    fn index(&self, addr: u16) -> &Self::Output {
-        match addr {
-            ROM_BANK00_START..=NOT_USABLE_END => &self.bus[addr],
-            IO_REGISTERS_START..=IO_REGISTERS_END => match addr {
-                JOYP => &self.joypad.0,
-
-                SB => &self.serial.sb,
-                SC => &self.serial.sc,
-
-                DIV => &self.timer.divider,
-                TIMA => &self.timer.timer_counter,
-                TMA => &self.timer.timer_modulo,
-                TAC => &self.timer.timer_control,
-
-                IF => &self.interrupt_flag.0,
-
-                APU_REGISTER_START..=APU_REGISTER_END => &self.apu[addr],
-
-                PPU_REGISTER_START..=PPU_REGISTER_END => &self.ppu[addr],
-
-                BANK_REGISTER => &self.bank,
-
-                _ => unreachable!(),
-            },
-            HRAM_START..=HRAM_END => &self.bus[addr],
-            IE => &self.interrupt_enable.0,
-        }
-    }
-}
-
-impl IndexMut<u16> for Dmg {
-    fn index_mut(&mut self, addr: u16) -> &mut Self::Output {
-        match addr {
-            IO_REGISTERS_START..=IO_REGISTERS_END => match addr {
-                JOYP => &mut self.joypad.0,
-
-                SB => &mut self.serial.sb,
-                SC => &mut self.serial.sc,
-
-                DIV => &mut self.timer.divider,
-                TIMA => &mut self.timer.timer_counter,
-                TMA => &mut self.timer.timer_modulo,
-                TAC => &mut self.timer.timer_control,
-
-                IF => &mut self.interrupt_flag.0,
-
-                0xF100..=0xFF26 => &mut self.apu[addr],
-
-                0xFF40..=0xFF4B => &mut self.ppu[addr],
-
-                0xFF50 => {
-                    if self.bank == 0 {
-                        self.bus.unmap_boot_rom();
-                    }
-
-                    &mut self.bank
-                }
-
-                _ => unreachable!(),
-            },
-            HRAM_START..=HRAM_END => &mut self.bus[addr],
-            IE => &mut self.interrupt_enable.0,
-        }
-    }
-}
-
-impl MemoryMapped for Dmg {
+impl MemoryMapped<u16> for Dmg {
     fn read(&self, address: u16) -> u8 {
         match address {
             ROM_BANK00_START..=ROM_BANKNN_END => self.bus.rom[address as usize],
@@ -227,32 +154,27 @@ impl MemoryMapped for Dmg {
             ),
 
             IO_REGISTERS_START..=IO_REGISTERS_END => match address {
-                JOYP => self.joypad.0,
-
-                SB => self.serial.sb,
-                SC => self.serial.sc,
-
-                DIV => self.timer.divider,
-                TIMA => self.timer.timer_counter,
-                TMA => self.timer.timer_modulo,
-                TAC => self.timer.timer_control,
+                JOYP => self.joypad.read(address),
+                SERIAL_REGISTER_START..=SERIAL_REGISTER_END => self.serial.read(address),
+                TIMER_REGISTER_START..=TIMER_REGISTER_END => self.timer.read(address),
 
                 IF => self.interrupt_flag.0,
 
-                APU_REGISTER_START..=APU_REGISTER_END => self.apu[addr],
-
-                PPU_REGISTER_START..=PPU_REGISTER_END => self.ppu[addr],
+                APU_REGISTER_START..=APU_REGISTER_END => self.apu.read(address),
+                PPU_REGISTER_START..=PPU_REGISTER_END => self.ppu.read(address),
 
                 BANK_REGISTER => self.bank,
 
-                _ => unreachable!(
-                    "Read of IO register {:04X} should have been handled by other components",
-                    address
-                ),
+                // unimplemented IO registers return 0xFF
+                _ => 0xFF,
             },
             HRAM_START..=HRAM_END => self.bus.hram[(address - HRAM_START) as usize],
 
-            _ => unreachable!("Read of address {address:04X} should have been handled by other components"),
+            _ => {
+                unreachable!(
+                    "Dmg: read of address {address:04X} should have been handled by other components"
+                )
+            }
         }
     }
 
@@ -273,5 +195,66 @@ impl MemoryMapped for Dmg {
 
             _ => unreachable!("Write of address {address:04X} should have been handled by other components"),
         }
+    }
+}
+
+impl MemoryMapped16<u16> for Dmg {
+    fn load(&self, address: u16) -> u16 { to_u16(self.read(address), self.read(address.wrapping_add(1))) }
+
+    fn store(&mut self, address: u16, value: u16) {
+        self.write(address, low(value));
+        self.write(address.wrapping_add(1), high(value));
+    }
+}
+
+impl MemoryMapped<Reg> for Dmg {
+    fn read(&self, address: Reg) -> u8 {
+        match address {
+            Reg::A => self.cpu.a,
+            Reg::F => self.cpu.f,
+            Reg::B => self.cpu.b,
+            Reg::C => self.cpu.c,
+            Reg::D => self.cpu.d,
+            Reg::E => self.cpu.e,
+            Reg::H => self.cpu.h,
+            Reg::L => self.cpu.l,
+            _ => unreachable!("Cpu: attempted to read 16 bits register as 8 bits {:?}", address),
+        }
+    }
+
+    fn write(&mut self, address: Reg, value: u8) {
+        match address {
+            Reg::A => self.cpu.a = value,
+            Reg::F => self.cpu.f = value & 0xF0,
+            Reg::B => self.cpu.b = value,
+            Reg::C => self.cpu.c = value,
+            Reg::D => self.cpu.d = value,
+            Reg::E => self.cpu.e = value,
+            Reg::H => self.cpu.h = value,
+            Reg::L => self.cpu.l = value,
+            _ => unreachable!("Cpu: attempted to write 16 bits register as 8 bits {:?}", address),
+        }
+    }
+}
+
+impl MemoryMapped16<Reg> for Dmg {
+    fn load(&self, address: Reg) -> u16 {
+        match address {
+            Reg::AF => self.cpu.af(),
+            Reg::BC => self.cpu.bc(),
+            Reg::DE => self.cpu.de(),
+            Reg::HL => self.cpu.hl(),
+            _ => unreachable!("Cpu: attempted to read 8 bits register as 16 bits {:?}", address),
+        }
+    }
+
+    fn store(&mut self, address: Reg, value: u16) {
+        match address {
+            Reg::AF => with_u16(&mut self.cpu.f, &mut self.cpu.a, |_| value),
+            Reg::BC => with_u16(&mut self.cpu.c, &mut self.cpu.b, |_| value),
+            Reg::DE => with_u16(&mut self.cpu.e, &mut self.cpu.d, |_| value),
+            Reg::HL => with_u16(&mut self.cpu.l, &mut self.cpu.h, |_| value),
+            _ => unreachable!("Cpu: attempted to write 8 bits register as 16 bits {:?}", address),
+        };
     }
 }

@@ -10,10 +10,10 @@ pub const TIMER_INTERRUPT: u8 = 0x04;
 pub const LCD_STAT_INTERRUPT: u8 = 0x02;
 pub const VBLANK_INTERRUPT: u8 = 0x01;
 
-/// # Interrupt Flag Register
+/// # Interrupt Flag Reg
 /// Represents **requested** interrupts.
 /// Bits are set by hardware or manually by the user using instructions `EI` and `DI`.
-/// # Interrupt Enable Register
+/// # Interrupt Enable Reg
 /// Controls whether specific interrupts are **allowed** to be serviced.
 /// Even if requested in `IF`, the handler won't run unless the corresponding bit here is 1.
 #[derive(Debug, Default)]

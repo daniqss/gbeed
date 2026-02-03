@@ -50,7 +50,7 @@ impl Instruction for Rrc {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::cpu::{R8, flags::Flags};
+    use crate::core::cpu::{Reg, flags::Flags};
 
     use super::*;
 
@@ -58,7 +58,7 @@ mod tests {
     fn test_rr_no_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0b0000_0001;
-        let mut instr = Rrc::new(ID::Reg8(R8::A));
+        let mut instr = Rrc::new(ID::Reg8(Reg::A));
 
         let result = instr.exec(&mut gb).unwrap();
         assert_eq!(gb.cpu.a, 0b1000_0000);

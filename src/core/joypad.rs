@@ -68,7 +68,7 @@ impl Joypad {
     }
 }
 
-impl MemoryMapped for Joypad {
+impl MemoryMapped<u16> for Joypad {
     fn read(&self, address: u16) -> u8 {
         match address {
             JOYP if !self.select_buttons() => SELECT_BUTTONS | (self.input >> 4),
