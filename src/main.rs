@@ -5,9 +5,8 @@ use gbeed::core::ppu::DMG_SCREEN_HEIGHT;
 use gbeed::core::ppu::DMG_SCREEN_WIDTH;
 use gbeed::prelude::*;
 
+use raylib::ffi::PixelFormat;
 use raylib::prelude::*;
-
-use std::io::{self, ErrorKind};
 
 // we should distinguish between desktop arm and armv6 32 bits of the raspberry pi zero
 #[cfg(target_arch = "arm")]
@@ -24,18 +23,64 @@ const WINDOW_TITLE: &str = "gbeed";
 const WINDOW_TITLE: &str = "gbeed -- desktop";
 
 fn main() -> Result<()> {
-    let mut args = std::env::args().skip(1);
+    let args: Vec<String> = std::env::args().collect();
+    let mut game_path: Option<String> = None;
+    let mut boot_path: Option<String> = None;
 
-    let game_name = args
-        .next()
-        .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "Missing game name"))?;
-    let boot_room_name = args
-        .next()
-        .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "Missing boot room name"))?;
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "-g" | "--game" => {
+                if i + 1 < args.len() {
+                    game_path = Some(args[i + 1].clone());
+                    i += 1;
+                } else {
+                    eprintln!("Error: Missing argument for --game");
+                    print_help();
+                    std::process::exit(1);
+                }
+            }
+            "-b" | "--boot" | "--boot_rom" => {
+                if i + 1 < args.len() {
+                    boot_path = Some(args[i + 1].clone());
+                    i += 1;
+                } else {
+                    eprintln!("Error: Missing argument for --boot_rom");
+                    print_help();
+                    std::process::exit(1);
+                }
+            }
+            "-h" | "--help" => {
+                print_help();
+                std::process::exit(0);
+            }
+            arg => {
+                eprintln!("Unknown argument: {}", arg);
+                print_help();
+                std::process::exit(1);
+            }
+        }
+        i += 1;
+    }
 
-    let game = Cartridge::new(std::fs::read(game_name)?)?;
-    let boot_room_data = std::fs::read(boot_room_name)?;
-    let mut gb = Dmg::new(Some(game), Some(boot_room_data));
+    let game = if let Some(path) = game_path {
+        let data = std::fs::read(&path)
+            .map_err(|e| Error::Generic(format!("Failed to read game ROM at {}: {}", path, e)))?;
+        Some(Cartridge::new(data)?)
+    } else {
+        None
+    };
+
+    let boot_rom = if let Some(path) = boot_path {
+        Some(
+            std::fs::read(&path)
+                .map_err(|e| Error::Generic(format!("Failed to read boot ROM at {}: {}", path, e)))?,
+        )
+    } else {
+        None
+    };
+
+    let mut gb = Dmg::new(game, boot_rom);
 
     let (mut rl, thread) = raylib::init()
         .size(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -46,7 +91,7 @@ fn main() -> Result<()> {
 
     let mut frame_image =
         Image::gen_image_color(DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32, Color::BLACK);
-    frame_image.set_format(raylib::ffi::PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
+    frame_image.set_format(PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
     let mut frame = rl
         .load_texture_from_image(&thread, &frame_image)
         .expect("Failed to load texture");
@@ -152,4 +197,12 @@ fn update_joypad(jp: &mut Joypad, key: Option<KeyboardKey>) {
         }
         _ => {}
     }
+}
+
+fn print_help() {
+    println!("Usage: gbeed [OPTIONS]");
+    println!("Options:");
+    println!("  -g, --game <PATH>      Path to the game ROM file");
+    println!("  -b, --boot <PATH>      Path to the boot ROM file (optional)");
+    println!("  -h, --help             Print this help message");
 }

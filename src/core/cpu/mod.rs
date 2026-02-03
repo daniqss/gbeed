@@ -17,11 +17,26 @@ use std::fmt::{self, Display, Formatter};
 
 pub type FetchResult = std::result::Result<Box<dyn Instruction>, InstructionError>;
 
+pub const AFTER_BOOT_CPU: Cpu = Cpu {
+    a: 0x01,
+    f: 0xB0,
+    b: 0x00,
+    c: 0x13,
+    d: 0x00,
+    e: 0xD8,
+    h: 0x01,
+    l: 0x4D,
+    pc: 0x0100,
+    sp: 0xFFFE,
+    cycles: 60814,
+    ime: false,
+};
+
 /// # CPU
 /// Gameboy CPU, with a mix of Intel 8080 and Zilog Z80 features and instruction set, the Sharp LR35902.
 /// Most of its register are 8-bits ones, that are commonly used as pairs to perform 16-bits operations.
 /// The only 16-bits registers are the stack pointer (SP) and the program counter (PC).
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Cpu {
     pub a: u8,
     pub f: u8,
@@ -41,20 +56,10 @@ pub struct Cpu {
 
 impl Cpu {
     pub fn new(start_at_boot: bool) -> Cpu {
-        Cpu {
-            a: if start_at_boot { 0x01 } else { 0x00 },
-            f: 0x00,
-            b: 0x00,
-            c: 0x00,
-            d: 0x00,
-            e: 0x00,
-            h: 0x00,
-            l: 0x00,
-            pc: if start_at_boot { 0x0000 } else { 0x0100 },
-            sp: 0x0000,
-
-            cycles: 0,
-            ime: false,
+        if start_at_boot {
+            Cpu::default()
+        } else {
+            AFTER_BOOT_CPU
         }
     }
 
@@ -73,18 +78,18 @@ impl Cpu {
     pub fn not_zero(&self) -> bool { self.f & ZERO_FLAG_MASK == 0 }
 
     pub fn reset(&mut self) {
-        self.a = 0x00;
-        self.f = 0x00;
-        self.b = 0x00;
-        self.c = 0x00;
-        self.d = 0x00;
-        self.e = 0x00;
-        self.h = 0x00;
-        self.l = 0x00;
-        self.pc = 0x0100;
-        self.sp = 0x0000;
-        self.ime = false;
-        self.cycles = 0;
+        self.a = AFTER_BOOT_CPU.a;
+        self.f = AFTER_BOOT_CPU.f;
+        self.b = AFTER_BOOT_CPU.b;
+        self.c = AFTER_BOOT_CPU.c;
+        self.d = AFTER_BOOT_CPU.d;
+        self.e = AFTER_BOOT_CPU.e;
+        self.h = AFTER_BOOT_CPU.h;
+        self.l = AFTER_BOOT_CPU.l;
+        self.pc = AFTER_BOOT_CPU.pc;
+        self.sp = AFTER_BOOT_CPU.sp;
+        self.ime = AFTER_BOOT_CPU.ime;
+        self.cycles = AFTER_BOOT_CPU.cycles;
     }
 
     /// Execute instruction based on the opcode.

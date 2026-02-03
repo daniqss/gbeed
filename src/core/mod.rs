@@ -23,7 +23,7 @@ use crate::{
 
 pub use apu::Apu;
 pub use cartrigde::Cartridge;
-pub use cpu::Cpu;
+pub use cpu::{Cpu, AFTER_BOOT_CPU};
 pub use interrupts::Interrupt;
 pub use joypad::Joypad;
 pub use memory::{
@@ -93,6 +93,7 @@ impl Dmg {
             let _instr = self.step()?;
             if self.cpu.pc == 0x0100 {
                 println!("just arrive to game rom start");
+                println!("Cpu: {}", self.cpu);
                 std::thread::sleep(std::time::Duration::from_millis(500));
             }
         }
