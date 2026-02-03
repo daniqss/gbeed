@@ -1,4 +1,18 @@
 #[macro_export]
+macro_rules! mem_range {
+    ($name:ident, $start:expr, $end:expr) => {
+        paste::paste! {
+            #[allow(dead_code)]
+            pub const [<$name _START>]: u16 = $start;
+            #[allow(dead_code)]
+            pub const [<$name _END>]: u16 = $end;
+            #[allow(dead_code)]
+            pub const [<$name _SIZE>]: u16 = $end - $start + 1;
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! bit_accessors {
     (
         target: $target:tt;
