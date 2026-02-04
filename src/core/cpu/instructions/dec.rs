@@ -1,111 +1,162 @@
-use std::fmt::{self, Display, Write};
+use std::fmt::Write;
 
 use crate::{
     Dmg,
     core::{
+        Accessible16,
         cpu::{
+            R8, R16,
             flags::{Flags, check_borrow_hc, check_zero},
             instructions::{Instruction, InstructionEffect, InstructionResult},
-            {R8, R16},
         },
-        memory::{Accessible, Accessible16},
+        memory::Accessible,
     },
 };
 
-// --- Operands (TODO: Move to instructions/mod.rs) ---
+pub trait Dec: Instruction {
+    type Args;
+    type FlagsArgs;
 
-pub trait Operand8: Display {
-    fn read(&self, gb: &Dmg) -> u8;
-    fn write(&self, gb: &mut Dmg, value: u8);
+    fn new(args: Self::Args) -> Box<Self>;
+    fn flags(&self, args: Self::FlagsArgs) -> Flags;
     fn cycles(&self) -> u8;
+    fn len(&self) -> u8;
 }
 
-pub trait Operand16: Display {
-    fn read(&self, gb: &Dmg) -> u16;
-    fn write(&self, gb: &mut Dmg, value: u16);
-    fn cycles(&self) -> u8;
+pub struct DecR8 {
+    dst: R8,
 }
 
-pub struct OpReg8(pub R8);
-impl Display for OpReg8 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{}", self.0) }
-}
-impl Operand8 for OpReg8 {
-    fn read(&self, gb: &Dmg) -> u8 { gb.read(self.0) }
-    fn write(&self, gb: &mut Dmg, value: u8) { gb.write(self.0, value) }
-    fn cycles(&self) -> u8 { 0 }
-}
+impl Dec for DecR8 {
+    type Args = R8;
+    type FlagsArgs = (u8, u8);
 
-pub struct OpHL;
-impl Display for OpHL {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "[hl]") }
-}
-impl Operand8 for OpHL {
-    fn read(&self, gb: &Dmg) -> u8 { gb.read(gb.cpu.hl()) }
-    fn write(&self, gb: &mut Dmg, value: u8) { gb.write(gb.cpu.hl(), value) }
-    fn cycles(&self) -> u8 { 2 }
-}
-
-pub struct OpReg16(pub R16);
-impl Display for OpReg16 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{}", self.0) }
-}
-impl Operand16 for OpReg16 {
-    fn read(&self, gb: &Dmg) -> u16 { gb.load(self.0) }
-    fn write(&self, gb: &mut Dmg, value: u16) { gb.store(self.0, value) }
-    fn cycles(&self) -> u8 { 0 }
-}
-
-pub struct OpSP;
-impl Display for OpSP {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "sp") }
-}
-impl Operand16 for OpSP {
-    fn read(&self, gb: &Dmg) -> u16 { gb.cpu.sp }
-    fn write(&self, gb: &mut Dmg, value: u16) { gb.cpu.sp = value }
-    fn cycles(&self) -> u8 { 0 }
-}
-
-// --- Instructions ---
-
-/// Decrement the 8-bit operand value by one
-pub struct Dec8<O>(pub O);
-
-impl<O: Operand8> Instruction for Dec8<O> {
-    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let len = 1;
-        let val = self.0.read(gb);
-        let result = val.wrapping_sub(1);
-        self.0.write(gb, result);
-
-        let flags = Flags {
+    #[inline]
+    fn new(dst: R8) -> Box<Self> { Box::new(DecR8 { dst }) }
+    #[inline]
+    fn flags(&self, args: Self::FlagsArgs) -> Flags {
+        let (old, result) = args;
+        Flags {
             z: Some(check_zero(result)),
             n: Some(true),
-            h: Some(check_borrow_hc(val, 1)),
+            h: Some(check_borrow_hc(old, 1)),
             c: None,
-        };
-
-        Ok(InstructionEffect::new(1 + self.0.cycles(), len, flags))
+        }
     }
-
-    fn disassembly(&self, w: &mut dyn Write) -> fmt::Result {
-        write!(w, "dec {}", self.0)
-    }
+    #[inline]
+    fn cycles(&self) -> u8 { 1 }
+    #[inline]
+    fn len(&self) -> u8 { 1 }
 }
 
-/// Decrement the 16-bit operand value by one
-pub struct Dec16<O>(pub O);
-
-impl<O: Operand16> Instruction for Dec16<O> {
+impl Instruction for DecR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let len = 1;
-        let val = self.0.read(gb);
-        self.0.write(gb, val.wrapping_sub(1));
+        let r8 = gb.read(self.dst);
+        let result = r8.wrapping_sub(1);
+        gb.write(self.dst, result);
 
-        Ok(InstructionEffect::new(2 + self.0.cycles(), len, Flags::none()))
+        Ok(InstructionEffect::new(
+            self.cycles(),
+            self.len(),
+            self.flags((r8, result)),
+        ))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> fmt::Result {
-        write!(w, "dec {}", self.0)
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "dec {}", self.dst) }
+}
+
+pub struct DecPointedByHL;
+
+impl Dec for DecPointedByHL {
+    type Args = ();
+    type FlagsArgs = (u8, u8);
+
+    #[inline(always)]
+    fn new(_: ()) -> Box<Self> { Box::new(DecPointedByHL) }
+    #[inline(always)]
+    fn flags(&self, args: Self::FlagsArgs) -> Flags {
+        let (old, result) = args;
+        Flags {
+            z: Some(check_zero(result)),
+            n: Some(true),
+            h: Some(check_borrow_hc(old, 1)),
+            c: None,
+        }
     }
+    #[inline(always)]
+    fn cycles(&self) -> u8 { 3 }
+    #[inline(always)]
+    fn len(&self) -> u8 { 1 }
+}
+
+impl Instruction for DecPointedByHL {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        let n8 = gb.read(gb.cpu.hl());
+        let result = n8.wrapping_sub(1);
+        gb.write(gb.cpu.hl(), result);
+
+        Ok(InstructionEffect::new(
+            self.cycles(),
+            self.len(),
+            self.flags((n8, result)),
+        ))
+    }
+
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "dec [hl]") }
+}
+
+pub struct DecR16 {
+    dst: R16,
+}
+
+impl Dec for DecR16 {
+    type Args = R16;
+    type FlagsArgs = ();
+
+    #[inline(always)]
+    fn new(dst: R16) -> Box<Self> { Box::new(DecR16 { dst }) }
+    #[inline(always)]
+    fn flags(&self, _: Self::FlagsArgs) -> Flags { Flags::none() }
+    #[inline(always)]
+    fn cycles(&self) -> u8 { 2 }
+    #[inline(always)]
+    fn len(&self) -> u8 { 1 }
+}
+
+impl Instruction for DecR16 {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        let r16 = gb.load(self.dst);
+        let result = r16.wrapping_sub(1);
+        gb.store(self.dst, result);
+
+        Ok(InstructionEffect::new(self.cycles(), self.len(), self.flags(())))
+    }
+
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "dec {}", self.dst) }
+}
+
+pub struct DecStackPointer;
+
+impl Dec for DecStackPointer {
+    type Args = ();
+    type FlagsArgs = ();
+
+    #[inline(always)]
+    fn new(_: ()) -> Box<Self> { Box::new(DecStackPointer) }
+    #[inline(always)]
+    fn flags(&self, _: Self::FlagsArgs) -> Flags { Flags::none() }
+    #[inline(always)]
+    fn cycles(&self) -> u8 { 2 }
+    #[inline(always)]
+    fn len(&self) -> u8 { 1 }
+}
+
+impl Instruction for DecStackPointer {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        gb.cpu.sp = gb.cpu.sp.wrapping_sub(1);
+
+        Ok(InstructionEffect::new(self.cycles(), self.len(), self.flags(())))
+    }
+
+    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "dec sp") }
 }
