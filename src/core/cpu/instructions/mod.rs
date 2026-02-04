@@ -38,7 +38,7 @@ mod sub;
 mod swap;
 mod xor;
 
-use std::fmt::{Display, Write};
+use std::fmt::Display;
 
 pub use adc::Adc;
 pub use add::Add;
@@ -48,7 +48,7 @@ pub use ccf::Ccf;
 pub use cp::Cp;
 pub use cpl::Cpl;
 pub use daa::Daa;
-pub use dec::Dec;
+pub use dec::*;
 pub use di::Di;
 pub use ei::Ei;
 pub use halt::Halt;
@@ -84,21 +84,20 @@ use crate::{
     Dmg,
     core::{
         IO_REGISTERS_START,
-        cpu::{
-            flags::Flags,
-            {R8, R16}, {R8, R16},
-        },
+        cpu::{R8, R16, flags::Flags},
     },
 };
 
 /// Represents a CPU instruction.
 /// The instruction can be executed and can provide its disassembly representation
 pub trait Instruction {
-    type Args;
-
-    fn new(args: Self::Args) -> Box<Self>;
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult;
+    fn info(&self, gb: &mut Dmg) -> (u8, u8);
     fn disassembly(&self) -> String;
+}
+
+impl Display for dyn Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { write!(f, "{}", self.disassembly()) }
 }
 
 /// Instructions possible operands and targets.
@@ -110,13 +109,13 @@ pub enum InstructionTarget {
     Imm8(u8),
     Imm16(u16),
     SignedImm(i8),
-    Reg8(u8, Reg),
-    Reg16(u16, Reg),
+    Reg8(u8, R8),
+    Reg16(u16, R16),
     PointedByHL(u8),
     PointedByN16(u16),
     PointedByA8(u8),
     PointedByCPlusFF00,
-    PointedByReg16(u8, Reg),
+    PointedByReg16(u8, R16),
     PointedByHLI(u8),
     PointedByHLD(u8),
     StackPointer(u16),
@@ -156,9 +155,9 @@ pub enum InstructionDestination {
     PointedByN16(u16),
     PointedByA8(u8),
     PointedByCPlusFF00,
-    Reg8(Reg),
-    Reg16(Reg),
-    PointedByReg16(u16, Reg),
+    Reg8(R8),
+    Reg16(R16),
+    PointedByReg16(u16, R16),
     PointedByHLI(u16),
     PointedByHLD(u16),
     StackPointer,
@@ -202,7 +201,8 @@ pub struct InstructionEffect {
 }
 
 impl InstructionEffect {
-    pub fn new(cycles: u8, len: u8, flags: Flags) -> Self {
+    pub fn new(info: (u8, u8), flags: Flags) -> Self {
+        let (cycles, len) = info;
         Self {
             cycles,
             len: Len::AddLen(len),
@@ -210,7 +210,8 @@ impl InstructionEffect {
         }
     }
 
-    pub fn with_jump(cycles: u8, len: u8, flags: Flags) -> Self {
+    pub fn with_jump(info: (u8, u8), flags: Flags) -> Self {
+        let (cycles, len) = info;
         Self {
             cycles,
             len: Len::Jump(len),

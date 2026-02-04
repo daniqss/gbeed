@@ -24,72 +24,72 @@ fn dec_u8_flags(old: u8, result: u8) -> Flags {
 pub struct DecR8 {
     dst: R8,
 }
+impl DecR8 {
+    pub fn new(dst: R8) -> Box<Self> { Box::new(Self { dst }) }
+}
 
 impl Instruction for DecR8 {
-    type Args = R8;
-
-    fn new(args: Self::Args) -> Box<Self> { Box::new(DecR8 { dst: args }) }
-
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let r8 = gb.read(self.dst);
         let result = r8.wrapping_sub(1);
         gb.write(self.dst, result);
 
-        Ok(InstructionEffect::new(1, 1, dec_u8_flags(r8, result)))
+        Ok(InstructionEffect::new(self.info(gb), dec_u8_flags(r8, result)))
     }
-
+    #[inline(always)]
+    fn info(&self, _: &mut Dmg) -> (u8, u8) { (1, 1) }
+    #[inline(always)]
     fn disassembly(&self) -> String { format!("dec {}", self.dst) }
 }
 
 pub struct DecPointedByHL;
+impl DecPointedByHL {
+    pub fn new() -> Box<Self> { Box::new(Self) }
+}
 
 impl Instruction for DecPointedByHL {
-    type Args = ();
-
-    fn new(_: Self::Args) -> Box<Self> { Box::new(DecPointedByHL) }
-
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let n8 = gb.read(gb.cpu.hl());
         let result = n8.wrapping_sub(1);
         gb.write(gb.cpu.hl(), result);
 
-        Ok(InstructionEffect::new(3, 1, dec_u8_flags(n8, result)))
+        Ok(InstructionEffect::new(self.info(gb), dec_u8_flags(n8, result)))
     }
-
+    fn info(&self, _: &mut Dmg) -> (u8, u8) { (3, 1) }
     fn disassembly(&self) -> String { format!("dec [hl]") }
 }
 
 pub struct DecR16 {
     dst: R16,
 }
+impl DecR16 {
+    pub fn new(dst: R16) -> Box<Self> { Box::new(Self { dst }) }
+}
 
 impl Instruction for DecR16 {
-    type Args = R16;
-
-    fn new(args: Self::Args) -> Box<Self> { Box::new(DecR16 { dst: args }) }
-
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let r16 = gb.load(self.dst);
         let result = r16.wrapping_sub(1);
         gb.store(self.dst, result);
 
-        Ok(InstructionEffect::new(2, 1, Flags::none()))
+        Ok(InstructionEffect::new(self.info(gb), Flags::none()))
     }
-
+    fn info(&self, _: &mut Dmg) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { format!("dec {}", self.dst) }
 }
 
 pub struct DecStackPointer;
 
-impl Instruction for DecStackPointer {
-    type Args = ();
+impl DecStackPointer {
+    pub fn new() -> Box<Self> { Box::new(Self) }
+}
 
-    fn new(_: Self::Args) -> Box<Self> { Box::new(DecStackPointer) }
+impl Instruction for DecStackPointer {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.sp = gb.cpu.sp.wrapping_sub(1);
 
-        Ok(InstructionEffect::new(2, 1, Flags::none()))
+        Ok(InstructionEffect::new(self.info(gb), Flags::none()))
     }
-
+    fn info(&self, _: &mut Dmg) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { format!("dec sp") }
 }
