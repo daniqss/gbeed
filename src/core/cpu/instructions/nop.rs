@@ -1,5 +1,3 @@
-use std::fmt::Write;
-
 use crate::{
     Dmg,
     core::cpu::{
@@ -16,6 +14,9 @@ impl Nop {
 }
 
 impl Instruction for Nop {
-    fn exec(&mut self, _gb: &mut Dmg) -> InstructionResult { Ok(InstructionEffect::new(1, 1, Flags::none())) }
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "nop") }
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        Ok(InstructionEffect::new(self.info(gb), Flags::none()))
+    }
+    fn info(&self, _: &mut Dmg) -> (u8, u8) { (1, 1) }
+    fn disassembly(&self) -> String { format!("nop") }
 }

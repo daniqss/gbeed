@@ -1,7 +1,7 @@
 use crate::{
     Dmg,
     core::cpu::{
-        flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK},
+        flags::Flags,
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
 };
@@ -18,22 +18,22 @@ impl Instruction for Daa {
         let mut adjustament = 0;
         let mut carry = false;
 
-        if (gb.cpu.f & SUBTRACTION_FLAG_MASK) != 0 {
-            if gb.cpu.f & HALF_CARRY_FLAG_MASK != 0 {
+        if gb.cpu.substraction() {
+            if gb.cpu.half_carry() {
                 adjustament += 0x6;
             }
-            if gb.cpu.f & CARRY_FLAG_MASK != 0 {
+            if gb.cpu.carry() {
                 adjustament += 0x60;
             }
 
             gb.cpu.a = gb.cpu.a.wrapping_sub(adjustament);
         } else {
-            if (gb.cpu.f & HALF_CARRY_FLAG_MASK != 0) || (gb.cpu.a & 0x0F) > 0x09 {
+            if gb.cpu.half_carry() || (gb.cpu.a & 0x0F) > 0x09 {
                 adjustament += 0x6;
             }
-            if (gb.cpu.f & CARRY_FLAG_MASK != 0) || gb.cpu.a > 0x99 {
+            if gb.cpu.carry() || gb.cpu.a > 0x99 {
                 adjustament += 0x60;
-                carry = true;
+                carry = true
             }
 
             gb.cpu.a = gb.cpu.a.wrapping_add(adjustament);
@@ -46,8 +46,8 @@ impl Instruction for Daa {
             c: if carry { Some(true) } else { None },
         };
 
-        Ok(InstructionEffect::new(1, 1, flags))
+        Ok(InstructionEffect::new(self.info(gb), flags))
     }
-
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "daa") }
+    fn info(&self, _: &mut Dmg) -> (u8, u8) { (1, 1) }
+    fn disassembly(&self) -> String { format!("daa") }
 }

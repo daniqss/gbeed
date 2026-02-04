@@ -36,9 +36,7 @@ impl Instruction for DecR8 {
 
         Ok(InstructionEffect::new(self.info(gb), dec_u8_flags(r8, result)))
     }
-    #[inline(always)]
     fn info(&self, _: &mut Dmg) -> (u8, u8) { (1, 1) }
-    #[inline(always)]
     fn disassembly(&self) -> String { format!("dec {}", self.dst) }
 }
 

@@ -42,7 +42,7 @@ use std::fmt::Display;
 
 pub use adc::Adc;
 pub use add::Add;
-pub use and::And;
+pub use and::*;
 pub use bit::Bit;
 pub use ccf::Ccf;
 pub use cp::Cp;
@@ -52,12 +52,12 @@ pub use dec::*;
 pub use di::Di;
 pub use ei::Ei;
 pub use halt::Halt;
-pub use inc::Inc;
+pub use inc::*;
 pub use jumps::*;
 pub use ld::Ld;
 pub use ldh::Ldh;
 pub use nop::Nop;
-pub use or::Or;
+pub use or::*;
 pub use pop::Pop;
 pub use push::Push;
 pub use res::Res;
@@ -77,8 +77,8 @@ pub use sra::Sra;
 pub use srl::Srl;
 pub use stop::Stop;
 pub use sub::Sub;
-pub use swap::Swap;
-pub use xor::Xor;
+pub use swap::*;
+pub use xor::*;
 
 use crate::{
     Dmg,
