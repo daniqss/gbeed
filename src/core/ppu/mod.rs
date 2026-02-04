@@ -3,7 +3,7 @@ mod sprite;
 use crate::{
     Dmg,
     core::{
-        MemoryMapped,
+        Accessible,
         memory::{OAM_END, OAM_START, VRAM_START},
         ppu::sprite::{MAX_SPRITES_IN_OAM, MAX_SPRITES_PER_LINE, Sprite},
     },
@@ -546,7 +546,7 @@ impl Ppu {
     }
 }
 
-impl MemoryMapped<u16> for Ppu {
+impl Accessible<u16> for Ppu {
     fn read(&self, address: u16) -> u8 {
         match address {
             0xFF40 => self.lcd_control,

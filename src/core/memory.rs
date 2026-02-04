@@ -1,4 +1,4 @@
-use crate::{Cartridge, mem_range, prelude::*};
+use crate::{Cartridge, prelude::*};
 
 /// addressable memory size, 64KB
 pub const ADDRESABLE_MEMORY: u16 = 0xFFFF;
@@ -42,21 +42,14 @@ pub fn is_high_address(address: u16) -> bool { address >= IO_REGISTERS_START && 
 /// # Memory mapped trait for addressable components
 /// This trait allows to read and write from Dmg and its components, indexing it with a memory address
 /// without the limitations of operators overloading traits
-pub trait MemoryMapped<Index> {
-    fn read(&self, address: Index) -> u8;
-    fn write(&mut self, address: Index, value: u8);
+pub trait Accessible<Address8> {
+    fn read(&self, address: Address8) -> u8;
+    fn write(&mut self, address: Address8, value: u8);
 }
 
-pub trait MemoryMapped16<Index>: MemoryMapped<Index> {
-    fn load(&self, address: Index) -> u16;
-    fn store(&mut self, address: Index, value: u16);
-}
-
-/// # Memory mapped trait for addressable components
-/// This trait allows to read and write from Dmg and its components, indexing it with a memory address or a Cpu register
-pub trait Accessable<Address8, Address16>: Index<Address8, Output = u8> + IndexMut<Address8> {
-    fn load(&self, addr: Address16) -> u16;
-    fn store(&mut self, addr: Address16, value: u16);
+pub trait Accessible16<Address16, Address8>: Accessible<Address8> {
+    fn load(&self, address: Address16) -> u16;
+    fn store(&mut self, address: Address16, value: u16);
 }
 
 /// # Memory bus

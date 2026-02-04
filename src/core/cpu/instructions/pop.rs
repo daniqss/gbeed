@@ -4,14 +4,14 @@ use crate::{
     Dmg,
     core::{
         cpu::{
-            Reg,
             flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
             instructions::{
                 Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
                 InstructionResult,
             },
+            {R8, R16},
         },
-        memory::Accessable,
+        memory::{Accessible, Accessible16},
     },
     utils::low,
 };
@@ -36,7 +36,7 @@ impl Instruction for Pop {
         let src = gb.load(gb.cpu.sp);
 
         let (reg, flags) = match &self.dst {
-            ID::Reg16(reg) if *reg == Reg::AF => (
+            ID::Reg16(reg) if *reg == R16::AF => (
                 reg,
                 // set flags according to the bits that are going to pop into F
                 Flags {
@@ -51,7 +51,7 @@ impl Instruction for Pop {
         };
 
         // pop from stack to register
-        gb.store(reg, src);
+        gb.write(reg, src);
 
         // increment stack pointer by 2, one for each byte popped
         gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
@@ -78,7 +78,7 @@ mod tests {
         gb[sp] = ZERO_FLAG_MASK | CARRY_FLAG_MASK;
         gb[sp + 1] = 1;
 
-        let mut instr = Pop::new(ID::Reg16(Reg::AF));
+        let mut instr = Pop::new(ID::Reg16(R16::AF));
         let effect = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.a, 1);

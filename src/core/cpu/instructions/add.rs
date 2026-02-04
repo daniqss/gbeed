@@ -3,15 +3,15 @@ use std::fmt::Write;
 use crate::{
     Dmg,
     core::{
+        Accessible16,
         cpu::{
-            Reg, Reg,
+            R8, R16,
             flags::{Flags, check_overflow_cy, check_overflow_hc, check_zero},
             instructions::{
                 Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
                 InstructionResult, InstructionTarget as IT,
             },
         },
-        memory::Accessable,
     },
     utils::{high, low},
 };
@@ -29,12 +29,12 @@ impl Add {
 impl Instruction for Add {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (dst, addend, cycles, len): (&mut u8, u8, u8, u8) = match (&mut self.dst, &self.addend) {
-            (ID::Reg8(Reg::A), IT::Reg8(r8, reg)) if *reg != Reg::F => (&mut gb.cpu.a, *r8, 1, 1),
-            (ID::Reg8(Reg::A), IT::Imm8(n8)) => (&mut gb.cpu.a, *n8, 2, 2),
-            (ID::Reg8(Reg::A), IT::PointedByHL(val)) => (&mut gb.cpu.a, *val, 2, 1),
-            (ID::Reg16(Reg::HL), IT::Reg16(r16, src_reg)) if *src_reg != Reg::HL => {
+            (ID::Reg8(R8::A), IT::Reg8(r8, reg)) if *reg != R8::F => (&mut gb.cpu.a, *r8, 1, 1),
+            (ID::Reg8(R8::A), IT::Imm8(n8)) => (&mut gb.cpu.a, *n8, 2, 2),
+            (ID::Reg8(R8::A), IT::PointedByHL(val)) => (&mut gb.cpu.a, *val, 2, 1),
+            (ID::Reg16(R16::HL), IT::Reg16(r16, src_reg)) if *src_reg != R16::HL => {
                 let hl = gb.cpu.hl();
-                gb.store(&Reg::HL, hl + *r16);
+                gb.store(R16::HL, hl + *r16);
 
                 let flags = Flags {
                     z: None,
@@ -45,9 +45,9 @@ impl Instruction for Add {
 
                 return Ok(InstructionEffect::new(2, 1, flags));
             }
-            (ID::Reg16(Reg::HL), IT::StackPointer(sp)) => {
+            (ID::Reg16(R16::HL), IT::StackPointer(sp)) => {
                 let hl = gb.cpu.hl();
-                gb.store(&Reg::HL, hl + sp);
+                gb.store(R16::HL, hl + sp);
                 let flags = Flags {
                     z: None,
                     n: Some(false),

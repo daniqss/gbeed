@@ -1,4 +1,4 @@
-use crate::{core::MemoryMapped, mem_range, prelude::*};
+use crate::{core::Accessible, mem_range, prelude::*};
 
 mem_range!(APU_REGISTER, 0xFF10, 0xFF3F);
 
@@ -136,7 +136,7 @@ impl Apu {
     pub fn is_active(&self) -> bool { self.nr52 & AUDIO_ON_OFF != 0 }
 }
 
-impl MemoryMapped<u16> for Apu {
+impl Accessible<u16> for Apu {
     fn read(&self, address: u16) -> u8 {
         match address {
             NR10 => self.nr10,

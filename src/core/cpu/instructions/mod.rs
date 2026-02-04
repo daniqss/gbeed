@@ -84,7 +84,7 @@ use crate::{
     Dmg,
     core::{
         IO_REGISTERS_START,
-        cpu::{Reg, Reg, flags::Flags},
+        cpu::{{R8, R16}, {R8, R16}, flags::Flags},
     },
 };
 

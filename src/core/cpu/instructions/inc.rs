@@ -9,9 +9,9 @@ use crate::{
                 Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
                 InstructionResult,
             },
-            registers::{Reg8 as Reg, Reg16 as Reg},
+            {R8, R16},
         },
-        memory::Accessable,
+        memory::{Accessible, Accessible16},
     },
 };
 
@@ -29,11 +29,11 @@ impl Instruction for Inc {
         let len = 1;
 
         let (dst, cycles): (&mut u8, u8) = match &mut self.dst {
-            ID::Reg8(reg) if *reg != Reg::F => (&mut gb[&*reg], 1),
+            ID::Reg8(reg) if *reg != R8::F => (&mut gb[&*reg], 1),
             ID::PointedByHL(addr) => (&mut gb[*addr], 3),
-            ID::Reg16(reg) if *reg != Reg::AF => {
+            ID::Reg16(reg) if *reg != R16::AF => {
                 let r16 = gb.load(&*reg);
-                gb.store(&*reg, r16.wrapping_add(1));
+                gb.write(&*reg, r16.wrapping_add(1));
 
                 return Ok(InstructionEffect::new(2, len, Flags::none()));
             }

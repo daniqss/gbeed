@@ -50,7 +50,7 @@ impl Instruction for Rlc {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::cpu::{Reg, flags::Flags};
+    use crate::core::cpu::{{R8, R16}, flags::Flags};
 
     use super::*;
 

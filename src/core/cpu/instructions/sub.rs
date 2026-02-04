@@ -3,7 +3,7 @@ use std::fmt::Write;
 use crate::{
     Dmg,
     core::cpu::{
-        Reg,
+        {R8, R16},
         flags::{Flags, check_borrow_hc, check_zero},
         instructions::{
             Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
@@ -25,7 +25,7 @@ impl Sub {
 impl Instruction for Sub {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let (subtrahend, cycles, len) = match &self.subtrahend {
-            IT::Reg8(val, reg) if *reg != Reg::F => (*val, 1, 1),
+            IT::Reg8(val, reg) if *reg != R8::F => (*val, 1, 1),
             IT::PointedByHL(value) => (*value, 2, 1),
             IT::Imm8(n8) => (*n8, 2, 2),
             _ => return Err(InstructionError::MalformedInstruction),

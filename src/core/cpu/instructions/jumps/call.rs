@@ -3,7 +3,7 @@ use std::fmt::Write;
 use crate::{
     Dmg,
     core::{
-        MemoryMapped,
+        Accessible,
         cpu::{
             flags::Flags,
             instructions::{

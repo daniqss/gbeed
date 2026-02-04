@@ -1,4 +1,4 @@
-use crate::{core::MemoryMapped, mem_range, prelude::*};
+use crate::{core::Accessible, mem_range, prelude::*};
 
 pub const CLOCKS_SPEEDS: [u32; 4] = [4_096, 262_144, 65_536, 16_384];
 
@@ -62,7 +62,7 @@ impl Timer {
     }
 }
 
-impl MemoryMapped<u16> for Timer {
+impl Accessible<u16> for Timer {
     fn read(&self, address: u16) -> u8 {
         match address {
             DIV => self.divider,

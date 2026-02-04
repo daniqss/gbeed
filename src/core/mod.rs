@@ -13,7 +13,7 @@ pub use crate::prelude::*;
 use crate::{
     core::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
-        cpu::{Instruction, Len, Reg},
+        cpu::{Instruction, Len, R8, R16},
         ppu::{PPU_REGISTER_END, PPU_REGISTER_START},
         serial::{SERIAL_REGISTER_END, SERIAL_REGISTER_START},
         timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
@@ -133,7 +133,7 @@ impl Dmg {
     }
 }
 
-impl MemoryMapped<u16> for Dmg {
+impl Accessible<u16> for Dmg {
     fn read(&self, address: u16) -> u8 {
         match address {
             ROM_BANK00_START..=ROM_BANKNN_END => self.bus.rom[address as usize],
@@ -198,7 +198,7 @@ impl MemoryMapped<u16> for Dmg {
     }
 }
 
-impl MemoryMapped16<u16> for Dmg {
+impl Accessible16<u16, u16> for Dmg {
     fn load(&self, address: u16) -> u16 { to_u16(self.read(address), self.read(address.wrapping_add(1))) }
 
     fn store(&mut self, address: u16, value: u16) {
@@ -207,54 +207,50 @@ impl MemoryMapped16<u16> for Dmg {
     }
 }
 
-impl MemoryMapped<Reg> for Dmg {
-    fn read(&self, address: Reg) -> u8 {
+impl Accessible<R8> for Dmg {
+    fn read(&self, address: R8) -> u8 {
         match address {
-            Reg::A => self.cpu.a,
-            Reg::F => self.cpu.f,
-            Reg::B => self.cpu.b,
-            Reg::C => self.cpu.c,
-            Reg::D => self.cpu.d,
-            Reg::E => self.cpu.e,
-            Reg::H => self.cpu.h,
-            Reg::L => self.cpu.l,
-            _ => unreachable!("Cpu: attempted to read 16 bits register as 8 bits {:?}", address),
+            R8::A => self.cpu.a,
+            R8::F => self.cpu.f,
+            R8::B => self.cpu.b,
+            R8::C => self.cpu.c,
+            R8::D => self.cpu.d,
+            R8::E => self.cpu.e,
+            R8::H => self.cpu.h,
+            R8::L => self.cpu.l,
         }
     }
 
-    fn write(&mut self, address: Reg, value: u8) {
+    fn write(&mut self, address: R8, value: u8) {
         match address {
-            Reg::A => self.cpu.a = value,
-            Reg::F => self.cpu.f = value & 0xF0,
-            Reg::B => self.cpu.b = value,
-            Reg::C => self.cpu.c = value,
-            Reg::D => self.cpu.d = value,
-            Reg::E => self.cpu.e = value,
-            Reg::H => self.cpu.h = value,
-            Reg::L => self.cpu.l = value,
-            _ => unreachable!("Cpu: attempted to write 16 bits register as 8 bits {:?}", address),
+            R8::A => self.cpu.a = value,
+            R8::F => self.cpu.f = value & 0xF0,
+            R8::B => self.cpu.b = value,
+            R8::C => self.cpu.c = value,
+            R8::D => self.cpu.d = value,
+            R8::E => self.cpu.e = value,
+            R8::H => self.cpu.h = value,
+            R8::L => self.cpu.l = value,
         }
     }
 }
 
-impl MemoryMapped16<Reg> for Dmg {
-    fn load(&self, address: Reg) -> u16 {
+impl Accessible16<R16, R8> for Dmg {
+    fn load(&self, address: R16) -> u16 {
         match address {
-            Reg::AF => self.cpu.af(),
-            Reg::BC => self.cpu.bc(),
-            Reg::DE => self.cpu.de(),
-            Reg::HL => self.cpu.hl(),
-            _ => unreachable!("Cpu: attempted to read 8 bits register as 16 bits {:?}", address),
+            R16::AF => self.cpu.af(),
+            R16::BC => self.cpu.bc(),
+            R16::DE => self.cpu.de(),
+            R16::HL => self.cpu.hl(),
         }
     }
 
-    fn store(&mut self, address: Reg, value: u16) {
+    fn store(&mut self, address: R16, value: u16) {
         match address {
-            Reg::AF => with_u16(&mut self.cpu.f, &mut self.cpu.a, |_| value),
-            Reg::BC => with_u16(&mut self.cpu.c, &mut self.cpu.b, |_| value),
-            Reg::DE => with_u16(&mut self.cpu.e, &mut self.cpu.d, |_| value),
-            Reg::HL => with_u16(&mut self.cpu.l, &mut self.cpu.h, |_| value),
-            _ => unreachable!("Cpu: attempted to write 8 bits register as 16 bits {:?}", address),
+            R16::AF => with_u16(&mut self.cpu.f, &mut self.cpu.a, |_| value),
+            R16::BC => with_u16(&mut self.cpu.c, &mut self.cpu.b, |_| value),
+            R16::DE => with_u16(&mut self.cpu.e, &mut self.cpu.d, |_| value),
+            R16::HL => with_u16(&mut self.cpu.l, &mut self.cpu.h, |_| value),
         };
     }
 }

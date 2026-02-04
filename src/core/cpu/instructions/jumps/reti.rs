@@ -7,7 +7,7 @@ use crate::{
             flags::Flags,
             instructions::{Instruction, InstructionEffect, InstructionResult},
         },
-        memory::Accessable,
+        memory::{Accessible, Accessible16},
     },
 };
 

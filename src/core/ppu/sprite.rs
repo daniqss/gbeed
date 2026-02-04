@@ -1,4 +1,4 @@
-use crate::{Dmg, core::MemoryMapped, prelude::*};
+use crate::{Dmg, core::Accessible, prelude::*};
 
 const PRIORITY: u8 = 0x80;
 const YFLIP: u8 = 0x40;

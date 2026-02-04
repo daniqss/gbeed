@@ -7,7 +7,7 @@ use crate::{
             flags::Flags,
             instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition as JC},
         },
-        memory::Accessable,
+        memory::{Accessible, Accessible16},
     },
 };
 

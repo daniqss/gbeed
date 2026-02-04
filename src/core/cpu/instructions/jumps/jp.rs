@@ -50,9 +50,9 @@ impl Instruction for Jp {
 #[cfg(test)]
 mod test {
     use crate::core::{
-        MemoryMapped,
+        Accessible,
         cpu::{
-            Reg,
+            {R8, R16},
             flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK},
             instructions::JumpCondition as JC,
         },

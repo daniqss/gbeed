@@ -3,11 +3,11 @@ use std::fmt::Write;
 use crate::{
     Dmg,
     core::cpu::{
-        Reg,
         flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
         instructions::{
             Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
         },
+        {R8, R16},
     },
     utils::{high, low, to_u8},
 };
@@ -36,7 +36,7 @@ impl Push {
 impl Instruction for Push {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let src = match &mut self.src {
-            IT::Reg16(src, Reg::AF) => {
+            IT::Reg16(src, R16::AF) => {
                 // this is probably useless because no other bit of F should be set
                 let f = low(*src)
                     & (ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK);
@@ -75,7 +75,7 @@ mod tests {
         gb.cpu.a = 1;
         gb.cpu.sp = 0xFFA0;
 
-        let mut push = Push::new(IT::Reg16(gb.cpu.af(), Reg::AF));
+        let mut push = Push::new(IT::Reg16(gb.cpu.af(), R16::AF));
 
         let effect = push.exec(&mut gb).unwrap();
 

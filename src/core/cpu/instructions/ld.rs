@@ -9,9 +9,9 @@ use crate::{
                 Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
                 InstructionResult, InstructionTarget as IT,
             },
-            registers::{Reg8 as Reg, Reg16 as Reg},
+            registers::{Reg8 as {R8, R16}, Reg16 as Reg},
         },
-        memory::Accessable,
+        memory::{Accessible, Accessible16},
     },
     utils::low,
 };

@@ -8,7 +8,7 @@ use crate::{
     Dmg,
     core::{
         IO_REGISTERS_START,
-        cpu::{Reg, flags::Flags, instructions::Instruction},
+        cpu::{{R8, R16}, flags::Flags, instructions::Instruction},
         memory::is_high_address,
     },
 };

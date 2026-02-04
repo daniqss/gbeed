@@ -1,4 +1,4 @@
-use crate::{core::MemoryMapped, mem_range, prelude::*};
+use crate::{core::Accessible, mem_range, prelude::*};
 
 mem_range!(SERIAL_REGISTER, SB, SC);
 
@@ -36,7 +36,7 @@ impl Serial {
     );
 }
 
-impl MemoryMapped<u16> for Serial {
+impl Accessible<u16> for Serial {
     fn read(&self, address: u16) -> u8 {
         match address {
             SB => self.sb,
