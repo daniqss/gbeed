@@ -84,19 +84,21 @@ use crate::{
     Dmg,
     core::{
         IO_REGISTERS_START,
-        cpu::{{R8, R16}, {R8, R16}, flags::Flags},
+        cpu::{
+            flags::Flags,
+            {R8, R16}, {R8, R16},
+        },
     },
 };
 
 /// Represents a CPU instruction.
 /// The instruction can be executed and can provide its disassembly representation
 pub trait Instruction {
-    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult;
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error>;
-}
+    type Args;
 
-impl Display for dyn Instruction {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { self.disassembly(f) }
+    fn new(args: Self::Args) -> Box<Self>;
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult;
+    fn disassembly(&self) -> String;
 }
 
 /// Instructions possible operands and targets.
