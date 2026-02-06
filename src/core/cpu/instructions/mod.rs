@@ -40,12 +40,12 @@ mod xor;
 
 use std::fmt::Display;
 
-pub use adc::Adc;
-pub use add::Add;
+pub use adc::*;
+pub use add::*;
 pub use and::*;
-pub use bit::Bit;
+pub use bit::*;
 pub use ccf::Ccf;
-pub use cp::Cp;
+pub use cp::*;
 pub use cpl::Cpl;
 pub use daa::Daa;
 pub use dec::*;
@@ -61,7 +61,7 @@ pub use or::*;
 pub use pop::Pop;
 pub use push::Push;
 pub use res::Res;
-pub use rl::Rl;
+pub use rl::*;
 pub use rla::Rla;
 pub use rlc::Rlc;
 pub use rlca::Rlca;
@@ -92,7 +92,7 @@ use crate::{
 /// The instruction can be executed and can provide its disassembly representation
 pub trait Instruction {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult;
-    fn info(&self, gb: &mut Dmg) -> (u8, u8);
+    fn info(&self) -> (u8, u8);
     fn disassembly(&self) -> String;
 }
 

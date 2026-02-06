@@ -50,7 +50,5 @@ impl Instruction for Call {
         }
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
-        write!(w, "call {}", self.call)
-    }
+    fn disassembly(&self) -> String { format!("call {}", self.call) }
 }

@@ -6,11 +6,24 @@ use crate::{
     },
 };
 
-/// rotate bits left between r8 and carry flag
-///   ┏━ Flags ━┓ ┏━━━━━━━ r8 | [hl] ━━━━━━┓
-/// ┌─╂─   C   ←╂─╂─  b7  ←   ...  ←  b0  ←╂─┐
-/// │ ┗━━━━━━━━━┛ ┗━━━━━━━━━━━━━━━━━━━━━━━━┛ │
-/// └────────────────────────────────────────┘
+#[inline(always)]
+fn rla_flags(dst: u8) -> Flags {
+    Flags {
+        z: Some(false),
+        n: Some(false),
+        h: Some(false),
+        c: Some(dst & 0b1000_0000 != 0),
+    }
+}
+
+#[inline(always)]
+fn rla(value: u8, carry: bool) -> u8 { (value << 1) | if carry { 1 } else { 0 } }
+
+/// rotate bits left between a and carry flag
+///   ┏━ Flags ━┓ ┏━━━━━━━ a ━━━━━━┓
+/// ┌─╂─   C   ←╂─╂─  b7 ← ... ← b0 ←╂─┐
+/// │ ┗━━━━━━━━━┛ ┗━━━━━━━━━━━━━━━━━━┛ │
+/// └──────────────────────────────────┘
 pub struct Rla {
     carry: bool,
 }
@@ -21,19 +34,15 @@ impl Rla {
 
 impl Instruction for Rla {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let result = (gb.cpu.a << 1) | if self.carry { 1 } else { 0 };
-        let flags = Flags {
-            z: Some(false),
-            n: Some(false),
-            h: Some(false),
-            c: Some(gb.cpu.a & 0b1000_0000 != 0),
-        };
+        let result = rla(gb.cpu.a, self.carry);
+        let flags = rla_flags(gb.cpu.a);
         gb.cpu.a = result;
 
-        Ok(InstructionEffect::new(1, 1, flags))
+        Ok(InstructionEffect::new(self.info(), flags))
     }
 
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "rla") }
+    fn info(&self) -> (u8, u8) { (1, 1) }
+    fn disassembly(&self) -> String { format!("rla") }
 }
 
 #[cfg(test)]
@@ -43,7 +52,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_rl_no_carry() {
+    fn test_rla_no_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0b1000_0000;
         let mut instr = Rla::new(false);
@@ -65,7 +74,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rl_with_carry() {
+    fn test_rla_with_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0b0011_1000;
 

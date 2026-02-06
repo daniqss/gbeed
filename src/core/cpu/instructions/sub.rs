@@ -3,11 +3,11 @@ use std::fmt::Write;
 use crate::{
     Dmg,
     core::cpu::{
-        {R8, R16},
         flags::{Flags, check_borrow_hc, check_zero},
         instructions::{
             Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
         },
+        {R8, R16},
     },
 };
 
@@ -46,9 +46,7 @@ impl Instruction for Sub {
         Ok(InstructionEffect::new(cycles, len, flags))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
-        write!(w, "sub a,{}", self.subtrahend)
-    }
+    fn disassembly(&self) -> String { format!("sub a,{}", self.subtrahend) }
 }
 
 #[cfg(test)]

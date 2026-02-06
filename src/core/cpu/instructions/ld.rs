@@ -109,7 +109,7 @@ impl Instruction for Ld {
         Ok(InstructionEffect::new(cycles, len, Flags::none()))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
-        write!(w, "ld {},{}", self.dst, self.src)
+    fn disassembly(&self) -> String {
+        format!("ld {},{}", self.dst, self.src)
     }
 }

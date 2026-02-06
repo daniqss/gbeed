@@ -49,9 +49,9 @@ impl Instruction for Pop {
         // increment stack pointer by 2, one for each byte popped
         gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
 
-        Ok(InstructionEffect::new(self.info(gb), flags_pop(self.dst, src)))
+        Ok(InstructionEffect::new(self.info(), flags_pop(self.dst, src)))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (3, 1) }
+    fn info(&self) -> (u8, u8) { (3, 1) }
     fn disassembly(&self) -> String { format!("pop {}", self.dst) }
 }
 

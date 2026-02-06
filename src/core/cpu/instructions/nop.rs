@@ -14,9 +14,9 @@ impl Nop {
 }
 
 impl Instruction for Nop {
-    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        Ok(InstructionEffect::new(self.info(gb), Flags::none()))
+    fn exec(&mut self, _: &mut Dmg) -> InstructionResult {
+        Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (1, 1) }
+    fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { format!("nop") }
 }

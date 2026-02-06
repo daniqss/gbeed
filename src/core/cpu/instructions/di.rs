@@ -16,8 +16,8 @@ impl Di {
 impl Instruction for Di {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.ime = false;
-        Ok(InstructionEffect::new(1, 1, Flags::none()))
+        Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
-
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "di") }
+    fn info(&self) -> (u8, u8) { (1, 1) }
+    fn disassembly(&self) -> String { format!("di") }
 }

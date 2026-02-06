@@ -26,5 +26,5 @@ impl Instruction for Scf {
         ))
     }
 
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "scf") }
+    fn disassembly(&self) -> String { format!("scf") }
 }

@@ -33,9 +33,9 @@ impl Instruction for SwapR8 {
         let result = (r8 << 4) | (r8 >> 4);
         gb.write(self.dst, result);
 
-        Ok(InstructionEffect::new(self.info(gb), swap_u8_flags(result)))
+        Ok(InstructionEffect::new(self.info(), swap_u8_flags(result)))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (2, 2) }
+    fn info(&self) -> (u8, u8) { (2, 2) }
     fn disassembly(&self) -> String { format!("swap {}", self.dst) }
 }
 
@@ -49,8 +49,8 @@ impl Instruction for SwapPointedByHL {
         let result = (n8 << 4) | (n8 >> 4);
         gb.write(gb.cpu.hl(), result);
 
-        Ok(InstructionEffect::new(self.info(gb), swap_u8_flags(result)))
+        Ok(InstructionEffect::new(self.info(), swap_u8_flags(result)))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (4, 2) }
+    fn info(&self) -> (u8, u8) { (4, 2) }
     fn disassembly(&self) -> String { format!("swap [hl]") }
 }

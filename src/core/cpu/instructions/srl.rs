@@ -1,11 +1,11 @@
 use crate::{
     Dmg,
     core::cpu::{
+        R8,
         flags::Flags,
         instructions::{
             Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
         },
-        {R8, R16},
     },
 };
 
@@ -40,8 +40,5 @@ impl Instruction for Srl {
 
         Ok(InstructionEffect::new(cycles, len, flags))
     }
-
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
-        write!(w, "srl {}", self.dst)
-    }
+    fn disassembly(&self) -> String { format!("srl {}", self.dst) }
 }

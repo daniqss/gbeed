@@ -30,9 +30,9 @@ impl Instruction for AndR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let n8 = gb.read(self.src);
         gb.cpu.a &= n8;
-        Ok(InstructionEffect::new(self.info(gb), and_u8_flags(gb.cpu.a)))
+        Ok(InstructionEffect::new(self.info(), and_u8_flags(gb.cpu.a)))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (1, 1) }
+    fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { format!("and {}", self.src) }
 }
 
@@ -44,9 +44,9 @@ impl Instruction for AndPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let n8 = gb.read(gb.cpu.hl());
         gb.cpu.a &= n8;
-        Ok(InstructionEffect::new(self.info(gb), and_u8_flags(gb.cpu.a)))
+        Ok(InstructionEffect::new(self.info(), and_u8_flags(gb.cpu.a)))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (2, 1) }
+    fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { format!("and [hl]") }
 }
 
@@ -59,8 +59,8 @@ impl AndImm8 {
 impl Instruction for AndImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.a &= self.val;
-        Ok(InstructionEffect::new(self.info(gb), and_u8_flags(gb.cpu.a)))
+        Ok(InstructionEffect::new(self.info(), and_u8_flags(gb.cpu.a)))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (2, 2) }
+    fn info(&self) -> (u8, u8) { (2, 2) }
     fn disassembly(&self) -> String { format!("and ${:02X}", self.val) }
 }

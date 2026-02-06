@@ -42,7 +42,5 @@ impl Instruction for Sra {
         Ok(InstructionEffect::new(cycles, len, flags))
     }
 
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
-        write!(w, "sra {}", self.dst)
-    }
+    fn disassembly(&self) -> String { format!("sra {}", self.dst) }
 }

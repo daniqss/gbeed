@@ -34,9 +34,9 @@ impl Instruction for IncR8 {
         let result = r8.wrapping_add(1);
         gb.write(self.dst, result);
 
-        Ok(InstructionEffect::new(self.info(gb), inc_u8_flags(r8, result)))
+        Ok(InstructionEffect::new(self.info(), inc_u8_flags(r8, result)))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (1, 1) }
+    fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { format!("inc {}", self.dst) }
 }
 
@@ -51,9 +51,9 @@ impl Instruction for IncPointedByHL {
         let result = n8.wrapping_add(1);
         gb.write(gb.cpu.hl(), result);
 
-        Ok(InstructionEffect::new(self.info(gb), inc_u8_flags(n8, result)))
+        Ok(InstructionEffect::new(self.info(), inc_u8_flags(n8, result)))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (3, 1) }
+    fn info(&self) -> (u8, u8) { (3, 1) }
     fn disassembly(&self) -> String { format!("inc [hl]") }
 }
 
@@ -70,9 +70,9 @@ impl Instruction for IncR16 {
         let result = r16.wrapping_add(1);
         gb.store(self.dst, result);
 
-        Ok(InstructionEffect::new(self.info(gb), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (2, 1) }
+    fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { format!("inc {}", self.dst) }
 }
 
@@ -85,8 +85,8 @@ impl Instruction for IncStackPointer {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.sp = gb.cpu.sp.wrapping_add(1);
 
-        Ok(InstructionEffect::new(self.info(gb), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (2, 1) }
+    fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { format!("inc sp") }
 }

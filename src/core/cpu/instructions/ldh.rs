@@ -8,7 +8,11 @@ use crate::{
     Dmg,
     core::{
         IO_REGISTERS_START,
-        cpu::{{R8, R16}, flags::Flags, instructions::Instruction},
+        cpu::{
+            flags::Flags,
+            instructions::Instruction,
+            {R8, R16},
+        },
         memory::is_high_address,
     },
 };
@@ -71,7 +75,5 @@ impl Instruction for Ldh {
         Ok(InstructionEffect::new(cycles, len, Flags::none()))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
-        write!(w, "ldh {},{}", self.dst, self.src)
-    }
+    fn disassembly(&self) -> String { format!("ldh {},{}", self.dst, self.src) }
 }

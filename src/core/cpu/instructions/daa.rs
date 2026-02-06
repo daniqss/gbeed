@@ -15,28 +15,28 @@ impl Daa {
 
 impl Instruction for Daa {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let mut adjustament = 0;
+        let mut adjustment = 0;
         let mut carry = false;
 
-        if gb.cpu.substraction() {
+        if gb.cpu.subtraction() {
             if gb.cpu.half_carry() {
-                adjustament += 0x6;
+                adjustment += 0x6;
             }
             if gb.cpu.carry() {
-                adjustament += 0x60;
+                adjustment += 0x60;
             }
 
-            gb.cpu.a = gb.cpu.a.wrapping_sub(adjustament);
+            gb.cpu.a = gb.cpu.a.wrapping_sub(adjustment);
         } else {
             if gb.cpu.half_carry() || (gb.cpu.a & 0x0F) > 0x09 {
-                adjustament += 0x6;
+                adjustment += 0x6;
             }
             if gb.cpu.carry() || gb.cpu.a > 0x99 {
-                adjustament += 0x60;
+                adjustment += 0x60;
                 carry = true
             }
 
-            gb.cpu.a = gb.cpu.a.wrapping_add(adjustament);
+            gb.cpu.a = gb.cpu.a.wrapping_add(adjustment);
         }
 
         let flags = Flags {
@@ -46,8 +46,8 @@ impl Instruction for Daa {
             c: if carry { Some(true) } else { None },
         };
 
-        Ok(InstructionEffect::new(self.info(gb), flags))
+        Ok(InstructionEffect::new(self.info(), flags))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (1, 1) }
+    fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { format!("daa") }
 }

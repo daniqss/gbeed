@@ -6,12 +6,25 @@ use crate::{
     },
 };
 
-/// rotate bits left between a and carry flag
+#[inline(always)]
+fn rlca_flags(dst: u8) -> Flags {
+    Flags {
+        z: Some(false),
+        n: Some(false),
+        h: Some(false),
+        c: Some(dst & 0b1000_0000 != 0),
+    }
+}
+
+#[inline(always)]
+fn rlca(value: u8) -> u8 { (value << 1) | (value >> 7) }
+
+/// rotate bits left a
 /// ┏━ Flags ━┓   ┏━━━━━━━  a  ━━━━━━┓
 /// ┃    C   ←╂─┬─╂─ b7 ← ... ← b0  ←╂─┐
 /// ┗━━━━━━━━━┛ │ ┗━━━━━━━━━━━━━━━━━━┛ │
 ///             └──────────────────────┘
-pub struct Rlca {}
+pub struct Rlca;
 
 impl Rlca {
     pub fn new() -> Box<Self> { Box::new(Self {}) }
@@ -19,20 +32,14 @@ impl Rlca {
 
 impl Instruction for Rlca {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let last_bit = gb.cpu.a & 0b1000_0000 != 0;
-        let result = (gb.cpu.a << 1) | if last_bit { 1 } else { 0 };
-        let flags = Flags {
-            z: Some(false),
-            n: Some(false),
-            h: Some(false),
-            c: Some(last_bit),
-        };
+        let result = rlca(gb.cpu.a);
+        let flags = rlca_flags(gb.cpu.a);
         gb.cpu.a = result;
 
-        Ok(InstructionEffect::new(1, 1, flags))
+        Ok(InstructionEffect::new(self.info(), flags))
     }
-
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "rlca") }
+    fn info(&self) -> (u8, u8) { (1, 1) }
+    fn disassembly(&self) -> String { format!("rlca") }
 }
 
 #[cfg(test)]
@@ -42,7 +49,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_rl_no_carry() {
+    fn test_rlca_no_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0b1000_0000;
 
@@ -65,7 +72,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rl_with_carry() {
+    fn test_rlca_with_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0b0011_1000;
 

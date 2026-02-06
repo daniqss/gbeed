@@ -41,5 +41,5 @@ impl Instruction for Ret {
     }
 
     // this probably is gonna look wrong
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "ret {}", self.cc) }
+    fn disassembly(&self) -> String { format!("ret {}", self.cc) }
 }

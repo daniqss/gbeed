@@ -29,5 +29,5 @@ impl Instruction for Reti {
         Ok(InstructionEffect::with_jump(4, 1, Flags::none()))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "reti") }
+    fn disassembly(&self) -> String { format!("reti") }
 }

@@ -31,8 +31,6 @@ impl Instruction for Set {
 
         Ok(InstructionEffect::new(cycles, len, Flags::none()))
     }
-
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
-        write!(w, "set {}, {}", self.bit, self.dst)
-    }
+    fn info(&self) -> (u8, u8) { (2, 2) }
+    fn disassembly(&self) -> String { format!("set {}, {}", self.bit, self.dst) }
 }

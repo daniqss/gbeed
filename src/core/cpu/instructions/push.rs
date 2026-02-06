@@ -49,9 +49,9 @@ impl Instruction for Push {
         // gb.cpu.sp = gb.cpu.sp.wrapping_sub(2);
         // gb.store(gb.cpu.sp, src);
 
-        Ok(InstructionEffect::new(self.info(gb), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
-    fn info(&self, _: &mut Dmg) -> (u8, u8) { (4, 1) }
+    fn info(&self) -> (u8, u8) { (4, 1) }
     fn disassembly(&self) -> String { format!("push {}", self.src) }
 }
 

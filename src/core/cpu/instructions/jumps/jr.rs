@@ -54,7 +54,7 @@ impl Instruction for Jr {
         Ok(InstructionEffect::with_jump(cycles, len, Flags::none()))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "jr {}", self.jump) }
+    fn disassembly(&self) -> String { format!("jr {}", self.jump) }
 }
 
 #[cfg(test)]

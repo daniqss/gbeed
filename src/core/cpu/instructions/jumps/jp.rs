@@ -44,7 +44,7 @@ impl Instruction for Jp {
         Ok(InstructionEffect::with_jump(cycles, len, Flags::none()))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "jp {}", self.jump) }
+    fn disassembly(&self) -> String { format!("jp {}", self.jump) }
 }
 
 #[cfg(test)]
@@ -52,9 +52,9 @@ mod test {
     use crate::core::{
         Accessible,
         cpu::{
-            {R8, R16},
             flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK},
             instructions::JumpCondition as JC,
+            {R8, R16},
         },
     };
 

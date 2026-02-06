@@ -82,9 +82,9 @@ impl Cpu {
     #[inline]
     pub fn not_zero(&self) -> bool { self.f & ZERO_FLAG_MASK == 0 }
     #[inline]
-    pub fn substraction(&self) -> bool { self.f & SUBTRACTION_FLAG_MASK != 0 }
+    pub fn subtraction(&self) -> bool { self.f & SUBTRACTION_FLAG_MASK != 0 }
     #[inline]
-    pub fn not_substraction(&self) -> bool { self.f & SUBTRACTION_FLAG_MASK == 0 }
+    pub fn not_subtraction(&self) -> bool { self.f & SUBTRACTION_FLAG_MASK == 0 }
     #[inline]
     pub fn half_carry(&self) -> bool { self.f & HALF_CARRY_FLAG_MASK != 0 }
     #[inline]
@@ -239,22 +239,22 @@ impl Cpu {
             0x7D => Ld::new(ID::Reg8(R8::A), IT::Reg8(cpu.l, R8::L)),
             0x7E => Ld::new(ID::Reg8(R8::A), IT::PointedByHL(gb.read(cpu.hl()))),
             0x7F => Ld::new(ID::Reg8(R8::A), IT::Reg8(cpu.a, R8::A)),
-            0x80 => Add::new(ID::Reg8(R8::A), IT::Reg8(cpu.b, R8::B)),
-            0x81 => Add::new(ID::Reg8(R8::A), IT::Reg8(cpu.c, R8::C)),
-            0x82 => Add::new(ID::Reg8(R8::A), IT::Reg8(cpu.d, R8::D)),
-            0x83 => Add::new(ID::Reg8(R8::A), IT::Reg8(cpu.e, R8::E)),
-            0x84 => Add::new(ID::Reg8(R8::A), IT::Reg8(cpu.h, R8::H)),
-            0x85 => Add::new(ID::Reg8(R8::A), IT::Reg8(cpu.l, R8::L)),
-            0x86 => Add::new(ID::Reg8(R8::A), IT::PointedByHL(gb.read(cpu.hl()))),
-            0x87 => Add::new(ID::Reg8(R8::A), IT::Reg8(cpu.a, R8::A)),
-            0x88 => Adc::new(cpu.carry(), IT::Reg8(cpu.b, R8::B)),
-            0x89 => Adc::new(cpu.carry(), IT::Reg8(cpu.c, R8::C)),
-            0x8A => Adc::new(cpu.carry(), IT::Reg8(cpu.d, R8::D)),
-            0x8B => Adc::new(cpu.carry(), IT::Reg8(cpu.e, R8::E)),
-            0x8C => Adc::new(cpu.carry(), IT::Reg8(cpu.h, R8::H)),
-            0x8D => Adc::new(cpu.carry(), IT::Reg8(cpu.l, R8::L)),
-            0x8E => Adc::new(cpu.carry(), IT::PointedByHL(gb.read(cpu.hl()))),
-            0x8F => Adc::new(cpu.carry(), IT::Reg8(cpu.a, R8::A)),
+            0x80 => AddAR8::new(R8::B),
+            0x81 => AddAR8::new(R8::C),
+            0x82 => AddAR8::new(R8::D),
+            0x83 => AddAR8::new(R8::E),
+            0x84 => AddAR8::new(R8::H),
+            0x85 => AddAR8::new(R8::L),
+            0x86 => AddAPointedByHL::new(),
+            0x87 => AddAR8::new(R8::A),
+            0x88 => AdcR8::new(R8::B),
+            0x89 => AdcR8::new(R8::C),
+            0x8A => AdcR8::new(R8::D),
+            0x8B => AdcR8::new(R8::E),
+            0x8C => AdcR8::new(R8::H),
+            0x8D => AdcR8::new(R8::L),
+            0x8E => AdcPointedByHL::new(cpu.carry()),
+            0x8F => AdcR8::new(R8::A),
             0x90 => Sub::new(IT::Reg8(cpu.b, R8::B)),
             0x91 => Sub::new(IT::Reg8(cpu.c, R8::C)),
             0x92 => Sub::new(IT::Reg8(cpu.d, R8::D)),
