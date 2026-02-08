@@ -1,5 +1,3 @@
-use std::fmt::Write;
-
 use crate::{
     Dmg,
     core::{
@@ -7,7 +5,7 @@ use crate::{
             flags::Flags,
             instructions::{Instruction, InstructionEffect, InstructionResult},
         },
-        memory::{Accessible, Accessible16},
+        memory::Accessible16,
     },
 };
 
@@ -26,8 +24,8 @@ impl Instruction for Reti {
         gb.cpu.pc = return_addr;
         gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
 
-        Ok(InstructionEffect::with_jump(4, 1, Flags::none()))
+        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
     }
-
+    fn info(&self) -> (u8, u8) { (4, 1) }
     fn disassembly(&self) -> String { format!("reti") }
 }

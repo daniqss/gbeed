@@ -1,15 +1,13 @@
-use std::fmt::Write;
-
 use crate::{
     Dmg,
     core::{
         cpu::{
+            R8, R16,
             flags::{Flags, check_overflow_cy, check_overflow_hc},
             instructions::{
                 Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
                 InstructionResult, InstructionTarget as IT,
             },
-            registers::{Reg8 as {R8, R16}, Reg16 as Reg},
         },
         memory::{Accessible, Accessible16},
     },
@@ -109,7 +107,5 @@ impl Instruction for Ld {
         Ok(InstructionEffect::new(cycles, len, Flags::none()))
     }
 
-    fn disassembly(&self) -> String {
-        format!("ld {},{}", self.dst, self.src)
-    }
+    fn disassembly(&self) -> String { format!("ld {},{}", self.dst, self.src) }
 }

@@ -1,60 +1,57 @@
-use std::fmt::Write;
-
 use crate::{
     Dmg,
     core::cpu::{
         flags::Flags,
-        instructions::{
-            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
-        },
+        instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
     },
 };
 
-/// jump to the given address
-/// it can get a condition to jump only if the condition is met
-/// this condition is based on carry and zero flags
-pub struct Jp {
-    pub jump: IT,
+pub struct JpToImm16 {
+    pub jc: JumpCondition,
+    pub addr: u16,
 }
 
-impl Jp {
-    pub fn new(jump: IT) -> Box<Self> { Box::new(Self { jump }) }
+impl JpToImm16 {
+    pub fn new(jc: JumpCondition, addr: u16) -> Box<Self> { Box::new(Self { jc, addr }) }
 }
 
-impl Instruction for Jp {
+impl Instruction for JpToImm16 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let (addr, cycles, len) = match &self.jump {
-            IT::JumpToImm16(cc, addr) => {
-                let should_jump = cc.should_jump();
-
-                let addr = if should_jump { *addr } else { gb.cpu.pc };
-                let cycles = if should_jump { 4 } else { 3 };
-                let len = 3;
-
-                (addr, cycles, len)
-            }
-
-            IT::JumpToHL(addr) => (*addr, 1, 1),
-
-            _ => return Err(InstructionError::MalformedInstruction),
-        };
-
+        let should_jump = self.jc.should_jump();
+        let addr = if should_jump { self.addr } else { gb.cpu.pc };
         gb.cpu.pc = addr;
 
-        Ok(InstructionEffect::with_jump(cycles, len, Flags::none()))
+        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
     }
+    fn info(&self) -> (u8, u8) { if self.jc.should_jump() { (4, 3) } else { (3, 3) } }
+    fn disassembly(&self) -> String { format!("jp {}${:04X}", self.jc, self.addr) }
+}
 
-    fn disassembly(&self) -> String { format!("jp {}", self.jump) }
+pub struct JpToHL {
+    pub addr: u16,
+}
+
+impl JpToHL {
+    pub fn new(addr: u16) -> Box<Self> { Box::new(Self { addr }) }
+}
+
+impl Instruction for JpToHL {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        gb.cpu.pc = self.addr;
+        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+    }
+    fn info(&self) -> (u8, u8) { (1, 1) }
+    fn disassembly(&self) -> String { "jp (hl)".to_string() }
 }
 
 #[cfg(test)]
 mod test {
     use crate::core::{
-        Accessible,
+        Accessible16,
         cpu::{
+            R16,
             flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK},
             instructions::JumpCondition as JC,
-            {R8, R16},
         },
     };
 
@@ -63,9 +60,9 @@ mod test {
     #[test]
     fn test_jump_to_hl() {
         let mut gb = Dmg::default();
-        gb.store(&Reg::HL, 0x1234);
+        gb.store(R16::HL, 0x1234);
 
-        let mut instr = Jp::new(IT::JumpToHL(gb.cpu.hl()));
+        let mut instr = JpToHL::new(gb.cpu.hl());
         let result = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.pc, 0x1234);
@@ -79,7 +76,7 @@ mod test {
         gb.cpu.pc = 0x100;
         gb.store(gb.cpu.pc + 1, 0x200);
 
-        let mut instr = Jp::new(IT::JumpToImm16(JC::None, gb.load(gb.cpu.pc + 1)));
+        let mut instr = JpToImm16::new(JC::None, gb.load(gb.cpu.pc + 1));
         let result = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.pc, 0x200);
@@ -94,7 +91,7 @@ mod test {
         gb.cpu.f = ZERO_FLAG_MASK;
         gb.store(gb.cpu.pc + 1, 0x200);
 
-        let mut instr = Jp::new(IT::JumpToImm16(JC::Zero(gb.cpu.zero()), gb.load(gb.cpu.pc + 1)));
+        let mut instr = JpToImm16::new(JC::Zero(gb.cpu.zero()), gb.load(gb.cpu.pc + 1));
         let result = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.pc, 0x200);
@@ -110,10 +107,7 @@ mod test {
         gb.cpu.f = CARRY_FLAG_MASK;
         gb.store(gb.cpu.pc + 1, 0x200);
 
-        let mut instr = Jp::new(IT::JumpToImm16(
-            JC::NotCarry(gb.cpu.not_carry()),
-            gb.load(gb.cpu.pc + 1),
-        ));
+        let mut instr = JpToImm16::new(JC::NotCarry(gb.cpu.not_carry()), gb.load(gb.cpu.pc + 1));
         let result = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.pc, 0x100);
