@@ -45,11 +45,9 @@ impl Instruction for AdcR8 {
 
 /// Add with carry instruction
 /// Adds the value pointed by HL plus the carry flag to register A
-pub struct AdcPointedByHL {
-    carry: bool,
-}
+pub struct AdcPointedByHL;
 impl AdcPointedByHL {
-    pub fn new(carry: bool) -> Box<Self> { Box::new(Self { carry }) }
+    pub fn new() -> Box<Self> { Box::new(Self) }
 }
 impl Instruction for AdcPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

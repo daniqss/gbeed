@@ -54,8 +54,8 @@ pub use ei::Ei;
 pub use halt::Halt;
 pub use inc::*;
 pub use jumps::*;
-pub use ld::Ld;
-pub use ldh::Ldh;
+pub use ld::*;
+pub use ldh::*;
 pub use nop::Nop;
 pub use or::*;
 pub use pop::Pop;
@@ -80,13 +80,7 @@ pub use sub::*;
 pub use swap::*;
 pub use xor::*;
 
-use crate::{
-    Dmg,
-    core::{
-        IO_REGISTERS_START,
-        cpu::{R8, R16, flags::Flags},
-    },
-};
+use crate::{Dmg, core::cpu::flags::Flags};
 
 /// Represents a CPU instruction.
 /// The instruction can be executed and can provide its disassembly representation
@@ -98,90 +92,6 @@ pub trait Instruction {
 
 impl Display for dyn Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { write!(f, "{}", self.disassembly()) }
-}
-
-/// Instructions possible operands and targets.
-/// Only used when various operand types are possible for the same instruction.
-/// They store neccesary data to identify then in their display and the value that will be used during execution, and we can know by the fetching, to avoid innecesary matching and reading during instruction execution.
-/// We won't pass values when they can be accessed directly without matching cpu (e.g named registers)
-#[derive(Debug, PartialEq)]
-pub enum InstructionTarget {
-    Imm8(u8),
-    Imm16(u16),
-    SignedImm(i8),
-    Reg8(u8, R8),
-    Reg16(u16, R16),
-    PointedByHL(u8),
-    PointedByN16(u16),
-    PointedByA8(u8),
-    PointedByCPlusFF00,
-    PointedByReg16(u8, R16),
-    PointedByHLI(u8),
-    PointedByHLD(u8),
-    StackPointer(u16),
-    StackPointerPlusE8(u16, i8),
-    JumpToImm16(JumpCondition, u16),
-    JumpToHL(u16),
-    JumpToImm8(JumpCondition, u8),
-}
-
-impl Display for InstructionTarget {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            InstructionTarget::Imm8(n8) => write!(f, "${:02X}", n8),
-            InstructionTarget::Imm16(n16) => write!(f, "${:04X}", n16),
-            InstructionTarget::SignedImm(e8) => write!(f, "{:+}", e8),
-            InstructionTarget::Reg8(_, reg) => write!(f, "{}", reg),
-            InstructionTarget::Reg16(_, reg) => write!(f, "{}", reg),
-            InstructionTarget::PointedByHL(_) => write!(f, "[hl]"),
-            InstructionTarget::PointedByN16(addr) => write!(f, "[${:04X}]", addr),
-            InstructionTarget::PointedByA8(addr) => write!(f, "[${:04X}]", IO_REGISTERS_START + *addr as u16),
-            InstructionTarget::PointedByCPlusFF00 => write!(f, "[c]"),
-            InstructionTarget::PointedByReg16(_, reg) => write!(f, "[{}]", reg),
-            InstructionTarget::PointedByHLI(_) => write!(f, "[hli]"),
-            InstructionTarget::PointedByHLD(_) => write!(f, "[hld]"),
-            InstructionTarget::StackPointer(_) => write!(f, "sp"),
-            InstructionTarget::StackPointerPlusE8(_, e8) => write!(f, "sp{:+}", e8),
-            InstructionTarget::JumpToImm16(jc, n16) => write!(f, "{}${:04X}", jc, n16),
-            InstructionTarget::JumpToHL(_) => write!(f, "hl"),
-            InstructionTarget::JumpToImm8(jc, e8) => write!(f, "{}{}", jc, *e8 as i8),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum InstructionDestination {
-    PointedByHL(u16),
-    PointedByN16(u16),
-    PointedByA8(u8),
-    PointedByCPlusFF00,
-    Reg8(R8),
-    Reg16(R16),
-    PointedByReg16(u16, R16),
-    PointedByHLI(u16),
-    PointedByHLD(u16),
-    StackPointer,
-}
-
-impl Display for InstructionDestination {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            InstructionDestination::PointedByHL(_) => write!(f, "[hl]"),
-            InstructionDestination::PointedByN16(addr) => write!(f, "[${:04X}]", addr),
-            InstructionDestination::PointedByA8(addr) => {
-                write!(f, "[${:04X}]", IO_REGISTERS_START + *addr as u16)
-            }
-            InstructionDestination::PointedByCPlusFF00 => {
-                write!(f, "[c]")
-            }
-            InstructionDestination::Reg8(reg) => write!(f, "{}", reg),
-            InstructionDestination::Reg16(reg) => write!(f, "{}", reg),
-            InstructionDestination::PointedByReg16(_, reg) => write!(f, "[{}]", reg),
-            InstructionDestination::PointedByHLI(_) => write!(f, "[hli]"),
-            InstructionDestination::PointedByHLD(_) => write!(f, "[hld]"),
-            InstructionDestination::StackPointer => write!(f, "sp"),
-        }
-    }
 }
 
 /// solves the issue of overriding jumps with instruction length addition to pc
