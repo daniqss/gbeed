@@ -18,6 +18,18 @@ const PRESS_UP: u8 = 0x04;
 const PRESS_LEFT: u8 = 0x02;
 const PRESS_RIGHT: u8 = 0x01;
 
+#[repr(u8)]
+#[derive(Debug, Clone, Copy)]
+pub enum JoypadButton {
+    Right = PRESS_RIGHT,
+    Left = PRESS_LEFT,
+    Up = PRESS_UP,
+    Down = PRESS_DOWN,
+    A = PRESS_A,
+    B = PRESS_B,
+    Select = PRESS_SELECT,
+    Start = PRESS_START,
+}
 /// # Joypad Input
 /// It uses 6 GPIO pins to read the state of the buttons.
 /// | P14   | P15    |     |
@@ -29,7 +41,7 @@ const PRESS_RIGHT: u8 = 0x01;
 /// A button beeing pressed is seen as the corresponding bit being 0, not 1 as usual in other components.
 #[derive(Debug, Default)]
 pub struct Joypad {
-    input: u8,
+    pub input: u8,
     joyp: u8,
 }
 
@@ -41,6 +53,18 @@ impl Joypad {
         }
     }
 
+    pub fn button_down(&mut self, btn: JoypadButton, is_down: bool) {
+        let mask = btn as u8;
+
+        if is_down {
+            self.input &= !mask;
+        } else {
+            self.input |= mask;
+        }
+    }
+
+    pub fn any_input(&self) -> bool { self.input != 0xFF }
+
     // TODO: change visibility in macro
     bit_accessors! {
         target: joyp;
@@ -51,20 +75,6 @@ impl Joypad {
         INPUT_UP_SELECT,
         INPUT_LEFT_B,
         INPUT_RIGHT_A
-    }
-
-    // TODO: use enum repr u8
-    bit_accessors! {
-        target: input;
-
-        PRESS_START,
-        PRESS_SELECT,
-        PRESS_B,
-        PRESS_A,
-        PRESS_DOWN,
-        PRESS_UP,
-        PRESS_LEFT,
-        PRESS_RIGHT
     }
 }
 
@@ -90,5 +100,37 @@ impl Accessible<u16> for Joypad {
                 address
             ),
         }
+    }
+}
+
+impl std::fmt::Display for Joypad {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buttons = Vec::with_capacity(10);
+        if self.input & PRESS_RIGHT == 0 {
+            buttons.push("Right");
+        }
+        if self.input & PRESS_LEFT == 0 {
+            buttons.push("Left");
+        }
+        if self.input & PRESS_UP == 0 {
+            buttons.push("Up");
+        }
+        if self.input & PRESS_DOWN == 0 {
+            buttons.push("Down");
+        }
+        if self.input & PRESS_A == 0 {
+            buttons.push("A");
+        }
+        if self.input & PRESS_B == 0 {
+            buttons.push("B");
+        }
+        if self.input & PRESS_SELECT == 0 {
+            buttons.push("Select");
+        }
+        if self.input & PRESS_START == 0 {
+            buttons.push("Start");
+        }
+
+        write!(f, "Joypad: [{}]", buttons.join(", "))
     }
 }

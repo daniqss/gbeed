@@ -1,6 +1,7 @@
 use gbeed::Cartridge;
 use gbeed::Dmg;
 use gbeed::Joypad;
+use gbeed::core::JoypadButton;
 use gbeed::core::ppu::DMG_SCREEN_HEIGHT;
 use gbeed::core::ppu::DMG_SCREEN_WIDTH;
 use gbeed::prelude::*;
@@ -97,10 +98,10 @@ fn main() -> Result<()> {
         .expect("Failed to load texture");
 
     while !rl.window_should_close() {
+        update_joypad(&rl, &mut gb.joypad);
         gb.run()?;
 
         draw_screen(&mut rl, &thread, &mut gb, &mut frame);
-        // update_joypad(&mut gb.joypad, rl.get_key_pressed());
     }
 
     Ok(())
@@ -161,40 +162,37 @@ fn draw_screen(rl: &mut RaylibHandle, thread: &RaylibThread, gb: &mut Dmg, textu
     // draw_cartridge(rl, thread, gb);
 }
 
-// fn update_joypad(jp: &mut Joypad, key: Option<KeyboardKey>) {
-//     match key {
-//         Some(KeyboardKey::KEY_UP | KeyboardKey::KEY_W) => {
-//             jp.set_select_directions(true);
-//             jp.set_input_up_select(true)
-//         }
-
-//         Some(KeyboardKey::KEY_LEFT | KeyboardKey::KEY_A) => {
-//             jp.set_select_directions(true);
-//             jp.set_input_left_b(true)
-//         }
-//         Some(KeyboardKey::KEY_RIGHT | KeyboardKey::KEY_D) => {
-//             jp.set_select_directions(true);
-//             jp.set_input_right_a(true)
-//         }
-//         Some(KeyboardKey::KEY_J) => {
-//             jp.set_select_buttons(true);
-//             jp.set_input_right_a(true)
-//         }
-//         Some(KeyboardKey::KEY_X) => {
-//             jp.set_select_buttons(true);
-//             jp.set_input_left_b(true)
-//         }
-//         Some(KeyboardKey::KEY_ENTER) => {
-//             jp.set_select_buttons(true);
-//             jp.set_input_down_start(true)
-//         }
-//         Some(KeyboardKey::KEY_RIGHT_SHIFT) | Some(KeyboardKey::KEY_LEFT_SHIFT) => {
-//             jp.set_select_buttons(true);
-//             jp.set_input_up_select(true)
-//         }
-//         _ => {}
-//     }
-// }
+fn update_joypad(rl: &RaylibHandle, joypad: &mut Joypad) {
+    joypad.button_down(
+        JoypadButton::Up,
+        rl.is_key_down(KeyboardKey::KEY_UP) || rl.is_key_down(KeyboardKey::KEY_W),
+    );
+    joypad.button_down(
+        JoypadButton::Down,
+        rl.is_key_down(KeyboardKey::KEY_DOWN) || rl.is_key_down(KeyboardKey::KEY_S),
+    );
+    joypad.button_down(
+        JoypadButton::Left,
+        rl.is_key_down(KeyboardKey::KEY_LEFT) || rl.is_key_down(KeyboardKey::KEY_A),
+    );
+    joypad.button_down(
+        JoypadButton::Right,
+        rl.is_key_down(KeyboardKey::KEY_RIGHT) || rl.is_key_down(KeyboardKey::KEY_D),
+    );
+    joypad.button_down(
+        JoypadButton::A,
+        rl.is_key_down(KeyboardKey::KEY_Z) || rl.is_key_down(KeyboardKey::KEY_J),
+    );
+    joypad.button_down(
+        JoypadButton::B,
+        rl.is_key_down(KeyboardKey::KEY_X) || rl.is_key_down(KeyboardKey::KEY_K),
+    );
+    joypad.button_down(JoypadButton::Start, rl.is_key_down(KeyboardKey::KEY_ENTER));
+    joypad.button_down(
+        JoypadButton::Select,
+        rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) || rl.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT),
+    )
+}
 
 fn print_help() {
     println!("Usage: gbeed [OPTIONS]");

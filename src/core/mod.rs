@@ -27,6 +27,7 @@ pub use cartrigde::Cartridge;
 pub use cpu::{AFTER_BOOT_CPU, Cpu};
 pub use interrupts::Interrupt;
 pub use joypad::Joypad;
+pub use joypad::JoypadButton;
 pub use memory::*;
 pub use ppu::Ppu;
 pub use serial::Serial;
@@ -84,11 +85,14 @@ impl Dmg {
         // one frame (70224 cycles)
         while self.cpu.cycles < 70224 {
             let _instr = self.step()?;
-            if self.cpu.pc == 0x0100 {
-                println!("just arrive to game rom start");
-                println!("Cpu: {}", self.cpu);
-                std::thread::sleep(std::time::Duration::from_millis(500));
-            }
+            // if self.cpu.pc == 0x0100 {
+            //     println!("just arrive to game rom start");
+            //     println!("Cpu: {}", self.cpu);
+            //     std::thread::sleep(std::time::Duration::from_millis(500));
+            // }
+        }
+        if self.joypad.any_input() {
+            println!("Joypad input: {}", self.joypad);
         }
         self.cpu.cycles = 0;
         self.ppu.last_cycles = 0;
