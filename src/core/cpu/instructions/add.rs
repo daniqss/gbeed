@@ -16,8 +16,7 @@ use crate::{
 fn add_u8(val: u8, old_a: u8) -> u8 { old_a.wrapping_add(val) }
 
 #[inline(always)]
-fn add_u16(gb: &mut Dmg) -> u16 {
-    let addend = gb.cpu.sp;
+fn add_u16(gb: &mut Dmg, addend: u16) -> u16 {
     let result = gb.cpu.hl().wrapping_add(addend);
 
     gb.store(R16::HL, result);
@@ -64,13 +63,13 @@ impl Instruction for AddAPointedByHL {
     fn disassembly(&self) -> String { format!("add a,[hl]") }
 }
 
-pub struct AddAImm8 {
+pub struct AddImm8 {
     val: u8,
 }
-impl AddAImm8 {
+impl AddImm8 {
     pub fn new(val: u8) -> Box<Self> { Box::new(Self { val }) }
 }
-impl Instruction for AddAImm8 {
+impl Instruction for AddImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let old_a = gb.cpu.a;
         gb.cpu.a = add_u8(self.val, old_a);
@@ -89,7 +88,7 @@ impl AddR16 {
 impl Instruction for AddR16 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let old_hl = gb.cpu.hl();
-        let result = add_u16(gb);
+        let result = add_u16(gb, gb.load(self.src));
 
         let flags = Flags {
             z: None,
@@ -110,7 +109,7 @@ impl AddSP {
 impl Instruction for AddSP {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let old_hl = gb.cpu.hl();
-        let result = add_u16(gb);
+        let result = add_u16(gb, gb.cpu.sp);
 
         let flags = Flags {
             z: None,
