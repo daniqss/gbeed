@@ -100,7 +100,7 @@ fn main() -> Result<()> {
         gb.run()?;
 
         draw_screen(&mut rl, &thread, &mut gb, &mut frame);
-        update_joypad(&mut gb.joypad, rl.get_key_pressed());
+        // update_joypad(&mut gb.joypad, rl.get_key_pressed());
     }
 
     Ok(())
@@ -161,43 +161,40 @@ fn draw_screen(rl: &mut RaylibHandle, thread: &RaylibThread, gb: &mut Dmg, textu
     // draw_cartridge(rl, thread, gb);
 }
 
-fn update_joypad(jp: &mut Joypad, key: Option<KeyboardKey>) {
-    match key {
-        Some(KeyboardKey::KEY_UP | KeyboardKey::KEY_W) => {
-            jp.set_select_directions(true);
-            jp.set_input_up_select(true)
-        }
-        Some(KeyboardKey::KEY_DOWN | KeyboardKey::KEY_S) => {
-            jp.set_select_directions(true);
-            jp.set_input_down_start(true)
-        }
-        Some(KeyboardKey::KEY_LEFT | KeyboardKey::KEY_A) => {
-            jp.set_select_directions(true);
-            jp.set_input_left_b(true)
-        }
-        Some(KeyboardKey::KEY_RIGHT | KeyboardKey::KEY_D) => {
-            jp.set_select_directions(true);
-            jp.set_input_right_a(true)
-        }
-        Some(KeyboardKey::KEY_J) => {
-            jp.set_select_buttons(true);
-            jp.set_input_right_a(true)
-        }
-        Some(KeyboardKey::KEY_X) => {
-            jp.set_select_buttons(true);
-            jp.set_input_left_b(true)
-        }
-        Some(KeyboardKey::KEY_ENTER) => {
-            jp.set_select_buttons(true);
-            jp.set_input_down_start(true)
-        }
-        Some(KeyboardKey::KEY_RIGHT_SHIFT) | Some(KeyboardKey::KEY_LEFT_SHIFT) => {
-            jp.set_select_buttons(true);
-            jp.set_input_up_select(true)
-        }
-        _ => {}
-    }
-}
+// fn update_joypad(jp: &mut Joypad, key: Option<KeyboardKey>) {
+//     match key {
+//         Some(KeyboardKey::KEY_UP | KeyboardKey::KEY_W) => {
+//             jp.set_select_directions(true);
+//             jp.set_input_up_select(true)
+//         }
+
+//         Some(KeyboardKey::KEY_LEFT | KeyboardKey::KEY_A) => {
+//             jp.set_select_directions(true);
+//             jp.set_input_left_b(true)
+//         }
+//         Some(KeyboardKey::KEY_RIGHT | KeyboardKey::KEY_D) => {
+//             jp.set_select_directions(true);
+//             jp.set_input_right_a(true)
+//         }
+//         Some(KeyboardKey::KEY_J) => {
+//             jp.set_select_buttons(true);
+//             jp.set_input_right_a(true)
+//         }
+//         Some(KeyboardKey::KEY_X) => {
+//             jp.set_select_buttons(true);
+//             jp.set_input_left_b(true)
+//         }
+//         Some(KeyboardKey::KEY_ENTER) => {
+//             jp.set_select_buttons(true);
+//             jp.set_input_down_start(true)
+//         }
+//         Some(KeyboardKey::KEY_RIGHT_SHIFT) | Some(KeyboardKey::KEY_LEFT_SHIFT) => {
+//             jp.set_select_buttons(true);
+//             jp.set_input_up_select(true)
+//         }
+//         _ => {}
+//     }
+// }
 
 fn print_help() {
     println!("Usage: gbeed [OPTIONS]");

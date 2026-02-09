@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Register8 {
     A,
     F,
@@ -33,7 +33,7 @@ impl Display for Register8 {
 
 /// not including SP and PC for now
 /// maybe its a good idea, we'll see
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Register16 {
     AF,
     BC,

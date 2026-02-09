@@ -8,7 +8,7 @@ use crate::{
 
 /// enable interrupts
 /// actually ime should be set AFTER the next instruction is executed
-/// but let's hope it works the same
+/// but let's hope it works nevertheless
 pub struct Ei {}
 
 impl Ei {
@@ -18,8 +18,8 @@ impl Ei {
 impl Instruction for Ei {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.ime = true;
-        Ok(InstructionEffect::new(1, 1, Flags::none()))
+        Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
-
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "ei") }
+    fn info(&self) -> (u8, u8) { (1, 1) }
+    fn disassembly(&self) -> String { format!("ei") }
 }

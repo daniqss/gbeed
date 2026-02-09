@@ -1,38 +1,86 @@
 use crate::{
     Dmg,
-    core::cpu::{
-        flags::Flags,
-        instructions::{
-            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
+    core::{
+        Accessible,
+        cpu::{
+            R8,
+            flags::Flags,
+            instructions::{Instruction, InstructionEffect, InstructionResult},
         },
     },
 };
 
-/// Sets bit u3 in register r8 to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
-pub struct Set {
+/// Sets bit u3 in register r8 to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
+pub struct SetR8 {
     bit: u8,
-    dst: ID,
+    dst: R8,
 }
-
-impl Set {
-    pub fn new(bit: u8, dst: ID) -> Box<Self> { Box::new(Set { bit, dst }) }
+impl SetR8 {
+    pub fn new(bit: u8, dst: R8) -> Box<Self> { Box::new(Self { bit, dst }) }
 }
-
-impl Instruction for Set {
+impl Instruction for SetR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
-            ID::Reg8(reg) => (&mut gb[&*reg], 2, 2),
-            ID::PointedByHL(addr) => (&mut gb[*addr], 4, 2),
+        let r8 = gb.read(self.dst);
+        let result = r8 | (1 << self.bit);
+        gb.write(self.dst, result);
 
-            _ => return Err(InstructionError::MalformedInstruction),
-        };
+        Ok(InstructionEffect::new(self.info(), Flags::none()))
+    }
+    fn info(&self) -> (u8, u8) { (2, 2) }
+    fn disassembly(&self) -> String { format!("set {}, {}", self.bit, self.dst) }
+}
 
-        *dst |= 1 << self.bit;
+pub struct SetPointedByHL {
+    bit: u8,
+}
+impl SetPointedByHL {
+    pub fn new(bit: u8) -> Box<Self> { Box::new(Self { bit }) }
+}
+impl Instruction for SetPointedByHL {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        let val = gb.read(gb.cpu.hl());
+        let result = val | (1 << self.bit);
+        gb.write(gb.cpu.hl(), result);
 
-        Ok(InstructionEffect::new(cycles, len, Flags::none()))
+        Ok(InstructionEffect::new(self.info(), Flags::none()))
+    }
+    fn info(&self) -> (u8, u8) { (4, 2) }
+    fn disassembly(&self) -> String { format!("set {}, [hl]", self.bit) }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::core::{Accessible16, cpu::R16};
+
+    use super::*;
+
+    #[test]
+    fn test_set_r8() {
+        let mut gb = Dmg::default();
+        gb.cpu.a = 0b0000_0000;
+        let mut instr = SetR8::new(1, R8::A);
+
+        let result = instr.exec(&mut gb).unwrap();
+        assert_eq!(gb.cpu.a, 0b0000_0010);
+
+        assert_eq!(result.cycles, 2);
+        assert_eq!(result.len(), 2);
+        assert_eq!(result.flags, Flags::none());
     }
 
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
-        write!(w, "set {}, {}", self.bit, self.dst)
+    #[test]
+    fn test_set_pointed_by_hl() {
+        let mut gb = Dmg::default();
+        let addr = 0xC000;
+        gb.store(R16::HL, addr);
+        gb.write(addr, 0b0000_0000);
+        let mut instr = SetPointedByHL::new(4);
+
+        let result = instr.exec(&mut gb).unwrap();
+        assert_eq!(gb.read(addr), 0b0001_0000);
+
+        assert_eq!(result.cycles, 4);
+        assert_eq!(result.len(), 2);
+        assert_eq!(result.flags, Flags::none());
     }
 }

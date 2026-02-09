@@ -6,12 +6,25 @@ use crate::{
     },
 };
 
-/// rotate bits left between A and carry flag
+#[inline(always)]
+fn rrca_flags(dst: u8) -> Flags {
+    Flags {
+        z: Some(false),
+        n: Some(false),
+        h: Some(false),
+        c: Some(dst & 0b0000_0001 != 0),
+    }
+}
+
+#[inline(always)]
+fn rrca(value: u8) -> u8 { (value >> 1) | ((value & 1) << 7) }
+
+/// rotate bits right A
 ///   ┏━━━━━━━ A ━━━━━━━┓   ┏━ Flags ━┓
 /// ┌─╂→ b7 → ... → b0 ─╂─┬─╂→   C    ┃
 /// │ ┗━━━━━━━━━━━━━━━━━┛ │ ┗━━━━━━━━━┛
 /// └─────────────────────┘
-pub struct Rrca {}
+pub struct Rrca;
 
 impl Rrca {
     pub fn new() -> Box<Self> { Box::new(Self {}) }
@@ -19,20 +32,15 @@ impl Rrca {
 
 impl Instruction for Rrca {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let first_bit = gb.cpu.a & 0b0000_0001 != 0;
-        let result = (gb.cpu.a >> 1) | if first_bit { 0b1000_0000 } else { 0 };
-        let flags = Flags {
-            z: Some(false),
-            n: Some(false),
-            h: Some(false),
-            c: Some(first_bit),
-        };
+        let result = rrca(gb.cpu.a);
+        let flags = rrca_flags(gb.cpu.a);
         gb.cpu.a = result;
 
-        Ok(InstructionEffect::new(1, 1, flags))
+        Ok(InstructionEffect::new(self.info(), flags))
     }
 
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "rrca") }
+    fn info(&self) -> (u8, u8) { (1, 1) }
+    fn disassembly(&self) -> String { format!("rrca") }
 }
 
 #[cfg(test)]
@@ -42,7 +50,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_rl_no_carry() {
+    fn test_rrca_no_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0b0000_0001;
         let mut instr = Rrca::new();
@@ -64,7 +72,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rl_with_carry() {
+    fn test_rrca_with_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0b0011_1000;
 

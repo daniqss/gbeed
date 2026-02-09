@@ -14,11 +14,12 @@ use crate::{
     core::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
         cpu::{Instruction, Len, R8, R16},
+        interrupts::IE,
         ppu::{PPU_REGISTER_END, PPU_REGISTER_START},
         serial::{SERIAL_REGISTER_END, SERIAL_REGISTER_START},
         timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
     },
-    utils::{high, low, to_u16, with_u16},
+    utils::{high, low, to_u16},
 };
 
 pub use apu::Apu;
@@ -148,10 +149,13 @@ impl Accessible<u16> for Dmg {
             }
             OAM_START..=OAM_END => self.bus.oam_ram[(address - OAM_START) as usize],
 
-            NOT_USABLE_START..=NOT_USABLE_END => unreachable!(
-                "Read to prohibited memory region [{}, {}] with address {:04X}",
-                NOT_USABLE_START, NOT_USABLE_END, address
-            ),
+            NOT_USABLE_START..=NOT_USABLE_END => {
+                eprintln!(
+                    "Reads to prohibited memory region [{}, {}] with address {:04X} return 0xFF",
+                    NOT_USABLE_START, NOT_USABLE_END, address
+                );
+                0xFF
+            }
 
             IO_REGISTERS_START..=IO_REGISTERS_END => match address {
                 JOYP => self.joypad.read(address),
@@ -165,16 +169,13 @@ impl Accessible<u16> for Dmg {
 
                 BANK_REGISTER => self.bank,
 
-                // unimplemented IO registers return 0xFF
-                _ => 0xFF,
+                _ => {
+                    eprintln!("Reads to unimplemented IO register {:04X} return 0xFF", address);
+                    0xFF
+                }
             },
             HRAM_START..=HRAM_END => self.bus.hram[(address - HRAM_START) as usize],
-
-            _ => {
-                unreachable!(
-                    "Dmg: read of address {address:04X} should have been handled by other components"
-                )
-            }
+            IE => self.interrupt_enable.0,
         }
     }
 
@@ -191,9 +192,28 @@ impl Accessible<u16> for Dmg {
                 self.bus.ram[offset] = value;
             }
             OAM_START..=OAM_END => self.bus.oam_ram[(address - OAM_START) as usize] = value,
-            HRAM_START..=HRAM_END => self.bus.hram[(address - HRAM_START) as usize] = value,
 
-            _ => unreachable!("Write of address {address:04X} should have been handled by other components"),
+            NOT_USABLE_START..=NOT_USABLE_END => eprintln!(
+                "Writes to prohibited memory region [{}, {}] with address {:04X} are ignored",
+                NOT_USABLE_START, NOT_USABLE_END, address
+            ),
+
+            IO_REGISTERS_START..=IO_REGISTERS_END => match address {
+                JOYP => self.joypad.write(address, value),
+                SERIAL_REGISTER_START..=SERIAL_REGISTER_END => self.serial.write(address, value),
+                TIMER_REGISTER_START..=TIMER_REGISTER_END => self.timer.write(address, value),
+
+                IF => self.interrupt_flag.0 = value,
+
+                APU_REGISTER_START..=APU_REGISTER_END => self.apu.write(address, value),
+                PPU_REGISTER_START..=PPU_REGISTER_END => self.ppu.write(address, value),
+
+                BANK_REGISTER => self.bank = value,
+
+                _ => eprintln!("Writes to unimplemented IO register {:04X} are ignored", address),
+            },
+            HRAM_START..=HRAM_END => self.bus.hram[(address - HRAM_START) as usize] = value,
+            IE => self.interrupt_enable.0 = value,
         }
     }
 }
@@ -247,10 +267,10 @@ impl Accessible16<R16, R8> for Dmg {
 
     fn store(&mut self, address: R16, value: u16) {
         match address {
-            R16::AF => with_u16(&mut self.cpu.f, &mut self.cpu.a, |_| value),
-            R16::BC => with_u16(&mut self.cpu.c, &mut self.cpu.b, |_| value),
-            R16::DE => with_u16(&mut self.cpu.e, &mut self.cpu.d, |_| value),
-            R16::HL => with_u16(&mut self.cpu.l, &mut self.cpu.h, |_| value),
+            R16::AF => self.cpu.set_af(value),
+            R16::BC => self.cpu.set_bc(value),
+            R16::DE => self.cpu.set_de(value),
+            R16::HL => self.cpu.set_hl(value),
         };
     }
 }

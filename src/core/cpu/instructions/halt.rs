@@ -14,7 +14,9 @@ impl Halt {
 }
 
 impl Instruction for Halt {
-    fn exec(&mut self, _gb: &mut Dmg) -> InstructionResult { Ok(InstructionEffect::new(2, 2, Flags::none())) }
-
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "halt") }
+    fn exec(&mut self, _: &mut Dmg) -> InstructionResult {
+        Ok(InstructionEffect::new(self.info(), Flags::none()))
+    }
+    fn info(&self) -> (u8, u8) { (2, 2) }
+    fn disassembly(&self) -> String { format!("halt") }
 }

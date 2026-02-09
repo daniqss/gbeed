@@ -1,6 +1,7 @@
 use gbeed::Cartridge;
 use gbeed::Dmg;
 use gbeed::core::AFTER_BOOT_CPU;
+use gbeed::core::Accessible;
 use gbeed::prelude::*;
 
 /// Testing dmg boot rom, which is disassembled to
@@ -206,7 +207,7 @@ fn test_disassembly_boot() -> Result<()> {
             assert_eq!(gb.cpu.a, 0x77);
             assert_eq!(gb.cpu.c, 0x12);
             assert_eq!(gb.cpu.hl(), 0xFF24);
-            assert_eq!(gb[gb.cpu.hl()], 0x77);
+            assert_eq!(gb.read(gb.cpu.hl()), 0x77);
             assert_eq!(gb.cpu.cycles, 57372);
 
             set_audio = true;

@@ -1,54 +1,89 @@
-use std::fmt::Write;
-
 use crate::{
     Dmg,
-    core::cpu::{
-        {R8, R16},
-        flags::{Flags, check_borrow_hc, check_zero},
-        instructions::{
-            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+    core::{
+        cpu::{
+            R8,
+            flags::{Flags, check_borrow_hc, check_zero},
+            instructions::{Instruction, InstructionEffect, InstructionResult},
         },
+        memory::Accessible,
     },
 };
 
+#[inline(always)]
+fn sub(subtrahend: u8, old_a: u8) -> u8 { old_a.wrapping_sub(subtrahend) }
+
+#[inline(always)]
+fn sub_flags(result: u8, old_a: u8, subtrahend: u8) -> Flags {
+    Flags {
+        z: Some(check_zero(result)),
+        n: Some(true),
+        h: Some(check_borrow_hc(old_a, subtrahend)),
+        c: Some(old_a < subtrahend),
+    }
+}
+
 /// Subtraction instruction
-/// Subtracts the value of the specified target from register A
-/// Always sets the subtraction flag, sets zero flag if result is zero, and sets half-carry and carry flags if there is a borrow in bits 4
-pub struct Sub {
-    subtrahend: IT,
+/// Subtracts the value of the wanted register from register A
+pub struct SubR8 {
+    src: R8,
 }
-
-impl Sub {
-    pub fn new(subtrahend: IT) -> Box<Self> { Box::new(Sub { subtrahend }) }
+impl SubR8 {
+    pub fn new(src: R8) -> Box<Self> { Box::new(Self { src }) }
 }
-
-impl Instruction for Sub {
+impl Instruction for SubR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let (subtrahend, cycles, len) = match &self.subtrahend {
-            IT::Reg8(val, reg) if *reg != R8::F => (*val, 1, 1),
-            IT::PointedByHL(value) => (*value, 2, 1),
-            IT::Imm8(n8) => (*n8, 2, 2),
-            _ => return Err(InstructionError::MalformedInstruction),
-        };
-
-        // perform the subtraction
-        let (result, did_borrow) = gb.cpu.a.overflowing_sub(subtrahend);
-
-        let flags = Flags {
-            z: Some(check_zero(result)),
-            n: Some(true),
-            h: Some(check_borrow_hc(gb.cpu.a, subtrahend)),
-            c: Some(did_borrow),
-        };
-
-        gb.cpu.a = result;
-
-        Ok(InstructionEffect::new(cycles, len, flags))
+        let old_a = gb.cpu.a;
+        let subtrahend = gb.read(self.src);
+        gb.cpu.a = sub(subtrahend, old_a);
+        Ok(InstructionEffect::new(
+            self.info(),
+            sub_flags(gb.cpu.a, old_a, subtrahend),
+        ))
     }
+    fn info(&self) -> (u8, u8) { (1, 1) }
+    fn disassembly(&self) -> String { format!("sub a,{}", self.src) }
+}
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
-        write!(w, "sub a,{}", self.subtrahend)
+/// Subtraction instruction
+/// Subtracts the value pointed by HL from register A
+pub struct SubPointedByHL;
+impl SubPointedByHL {
+    pub fn new() -> Box<Self> { Box::new(Self {}) }
+}
+impl Instruction for SubPointedByHL {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        let old_a = gb.cpu.a;
+        let subtrahend = gb.read(gb.cpu.hl());
+        gb.cpu.a = sub(subtrahend, old_a);
+        Ok(InstructionEffect::new(
+            self.info(),
+            sub_flags(gb.cpu.a, old_a, subtrahend),
+        ))
     }
+    fn info(&self) -> (u8, u8) { (2, 1) }
+    fn disassembly(&self) -> String { format!("sub a,[hl]") }
+}
+
+/// Subtraction instruction
+/// Subtracts the value of the immediate 8 bit value from register A
+pub struct SubImm8 {
+    val: u8,
+}
+impl SubImm8 {
+    pub fn new(val: u8) -> Box<Self> { Box::new(Self { val }) }
+}
+impl Instruction for SubImm8 {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        let old_a = gb.cpu.a;
+        gb.cpu.a = sub(self.val, old_a);
+        Ok(InstructionEffect::new(
+            self.info(),
+            sub_flags(gb.cpu.a, old_a, self.val),
+        ))
+    }
+    fn info(&self) -> (u8, u8) { (2, 2) }
+    fn disassembly(&self) -> String { format!("sub a,${:02X}", self.val) }
 }
 
 #[cfg(test)]
@@ -61,7 +96,7 @@ mod tests {
     fn test_sub_zero_result() {
         let mut gb = Dmg::default();
         gb.cpu.a = 20;
-        let mut instr = Sub::new(IT::Imm8(20));
+        let mut instr = SubImm8::new(20);
 
         let result = instr.exec(&mut gb).unwrap();
         assert_eq!(gb.cpu.a, 0);
@@ -83,9 +118,9 @@ mod tests {
     fn test_sub_set_half_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0b0001_0000;
-        let subtrahend = IT::Reg8(0b0000_0001, Reg::B);
+        gb.cpu.b = 0b0000_0001;
 
-        let mut instr = Sub::new(subtrahend);
+        let mut instr = SubR8::new(R8::B);
         let result = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.a, 0x0F);
@@ -106,9 +141,11 @@ mod tests {
     fn test_sub_set_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0x10;
-        let subtrahend = IT::PointedByHL(0x20);
+        gb.write(0x20, 0x20);
+        gb.cpu.h = 0x00;
+        gb.cpu.l = 0x20;
 
-        let mut instr = Sub::new(subtrahend);
+        let mut instr = SubPointedByHL::new();
         let result = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.a, 0xF0);

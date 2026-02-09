@@ -1,15 +1,14 @@
-use std::fmt::Write;
-
 use crate::{
     Dmg,
-    core::cpu::{
-        flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
-        instructions::{
-            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+    core::{
+        Accessible, Accessible16,
+        cpu::{
+            R16,
+            flags::Flags,
+            instructions::{Instruction, InstructionEffect, InstructionResult},
         },
-        {R8, R16},
     },
-    utils::{high, low, to_u8},
+    utils::to_u8,
 };
 
 /// Push a 16 bit register onto the stack. It is roughly equivalent to the following imaginary instructions:
@@ -26,47 +25,41 @@ use crate::{
 /// dec sp
 /// ld [sp], c   ; C, E or L
 pub struct Push {
-    src: IT,
+    src: R16,
 }
 
 impl Push {
-    pub fn new(src: IT) -> Box<Self> { Box::new(Self { src }) }
+    pub fn new(src: R16) -> Box<Self> { Box::new(Self { src }) }
 }
 
 impl Instruction for Push {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let src = match &mut self.src {
-            IT::Reg16(src, R16::AF) => {
-                // this is probably useless because no other bit of F should be set
-                let f = low(*src)
-                    & (ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK);
-                (f, high(*src))
-            }
-            IT::Reg16(src, _) => to_u8(*src),
-
-            _ => return Err(InstructionError::MalformedInstruction),
+        let src = match self.src {
+            R16::AF => (gb.cpu.f & 0b1111_0000, gb.cpu.a),
+            _ => to_u8(gb.load(self.src)),
         };
 
         // let src = to_u16(src.0, src.1);
         let mut sp = gb.cpu.sp.wrapping_sub(1);
-        gb[sp] = src.1;
+        gb.write(sp, src.1);
         sp = sp.wrapping_sub(1);
-        gb[sp] = src.0;
+        gb.write(sp, src.0);
         gb.cpu.sp = sp;
         // with u16 functions
         // gb.cpu.sp = gb.cpu.sp.wrapping_sub(2);
         // gb.store(gb.cpu.sp, src);
 
-        Ok(InstructionEffect::new(4, 1, Flags::none()))
+        Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
-
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "push {}", self.src) }
+    fn info(&self) -> (u8, u8) { (4, 1) }
+    fn disassembly(&self) -> String { format!("push {}", self.src) }
 }
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
+    use crate::core::cpu::flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK};
 
     #[test]
     fn test_push_af() {
@@ -75,14 +68,14 @@ mod tests {
         gb.cpu.a = 1;
         gb.cpu.sp = 0xFFA0;
 
-        let mut push = Push::new(IT::Reg16(gb.cpu.af(), R16::AF));
+        let mut push = Push::new(R16::AF);
 
         let effect = push.exec(&mut gb).unwrap();
 
         assert_eq!(effect.cycles, 4);
         assert_eq!(effect.len(), 1);
-        assert_eq!(gb[gb.cpu.sp], ZERO_FLAG_MASK | CARRY_FLAG_MASK);
-        assert_eq!(gb[gb.cpu.sp + 1], gb.cpu.a);
+        assert_eq!(gb.read(gb.cpu.sp), ZERO_FLAG_MASK | CARRY_FLAG_MASK);
+        assert_eq!(gb.read(gb.cpu.sp + 1), gb.cpu.a);
         assert_eq!(gb.cpu.sp, 0xFFA0 - 2);
         assert_eq!(effect.flags, Flags::none());
     }
@@ -94,14 +87,14 @@ mod tests {
         gb.cpu.b = 1;
         gb.cpu.sp = 0xFFA0;
 
-        let mut push = Push::new(IT::Reg16(gb.cpu.bc(), Reg::BC));
+        let mut push = Push::new(R16::BC);
 
         let effect = push.exec(&mut gb).unwrap();
 
         assert_eq!(effect.cycles, 4);
         assert_eq!(effect.len(), 1);
-        assert_eq!(gb[gb.cpu.sp], gb.cpu.c);
-        assert_eq!(gb[gb.cpu.sp + 1], gb.cpu.b);
+        assert_eq!(gb.read(gb.cpu.sp), gb.cpu.c);
+        assert_eq!(gb.read(gb.cpu.sp + 1), gb.cpu.b);
         assert_eq!(gb.cpu.sp, 0xFFA0 - 2);
         assert_eq!(effect.flags, Flags::none());
     }

@@ -1,12 +1,8 @@
-use std::fmt::Write;
-
 use crate::{
     Dmg,
     core::cpu::{
         flags::Flags,
-        instructions::{
-            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
-        },
+        instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
     },
 };
 
@@ -15,53 +11,48 @@ use crate::{
 /// the condition is based on carry and zero flags
 /// the address is encoded as a signed 8 bit immediate value
 pub struct Jr {
-    pub jump: IT,
+    pub jc: JumpCondition,
+    pub offset: u8,
 }
 
 impl Jr {
-    pub fn new(jump: IT) -> Box<Self> { Box::new(Self { jump }) }
+    pub fn new(jc: JumpCondition, offset: u8) -> Box<Self> { Box::new(Self { jc, offset }) }
 }
 
 impl Instruction for Jr {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let (result, cycles, len) = match &self.jump {
-            IT::JumpToImm8(cc, offset) => {
-                let should_jump = cc.should_jump();
-                gb.cpu.pc = gb.cpu.pc.wrapping_add(2);
+        let should_jump = self.jc.should_jump();
+        gb.cpu.pc = gb.cpu.pc.wrapping_add(2);
 
-                if should_jump {
-                    // cast i8 offset to u16 to perform addition
-                    // offset is relative to the next instruction
-                    let result = if *offset & 0x80 != 0 {
-                        let mut e8: u8 = !offset;
-                        e8 = e8.wrapping_add(1);
+        if should_jump {
+            // cast i8 offset to u16 to perform addition
+            // offset is relative to the next instruction
+            let result = if self.offset & 0x80 != 0 {
+                let mut e8: u8 = !self.offset;
+                e8 = e8.wrapping_add(1);
 
-                        gb.cpu.pc.wrapping_sub(e8 as u16)
-                    } else {
-                        gb.cpu.pc.wrapping_add(*offset as u16)
-                    };
-                    (result, 3, 2)
-                } else {
-                    (gb.cpu.pc, 2, 2)
-                }
-            }
-
-            _ => return Err(InstructionError::MalformedInstruction),
-        };
-
-        gb.cpu.pc = result;
-
-        Ok(InstructionEffect::with_jump(cycles, len, Flags::none()))
+                gb.cpu.pc.wrapping_sub(e8 as u16)
+            } else {
+                gb.cpu.pc.wrapping_add(self.offset as u16)
+            };
+            gb.cpu.pc = result;
+            Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+        } else {
+            Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+        }
     }
-
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "jr {}", self.jump) }
+    fn info(&self) -> (u8, u8) { if self.jc.should_jump() { (3, 2) } else { (2, 2) } }
+    fn disassembly(&self) -> String { format!("jr {}{}", self.jc, self.offset as i8) }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::core::cpu::{
-        flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK},
-        instructions::JumpCondition as JC,
+    use crate::core::{
+        Accessible,
+        cpu::{
+            flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK},
+            instructions::JumpCondition as JC,
+        },
     };
 
     use super::*;
@@ -72,9 +63,9 @@ mod test {
         gb.cpu.pc = 0x100;
         let pc = gb.cpu.pc;
         let e8: u8 = 0x07;
-        gb[pc + 1] = e8 as u8;
+        gb.write(pc + 1, e8 as u8);
 
-        let mut instr = Jr::new(IT::JumpToImm8(JC::None, e8));
+        let mut instr = Jr::new(JC::None, e8);
         let result = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.pc, pc.wrapping_add((e8 + 2) as u16));
@@ -90,12 +81,12 @@ mod test {
 
         // e8 = 0xFA = -6
         let e8: u8 = 0xFA;
-        gb[pc + 1] = e8;
+        gb.write(pc + 1, e8);
 
         // zero flag is not set, so it should jump
         gb.cpu.f = !ZERO_FLAG_MASK;
 
-        let mut instr = Jr::new(IT::JumpToImm8(JC::NotZero(gb.cpu.not_zero()), e8));
+        let mut instr = Jr::new(JC::NotZero(gb.cpu.not_zero()), e8);
         let result = instr.exec(&mut gb).unwrap();
 
         // interpret e8 as signed i8
@@ -113,11 +104,11 @@ mod test {
         gb.cpu.pc = 0x100;
         let pc = gb.cpu.pc;
         let e8: u8 = 0x64;
-        gb[pc + 1] = e8 as u8;
+        gb.write(pc + 1, e8 as u8);
         // carry is not set, so it should not jump
         gb.cpu.f = !CARRY_FLAG_MASK;
 
-        let mut instr = Jr::new(IT::JumpToImm8(JC::Carry(gb.cpu.carry()), e8));
+        let mut instr = Jr::new(JC::Carry(gb.cpu.carry()), e8);
         let result = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.pc, pc + 2);
