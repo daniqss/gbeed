@@ -104,7 +104,9 @@ mod tests {
     #[test]
     fn test_rrc_with_carry() {
         let mut gb = Dmg::default();
-        let addr = 0xFF00;
+        let addr = 0xC000;
+        gb.cpu.set_hl(addr);
+        gb.cpu.set_carry();
         gb.write(addr, 0b0011_1000);
 
         let mut instr = RrcPointedByHL::new();

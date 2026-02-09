@@ -59,7 +59,7 @@ mod tests {
     fn test_ret_unconditional() {
         let mut gb = Dmg::default();
         let ret_addr = 0x1234;
-        let sp = 0xFFFE;
+        let sp = 0xFFFC;
         gb.cpu.sp = sp;
         gb.store(sp, ret_addr);
 

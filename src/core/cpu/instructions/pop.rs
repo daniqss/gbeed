@@ -67,7 +67,7 @@ mod tests {
         let mut gb = Dmg::default();
         gb.cpu.f = 0;
         gb.cpu.a = 0;
-        gb.cpu.sp = 0xFF00;
+        gb.cpu.sp = 0xC000;
 
         let sp = gb.cpu.sp;
         gb.write(sp, ZERO_FLAG_MASK | CARRY_FLAG_MASK);
@@ -78,7 +78,7 @@ mod tests {
 
         assert_eq!(gb.cpu.a, 1);
         assert_eq!(gb.cpu.f, ZERO_FLAG_MASK | CARRY_FLAG_MASK);
-        assert_eq!(gb.cpu.sp, 0xFF02);
+        assert_eq!(gb.cpu.sp, 0xC002);
         assert_eq!(effect.cycles, 3);
         assert_eq!(effect.len(), 1);
         assert_eq!(

@@ -96,16 +96,14 @@ impl Instruction for SbcImm8 {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::cpu::flags::CARRY_FLAG_MASK;
-
     use super::*;
 
     #[test]
     fn test_sbc_zero_result() {
         let mut gb = Dmg::default();
         gb.cpu.a = 20;
-        gb.write(R8::F, CARRY_FLAG_MASK);
-        let mut instr = SbcImm8::new(20, gb.cpu.carry());
+        gb.cpu.set_carry();
+        let mut instr = SbcImm8::new(19, gb.cpu.carry());
 
         let result = instr.exec(&mut gb).unwrap();
         assert_eq!(gb.cpu.a, 0);
@@ -127,13 +125,13 @@ mod tests {
     fn test_sbc_set_half_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0b0001_0000;
-        gb.cpu.b = 0b0000_0001;
-        gb.write(R8::F, CARRY_FLAG_MASK);
+        gb.cpu.b = 0b0000_0011;
+        gb.cpu.clear_carry();
 
         let mut instr = SbcR8::new(R8::B);
         let result = instr.exec(&mut gb).unwrap();
 
-        assert_eq!(gb.cpu.a, 0x0F);
+        assert_eq!(gb.cpu.a, 0b0000_1101);
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len(), 1);
         assert_eq!(
@@ -178,7 +176,7 @@ mod tests {
         let mut gb = Dmg::default();
         gb.cpu.a = 10;
         gb.cpu.b = 3;
-        gb.write(R8::F, CARRY_FLAG_MASK);
+        gb.cpu.set_carry();
 
         let mut instr = SbcR8::new(R8::B);
         let result = instr.exec(&mut gb).unwrap();
@@ -197,7 +195,7 @@ mod tests {
         );
 
         gb.cpu.a = 5;
-        gb.write(R8::F, CARRY_FLAG_MASK);
+        gb.cpu.set_carry();
         let mut instr = SbcImm8::new(5, gb.cpu.carry());
         let result = instr.exec(&mut gb).unwrap();
 

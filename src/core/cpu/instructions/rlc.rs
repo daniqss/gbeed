@@ -53,7 +53,7 @@ impl Instruction for RlcR8 {
 pub struct RlcPointedByHL;
 
 impl RlcPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self {}) }
+    pub fn new() -> Box<Self> { Box::new(Self) }
 }
 
 impl Instruction for RlcPointedByHL {
@@ -104,7 +104,8 @@ mod tests {
     #[test]
     fn test_rlc_with_carry() {
         let mut gb = Dmg::default();
-        let addr = 0xFF00;
+        let addr = 0xC000;
+        gb.cpu.set_hl(addr);
         gb.write(addr, 0b0011_1000);
 
         let mut instr = RlcPointedByHL::new();

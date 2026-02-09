@@ -29,16 +29,15 @@ fn rr(value: u8, carry: bool) -> u8 { (value >> 1) | if carry { 1 << 7 } else { 
 /// │ ┗━━━━━━━━━━━━━━━━━━━━━━━━┛ ┗━━━━━━━━━┛ │
 /// └────────────────────────────────────────┘
 pub struct RrR8 {
-    carry: bool,
     dst: R8,
 }
 impl RrR8 {
-    pub fn new(carry: bool, dst: R8) -> Box<Self> { Box::new(Self { carry, dst }) }
+    pub fn new(dst: R8) -> Box<Self> { Box::new(Self { dst }) }
 }
 impl Instruction for RrR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let r8 = gb.read(self.dst);
-        let result = rr(r8, self.carry);
+        let result = rr(r8, gb.cpu.carry());
         let flags = rr_flags(result, r8);
         gb.write(self.dst, result);
 
@@ -48,16 +47,14 @@ impl Instruction for RrR8 {
     fn disassembly(&self) -> String { format!("rr {}", self.dst) }
 }
 
-pub struct RrPointedByHL {
-    carry: bool,
-}
+pub struct RrPointedByHL;
 impl RrPointedByHL {
-    pub fn new(carry: bool) -> Box<Self> { Box::new(Self { carry }) }
+    pub fn new() -> Box<Self> { Box::new(Self) }
 }
 impl Instruction for RrPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let val = gb.read(gb.cpu.hl());
-        let result = rr(val, self.carry);
+        let result = rr(val, gb.cpu.carry());
         let flags = rr_flags(result, val);
         gb.write(gb.cpu.hl(), result);
 
@@ -80,7 +77,8 @@ mod tests {
     fn test_rr_no_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0b0000_0001;
-        let mut instr = RrR8::new(false, R8::A);
+        gb.cpu.clear_carry();
+        let mut instr = RrR8::new(R8::A);
 
         let result = instr.exec(&mut gb).unwrap();
         assert_eq!(gb.cpu.a, 0);
@@ -101,10 +99,12 @@ mod tests {
     #[test]
     fn test_rr_with_carry() {
         let mut gb = Dmg::default();
-        let addr = 0xFF00;
+        let addr = 0xC000;
+        gb.cpu.set_hl(addr);
+        gb.cpu.set_carry();
         gb.write(addr, 0b0011_1000);
 
-        let mut instr = RrPointedByHL::new(true);
+        let mut instr = RrPointedByHL::new();
 
         let result = instr.exec(&mut gb).unwrap();
         assert_eq!(gb.read(addr), 0b1001_1100);

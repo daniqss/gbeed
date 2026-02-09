@@ -8,7 +8,8 @@ use crate::{
         Accessible, Accessible16,
         cpu::flags::{CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
     },
-    utils::to_u16,
+    prelude::*,
+    utils::{from_u16, to_u16},
 };
 pub use instructions::{Instruction, Len};
 use instructions::{JumpCondition as JC, *};
@@ -64,31 +65,17 @@ impl Cpu {
         }
     }
 
-    #[inline]
-    pub fn af(&self) -> u16 { to_u16(self.f, self.a) }
-    #[inline]
-    pub fn bc(&self) -> u16 { to_u16(self.c, self.b) }
-    #[inline]
-    pub fn de(&self) -> u16 { to_u16(self.e, self.d) }
-    #[inline]
-    pub fn hl(&self) -> u16 { to_u16(self.l, self.h) }
+    reg16!(af, set_af, a, f);
+    reg16!(bc, set_bc, b, c);
+    reg16!(de, set_de, d, e);
+    reg16!(hl, set_hl, h, l);
 
-    #[inline]
-    pub fn carry(&self) -> bool { self.f & CARRY_FLAG_MASK != 0 }
-    #[inline]
-    pub fn not_carry(&self) -> bool { self.f & CARRY_FLAG_MASK == 0 }
-    #[inline]
-    pub fn zero(&self) -> bool { self.f & ZERO_FLAG_MASK != 0 }
-    #[inline]
-    pub fn not_zero(&self) -> bool { self.f & ZERO_FLAG_MASK == 0 }
-    #[inline]
-    pub fn subtraction(&self) -> bool { self.f & SUBTRACTION_FLAG_MASK != 0 }
-    #[inline]
-    pub fn not_subtraction(&self) -> bool { self.f & SUBTRACTION_FLAG_MASK == 0 }
-    #[inline]
-    pub fn half_carry(&self) -> bool { self.f & HALF_CARRY_FLAG_MASK != 0 }
-    #[inline]
-    pub fn not_half_carry(&self) -> bool { self.f & HALF_CARRY_FLAG_MASK == 0 }
+    flag_methods! {
+        carry => CARRY_FLAG_MASK,
+        zero => ZERO_FLAG_MASK,
+        subtraction => SUBTRACTION_FLAG_MASK,
+        half_carry => HALF_CARRY_FLAG_MASK,
+    }
 
     pub fn reset(&mut self) {
         self.a = AFTER_BOOT_CPU.a;
@@ -400,22 +387,22 @@ impl Cpu {
             0x0D => RrcR8::new(R8::L),
             0x0E => RrcPointedByHL::new(),
             0x0F => RrcR8::new(R8::A),
-            0x10 => RlR8::new(cpu.carry(), R8::B),
-            0x11 => RlR8::new(cpu.carry(), R8::C),
-            0x12 => RlR8::new(cpu.carry(), R8::D),
-            0x13 => RlR8::new(cpu.carry(), R8::E),
-            0x14 => RlR8::new(cpu.carry(), R8::H),
-            0x15 => RlR8::new(cpu.carry(), R8::L),
-            0x16 => RlPointedByHL::new(cpu.carry()),
-            0x17 => RlR8::new(cpu.carry(), R8::A),
-            0x18 => RrR8::new(cpu.carry(), R8::B),
-            0x19 => RrR8::new(cpu.carry(), R8::C),
-            0x1A => RrR8::new(cpu.carry(), R8::D),
-            0x1B => RrR8::new(cpu.carry(), R8::E),
-            0x1C => RrR8::new(cpu.carry(), R8::H),
-            0x1D => RrR8::new(cpu.carry(), R8::L),
-            0x1E => RrPointedByHL::new(cpu.carry()),
-            0x1F => RrR8::new(cpu.carry(), R8::A),
+            0x10 => RlR8::new(R8::B),
+            0x11 => RlR8::new(R8::C),
+            0x12 => RlR8::new(R8::D),
+            0x13 => RlR8::new(R8::E),
+            0x14 => RlR8::new(R8::H),
+            0x15 => RlR8::new(R8::L),
+            0x16 => RlPointedByHL::new(),
+            0x17 => RlR8::new(R8::A),
+            0x18 => RrR8::new(R8::B),
+            0x19 => RrR8::new(R8::C),
+            0x1A => RrR8::new(R8::D),
+            0x1B => RrR8::new(R8::E),
+            0x1C => RrR8::new(R8::H),
+            0x1D => RrR8::new(R8::L),
+            0x1E => RrPointedByHL::new(),
+            0x1F => RrR8::new(R8::A),
             0x20 => SlaR8::new(R8::B),
             0x21 => SlaR8::new(R8::C),
             0x22 => SlaR8::new(R8::D),
