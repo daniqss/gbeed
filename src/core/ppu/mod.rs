@@ -1,20 +1,19 @@
-mod fifo;
 mod sprite;
 
 use crate::{
     Dmg,
     core::{
+        Accessible,
         memory::{OAM_END, OAM_START, VRAM_START},
         ppu::sprite::{MAX_SPRITES_IN_OAM, MAX_SPRITES_PER_LINE, Sprite},
     },
+    mem_range,
     prelude::*,
-    utils::to_u16,
 };
 
-pub const PPU_REGISTER_START: u16 = 0xFF40;
-pub const PPU_REGISTER_END: u16 = 0xFF4B;
+mem_range!(PPU_REGISTER, 0xFF40, 0xFF4B);
 
-/// LCD Control Register (R/W) bits
+/// LCD Control Reg (R/W) bits
 const LCD_DISPLAY_ENABLE: u8 = 0x80;
 const WINDOW_TILE_MAP_ADDRESS: u8 = 0x40;
 const WINDOW_ENABLE: u8 = 0x20;
@@ -24,7 +23,7 @@ const OBJ_SIZE: u8 = 0x04;
 const OBJ_ENABLE: u8 = 0x02;
 const BG_ENABLE: u8 = 0x01;
 
-/// LCDC Status Register (R/W) bits
+/// LCDC Status Reg (R/W) bits
 const LYC_EQ_LY_INTERRUPT: u8 = 0x40;
 const OAM_INTERRUPT: u8 = 0x20;
 const VBLANK_INTERRUPT: u8 = 0x10;
@@ -47,6 +46,8 @@ const DEFAULT_DMG_COLORS: [u32; 4] = [0xC4CFA1, 0x8B956D, 0x4D533C, 0x1F1F1F];
 
 const DEFAULT_WINDOW_BASE_ADDR: u16 = 0x9800;
 const COND_WINDOW_BASE_ADDR: u16 = 0x9C00;
+
+pub const DMA_REGISTER: u16 = 0xFF46;
 
 /// Represents the current mode of the LCD display
 ///   Mode                  | Action                                     | Duration                             | Accessible video memory
@@ -190,7 +191,7 @@ impl Ppu {
             gb.ppu.set_lyc_eq_ly_flag(true);
 
             if gb.ppu.lyc_eq_ly_interrupt() {
-                gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                gb.interrupt_flag.set_lcd_stat_interrupt(true);
             }
         } else {
             gb.ppu.set_lyc_eq_ly_flag(false);
@@ -223,10 +224,6 @@ impl Ppu {
         gb.ppu.last_cycles = cycles;
 
         gb.ppu.dots += instruction_cycles;
-        // this should be done on register writes
-        if gb.ppu.dma != 0 {
-            Ppu::dma_transfer(gb);
-        }
 
         let mode = gb.ppu.get_mode();
 
@@ -243,7 +240,7 @@ impl Ppu {
 
                 // set interrupt flag if hblank interrupt is needed
                 if gb.ppu.hblank_interrupt() {
-                    gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                    gb.interrupt_flag.set_lcd_stat_interrupt(true);
                 }
 
                 Some(LCDMode::HBlank)
@@ -258,7 +255,7 @@ impl Ppu {
                 let next_mode = if gb.ppu.ly == DMG_SCREEN_HEIGHT as u8 {
                     // frame draw is finished
                     if gb.ppu.vblank_interrupt() {
-                        gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                        gb.interrupt_flag.set_lcd_stat_interrupt(true);
                     }
 
                     LCDMode::VBlank
@@ -266,7 +263,7 @@ impl Ppu {
                 // frame not done yet
                 else {
                     if gb.ppu.oam_interrupt() {
-                        gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                        gb.interrupt_flag.set_lcd_stat_interrupt(true);
                     }
                     LCDMode::OAMScan
                 };
@@ -277,7 +274,7 @@ impl Ppu {
             LCDMode::VBlank => {
                 // set VBlank interrupt at the start of VBlank period
                 if gb.ppu.lcd_display_enable() && gb.ppu.ly >= DMG_SCREEN_HEIGHT as u8 {
-                    gb.interrupt_enable.set_vblank_interrupt(true);
+                    gb.interrupt_flag.set_vblank_interrupt(true);
                 }
 
                 if gb.ppu.dots >= FINISH_VBLANK_DOTS {
@@ -292,7 +289,7 @@ impl Ppu {
                         gb.ppu.frames += 1;
 
                         if gb.ppu.oam_interrupt() {
-                            gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                            gb.interrupt_flag.set_lcd_stat_interrupt(true);
                         }
                         Some(LCDMode::OAMScan)
                     } else {
@@ -362,8 +359,8 @@ impl Ppu {
             }
 
             let tile_addr = VRAM_START + (tile_index as u16) * 16 + (line_in_sprite as u16) * 2;
-            let low_tile_byte = gb[tile_addr];
-            let high_tile_byte = gb[tile_addr + 1];
+            let low_tile_byte = gb.read(tile_addr);
+            let high_tile_byte = gb.read(tile_addr + 1);
 
             let palette = if sprite.palette_number() {
                 gb.ppu.obj1_palette
@@ -442,7 +439,7 @@ impl Ppu {
             let tile_index = tile_y * 32 + tile_x;
 
             let tile_address_in_map = tile_map_base + tile_index as u16;
-            let tile_number = gb[tile_address_in_map];
+            let tile_number = gb.read(tile_address_in_map);
 
             // The "$8000 method" uses $8000 as its base pointer and uses an unsigned addressing,
             // meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
@@ -459,8 +456,8 @@ impl Ppu {
 
             let line_in_tile = gb.ppu.window_line_counter % 8;
 
-            let first_byte = gb[tile_address + (line_in_tile as u16) * 2];
-            let second_byte = gb[tile_address + (line_in_tile as u16) * 2 + 1];
+            let first_byte = gb.read(tile_address + (line_in_tile as u16) * 2);
+            let second_byte = gb.read(tile_address + (line_in_tile as u16) * 2 + 1);
 
             let bit_index = 7 - (window_column % 8);
 
@@ -497,7 +494,7 @@ impl Ppu {
 
             let tile_index: usize = tile_y as usize * 32 + tile_x as usize;
             let tile_address_in_map = tile_map_base + tile_index as u16;
-            let tile_number = gb[tile_address_in_map];
+            let tile_number = gb.read(tile_address_in_map);
 
             // The "$8000 method" uses $8000 as its base pointer and uses an unsigned addressing,
             // meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
@@ -514,8 +511,8 @@ impl Ppu {
 
             let line_in_tile = bg_y % 8;
 
-            let first_byte = gb[tile_address + (line_in_tile as u16) * 2];
-            let second_byte = gb[tile_address + (line_in_tile as u16) * 2 + 1];
+            let first_byte = gb.read(tile_address + (line_in_tile as u16) * 2);
+            let second_byte = gb.read(tile_address + (line_in_tile as u16) * 2 + 1);
 
             let bit_index = 7 - (bg_x % 8);
 
@@ -533,57 +530,67 @@ impl Ppu {
     /// It will take 160 dots or 320 at double speed
     /// CPU can access only HRAM and PPU can't access OAM
     /// Most games transfer to HRAM code to continue execution in CPU, and execute DMA transfer in VBlank
-    fn dma_transfer(gb: &mut Dmg) {
-        // address from data will be copied
-        let src_addr: u16 = to_u16(0, gb.ppu.dma);
+    pub fn dma_transfer(gb: &mut Dmg, src_addr: u8) {
+        println!("DMA transfer from {:02X}00 to OAM", src_addr);
 
         for i in 0..(OAM_END - OAM_START + 1) {
-            let byte = gb[(src_addr + i) as u16];
-            gb[(OAM_START + i) as u16] = byte;
+            let byte = gb.read((src_addr as u16 + i) as u16);
+            gb.write((OAM_START + i) as u16, byte);
         }
 
         gb.ppu.dma = 0;
     }
 }
 
-impl Index<u16> for Ppu {
-    type Output = u8;
-
-    fn index(&self, address: u16) -> &Self::Output {
+impl Accessible<u16> for Ppu {
+    fn read(&self, address: u16) -> u8 {
         match address {
-            0xFF40 => &self.lcd_control,
-            0xFF41 => &self.lcd_status,
-            0xFF42 => &self.scroll_y,
-            0xFF43 => &self.scroll_x,
-            0xFF44 => &self.ly,
-            0xFF45 => &self.lyc,
-            0xFF46 => &self.dma,
-            0xFF47 => &self.bg_palette,
-            0xFF48 => &self.obj0_palette,
-            0xFF49 => &self.obj1_palette,
-            0xFF4A => &self.wy,
-            0xFF4B => &self.wx,
-            _ => panic!("PPU: Invalid read address {:#06X}", address),
+            0xFF40 => self.lcd_control,
+            0xFF41 => self.lcd_status,
+            0xFF42 => self.scroll_y,
+            0xFF43 => self.scroll_x,
+            0xFF44 => self.ly,
+            0xFF45 => self.lyc,
+            0xFF46 => self.dma,
+            0xFF47 => self.bg_palette,
+            0xFF48 => self.obj0_palette,
+            0xFF49 => self.obj1_palette,
+            0xFF4A => self.wy,
+            0xFF4B => self.wx,
+            _ => unreachable!(
+                "Ppu: read of address {address:04X} should have been handled by other components",
+            ),
         }
     }
-}
 
-impl IndexMut<u16> for Ppu {
-    fn index_mut(&mut self, address: u16) -> &mut Self::Output {
+    fn write(&mut self, address: u16, value: u8) {
         match address {
-            0xFF40 => &mut self.lcd_control,
-            0xFF41 => &mut self.lcd_status,
-            0xFF42 => &mut self.scroll_y,
-            0xFF43 => &mut self.scroll_x,
-            0xFF44 => &mut self.ly,
-            0xFF45 => &mut self.lyc,
-            0xFF46 => &mut self.dma,
-            0xFF47 => &mut self.bg_palette,
-            0xFF48 => &mut self.obj0_palette,
-            0xFF49 => &mut self.obj1_palette,
-            0xFF4A => &mut self.wy,
-            0xFF4B => &mut self.wx,
-            _ => panic!("PPU: Invalid read address {:#04X}", address),
+            0xFF40 => {
+                self.lcd_control = value;
+
+                // if LCD is turned off, reset some PPU state
+                if !self.lcd_display_enable() {
+                    // clear ppu mode
+                    self.lcd_status &= 0x7C;
+                    self.ly = 0;
+                }
+            }
+            0xFF41 => self.lcd_status = value,
+            0xFF42 => self.scroll_y = value,
+            0xFF43 => self.scroll_x = value,
+            0xFF44 => self.ly = value,
+            0xFF45 => self.lyc = value,
+            DMA_REGISTER => unreachable!(
+                "Writing to DMA register should have been handled by Dmg, address: {address:04X}"
+            ),
+            0xFF47 => self.bg_palette = value,
+            0xFF48 => self.obj0_palette = value,
+            0xFF49 => self.obj1_palette = value,
+            0xFF4A => self.wy = value,
+            0xFF4B => self.wx = value,
+            _ => unreachable!(
+                "Ppu: write of address {address:04X} should have been handled by other components",
+            ),
         }
     }
 }

@@ -1,43 +1,56 @@
 use crate::{
     Dmg,
-    core::cpu::{
-        R8,
-        flags::Flags,
-        instructions::{
-            Instruction, InstructionDestination as ID, InstructionEffect, InstructionError, InstructionResult,
+    core::{
+        Accessible,
+        cpu::{
+            R8,
+            flags::Flags,
+            instructions::{Instruction, InstructionEffect, InstructionResult},
         },
     },
 };
 
-/// Swap the upper 4 bits in register r8 and the lower 4 ones.
-pub struct Swap {
-    dst: ID,
+fn swap_u8_flags(result: u8) -> Flags {
+    Flags {
+        z: Some(result == 0),
+        n: Some(false),
+        h: Some(false),
+        c: Some(false),
+    }
 }
 
-impl Swap {
-    pub fn new(dst: ID) -> Box<Self> { Box::new(Self { dst }) }
+pub struct SwapR8 {
+    dst: R8,
 }
 
-impl Instruction for Swap {
+impl SwapR8 {
+    pub fn new(dst: R8) -> Box<Self> { Box::new(Self { dst }) }
+}
+
+impl Instruction for SwapR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let (dst, cycles, len): (&mut u8, u8, u8) = match &mut self.dst {
-            ID::Reg8(reg) if *reg != R8::F => (&mut gb[&*reg], 2, 2),
-            ID::PointedByHL(addr) => (&mut gb[*addr], 4, 2),
-            _ => return Err(InstructionError::MalformedInstruction),
-        };
+        let r8 = gb.read(self.dst);
+        let result = (r8 << 4) | (r8 >> 4);
+        gb.write(self.dst, result);
 
-        *dst = (*dst << 4) | (*dst >> 4);
-        let flags = Flags {
-            z: Some(*dst == 0),
-            n: Some(false),
-            h: Some(false),
-            c: Some(false),
-        };
-
-        Ok(InstructionEffect::new(cycles, len, flags))
+        Ok(InstructionEffect::new(self.info(), swap_u8_flags(result)))
     }
+    fn info(&self) -> (u8, u8) { (2, 2) }
+    fn disassembly(&self) -> String { format!("swap {}", self.dst) }
+}
 
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
-        write!(w, "swap {}", self.dst)
+pub struct SwapPointedByHL;
+impl SwapPointedByHL {
+    pub fn new() -> Box<Self> { Box::new(Self) }
+}
+impl Instruction for SwapPointedByHL {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        let n8 = gb.read(gb.cpu.hl());
+        let result = (n8 << 4) | (n8 >> 4);
+        gb.write(gb.cpu.hl(), result);
+
+        Ok(InstructionEffect::new(self.info(), swap_u8_flags(result)))
     }
+    fn info(&self) -> (u8, u8) { (4, 2) }
+    fn disassembly(&self) -> String { format!("swap [hl]") }
 }

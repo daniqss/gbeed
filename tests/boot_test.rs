@@ -1,5 +1,7 @@
 use gbeed::Cartridge;
 use gbeed::Dmg;
+use gbeed::core::AFTER_BOOT_CPU;
+use gbeed::core::Accessible;
 use gbeed::prelude::*;
 
 /// Testing dmg boot rom, which is disassembled to
@@ -180,7 +182,12 @@ fn test_disassembly_boot() -> Result<()> {
     let mut setup_logo = false;
 
     loop {
-        let instr = gb.step()?;
+        let _instr = gb.step()?;
+
+        if gb.cpu.cycles >= 70224 {
+            gb.cpu.cycles = 0;
+            gb.ppu.last_cycles = 0;
+        }
 
         // finish initing ram
         if gb.cpu.pc == 0x000C && !init_ram {
@@ -200,7 +207,7 @@ fn test_disassembly_boot() -> Result<()> {
             assert_eq!(gb.cpu.a, 0x77);
             assert_eq!(gb.cpu.c, 0x12);
             assert_eq!(gb.cpu.hl(), 0xFF24);
-            assert_eq!(gb[gb.cpu.hl()], 0x77);
+            assert_eq!(gb.read(gb.cpu.hl()), 0x77);
             assert_eq!(gb.cpu.cycles, 57372);
 
             set_audio = true;
@@ -219,14 +226,10 @@ fn test_disassembly_boot() -> Result<()> {
             setup_logo = true;
         }
 
-        if init_ram && set_audio && setup_logo {
-            println!("Boot sequence in progress... Cpu: {}", gb.cpu);
-            println!("Current instruction: {}", instr);
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        }
-
         if gb.cpu.pc == 0x0100 {
+            assert_eq!(gb.cpu, AFTER_BOOT_CPU);
             println!("Boot sequence completed successfully!");
+            println!("Cpu after boot: {}", gb.cpu);
             break;
         }
     }

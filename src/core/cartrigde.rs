@@ -86,10 +86,13 @@ impl Cartridge {
             rom: game_rom,
         };
 
-        match cartridge.check_global_checksum() {
-            Ok(_) => Ok(cartridge),
-            Err(e) => Err(e),
+        if let Err(e) = cartridge.check_header_checksum() {
+            eprintln!(
+                "Header checksum mismatch: the cartridge may be corrupted or the file may be malformed:\n{e}"
+            );
         }
+
+        Ok(cartridge)
     }
 
     /// # Header checksum

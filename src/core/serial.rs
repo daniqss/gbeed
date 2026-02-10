@@ -1,4 +1,6 @@
-use crate::prelude::*;
+use crate::{core::Accessible, mem_range, prelude::*};
+
+mem_range!(SERIAL_REGISTER, SB, SC);
 
 pub const SB: u16 = 0xFF01;
 pub const SC: u16 = 0xFF02;
@@ -32,4 +34,26 @@ impl Serial {
         SC_CLOCK_SPEED,
         SC_SHIFT_CLOCK
     );
+}
+
+impl Accessible<u16> for Serial {
+    fn read(&self, address: u16) -> u8 {
+        match address {
+            SB => self.sb,
+            SC => self.sc,
+            _ => unreachable!(
+                "Serial: read of address {address:04X} should have been handled by other components",
+            ),
+        }
+    }
+
+    fn write(&mut self, address: u16, value: u8) {
+        match address {
+            SB => self.sb = value,
+            SC => self.sc = value,
+            _ => unreachable!(
+                "Serial: write of address {address:04X} should have been handled by other components",
+            ),
+        }
+    }
 }

@@ -8,7 +8,8 @@ mod rst;
 use std::fmt::Display;
 
 pub use call::Call;
-pub use jp::Jp;
+pub use jp::JpToHL;
+pub use jp::JpToImm16;
 pub use jr::Jr;
 pub use ret::Ret;
 pub use reti::Reti;

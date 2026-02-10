@@ -14,32 +14,28 @@ use crate::{
     core::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
         cpu::{Instruction, Len, R8, R16},
-        interrupts::IE,
-        memory::Accessable,
-        ppu::{PPU_REGISTER_END, PPU_REGISTER_START},
+        interrupts::{
+            IE, JOYPAD_INTERRUPT, LCD_STAT_INTERRUPT, SERIAL_INTERRUPT, TIMER_INTERRUPT, VBLANK_INTERRUPT,
+        },
+        ppu::{DMA_REGISTER, PPU_REGISTER_END, PPU_REGISTER_START},
+        serial::{SERIAL_REGISTER_END, SERIAL_REGISTER_START},
+        timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
     },
-    utils::with_u16,
+    utils::{high, low, to_u16},
 };
 
 pub use apu::Apu;
 pub use cartrigde::Cartridge;
-pub use cpu::Cpu;
+pub use cpu::{AFTER_BOOT_CPU, Cpu};
 pub use interrupts::Interrupt;
 pub use joypad::Joypad;
-pub use memory::{
-    HRAM_END, HRAM_START, IO_REGISTERS_END, IO_REGISTERS_START, Memory, NOT_USABLE_END, ROM_BANK00_START,
-    ROM_BANKNN_END,
-};
+pub use joypad::JoypadButton;
+pub use memory::*;
 pub use ppu::Ppu;
 pub use serial::Serial;
-pub use timer::TimerController;
+pub use timer::Timer;
 
-use self::{
-    interrupts::IF,
-    joypad::JOYP,
-    serial::{SB, SC},
-    timer::{DIV, TAC, TIMA, TMA},
-};
+use self::{interrupts::IF, joypad::JOYP};
 
 const BANK_REGISTER: u16 = 0xFF50;
 
@@ -50,7 +46,7 @@ pub struct Dmg {
     pub ppu: Ppu,
     pub joypad: Joypad,
     pub serial: Serial,
-    pub timer: TimerController,
+    pub timer: Timer,
     pub apu: Apu,
     pub interrupt_flag: Interrupt,
     pub interrupt_enable: Interrupt,
@@ -61,7 +57,7 @@ impl Dmg {
     pub fn new(game: Option<Cartridge>, boot_rom: Option<Vec<u8>>) -> Dmg {
         let joypad = Joypad::default();
         let serial = Serial::new();
-        let timer = TimerController::new();
+        let timer = Timer::new();
         let apu = Apu::new();
         let interrupt_flag = Interrupt::new();
         let ppu = Ppu::new();
@@ -91,10 +87,14 @@ impl Dmg {
         // one frame (70224 cycles)
         while self.cpu.cycles < 70224 {
             let _instr = self.step()?;
-            if self.cpu.pc == 0x0100 {
-                println!("just arrive to game rom start");
-                std::thread::sleep(std::time::Duration::from_millis(500));
-            }
+            // if self.cpu.pc == 0x0100 {
+            //     println!("just arrive to game rom start");
+            //     println!("Cpu: {}", self.cpu);
+            //     std::thread::sleep(std::time::Duration::from_millis(500));
+            // }
+        }
+        if self.joypad.any_input() {
+            println!("Joypad input: {}", self.joypad);
         }
         self.cpu.cycles = 0;
         self.ppu.last_cycles = 0;
@@ -103,7 +103,18 @@ impl Dmg {
     }
 
     pub fn step(&mut self) -> Result<Box<dyn Instruction>> {
-        let opcode = self[self.cpu.pc];
+        // check if is neccessatry to handle interrupts before executing the instruction
+        if self.cpu.ime || self.cpu.halted {
+            if self.handle_interrupts() {
+                self.cpu.ime = false;
+                self.cpu.halted = false;
+
+                self.cpu.cycles = self.cpu.cycles.wrapping_add(20);
+            }
+        }
+
+        // cpu
+        let opcode = self.read(self.cpu.pc);
 
         let mut instruction = match Cpu::fetch(self, opcode) {
             Ok(instr) => instr,
@@ -138,123 +149,165 @@ impl Dmg {
 
         Ok(instruction)
     }
-}
 
-impl Index<u16> for Dmg {
-    type Output = u8;
+    fn handle_interrupts(&mut self) -> bool {
+        let enabled_interrupts = self.interrupt_enable.0 & self.interrupt_flag.0;
 
-    fn index(&self, addr: u16) -> &Self::Output {
-        match addr {
-            ROM_BANK00_START..=NOT_USABLE_END => &self.bus[addr],
-            IO_REGISTERS_START..=IO_REGISTERS_END => match addr {
-                JOYP => &self.joypad.0,
-
-                SB => &self.serial.sb,
-                SC => &self.serial.sc,
-
-                DIV => &self.timer.divider,
-                TIMA => &self.timer.timer_counter,
-                TMA => &self.timer.timer_modulo,
-                TAC => &self.timer.timer_control,
-
-                IF => &self.interrupt_flag.0,
-
-                APU_REGISTER_START..=APU_REGISTER_END => &self.apu[addr],
-
-                PPU_REGISTER_START..=PPU_REGISTER_END => &self.ppu[addr],
-
-                BANK_REGISTER => &self.bank,
-
-                _ => unreachable!(),
-            },
-            HRAM_START..=HRAM_END => &self.bus[addr],
-            IE => &self.interrupt_enable.0,
+        if enabled_interrupts & 0b00011111 == 0 {
+            if self.cpu.halted && !self.cpu.ime {
+                self.cpu.halted = false;
+            }
+            return false;
         }
+
+        if enabled_interrupts & VBLANK_INTERRUPT != 0 {
+            Cpu::service_interrupt(self, 0x40, VBLANK_INTERRUPT);
+        } else if enabled_interrupts & LCD_STAT_INTERRUPT != 0 {
+            Cpu::service_interrupt(self, 0x48, LCD_STAT_INTERRUPT);
+        } else if enabled_interrupts & TIMER_INTERRUPT != 0 {
+            Cpu::service_interrupt(self, 0x50, TIMER_INTERRUPT);
+        } else if enabled_interrupts & SERIAL_INTERRUPT != 0 {
+            Cpu::service_interrupt(self, 0x58, SERIAL_INTERRUPT);
+        } else if enabled_interrupts & JOYPAD_INTERRUPT != 0 {
+            Cpu::service_interrupt(self, 0x60, JOYPAD_INTERRUPT);
+        }
+
+        true
     }
 }
 
-impl IndexMut<u16> for Dmg {
-    fn index_mut(&mut self, addr: u16) -> &mut Self::Output {
-        match addr {
-            ROM_BANK00_START..=NOT_USABLE_END => &mut self.bus[addr],
-            IO_REGISTERS_START..=IO_REGISTERS_END => match addr {
-                JOYP => &mut self.joypad.0,
+impl Accessible<u16> for Dmg {
+    fn read(&self, address: u16) -> u8 {
+        match address {
+            ROM_BANK00_START..=ROM_BANKNN_END => self.bus.rom[address as usize],
+            VRAM_START..=VRAM_END => self.bus.vram[(address - VRAM_START) as usize],
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
+                self.bus.external_ram[(address - EXTERNAL_RAM_START) as usize]
+            }
+            WRAM_BANK0_START..=WRAM_BANKN_END => self.bus.ram[(address - WRAM_BANK0_START) as usize],
+            ECHO_RAM_START..=ECHO_RAM_END => {
+                let offset = (address - ECHO_RAM_START) as usize;
+                self.bus.ram[offset]
+            }
+            OAM_START..=OAM_END => self.bus.oam_ram[(address - OAM_START) as usize],
 
-                SB => &mut self.serial.sb,
-                SC => &mut self.serial.sc,
+            NOT_USABLE_START..=NOT_USABLE_END => {
+                eprintln!(
+                    "Reads to prohibited memory region [{}, {}] with address {:04X} return 0xFF",
+                    NOT_USABLE_START, NOT_USABLE_END, address
+                );
+                0xFF
+            }
 
-                DIV => &mut self.timer.divider,
-                TIMA => &mut self.timer.timer_counter,
-                TMA => &mut self.timer.timer_modulo,
-                TAC => &mut self.timer.timer_control,
+            IO_REGISTERS_START..=IO_REGISTERS_END => match address {
+                JOYP => self.joypad.read(address),
+                SERIAL_REGISTER_START..=SERIAL_REGISTER_END => self.serial.read(address),
+                TIMER_REGISTER_START..=TIMER_REGISTER_END => self.timer.read(address),
 
-                IF => &mut self.interrupt_flag.0,
+                IF => self.interrupt_flag.0,
 
-                0xF100..=0xFF26 => &mut self.apu[addr],
+                APU_REGISTER_START..=APU_REGISTER_END => self.apu.read(address),
+                PPU_REGISTER_START..=PPU_REGISTER_END => self.ppu.read(address),
 
-                0xFF40..=0xFF4B => &mut self.ppu[addr],
+                BANK_REGISTER => self.bank,
 
-                0xFF50 => {
+                _ => {
+                    eprintln!("Reads to unimplemented IO register {:04X} return 0xFF", address);
+                    0xFF
+                }
+            },
+            HRAM_START..=HRAM_END => self.bus.hram[(address - HRAM_START) as usize],
+            IE => self.interrupt_enable.0,
+        }
+    }
+
+    fn write(&mut self, address: u16, value: u8) {
+        match address {
+            ROM_BANK00_START..=ROM_BANKNN_END => self.bus.rom[address as usize] = value,
+            VRAM_START..=VRAM_END => self.bus.vram[(address - VRAM_START) as usize] = value,
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
+                self.bus.external_ram[(address - EXTERNAL_RAM_START) as usize] = value
+            }
+            WRAM_BANK0_START..=WRAM_BANKN_END => self.bus.ram[(address - WRAM_BANK0_START) as usize] = value,
+            ECHO_RAM_START..=ECHO_RAM_END => {
+                let offset = (address - ECHO_RAM_START) as usize;
+                self.bus.ram[offset] = value;
+            }
+            OAM_START..=OAM_END => self.bus.oam_ram[(address - OAM_START) as usize] = value,
+
+            NOT_USABLE_START..=NOT_USABLE_END => eprintln!(
+                "Writes to prohibited memory region [{}, {}] with address {:04X} are ignored",
+                NOT_USABLE_START, NOT_USABLE_END, address
+            ),
+
+            IO_REGISTERS_START..=IO_REGISTERS_END => match address {
+                JOYP => self.joypad.write(address, value),
+                SERIAL_REGISTER_START..=SERIAL_REGISTER_END => self.serial.write(address, value),
+                TIMER_REGISTER_START..=TIMER_REGISTER_END => self.timer.write(address, value),
+
+                IF => self.interrupt_flag.0 = value,
+
+                APU_REGISTER_START..=APU_REGISTER_END => self.apu.write(address, value),
+
+                DMA_REGISTER => Ppu::dma_transfer(self, value),
+                PPU_REGISTER_START..=PPU_REGISTER_END => self.ppu.write(address, value),
+
+                BANK_REGISTER => {
                     if self.bank == 0 {
                         self.bus.unmap_boot_rom();
                     }
 
-                    &mut self.bank
+                    self.bank = value;
                 }
 
-                _ => unreachable!(),
+                _ => eprintln!("Writes to unimplemented IO register {:04X} are ignored", address),
             },
-            HRAM_START..=HRAM_END => &mut self.bus[addr],
-            IE => &mut self.interrupt_enable.0,
+            HRAM_START..=HRAM_END => self.bus.hram[(address - HRAM_START) as usize] = value,
+            IE => self.interrupt_enable.0 = value,
         }
     }
 }
 
-impl Accessable<u16, u16> for Dmg {
-    fn read16(&self, addr: u16) -> u16 { utils::to_u16(self[addr], self[addr + 1]) }
+impl Accessible16<u16, u16> for Dmg {
+    fn load(&self, address: u16) -> u16 { to_u16(self.read(address), self.read(address.wrapping_add(1))) }
 
-    fn write16(&mut self, addr: u16, value: u16) {
-        let (low, high) = utils::to_u8(value);
-        self[addr] = low;
-        self[addr + 1] = high;
+    fn store(&mut self, address: u16, value: u16) {
+        self.write(address, low(value));
+        self.write(address.wrapping_add(1), high(value));
     }
 }
 
-impl Index<&R8> for Dmg {
-    type Output = u8;
+impl Accessible<R8> for Dmg {
+    fn read(&self, address: R8) -> u8 {
+        match address {
+            R8::A => self.cpu.a,
+            R8::F => self.cpu.f,
+            R8::B => self.cpu.b,
+            R8::C => self.cpu.c,
+            R8::D => self.cpu.d,
+            R8::E => self.cpu.e,
+            R8::H => self.cpu.h,
+            R8::L => self.cpu.l,
+        }
+    }
 
-    fn index(&self, reg: &R8) -> &Self::Output {
-        match reg {
-            R8::A => &self.cpu.a,
-            R8::F => &self.cpu.f,
-            R8::B => &self.cpu.b,
-            R8::C => &self.cpu.c,
-            R8::D => &self.cpu.d,
-            R8::E => &self.cpu.e,
-            R8::H => &self.cpu.h,
-            R8::L => &self.cpu.l,
+    fn write(&mut self, address: R8, value: u8) {
+        match address {
+            R8::A => self.cpu.a = value,
+            R8::F => self.cpu.f = value & 0xF0,
+            R8::B => self.cpu.b = value,
+            R8::C => self.cpu.c = value,
+            R8::D => self.cpu.d = value,
+            R8::E => self.cpu.e = value,
+            R8::H => self.cpu.h = value,
+            R8::L => self.cpu.l = value,
         }
     }
 }
 
-impl IndexMut<&R8> for Dmg {
-    fn index_mut(&mut self, reg: &R8) -> &mut Self::Output {
-        match reg {
-            R8::A => &mut self.cpu.a,
-            R8::F => &mut self.cpu.f,
-            R8::B => &mut self.cpu.b,
-            R8::C => &mut self.cpu.c,
-            R8::D => &mut self.cpu.d,
-            R8::E => &mut self.cpu.e,
-            R8::H => &mut self.cpu.h,
-            R8::L => &mut self.cpu.l,
-        }
-    }
-}
-
-impl Accessable<&R8, &R16> for Dmg {
-    fn read16(&self, reg: &R16) -> u16 {
-        match reg {
+impl Accessible16<R16, R8> for Dmg {
+    fn load(&self, address: R16) -> u16 {
+        match address {
             R16::AF => self.cpu.af(),
             R16::BC => self.cpu.bc(),
             R16::DE => self.cpu.de(),
@@ -262,12 +315,12 @@ impl Accessable<&R8, &R16> for Dmg {
         }
     }
 
-    fn write16(&mut self, reg: &R16, value: u16) {
-        match reg {
-            R16::AF => with_u16(&mut self.cpu.f, &mut self.cpu.a, |_| value),
-            R16::BC => with_u16(&mut self.cpu.c, &mut self.cpu.b, |_| value),
-            R16::DE => with_u16(&mut self.cpu.e, &mut self.cpu.d, |_| value),
-            R16::HL => with_u16(&mut self.cpu.l, &mut self.cpu.h, |_| value),
+    fn store(&mut self, address: R16, value: u16) {
+        match address {
+            R16::AF => self.cpu.set_af(value),
+            R16::BC => self.cpu.set_bc(value),
+            R16::DE => self.cpu.set_de(value),
+            R16::HL => self.cpu.set_hl(value),
         };
     }
 }

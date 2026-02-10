@@ -15,8 +15,7 @@ impl Scf {
 impl Instruction for Scf {
     fn exec(&mut self, _gb: &mut Dmg) -> InstructionResult {
         Ok(InstructionEffect::new(
-            1,
-            1,
+            self.info(),
             Flags {
                 z: None,
                 n: Some(false),
@@ -25,6 +24,6 @@ impl Instruction for Scf {
             },
         ))
     }
-
-    fn disassembly(&self, w: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> { write!(w, "scf") }
+    fn info(&self) -> (u8, u8) { (1, 1) }
+    fn disassembly(&self) -> String { format!("scf") }
 }

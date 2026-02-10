@@ -1,11 +1,10 @@
-use std::fmt::Write;
-
 use crate::{
     Dmg,
-    core::cpu::{
-        flags::Flags,
-        instructions::{
-            Instruction, InstructionEffect, InstructionError, InstructionResult, InstructionTarget as IT,
+    core::{
+        Accessible,
+        cpu::{
+            flags::Flags,
+            instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
         },
     },
     utils::{high, low},
@@ -14,40 +13,34 @@ use crate::{
 /// call given address
 /// pushes the next instruction address on the stack, and then jumps to it
 pub struct Call {
-    pub call: IT,
+    jc: JumpCondition,
+    n16: u16,
 }
 
 impl Call {
-    pub fn new(call: IT) -> Box<Self> { Box::new(Self { call }) }
+    pub fn new(jc: JumpCondition, n16: u16) -> Box<Self> { Box::new(Self { jc, n16 }) }
 }
 
 impl Instruction for Call {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        match &self.call {
-            IT::JumpToImm16(cc, addr) => {
-                if !cc.should_jump() {
-                    return Ok(InstructionEffect::new(3, 3, Flags::none()));
-                }
-
-                let return_addr = gb.cpu.pc.wrapping_add(3);
-
-                let mut sp = gb.cpu.sp.wrapping_sub(1);
-                gb[sp] = high(return_addr);
-
-                sp = sp.wrapping_sub(1);
-                gb[sp] = low(return_addr);
-                gb.cpu.sp = sp;
-
-                gb.cpu.pc = *addr;
-
-                Ok(InstructionEffect::with_jump(6, 3, Flags::none()))
-            }
-
-            _ => Err(InstructionError::MalformedInstruction),
+        if !self.jc.should_jump() {
+            return Ok(InstructionEffect::new(self.info(), Flags::none()));
         }
+
+        let return_addr = gb.cpu.pc.wrapping_add(3);
+
+        let mut sp = gb.cpu.sp.wrapping_sub(1);
+        gb.write(sp, high(return_addr));
+
+        sp = sp.wrapping_sub(1);
+        gb.write(sp, low(return_addr));
+        gb.cpu.sp = sp;
+
+        gb.cpu.pc = self.n16;
+
+        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
     }
 
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> {
-        write!(w, "call {}", self.call)
-    }
+    fn info(&self) -> (u8, u8) { if !self.jc.should_jump() { (3, 3) } else { (6, 3) } }
+    fn disassembly(&self) -> String { format!("call {}${:04X}", self.jc, self.n16) }
 }

@@ -1,20 +1,28 @@
-use std::fmt::Write;
-
 use crate::{
     Dmg,
     core::{
         cpu::{
             R16,
             flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
-            instructions::{
-                Instruction, InstructionDestination as ID, InstructionEffect, InstructionError,
-                InstructionResult,
-            },
+            instructions::{Instruction, InstructionEffect, InstructionResult},
         },
-        memory::Accessable,
+        memory::Accessible16,
     },
     utils::low,
 };
+
+#[inline(always)]
+fn flags_pop(dst: R16, src: u16) -> Flags {
+    match dst {
+        R16::AF => Flags {
+            z: Some(low(src) & ZERO_FLAG_MASK != 0),
+            n: Some(low(src) & SUBTRACTION_FLAG_MASK != 0),
+            h: Some(low(src) & HALF_CARRY_FLAG_MASK != 0),
+            c: Some(low(src) & CARRY_FLAG_MASK != 0),
+        },
+        _ => Flags::none(),
+    }
+}
 
 /// Pop a 16 bit register from the stack.
 /// Should behave like the following non-real instructions (for AF register, but its the same for the other 16 bit registers):
@@ -25,45 +33,32 @@ use crate::{
 /// inc sp
 /// ``````
 pub struct Pop {
-    dst: ID,
+    dst: R16,
 }
 
 impl Pop {
-    pub fn new(dst: ID) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R16) -> Box<Self> { Box::new(Self { dst }) }
 }
 impl Instruction for Pop {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let src = gb.read16(gb.cpu.sp);
-
-        let (reg, flags) = match &self.dst {
-            ID::Reg16(reg) if *reg == R16::AF => (
-                reg,
-                // set flags according to the bits that are going to pop into F
-                Flags {
-                    z: Some(low(src) & ZERO_FLAG_MASK != 0),
-                    n: Some(low(src) & SUBTRACTION_FLAG_MASK != 0),
-                    h: Some(low(src) & HALF_CARRY_FLAG_MASK != 0),
-                    c: Some(low(src) & CARRY_FLAG_MASK != 0),
-                },
-            ),
-            ID::Reg16(reg) => (reg, Flags::none()),
-            _ => return Err(InstructionError::MalformedInstruction),
-        };
+        let src = gb.load(gb.cpu.sp);
 
         // pop from stack to register
-        gb.write16(reg, src);
+        gb.store(self.dst, src);
 
         // increment stack pointer by 2, one for each byte popped
         gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
 
-        Ok(InstructionEffect::new(3, 1, flags))
+        Ok(InstructionEffect::new(self.info(), flags_pop(self.dst, src)))
     }
-
-    fn disassembly(&self, w: &mut dyn Write) -> Result<(), std::fmt::Error> { write!(w, "pop {}", self.dst) }
+    fn info(&self) -> (u8, u8) { (3, 1) }
+    fn disassembly(&self) -> String { format!("pop {}", self.dst) }
 }
 
 #[cfg(test)]
 mod tests {
+
+    use crate::core::Accessible;
 
     use super::*;
 
@@ -72,18 +67,18 @@ mod tests {
         let mut gb = Dmg::default();
         gb.cpu.f = 0;
         gb.cpu.a = 0;
-        gb.cpu.sp = 0xFF00;
+        gb.cpu.sp = 0xC000;
 
         let sp = gb.cpu.sp;
-        gb[sp] = ZERO_FLAG_MASK | CARRY_FLAG_MASK;
-        gb[sp + 1] = 1;
+        gb.write(sp, ZERO_FLAG_MASK | CARRY_FLAG_MASK);
+        gb.write(sp + 1, 1);
 
-        let mut instr = Pop::new(ID::Reg16(R16::AF));
+        let mut instr = Pop::new(R16::AF);
         let effect = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.a, 1);
         assert_eq!(gb.cpu.f, ZERO_FLAG_MASK | CARRY_FLAG_MASK);
-        assert_eq!(gb.cpu.sp, 0xFF02);
+        assert_eq!(gb.cpu.sp, 0xC002);
         assert_eq!(effect.cycles, 3);
         assert_eq!(effect.len(), 1);
         assert_eq!(

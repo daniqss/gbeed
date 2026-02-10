@@ -1,4 +1,4 @@
-use crate::{Dmg, prelude::*};
+use crate::{Dmg, core::Accessible, prelude::*};
 
 const PRIORITY: u8 = 0x80;
 const YFLIP: u8 = 0x40;
@@ -22,18 +22,18 @@ impl Sprite {
     // we should probably implement slices for mmu to have better access
     pub fn from_oam(gb: &Dmg, index: u16) -> Self {
         Self {
-            ypos: gb[index].wrapping_sub(16),
-            xpos: gb[index + 1].wrapping_sub(8),
-            tile_index: gb[index + 2],
-            flags: gb[index + 3],
+            ypos: gb.read(index).wrapping_sub(16),
+            xpos: gb.read(index + 1).wrapping_sub(8),
+            tile_index: gb.read(index + 2),
+            flags: gb.read(index + 3),
         }
     }
 
     pub fn to_oam(&self, gb: &mut Dmg, index: u16) {
-        gb[index] = self.ypos;
-        gb[index + 1] = self.xpos;
-        gb[index + 2] = self.tile_index;
-        gb[index + 3] = self.flags;
+        gb.write(index, self.ypos);
+        gb.write(index + 1, self.xpos);
+        gb.write(index + 2, self.tile_index);
+        gb.write(index + 3, self.flags);
     }
 
     bit_accessors! {
