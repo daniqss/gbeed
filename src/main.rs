@@ -187,10 +187,10 @@ fn update_joypad(rl: &RaylibHandle, joypad: &mut Joypad) {
         JoypadButton::B,
         rl.is_key_down(KeyboardKey::KEY_X) || rl.is_key_down(KeyboardKey::KEY_K),
     );
-    joypad.button_down(JoypadButton::Start, rl.is_key_down(KeyboardKey::KEY_ENTER));
+    joypad.button_down(JoypadButton::Start, rl.is_key_down(KeyboardKey::KEY_L));
     joypad.button_down(
         JoypadButton::Select,
-        rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) || rl.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT),
+        rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) || rl.is_key_down(KeyboardKey::KEY_SEMICOLON),
     )
 }
 

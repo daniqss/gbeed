@@ -212,7 +212,13 @@ impl Accessible<u16> for Dmg {
                 APU_REGISTER_START..=APU_REGISTER_END => self.apu.write(address, value),
                 PPU_REGISTER_START..=PPU_REGISTER_END => self.ppu.write(address, value),
 
-                BANK_REGISTER => self.bank = value,
+                BANK_REGISTER => {
+                    if self.bank == 0 {
+                        self.bus.unmap_boot_rom();
+                    }
+
+                    self.bank = value;
+                }
 
                 _ => eprintln!("Writes to unimplemented IO register {:04X} are ignored", address),
             },
