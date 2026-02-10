@@ -48,6 +48,8 @@ const DEFAULT_DMG_COLORS: [u32; 4] = [0xC4CFA1, 0x8B956D, 0x4D533C, 0x1F1F1F];
 const DEFAULT_WINDOW_BASE_ADDR: u16 = 0x9800;
 const COND_WINDOW_BASE_ADDR: u16 = 0x9C00;
 
+pub const DMA_REGISTER: u16 = 0xFF46;
+
 /// Represents the current mode of the LCD display
 ///   Mode                  | Action                                     | Duration                             | Accessible video memory
 /// -----------------------:|--------------------------------------------|--------------------------------------|-------------------------
@@ -190,7 +192,7 @@ impl Ppu {
             gb.ppu.set_lyc_eq_ly_flag(true);
 
             if gb.ppu.lyc_eq_ly_interrupt() {
-                gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                gb.interrupt_flag.set_lcd_stat_interrupt(true);
             }
         } else {
             gb.ppu.set_lyc_eq_ly_flag(false);
@@ -223,10 +225,6 @@ impl Ppu {
         gb.ppu.last_cycles = cycles;
 
         gb.ppu.dots += instruction_cycles;
-        // this should be done on register writes
-        if gb.ppu.dma != 0 {
-            Ppu::dma_transfer(gb);
-        }
 
         let mode = gb.ppu.get_mode();
 
@@ -243,7 +241,7 @@ impl Ppu {
 
                 // set interrupt flag if hblank interrupt is needed
                 if gb.ppu.hblank_interrupt() {
-                    gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                    gb.interrupt_flag.set_lcd_stat_interrupt(true);
                 }
 
                 Some(LCDMode::HBlank)
@@ -258,7 +256,7 @@ impl Ppu {
                 let next_mode = if gb.ppu.ly == DMG_SCREEN_HEIGHT as u8 {
                     // frame draw is finished
                     if gb.ppu.vblank_interrupt() {
-                        gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                        gb.interrupt_flag.set_lcd_stat_interrupt(true);
                     }
 
                     LCDMode::VBlank
@@ -266,7 +264,7 @@ impl Ppu {
                 // frame not done yet
                 else {
                     if gb.ppu.oam_interrupt() {
-                        gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                        gb.interrupt_flag.set_lcd_stat_interrupt(true);
                     }
                     LCDMode::OAMScan
                 };
@@ -277,7 +275,7 @@ impl Ppu {
             LCDMode::VBlank => {
                 // set VBlank interrupt at the start of VBlank period
                 if gb.ppu.lcd_display_enable() && gb.ppu.ly >= DMG_SCREEN_HEIGHT as u8 {
-                    gb.interrupt_enable.set_vblank_interrupt(true);
+                    gb.interrupt_flag.set_vblank_interrupt(true);
                 }
 
                 if gb.ppu.dots >= FINISH_VBLANK_DOTS {
@@ -292,7 +290,7 @@ impl Ppu {
                         gb.ppu.frames += 1;
 
                         if gb.ppu.oam_interrupt() {
-                            gb.interrupt_enable.set_lcd_stat_interrupt(true);
+                            gb.interrupt_flag.set_lcd_stat_interrupt(true);
                         }
                         Some(LCDMode::OAMScan)
                     } else {
@@ -533,12 +531,11 @@ impl Ppu {
     /// It will take 160 dots or 320 at double speed
     /// CPU can access only HRAM and PPU can't access OAM
     /// Most games transfer to HRAM code to continue execution in CPU, and execute DMA transfer in VBlank
-    fn dma_transfer(gb: &mut Dmg) {
-        // address from data will be copied
-        let src_addr: u16 = to_u16(0, gb.ppu.dma);
+    pub fn dma_transfer(gb: &mut Dmg, src_addr: u8) {
+        println!("DMA transfer from {:02X}00 to OAM", src_addr);
 
         for i in 0..(OAM_END - OAM_START + 1) {
-            let byte = gb.read((src_addr + i) as u16);
+            let byte = gb.read((src_addr as u16 + i) as u16);
             gb.write((OAM_START + i) as u16, byte);
         }
 
@@ -569,13 +566,24 @@ impl Accessible<u16> for Ppu {
 
     fn write(&mut self, address: u16, value: u8) {
         match address {
-            0xFF40 => self.lcd_control = value,
+            0xFF40 => {
+                self.lcd_control = value;
+
+                // if LCD is turned off, reset some PPU state
+                if !self.lcd_display_enable() {
+                    // clear ppu mode
+                    self.lcd_status &= 0x7C;
+                    self.ly = 0;
+                }
+            }
             0xFF41 => self.lcd_status = value,
             0xFF42 => self.scroll_y = value,
             0xFF43 => self.scroll_x = value,
             0xFF44 => self.ly = value,
             0xFF45 => self.lyc = value,
-            0xFF46 => self.dma = value,
+            DMA_REGISTER => unreachable!(
+                "Writing to DMA register should have been handled by Dmg, address: {address:04X}"
+            ),
             0xFF47 => self.bg_palette = value,
             0xFF48 => self.obj0_palette = value,
             0xFF49 => self.obj1_palette = value,

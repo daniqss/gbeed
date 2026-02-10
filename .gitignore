@@ -1,5 +1,6 @@
 target/
 .direnv/
+acceptance/
 
 *.gb
 *.bin

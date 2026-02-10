@@ -15,7 +15,7 @@ use crate::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
         cpu::{Instruction, Len, R8, R16},
         interrupts::IE,
-        ppu::{PPU_REGISTER_END, PPU_REGISTER_START},
+        ppu::{DMA_REGISTER, PPU_REGISTER_END, PPU_REGISTER_START},
         serial::{SERIAL_REGISTER_END, SERIAL_REGISTER_START},
         timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
     },
@@ -210,6 +210,8 @@ impl Accessible<u16> for Dmg {
                 IF => self.interrupt_flag.0 = value,
 
                 APU_REGISTER_START..=APU_REGISTER_END => self.apu.write(address, value),
+
+                DMA_REGISTER => Ppu::dma_transfer(self, value),
                 PPU_REGISTER_START..=PPU_REGISTER_END => self.ppu.write(address, value),
 
                 BANK_REGISTER => {
