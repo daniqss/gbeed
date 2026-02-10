@@ -9,7 +9,6 @@ use crate::{
     },
     mem_range,
     prelude::*,
-    utils::to_u16,
 };
 
 mem_range!(PPU_REGISTER, 0xFF40, 0xFF4B);

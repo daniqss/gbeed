@@ -9,7 +9,7 @@ use crate::{
         cpu::flags::{CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
     },
     prelude::*,
-    utils::{from_u16, to_u16},
+    utils::{from_u16, high, low, to_u16},
 };
 pub use instructions::{Instruction, Len};
 use instructions::{JumpCondition as JC, *};
@@ -32,6 +32,7 @@ pub const AFTER_BOOT_CPU: Cpu = Cpu {
     sp: 0xFFFE,
     cycles: 60814,
     ime: false,
+    halted: false,
 };
 
 /// # CPU
@@ -54,6 +55,7 @@ pub struct Cpu {
 
     pub cycles: usize,
     pub ime: bool,
+    pub halted: bool,
 }
 
 impl Cpu {
@@ -90,6 +92,19 @@ impl Cpu {
         self.sp = AFTER_BOOT_CPU.sp;
         self.ime = AFTER_BOOT_CPU.ime;
         self.cycles = AFTER_BOOT_CPU.cycles;
+        self.halted = AFTER_BOOT_CPU.halted;
+    }
+
+    pub fn service_interrupt(gb: &mut Dmg, service_routine_addr: u16, interrupt_mask: u8) {
+        // we need a push function
+        let mut sp = gb.cpu.sp.wrapping_sub(1);
+        gb.write(sp, high(gb.cpu.pc));
+        sp = sp.wrapping_sub(1);
+        gb.write(sp, low(gb.cpu.pc));
+        gb.cpu.sp = sp;
+
+        gb.interrupt_flag.0 &= !interrupt_mask;
+        gb.cpu.pc = service_routine_addr;
     }
 
     /// Execute instruction based on the opcode.

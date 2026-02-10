@@ -14,7 +14,9 @@ use crate::{
     core::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
         cpu::{Instruction, Len, R8, R16},
-        interrupts::IE,
+        interrupts::{
+            IE, JOYPAD_INTERRUPT, LCD_STAT_INTERRUPT, SERIAL_INTERRUPT, TIMER_INTERRUPT, VBLANK_INTERRUPT,
+        },
         ppu::{DMA_REGISTER, PPU_REGISTER_END, PPU_REGISTER_START},
         serial::{SERIAL_REGISTER_END, SERIAL_REGISTER_START},
         timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
@@ -101,6 +103,17 @@ impl Dmg {
     }
 
     pub fn step(&mut self) -> Result<Box<dyn Instruction>> {
+        // check if is neccessatry to handle interrupts before executing the instruction
+        if self.cpu.ime || self.cpu.halted {
+            if self.handle_interrupts() {
+                self.cpu.ime = false;
+                self.cpu.halted = false;
+
+                self.cpu.cycles = self.cpu.cycles.wrapping_add(20);
+            }
+        }
+
+        // cpu
         let opcode = self.read(self.cpu.pc);
 
         let mut instruction = match Cpu::fetch(self, opcode) {
@@ -135,6 +148,31 @@ impl Dmg {
         self.timer.step(cycles);
 
         Ok(instruction)
+    }
+
+    fn handle_interrupts(&mut self) -> bool {
+        let enabled_interrupts = self.interrupt_enable.0 & self.interrupt_flag.0;
+
+        if enabled_interrupts & 0b00011111 == 0 {
+            if self.cpu.halted && !self.cpu.ime {
+                self.cpu.halted = false;
+            }
+            return false;
+        }
+
+        if enabled_interrupts & VBLANK_INTERRUPT != 0 {
+            Cpu::service_interrupt(self, 0x40, VBLANK_INTERRUPT);
+        } else if enabled_interrupts & LCD_STAT_INTERRUPT != 0 {
+            Cpu::service_interrupt(self, 0x48, LCD_STAT_INTERRUPT);
+        } else if enabled_interrupts & TIMER_INTERRUPT != 0 {
+            Cpu::service_interrupt(self, 0x50, TIMER_INTERRUPT);
+        } else if enabled_interrupts & SERIAL_INTERRUPT != 0 {
+            Cpu::service_interrupt(self, 0x58, SERIAL_INTERRUPT);
+        } else if enabled_interrupts & JOYPAD_INTERRUPT != 0 {
+            Cpu::service_interrupt(self, 0x60, JOYPAD_INTERRUPT);
+        }
+
+        true
     }
 }
 
