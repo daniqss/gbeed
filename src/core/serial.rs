@@ -1,4 +1,11 @@
-use crate::{core::Accessible, mem_range, prelude::*};
+use crate::{
+    core::{
+        Accessible,
+        interrupts::{Interrupt, SERIAL_INTERRUPT},
+    },
+    mem_range,
+    prelude::*,
+};
 
 mem_range!(SERIAL_REGISTER, SB, SC);
 
@@ -22,10 +29,25 @@ pub const SC_SHIFT_CLOCK: u8 = 0x01;
 pub struct Serial {
     pub sb: u8,
     pub sc: u8,
+    pub data: Vec<u8>,
 }
 
 impl Serial {
-    pub fn new() -> Self { Self { sb: 0x00, sc: 0x7E } }
+    pub fn new() -> Self {
+        Self {
+            sb: 0x00,
+            sc: 0x7E,
+            data: Vec::new(),
+        }
+    }
+
+    pub fn step(&mut self, interrupt_flag: &mut Interrupt) {
+        if self.sc_transfer_start() {
+            self.data.push(self.sb);
+            self.sc &= !SC_TRANSFER_START;
+            interrupt_flag.0 |= SERIAL_INTERRUPT;
+        }
+    }
 
     bit_accessors!(
         target: sc;

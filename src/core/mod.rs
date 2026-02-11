@@ -150,6 +150,9 @@ impl Dmg {
         let delta_cycles = cycles - start_cycles;
         self.timer.step(delta_cycles * 4);
 
+        // serial
+        self.serial.step(&mut self.interrupt_flag);
+
         Ok(instruction)
     }
 
