@@ -85,17 +85,17 @@ impl Dmg {
     /// Modifies the DMG state by executing one CPU instruction, and return the executed instruction
     pub fn run(&mut self) -> Result<()> {
         // one frame (70224 cycles)
-        while self.cpu.cycles < 70224 {
+        while self.cpu.cycles < 17556 {
             let _instr = self.step()?;
-            // if self.cpu.pc == 0x0100 {
-            //     println!("just arrive to game rom start");
-            //     println!("Cpu: {}", self.cpu);
-            //     std::thread::sleep(std::time::Duration::from_millis(500));
-            // }
+
+            // println!(
+            //     "Executing instruction at {:04X} and {}: {}",
+            //     self.cpu.pc,
+            //     self.cpu.cycles,
+            //     _instr.disassembly()
+            // );
         }
-        if self.joypad.any_input() {
-            println!("Joypad input: {}", self.joypad);
-        }
+
         self.cpu.cycles = 0;
         self.ppu.last_cycles = 0;
 
@@ -103,6 +103,8 @@ impl Dmg {
     }
 
     pub fn step(&mut self) -> Result<Box<dyn Instruction>> {
+        let start_cycles = self.cpu.cycles;
+
         // check if is neccessatry to handle interrupts before executing the instruction
         if self.cpu.ime || self.cpu.halted {
             if self.handle_interrupts() {
@@ -142,10 +144,11 @@ impl Dmg {
         effect.flags.apply(&mut self.cpu.f);
 
         // ppu
-        Ppu::step(self, cycles);
+        Ppu::step(self, cycles * 4);
 
         // timer
-        self.timer.step(cycles);
+        let delta_cycles = cycles - start_cycles;
+        self.timer.step(delta_cycles * 4);
 
         Ok(instruction)
     }

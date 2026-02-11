@@ -1,6 +1,7 @@
 target/
 .direnv/
 acceptance/
+gb-test-roms/
 
 *.gb
 *.bin

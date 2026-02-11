@@ -18,10 +18,12 @@ impl JpToImm16 {
 impl Instruction for JpToImm16 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let should_jump = self.jc.should_jump();
-        let addr = if should_jump { self.addr } else { gb.cpu.pc };
-        gb.cpu.pc = addr;
-
-        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+        if should_jump {
+            gb.cpu.pc = self.addr;
+            Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+        } else {
+            Ok(InstructionEffect::new(self.info(), Flags::none()))
+        }
     }
     fn info(&self) -> (u8, u8) { if self.jc.should_jump() { (4, 3) } else { (3, 3) } }
     fn disassembly(&self) -> String { format!("jp {}${:04X}", self.jc, self.addr) }
@@ -41,7 +43,7 @@ impl Instruction for JpToHL {
         Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
-    fn disassembly(&self) -> String { "jp (hl)".to_string() }
+    fn disassembly(&self) -> String { "jp [hl]".to_string() }
 }
 
 #[cfg(test)]
