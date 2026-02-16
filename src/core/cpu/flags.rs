@@ -66,3 +66,9 @@ pub fn check_borrow_hc(old: u8, substrahend: u8) -> bool { (old & 0x0F) < (subst
 
 #[inline]
 pub fn check_overflow_cy(result: u8, old: u8) -> bool { result < old }
+
+#[inline]
+pub fn check_overflow_hc16(result: u16, old: u16) -> bool { (result & 0x0FFF) < (old & 0x0FFF) }
+
+#[inline]
+pub fn check_overflow_cy16(result: u16, old: u16) -> bool { result < old }

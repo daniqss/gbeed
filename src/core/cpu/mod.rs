@@ -30,7 +30,7 @@ pub const AFTER_BOOT_CPU: Cpu = Cpu {
     l: 0x4D,
     pc: 0x0100,
     sp: 0xFFFE,
-    cycles: 60814,
+    cycles: 44441,
     ime: false,
     halted: false,
 };
@@ -170,7 +170,7 @@ impl Cpu {
             0x36 => LdPointedByHLImm8::new(gb.read(cpu.pc + 1)),
             0x37 => Scf::new(),
             0x38 => Jr::new(JC::Carry(cpu.carry()), gb.read(cpu.pc + 1)),
-            0x39 => AddSP::new(),
+            0x39 => AddHLSP::new(),
             0x3A => LdAPointedByHLDec::new(),
             0x3B => DecStackPointer::new(),
             0x3C => IncR8::new(R8::A),
