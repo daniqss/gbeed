@@ -4,26 +4,28 @@ use crate::{
         Accessible,
         cpu::{
             R8,
-            flags::{Flags, check_borrow_hc, check_zero},
+            flags::{Flags, check_zero},
             instructions::{Instruction, InstructionEffect, InstructionResult},
         },
     },
 };
 
 #[inline(always)]
-fn sbc(subtrahend: u8, old_a: u8, carry: bool) -> (u8, bool, bool) {
-    let (result, did_borrow_sub) = old_a.overflowing_sub(subtrahend);
-    let (result, did_borrow_cy) = result.overflowing_sub(if carry { 1 } else { 0 });
-    (result, did_borrow_sub, did_borrow_cy)
-}
+fn sbc(gb: &mut Dmg, val: u8) -> Flags {
+    let old_a = gb.cpu.a;
+    let carry = if gb.cpu.carry() { 1 } else { 0 };
 
-#[inline(always)]
-fn sbc_flags(result: u8, old_a: u8, subtrahend: u8, did_borrow_sub: bool, did_borrow_cy: bool) -> Flags {
+    let result = old_a.wrapping_sub(val).wrapping_sub(carry);
+    gb.cpu.a = result;
+
+    let h_check = (old_a & 0xF) < (val & 0xF) + carry;
+    let c_check = (old_a as u16) < (val as u16) + (carry as u16);
+
     Flags {
         z: Some(check_zero(result)),
         n: Some(true),
-        h: Some(check_borrow_hc(old_a, subtrahend)),
-        c: Some(did_borrow_sub || did_borrow_cy),
+        h: Some(h_check),
+        c: Some(c_check),
     }
 }
 
@@ -37,14 +39,9 @@ impl SbcR8 {
 }
 impl Instruction for SbcR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let old_a = gb.cpu.a;
-        let subtrahend = gb.read(self.src);
-        let (result, did_borrow_sub, did_borrow_cy) = sbc(subtrahend, old_a, gb.cpu.carry());
-        gb.cpu.a = result;
-        Ok(InstructionEffect::new(
-            self.info(),
-            sbc_flags(gb.cpu.a, old_a, subtrahend, did_borrow_sub, did_borrow_cy),
-        ))
+        let val = gb.read(self.src);
+        let flags = sbc(gb, val);
+        Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { format!("sbc a,{}", self.src) }
@@ -58,14 +55,9 @@ impl SbcPointedByHL {
 }
 impl Instruction for SbcPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let old_a = gb.cpu.a;
-        let subtrahend = gb.read(gb.cpu.hl());
-        let (result, did_borrow_sub, did_borrow_cy) = sbc(subtrahend, old_a, gb.cpu.carry());
-        gb.cpu.a = result;
-        Ok(InstructionEffect::new(
-            self.info(),
-            sbc_flags(gb.cpu.a, old_a, subtrahend, did_borrow_sub, did_borrow_cy),
-        ))
+        let val = gb.read(gb.cpu.hl());
+        let flags = sbc(gb, val);
+        Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { format!("sbc a,[hl]") }
@@ -75,20 +67,14 @@ impl Instruction for SbcPointedByHL {
 /// Subtracts the value of the immediate 8 bit value from register A, and the carry flag
 pub struct SbcImm8 {
     n8: u8,
-    carry: bool,
 }
 impl SbcImm8 {
-    pub fn new(n8: u8, carry: bool) -> Box<Self> { Box::new(Self { n8, carry }) }
+    pub fn new(n8: u8) -> Box<Self> { Box::new(Self { n8 }) }
 }
 impl Instruction for SbcImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let old_a = gb.cpu.a;
-        let (result, did_borrow_sub, did_borrow_cy) = sbc(self.n8, old_a, self.carry);
-        gb.cpu.a = result;
-        Ok(InstructionEffect::new(
-            self.info(),
-            sbc_flags(gb.cpu.a, old_a, self.n8, did_borrow_sub, did_borrow_cy),
-        ))
+        let flags = sbc(gb, self.n8);
+        Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }
     fn disassembly(&self) -> String { format!("sbc a,${:02X}", self.n8) }
@@ -103,7 +89,7 @@ mod tests {
         let mut gb = Dmg::default();
         gb.cpu.a = 20;
         gb.cpu.set_carry();
-        let mut instr = SbcImm8::new(19, gb.cpu.carry());
+        let mut instr = SbcImm8::new(19);
 
         let result = instr.exec(&mut gb).unwrap();
         assert_eq!(gb.cpu.a, 0);
@@ -196,7 +182,7 @@ mod tests {
 
         gb.cpu.a = 5;
         gb.cpu.set_carry();
-        let mut instr = SbcImm8::new(5, gb.cpu.carry());
+        let mut instr = SbcImm8::new(5);
         let result = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.a, 255);
@@ -207,7 +193,7 @@ mod tests {
             Flags {
                 z: Some(false),
                 n: Some(true),
-                h: Some(false),
+                h: Some(true),
                 c: Some(true),
             }
         );

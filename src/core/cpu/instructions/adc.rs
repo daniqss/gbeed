@@ -3,7 +3,7 @@ use crate::{
     core::{
         cpu::{
             R8,
-            flags::{Flags, check_overflow_cy, check_overflow_hc, check_zero},
+            flags::{Flags, check_zero},
             instructions::{Instruction, InstructionEffect, InstructionResult},
         },
         memory::Accessible,
@@ -11,17 +11,21 @@ use crate::{
 };
 
 #[inline(always)]
-fn adc(addend: u8, old_a: u8, carry: bool) -> u8 {
-    old_a.wrapping_add(addend).wrapping_add(if carry { 1 } else { 0 })
-}
+fn adc(gb: &mut Dmg, val: u8) -> Flags {
+    let old_a = gb.cpu.a;
+    let carry = if gb.cpu.carry() { 1 } else { 0 };
+    
+    let result = old_a.wrapping_add(val).wrapping_add(carry);
+    gb.cpu.a = result;
 
-#[inline(always)]
-fn adc_flags(result: u8, old_a: u8) -> Flags {
+    let h_check = (old_a & 0xF) + (val & 0xF) + carry > 0xF;
+    let c_check = (old_a as u16) + (val as u16) + (carry as u16) > 0xFF;
+
     Flags {
         z: Some(check_zero(result)),
         n: Some(false),
-        h: Some(check_overflow_hc(result, old_a)),
-        c: Some(check_overflow_cy(result, old_a)),
+        h: Some(h_check),
+        c: Some(c_check),
     }
 }
 
@@ -35,9 +39,9 @@ impl AdcR8 {
 }
 impl Instruction for AdcR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let old_a = gb.cpu.a;
-        gb.cpu.a = adc(gb.read(self.src), old_a, gb.cpu.carry());
-        Ok(InstructionEffect::new(self.info(), adc_flags(gb.cpu.a, old_a)))
+        let val = gb.read(self.src);
+        let flags = adc(gb, val);
+        Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { format!("adc a,{}", self.src) }
@@ -51,9 +55,9 @@ impl AdcPointedByHL {
 }
 impl Instruction for AdcPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let old_a = gb.cpu.a;
-        gb.cpu.a = adc(gb.read(gb.cpu.hl()), old_a, gb.cpu.carry());
-        Ok(InstructionEffect::new(self.info(), adc_flags(gb.cpu.a, old_a)))
+        let val = gb.read(gb.cpu.hl());
+        let flags = adc(gb, val);
+        Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { format!("adc a,[hl]") }
@@ -69,9 +73,8 @@ impl AdcImm8 {
 }
 impl Instruction for AdcImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let old_a = gb.cpu.a;
-        gb.cpu.a = adc(self.val, old_a, gb.cpu.carry());
-        Ok(InstructionEffect::new(self.info(), adc_flags(gb.cpu.a, old_a)))
+        let flags = adc(gb, self.val);
+        Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }
     fn disassembly(&self) -> String { format!("adc a,${:02X}", self.val) }

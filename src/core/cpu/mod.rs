@@ -341,7 +341,7 @@ impl Cpu {
             0xDB => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
             0xDC => Call::new(JC::Carry(cpu.carry()), gb.load(cpu.pc + 1)),
             0xDD => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
-            0xDE => SbcImm8::new(gb.read(cpu.pc + 1), cpu.carry()),
+            0xDE => SbcImm8::new(gb.read(cpu.pc + 1)),
             0xDF => Rst::new(0x18),
             0xE0 => LdhImm8A::new(gb.read(cpu.pc + 1)),
             0xE1 => Pop::new(R16::HL),
