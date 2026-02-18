@@ -98,6 +98,10 @@ fn main() -> Result<()> {
         .expect("Failed to load texture");
 
     while !rl.window_should_close() {
+        if rl.is_key_down(KeyboardKey::KEY_ESCAPE) {
+            break;
+        }
+
         update_joypad(&rl, &mut gb.joypad);
         gb.run()?;
 

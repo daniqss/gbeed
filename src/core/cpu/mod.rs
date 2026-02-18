@@ -11,7 +11,9 @@ use crate::{
     prelude::*,
     utils::{from_u16, high, low, to_u16},
 };
-pub use instructions::{Instruction, Len};
+
+// TODO: not expose individual instructions
+pub use instructions::{Instruction, Len, Nop};
 use instructions::{JumpCondition as JC, *};
 pub use registers::{Register8 as R8, Register16 as R16};
 
