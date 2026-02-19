@@ -14,7 +14,7 @@ use crate::{
 fn adc(gb: &mut Dmg, val: u8) -> Flags {
     let old_a = gb.cpu.a;
     let carry = if gb.cpu.carry() { 1 } else { 0 };
-    
+
     let result = old_a.wrapping_add(val).wrapping_add(carry);
     gb.cpu.a = result;
 

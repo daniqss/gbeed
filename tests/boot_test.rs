@@ -174,9 +174,9 @@ use gbeed::prelude::*;
 fn test_disassembly_boot() -> Result<()> {
     let boot_rom_data = std::fs::read("dmg_boot.bin")?;
     let game_data = std::fs::read("sml2.gb")?;
-    let game = Cartridge::new(game_data)?;
+    let game = Cartridge::new(game_data);
     // it actually needs a game to compare the logos
-    let mut gb = Dmg::new(Some(game), Some(boot_rom_data));
+    let mut gb = Dmg::new(game, Some(boot_rom_data));
     let mut init_ram = false;
     let mut set_audio = false;
     let mut setup_logo = false;

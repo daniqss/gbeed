@@ -135,8 +135,8 @@ mod tests {
     fn test_sbc_set_carry() {
         let mut gb = Dmg::default();
         gb.cpu.a = 0x10;
-        gb.write(0x20, 0x20);
-        gb.cpu.h = 0x00;
+        gb.write(0xC020, 0x20);
+        gb.cpu.h = 0xC0;
         gb.cpu.l = 0x20;
         gb.write(R8::F, 0);
 

@@ -5,8 +5,8 @@ use crate::{
         cpu::{
             R8, R16,
             flags::{
-                Flags, check_overflow_cy, check_overflow_cy16, check_overflow_hc,
-                check_overflow_hc16, check_zero,
+                Flags, check_overflow_cy, check_overflow_cy16, check_overflow_hc, check_overflow_hc16,
+                check_zero,
             },
             instructions::{Instruction, InstructionEffect, InstructionResult},
         },
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_add_hl_sp_flags() {
-        let mut dmg = Dmg::new(None, None);
+        let mut dmg = Dmg::default();
         let mut add_sp = AddHLSP::new();
 
         dmg.store(R16::HL, 0x0000);
