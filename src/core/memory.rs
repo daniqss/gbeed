@@ -86,5 +86,5 @@ impl Memory {
 }
 
 impl Default for Memory {
-    fn default() -> Self { Memory::new(&mut Cartridge::new(vec![]), None) }
+    fn default() -> Self { Memory::new(&mut Cartridge::default(), None) }
 }

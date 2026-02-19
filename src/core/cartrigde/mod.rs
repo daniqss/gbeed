@@ -2,7 +2,10 @@ mod header;
 mod license;
 
 use crate::{
-    core::{Accessible, ROM_BANK00_SIZE},
+    core::{
+        Accessible, EXTERNAL_RAM_END, EXTERNAL_RAM_SIZE, EXTERNAL_RAM_START, ROM_BANK00_END, ROM_BANK00_SIZE,
+        ROM_BANK00_START, ROM_BANKNN_END, ROM_BANKNN_SIZE, ROM_BANKNN_START,
+    },
     prelude::*,
 };
 
@@ -46,7 +49,7 @@ impl Default for CartridgeType {
     fn default() -> Self { CartridgeType::RomOnly }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Cartridge {
     pub raw_rom: Vec<u8>,
 
@@ -60,18 +63,32 @@ pub struct Cartridge {
 
     // checked in runtime to select currently used banks
     selected_rom_bank: u16,
-    selected_ram_bank: u8,
+    selected_ram_bank: u16,
     ram_enabled: bool,
+}
+
+impl Default for Cartridge {
+    fn default() -> Self { Cartridge::new(vec![0; (ROM_BANK00_SIZE + ROM_BANKNN_SIZE) as usize]) }
 }
 
 impl Cartridge {
     pub fn new(raw_rom: Vec<u8>) -> Self {
         let header = CartridgeHeader::new(&raw_rom);
 
-        let rom_bank00 = raw_rom[..ROM_BANK00_SIZE as usize].to_vec();
-        let rom_bank_nn = raw_rom[ROM_BANK00_SIZE as usize..].to_vec();
+        let rom_bank00: Vec<u8> = raw_rom
+            .iter()
+            .take(ROM_BANK00_SIZE as usize)
+            .map(|&b| b)
+            .collect();
 
-        let ram_bank = vec![0; header.ram_size as usize];
+        let rom_bank_nn: Vec<u8> = raw_rom
+            .iter()
+            .skip(ROM_BANK00_SIZE as usize)
+            .take((header.rom_size - ROM_BANK00_SIZE as u32) as usize)
+            .map(|&b| b)
+            .collect();
+
+        let ram_bank = vec![0; header.external_ram_size as usize];
 
         let cartridge = Self {
             header,
@@ -84,6 +101,7 @@ impl Cartridge {
             ram_enabled: false,
         };
 
+        #[cfg(not(test))]
         if let Err(e) = cartridge.check_header_checksum() {
             eprintln!(
                 "Header checksum mismatch: the cartridge may be corrupted or the file may be malformed:\n{e}"
@@ -143,8 +161,46 @@ impl Cartridge {
 }
 
 impl Accessible<u16> for Cartridge {
-    fn read(&self, address: u16) -> u8 { todo!() }
-    fn write(&mut self, address: u16, value: u8) { todo!() }
+    fn read(&self, address: u16) -> u8 {
+        match address {
+            ROM_BANK00_START..=ROM_BANK00_END => self.rom_bank00[address as usize],
+            ROM_BANKNN_START..=ROM_BANKNN_END => {
+                let bank_offset = if self.header.rom_banks_count == 2 {
+                    0
+                } else {
+                    (self.selected_rom_bank % self.header.rom_banks_count) * ROM_BANKNN_SIZE
+                };
+                self.rom_bank_nn[(address as usize - ROM_BANKNN_START as usize) + bank_offset as usize]
+            }
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END if self.ram_enabled => {
+                if let Some(bank_count) = self.header.external_ram_banks_count {
+                    let bank_offset = (self.selected_ram_bank % bank_count) * EXTERNAL_RAM_SIZE;
+                    self.ram_bank[(address as usize - EXTERNAL_RAM_START as usize) + bank_offset as usize]
+                } else {
+                    eprintln!(
+                        "Cartrigde: Attempted to read from RAM at {address:04X} but cartridge has no RAM"
+                    );
+                    0xFF
+                }
+            }
+            _ => {
+                eprintln!("Cartrigde: Attempted to read from unmapped cartridge address: {address:04X}");
+                0xFF
+            }
+        }
+    }
+    fn write(&mut self, address: u16, value: u8) {
+        match address {
+            // only in mbc1???
+            ROM_BANK00_START..=ROM_BANK00_END => self.ram_enabled = value & 0x0F == 0x0A,
+            ROM_BANKNN_START..=ROM_BANKNN_END => todo!(),
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END if self.ram_enabled => todo!(),
+
+            _ => unreachable!(
+                "Cartrigde: write of address {address:04X} should have been handled by other components"
+            ),
+        }
+    }
 }
 
 impl std::fmt::Display for Cartridge {

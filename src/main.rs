@@ -64,12 +64,28 @@ fn main() -> Result<()> {
         i += 1;
     }
 
-    let game = if let Some(path) = game_path {
-        let data = std::fs::read(&path)
-            .map_err(|e| Error::Generic(format!("Failed to read game ROM at {}: {}", path, e)))?;
-        Some(Cartridge::new(data)?)
-    } else {
-        None
+    // let game = if let Some(path) = game_path {
+    //     let data = std::fs::read(&path)
+    //         .map_err(|e| Error::Generic(format!("Failed to read game ROM at {}: {}", path, e)))?;
+    //     Some(Cartridge::new(data)?)
+    // } else {
+    //     None
+    // };
+    let game: Cartridge = match game_path {
+        Some(path) => match std::fs::read(&path) {
+            Ok(data) => Cartridge::new(data),
+            Err(e) => {
+                print_help();
+                return Err(Error::Generic(format!(
+                    "Failed to read game ROM at {}: {}",
+                    path, e
+                )));
+            }
+        },
+        None => {
+            print_help();
+            return Err(Error::Generic("No game ROM provided".to_string()));
+        }
     };
 
     let boot_rom = if let Some(path) = boot_path {
@@ -88,7 +104,7 @@ fn main() -> Result<()> {
         .title(WINDOW_TITLE)
         .resizable()
         .build();
-    rl.set_target_fps(60);
+    // rl.set_target_fps(60);
 
     let mut frame_image =
         Image::gen_image_color(DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32, Color::BLACK);
@@ -117,10 +133,8 @@ fn _draw_cartridge(rl: &mut RaylibHandle, thread: &RaylibThread, gb: &Dmg) {
     rl.draw(&thread, |mut d| {
         // d.clear_background(ray_white);
 
-        if let Some(game) = &gb.bus.game {
-            for (i, line) in format!("{}", game).lines().enumerate() {
-                d.draw_text(line, 10, 10 + i as i32 * 20, 20, white);
-            }
+        for (i, line) in format!("{}", gb.cartridge).lines().enumerate() {
+            d.draw_text(line, 10, 10 + i as i32 * 20, 20, white);
         }
     });
 }
