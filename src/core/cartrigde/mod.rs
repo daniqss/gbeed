@@ -11,6 +11,7 @@ use crate::{
 };
 
 use header::CartridgeHeader;
+use mbc::Mbc;
 
 #[derive(Debug)]
 pub struct Cartridge {
@@ -29,6 +30,11 @@ pub struct Cartridge {
     selected_ram_bank: u16,
     ram_enabled: bool,
     banking_mode: bool,
+
+    rtc_registers: [u8; 5],
+    rtc_latched_registers: [u8; 5],
+    rtc_latch_ready: bool,
+    rumble_active: bool,
 }
 
 impl Default for Cartridge {
@@ -66,6 +72,12 @@ impl Cartridge {
             selected_ram_bank: 0,
             ram_enabled: false,
             banking_mode: false,
+
+            // TODO: better RTC handling
+            rtc_registers: [0; 5],
+            rtc_latched_registers: [0; 5],
+            rtc_latch_ready: false,
+            rumble_active: false,
         };
 
         #[cfg(not(test))]
@@ -140,7 +152,18 @@ impl Accessible<u16> for Cartridge {
                 self.rom_bank_nn[(address as usize - ROM_BANKNN_START as usize) + bank_offset]
             }
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END if self.ram_enabled => {
-                if let Some(bank_count) = self.header.external_ram_banks_count {
+                if matches!(
+                    self.header.cartridge_type,
+                    Mbc::Mbc3
+                        | Mbc::Mbc3Ram
+                        | Mbc::Mbc3RamBattery
+                        | Mbc::Mbc3TimerBattery
+                        | Mbc::Mbc3TimerRamBattery
+                ) && self.selected_ram_bank >= 0x08
+                    && self.selected_ram_bank <= 0x0C
+                {
+                    self.rtc_latched_registers[(self.selected_ram_bank - 0x08) as usize]
+                } else if let Some(bank_count) = self.header.external_ram_banks_count {
                     let bank_offset = (self.selected_ram_bank % bank_count) * EXTERNAL_RAM_SIZE;
                     self.ram_bank[(address as usize - EXTERNAL_RAM_START as usize) + bank_offset as usize]
                 } else {
@@ -156,6 +179,7 @@ impl Accessible<u16> for Cartridge {
             }
         }
     }
+
     fn write(&mut self, address: u16, value: u8) {
         match address {
             ROM_BANK00_START..=0x1FFF => mbc::enable_ram(self, address, value),
@@ -164,13 +188,27 @@ impl Accessible<u16> for Cartridge {
             0x6000..=ROM_BANKNN_END => mbc::select_banking_mode(self, value),
 
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END if self.ram_enabled => {
+                if matches!(
+                    self.header.cartridge_type,
+                    Mbc::Mbc3
+                        | Mbc::Mbc3Ram
+                        | Mbc::Mbc3RamBattery
+                        | Mbc::Mbc3TimerBattery
+                        | Mbc::Mbc3TimerRamBattery
+                ) && self.selected_ram_bank >= 0x08
+                    && self.selected_ram_bank <= 0x0C
+                {
+                    self.rtc_registers[(self.selected_ram_bank - 0x08) as usize] = value;
+                    return;
+                }
+
                 if let Some(bank_count) = self.header.external_ram_banks_count {
                     let bank_offset = (self.selected_ram_bank % bank_count) * EXTERNAL_RAM_SIZE;
                     self.ram_bank[(address as usize - EXTERNAL_RAM_START as usize) + bank_offset as usize] =
                         value;
                 } else {
                     eprintln!(
-                        "Cartrigde: Attempted to write to RAM at {address:04X} but cartridge has no RAM"
+                        "Cartridge: Attempted to write to RAM at {address:04X} but cartridge has no RAM"
                     );
                 }
             }

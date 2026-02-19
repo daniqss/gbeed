@@ -47,6 +47,7 @@ pub fn enable_ram(cartridge: &mut Cartridge, address: u16, value: u8) {
         Mbc::Mbc2 | Mbc::Mbc2Battery if address & 0x0100 == 0 => (value & 0x0F) == 0x0A,
 
         Mbc::Mbc3 | Mbc::Mbc3Ram | Mbc::Mbc3RamBattery | Mbc::Mbc3TimerBattery | Mbc::Mbc3TimerRamBattery => {
+            // TODO: enable RTC??
             (value & 0x0F) == 0x0A
         }
         Mbc::Mbc5
@@ -56,7 +57,7 @@ pub fn enable_ram(cartridge: &mut Cartridge, address: u16, value: u8) {
         | Mbc::Mbc5RumbleRam
         | Mbc::Mbc5RumbleRamBattery => (value & 0x0F) == 0x0A,
 
-        // TODO: handle every cartridge type
+        // TODO: handle other cartridge types, such as mmm01
         _ => cartridge.ram_enabled,
     };
 }
@@ -117,13 +118,12 @@ pub fn select_ram_bank(cartridge: &mut Cartridge, value: u8) {
                 cartridge.selected_ram_bank = value as u16;
             }
         }
-        Mbc::Mbc5
-        | Mbc::Mbc5Ram
-        | Mbc::Mbc5RamBattery
-        | Mbc::Mbc5Rumble
-        | Mbc::Mbc5RumbleRam
-        | Mbc::Mbc5RumbleRamBattery => {
+        Mbc::Mbc5 | Mbc::Mbc5Ram | Mbc::Mbc5RamBattery => {
             cartridge.selected_ram_bank = (value & 0x0F) as u16;
+        }
+        Mbc::Mbc5Rumble | Mbc::Mbc5RumbleRam | Mbc::Mbc5RumbleRamBattery => {
+            cartridge.selected_ram_bank = (value & 0x07) as u16;
+            cartridge.rumble_active = (value & 0x08) != 0;
         }
         _ => {}
     }
@@ -133,6 +133,18 @@ pub fn select_banking_mode(cartridge: &mut Cartridge, value: u8) {
     match cartridge.header.cartridge_type {
         Mbc::Mbc1 | Mbc::Mbc1Ram | Mbc::Mbc1RamBattery => {
             cartridge.banking_mode = (value & 0x01) != 0;
+        }
+        Mbc::Mbc3 | Mbc::Mbc3Ram | Mbc::Mbc3RamBattery | Mbc::Mbc3TimerBattery | Mbc::Mbc3TimerRamBattery => {
+            if value == 0x00 {
+                cartridge.rtc_latch_ready = true;
+            } else if value == 0x01 && cartridge.rtc_latch_ready {
+                cartridge
+                    .rtc_latched_registers
+                    .copy_from_slice(&cartridge.rtc_registers);
+                cartridge.rtc_latch_ready = false;
+            } else {
+                cartridge.rtc_latch_ready = false;
+            }
         }
         _ => {}
     }
