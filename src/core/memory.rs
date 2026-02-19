@@ -58,12 +58,7 @@ pub trait Accessible16<Address16, Address8>: Accessible<Address8> {
 /// from this 16 bits address memory bus we can access all the memory mapped components
 #[derive(Debug)]
 pub struct Memory {
-    pub game: Option<Cartridge>,
-    pub boot_rom: Option<Vec<u8>>,
-
-    pub rom: [u8; (ROM_BANKNN_SIZE + ROM_BANK00_SIZE) as usize],
     pub vram: [u8; VRAM_SIZE as usize],
-    pub external_ram: [u8; EXTERNAL_RAM_SIZE as usize],
     pub ram: [u8; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize],
 
     pub oam_ram: [u8; OAM_SIZE as usize],
@@ -71,61 +66,25 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new(game: Option<Cartridge>, boot_rom: Option<Vec<u8>>) -> Memory {
-        let mut rom = [0u8; (ROM_BANKNN_SIZE + ROM_BANK00_SIZE) as usize];
-
+    pub fn new(game: &mut Cartridge, boot_rom: Option<Vec<u8>>) -> Memory {
         // copy first from boot rom, and then from game
         // both initial copies are required in real hardware for nintendo logo check from boot rom and cartridge
         // used in real hardware to required games to have a nintendo logo in rom and allow nintendo to sue them if they're not allow (trademark violation)
-        match (&game, &boot_rom) {
-            (Some(game), Some(boot)) => {
-                let boot_len = boot.len().min((ROM_BANKNN_SIZE - 1) as usize);
-                rom[..boot_len].copy_from_slice(&boot[..boot_len]);
-
-                let game_len = game.rom.len().min(ROM_BANKNN_SIZE as usize);
-                rom[boot_len..game_len].copy_from_slice(&game.rom[boot_len..game_len]);
-            }
-            // copy only game if no boot rom is provided
-            (Some(game), None) => {
-                let game_len = game.rom.len().min(rom.len());
-                rom[..game_len].copy_from_slice(&game.rom[..game_len]);
-            }
-            (None, Some(boot)) => {
-                let boot_len = boot.len().min((ROM_BANKNN_SIZE - 1) as usize);
-                rom[..boot_len].copy_from_slice(&boot[..boot_len]);
-            }
-            _ => {}
-        };
+        if let Some(boot_rom) = boot_rom {
+            let boot_len = boot_rom.len().min(BOOT_ROM_SIZE as usize);
+            game.rom_bank00[..boot_len].copy_from_slice(&boot_rom[..boot_len]);
+        }
 
         Memory {
-            game,
-            boot_rom,
-
-            rom,
             vram: [0; VRAM_SIZE as usize],
-            external_ram: [0; EXTERNAL_RAM_SIZE as usize],
             ram: [0; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize],
 
             oam_ram: [0; OAM_SIZE as usize],
             hram: [0; HRAM_SIZE as usize],
         }
     }
-
-    /// unmaps boot rom when boot reaches pc = 0x00FE, when load 1 in bank register (0xFF50)
-    /// ```asm
-    /// ld a, $01
-    /// ld [0xFF50], a
-    /// ```
-    /// Next instruction will be the first `nop` in 0x0100, in the cartridge rom
-    pub fn unmap_boot_rom(&mut self) {
-        if let Some(game) = &self.game {
-            println!("Unmapping boot rom, switching to cartridge rom");
-            let game_len = game.rom.len().min((ROM_BANKNN_END + 1) as usize);
-            self.rom[..game_len].copy_from_slice(&game.rom[..game_len]);
-        }
-    }
 }
 
 impl Default for Memory {
-    fn default() -> Self { Memory::new(None, None) }
+    fn default() -> Self { Memory::new(&mut Cartridge::new(vec![]), None) }
 }

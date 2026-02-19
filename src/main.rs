@@ -88,7 +88,7 @@ fn main() -> Result<()> {
         .title(WINDOW_TITLE)
         .resizable()
         .build();
-    // rl.set_target_fps(60);
+    rl.set_target_fps(60);
 
     let mut frame_image =
         Image::gen_image_color(DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32, Color::BLACK);
