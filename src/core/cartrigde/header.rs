@@ -1,6 +1,6 @@
 use crate::core::{EXTERNAL_RAM_SIZE, ROM_BANKNN_SIZE};
 
-use super::{CartridgeType, license::get_license};
+use super::{license::get_license, mbc::Mbc};
 
 pub const TITLE_START: usize = 0x0134;
 pub const TITLE_END: usize = 0x0143;
@@ -20,7 +20,7 @@ pub struct CartridgeHeader {
     license: Option<String>,
     title: String,
     supports_sgb: bool,
-    cartridge_type: CartridgeType,
+    pub cartridge_type: Mbc,
     pub rom_size: u32,
     pub rom_banks_count: u16,
     pub external_ram_size: u32,
@@ -113,34 +113,34 @@ fn get_supports_sgb(flag: u8) -> bool {
     }
 }
 
-fn get_cartridge_type(byte: u8) -> CartridgeType {
+fn get_cartridge_type(byte: u8) -> Mbc {
     match byte {
-        0x00 => CartridgeType::RomOnly,
-        0x01 => CartridgeType::Mbc1,
-        0x02 => CartridgeType::Mbc1Ram,
-        0x03 => CartridgeType::Mbc1RamBattery,
-        0x05 => CartridgeType::Mbc2,
-        0x06 => CartridgeType::Mbc2Battery,
-        0x08 => CartridgeType::RomRam,
-        0x09 => CartridgeType::RomRamBattery,
-        0x0B => CartridgeType::MMM01,
-        0x0C => CartridgeType::MMM01Ram,
-        0x0D => CartridgeType::MMM01RamBattery,
-        0x0F => CartridgeType::Mbc3TimerBattery,
-        0x10 => CartridgeType::Mbc3TimerRamBattery,
-        0x11 => CartridgeType::Mbc3,
-        0x12 => CartridgeType::Mbc3Ram,
-        0x13 => CartridgeType::Mbc3RamBattery,
-        0x19 => CartridgeType::Mbc5,
-        0x1A => CartridgeType::Mbc5Ram,
-        0x1B => CartridgeType::Mbc5RamBattery,
-        0x1C => CartridgeType::Mbc5Rumble,
-        0x1D => CartridgeType::Mbc5RumbleRam,
-        0x1E => CartridgeType::Mbc5RumbleRamBattery,
-        0x1F => CartridgeType::PocketCamera,
-        0xFD => CartridgeType::BandaiTama5,
-        0xFE => CartridgeType::HuC3,
-        0xFF => CartridgeType::HuC1RamBattery,
+        0x00 => Mbc::RomOnly,
+        0x01 => Mbc::Mbc1,
+        0x02 => Mbc::Mbc1Ram,
+        0x03 => Mbc::Mbc1RamBattery,
+        0x05 => Mbc::Mbc2,
+        0x06 => Mbc::Mbc2Battery,
+        0x08 => Mbc::RomRam,
+        0x09 => Mbc::RomRamBattery,
+        0x0B => Mbc::MMM01,
+        0x0C => Mbc::MMM01Ram,
+        0x0D => Mbc::MMM01RamBattery,
+        0x0F => Mbc::Mbc3TimerBattery,
+        0x10 => Mbc::Mbc3TimerRamBattery,
+        0x11 => Mbc::Mbc3,
+        0x12 => Mbc::Mbc3Ram,
+        0x13 => Mbc::Mbc3RamBattery,
+        0x19 => Mbc::Mbc5,
+        0x1A => Mbc::Mbc5Ram,
+        0x1B => Mbc::Mbc5RamBattery,
+        0x1C => Mbc::Mbc5Rumble,
+        0x1D => Mbc::Mbc5RumbleRam,
+        0x1E => Mbc::Mbc5RumbleRamBattery,
+        0x1F => Mbc::PocketCamera,
+        0xFD => Mbc::BandaiTama5,
+        0xFE => Mbc::HuC3,
+        0xFF => Mbc::HuC1RamBattery,
         _ => unreachable!("Unknown cartridge type: {byte:#X}"),
     }
 }

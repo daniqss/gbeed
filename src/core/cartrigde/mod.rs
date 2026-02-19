@@ -1,5 +1,6 @@
 mod header;
 mod license;
+mod mbc;
 
 use crate::{
     core::{
@@ -9,45 +10,7 @@ use crate::{
     prelude::*,
 };
 
-use header::*;
-
-/// Indicates the available hardware in the cartridge
-/// Is mostly used to indicates memory bank controllers
-/// No licensed game uses RomRam and RomRamBattery
-/// Mbc3Ram, Mbc3TimerBattery, Mbc3TimerRamBattery with 64kb of RAM is Pokemon Crystal Version
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CartridgeType {
-    RomOnly,
-    Mbc1,
-    Mbc1Ram,
-    Mbc1RamBattery,
-    Mbc2,
-    Mbc2Battery,
-    RomRam,
-    RomRamBattery,
-    MMM01,
-    MMM01Ram,
-    MMM01RamBattery,
-    Mbc3TimerBattery,
-    Mbc3TimerRamBattery,
-    Mbc3,
-    Mbc3Ram,
-    Mbc3RamBattery,
-    Mbc5,
-    Mbc5Ram,
-    Mbc5RamBattery,
-    Mbc5Rumble,
-    Mbc5RumbleRam,
-    Mbc5RumbleRamBattery,
-    PocketCamera,
-    BandaiTama5,
-    HuC3,
-    HuC1RamBattery,
-}
-
-impl Default for CartridgeType {
-    fn default() -> Self { CartridgeType::RomOnly }
-}
+use header::CartridgeHeader;
 
 #[derive(Debug)]
 pub struct Cartridge {
@@ -65,6 +28,7 @@ pub struct Cartridge {
     selected_rom_bank: u16,
     selected_ram_bank: u16,
     ram_enabled: bool,
+    banking_mode: bool,
 }
 
 impl Default for Cartridge {
@@ -74,6 +38,8 @@ impl Default for Cartridge {
 impl Cartridge {
     pub fn new(raw_rom: Vec<u8>) -> Self {
         let header = CartridgeHeader::new(&raw_rom);
+
+        println!("Cartridge header: {header}");
 
         let rom_bank00: Vec<u8> = raw_rom
             .iter()
@@ -99,6 +65,7 @@ impl Cartridge {
             selected_rom_bank: 1,
             selected_ram_bank: 0,
             ram_enabled: false,
+            banking_mode: false,
         };
 
         #[cfg(not(test))]
@@ -114,7 +81,7 @@ impl Cartridge {
     /// # Header checksum
     /// Checked by real hardware by the boot ROM
     pub fn check_header_checksum(&self) -> Result<()> {
-        let header_sum = self.raw_rom[TITLE_START..=GAME_VERSION]
+        let header_sum = self.raw_rom[header::TITLE_START..=header::GAME_VERSION]
             .iter()
             .fold(0u8, |acc, &b| acc.wrapping_sub(b).wrapping_sub(1));
 
@@ -132,7 +99,7 @@ impl Cartridge {
     /// We'll use in Cartridge creation for now to verify correct file parsing and integrity
     pub fn check_global_checksum(&self) -> Result<()> {
         let cartridge_sum: u16 = self.raw_rom.iter().enumerate().fold(0u16, |acc, (i, &b)| {
-            match i != GLOBAL_CHECKSUM_START && i != GLOBAL_CHECKSUM_END {
+            match i != header::GLOBAL_CHECKSUM_START && i != header::GLOBAL_CHECKSUM_END {
                 true => acc.wrapping_add(b as u16),
                 false => acc,
             }
@@ -168,9 +135,9 @@ impl Accessible<u16> for Cartridge {
                 let bank_offset = if self.header.rom_banks_count == 2 {
                     0
                 } else {
-                    (self.selected_rom_bank % self.header.rom_banks_count) * ROM_BANKNN_SIZE
+                    (self.selected_rom_bank % self.header.rom_banks_count) as usize * ROM_BANKNN_SIZE as usize
                 };
-                self.rom_bank_nn[(address as usize - ROM_BANKNN_START as usize) + bank_offset as usize]
+                self.rom_bank_nn[(address as usize - ROM_BANKNN_START as usize) + bank_offset]
             }
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END if self.ram_enabled => {
                 if let Some(bank_count) = self.header.external_ram_banks_count {
@@ -191,10 +158,22 @@ impl Accessible<u16> for Cartridge {
     }
     fn write(&mut self, address: u16, value: u8) {
         match address {
-            // only in mbc1???
-            ROM_BANK00_START..=ROM_BANK00_END => self.ram_enabled = value & 0x0F == 0x0A,
-            ROM_BANKNN_START..=ROM_BANKNN_END => todo!(),
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END if self.ram_enabled => todo!(),
+            ROM_BANK00_START..=0x1FFF => mbc::enable_ram(self, address, value),
+            0x2000..=ROM_BANK00_END => mbc::select_rom_bank(self, address, value),
+            ROM_BANKNN_START..=0x5FFF => mbc::select_ram_bank(self, value),
+            0x6000..=ROM_BANKNN_END => mbc::select_banking_mode(self, value),
+
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END if self.ram_enabled => {
+                if let Some(bank_count) = self.header.external_ram_banks_count {
+                    let bank_offset = (self.selected_ram_bank % bank_count) * EXTERNAL_RAM_SIZE;
+                    self.ram_bank[(address as usize - EXTERNAL_RAM_START as usize) + bank_offset as usize] =
+                        value;
+                } else {
+                    eprintln!(
+                        "Cartrigde: Attempted to write to RAM at {address:04X} but cartridge has no RAM"
+                    );
+                }
+            }
 
             _ => unreachable!(
                 "Cartrigde: write of address {address:04X} should have been handled by other components"
