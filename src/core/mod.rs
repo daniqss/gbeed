@@ -29,7 +29,7 @@ pub use joypad::Joypad;
 pub use joypad::JoypadButton;
 pub use memory::*;
 pub use ppu::Ppu;
-pub use serial::Serial;
+pub use serial::{Serial, SerialListener};
 pub use timer::Timer;
 
 use self::{interrupts::IF, joypad::JOYP};
@@ -79,6 +79,10 @@ impl Dmg {
         }
     }
 
+    // pub fn get_serial_output(&self) -> String {
+    //     self.serial.get_output()
+    // }
+
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     /// Modifies the DMG state by executing one CPU instruction, and return the executed instruction
@@ -111,7 +115,7 @@ impl Dmg {
         // timer
         self.timer.step(self.cpu.cycles * 4, &mut self.interrupt_flag);
 
-        // serial, produces unexpected errors
+        // serial
         // self.serial.step(&mut self.interrupt_flag);
 
         instruction
