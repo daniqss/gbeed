@@ -7,6 +7,9 @@ use crate::{
     core::{
         Accessible, Accessible16,
         cpu::flags::{CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
+        interrupts::{
+            JOYPAD_INTERRUPT, LCD_STAT_INTERRUPT, SERIAL_INTERRUPT, TIMER_INTERRUPT, VBLANK_INTERRUPT,
+        },
     },
     prelude::*,
     utils::{from_u16, high, low, to_u16},
@@ -97,12 +100,86 @@ impl Cpu {
         self.halted = AFTER_BOOT_CPU.halted;
     }
 
-    pub fn service_interrupt(gb: &mut Dmg, service_routine_addr: u16, interrupt_mask: u8) {
-        // we need a push function
+    pub fn step(gb: &mut Dmg) -> Option<Box<dyn Instruction>> {
+        // check if is neccessatry to handle interrupts before executing the instruction
+        if Cpu::handle_interrupts(gb) {
+            // 5 Mcycles = 2 NOP + 3 ...
+            gb.cpu.cycles = gb.cpu.cycles.wrapping_add(5);
+            return None;
+        }
+
+        if gb.cpu.halted {
+            gb.cpu.cycles = gb.cpu.cycles.wrapping_add(4);
+            return None;
+        }
+
+        let opcode = gb.read(gb.cpu.pc);
+
+        let mut instruction = match Cpu::fetch(gb, opcode) {
+            Ok(instr) => instr,
+            Err(e) => {
+                eprintln!("Error fetching instruction at {:04X}: {}", gb.cpu.pc, e);
+                return None;
+            }
+        };
+
+        let effect = match instruction.exec(gb) {
+            Ok(effect) => effect,
+            Err(e) => {
+                eprintln!("Error executing instruction at {:04X}: {}", gb.cpu.pc, e);
+                return None;
+            }
+        };
+
+        gb.cpu.cycles = gb.cpu.cycles.wrapping_add(effect.cycles as usize);
+        gb.cpu.pc = match effect.len {
+            Len::Jump(_) => gb.cpu.pc,
+            Len::AddLen(len) => gb.cpu.pc.wrapping_add(len as u16),
+        };
+        effect.flags.apply(&mut gb.cpu.f);
+
+        Some(instruction)
+    }
+
+    fn handle_interrupts(gb: &mut Dmg) -> bool {
+        let enabled_interrupts = gb.interrupt_enable.0 & gb.interrupt_flag.0;
+
+        if enabled_interrupts & 0b0001_1111 == 0 {
+            return false;
+        }
+
+        if gb.cpu.halted {
+            gb.cpu.halted = false;
+        }
+
+        if !gb.cpu.ime {
+            return false;
+        }
+
+        gb.cpu.ime = false;
+        if enabled_interrupts & VBLANK_INTERRUPT != 0 {
+            Cpu::service_interrupt(gb, 0x40, VBLANK_INTERRUPT);
+        } else if enabled_interrupts & LCD_STAT_INTERRUPT != 0 {
+            Cpu::service_interrupt(gb, 0x48, LCD_STAT_INTERRUPT);
+        } else if enabled_interrupts & TIMER_INTERRUPT != 0 {
+            Cpu::service_interrupt(gb, 0x50, TIMER_INTERRUPT);
+        } else if enabled_interrupts & SERIAL_INTERRUPT != 0 {
+            Cpu::service_interrupt(gb, 0x58, SERIAL_INTERRUPT);
+        } else if enabled_interrupts & JOYPAD_INTERRUPT != 0 {
+            Cpu::service_interrupt(gb, 0x60, JOYPAD_INTERRUPT);
+        }
+
+        true
+    }
+
+    fn service_interrupt(gb: &mut Dmg, service_routine_addr: u16, interrupt_mask: u8) {
+        // TODO: use auxiliar functions here and in some instructions to push, call, etc...
         let mut sp = gb.cpu.sp.wrapping_sub(1);
         gb.write(sp, high(gb.cpu.pc));
+
         sp = sp.wrapping_sub(1);
         gb.write(sp, low(gb.cpu.pc));
+
         gb.cpu.sp = sp;
 
         gb.interrupt_flag.0 &= !interrupt_mask;

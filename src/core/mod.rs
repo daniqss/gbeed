@@ -12,10 +12,8 @@ pub use crate::prelude::*;
 use crate::{
     core::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
-        cpu::{Instruction, Len, R8, R16},
-        interrupts::{
-            IE, JOYPAD_INTERRUPT, LCD_STAT_INTERRUPT, SERIAL_INTERRUPT, TIMER_INTERRUPT, VBLANK_INTERRUPT,
-        },
+        cpu::{Instruction, R8, R16},
+        interrupts::IE,
         ppu::{DMA_REGISTER, PPU_REGISTER_END, PPU_REGISTER_START},
         serial::{SERIAL_REGISTER_END, SERIAL_REGISTER_START},
         timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
@@ -85,9 +83,9 @@ impl Dmg {
 
     /// Modifies the DMG state by executing one CPU instruction, and return the executed instruction
     pub fn run(&mut self) -> Result<()> {
-        // one frame (70224 cycles)
+        // one frame == 70224 T-cycles == 17556 M-cycles
         while self.cpu.cycles < 17556 {
-            let _instr = self.step()?;
+            let _instr = self.step();
 
             // println!(
             //     "Executing instruction at {:04X} and {}: {}",
@@ -103,75 +101,20 @@ impl Dmg {
         Ok(())
     }
 
-    pub fn step(&mut self) -> Result<Box<dyn Instruction>> {
-        // check if is neccessatry to handle interrupts before executing the instruction
-        if self.cpu.ime && self.handle_interrupts() {
-            self.cpu.ime = false;
-            self.cpu.halted = false;
+    pub fn step(&mut self) -> Option<Box<dyn Instruction>> {
+        let instruction = Cpu::step(self);
 
-            self.cpu.cycles = self.cpu.cycles.wrapping_add(20);
-        }
-
-        // cpu
-        let opcode = self.read(self.cpu.pc);
-
-        let mut instruction = match Cpu::fetch(self, opcode) {
-            Ok(instr) => instr,
-            Err(e) => Err(Error::Generic(format!(
-                "Error fetching instruction at {:04X}: {}",
-                self.cpu.pc, e
-            )))?,
-        };
-
-        let effect = match instruction.exec(self) {
-            Ok(effect) => effect,
-            Err(e) => Err(Error::Generic(format!(
-                "Error executing instruction at {:04X}: {}",
-                self.cpu.pc, e
-            )))?,
-        };
-
-        let cycles = self.cpu.cycles.wrapping_add(effect.cycles as usize);
-
-        self.cpu.cycles = cycles;
-        self.cpu.pc = match effect.len {
-            Len::Jump(_) => self.cpu.pc,
-            Len::AddLen(len) => self.cpu.pc.wrapping_add(len as u16),
-        };
-        effect.flags.apply(&mut self.cpu.f);
-
+        // TODO: both ppu and timer use Tcycles
         // ppu
-        Ppu::step(self, cycles * 4);
+        Ppu::step(self, self.cpu.cycles * 4);
 
         // timer
-        self.timer.step(cycles * 4, &mut self.interrupt_flag);
+        self.timer.step(self.cpu.cycles * 4, &mut self.interrupt_flag);
 
-        Ok(instruction)
-    }
+        // serial, produces unexpected errors
+        // self.serial.step(&mut self.interrupt_flag);
 
-    fn handle_interrupts(&mut self) -> bool {
-        let enabled_interrupts = self.interrupt_enable.0 & self.interrupt_flag.0;
-
-        if enabled_interrupts & 0b00011111 == 0 {
-            if self.cpu.halted && !self.cpu.ime {
-                self.cpu.halted = false;
-            }
-            return false;
-        }
-
-        if enabled_interrupts & VBLANK_INTERRUPT != 0 {
-            Cpu::service_interrupt(self, 0x40, VBLANK_INTERRUPT);
-        } else if enabled_interrupts & LCD_STAT_INTERRUPT != 0 {
-            Cpu::service_interrupt(self, 0x48, LCD_STAT_INTERRUPT);
-        } else if enabled_interrupts & TIMER_INTERRUPT != 0 {
-            Cpu::service_interrupt(self, 0x50, TIMER_INTERRUPT);
-        } else if enabled_interrupts & SERIAL_INTERRUPT != 0 {
-            Cpu::service_interrupt(self, 0x58, SERIAL_INTERRUPT);
-        } else if enabled_interrupts & JOYPAD_INTERRUPT != 0 {
-            Cpu::service_interrupt(self, 0x60, JOYPAD_INTERRUPT);
-        }
-
-        true
+        instruction
     }
 }
 

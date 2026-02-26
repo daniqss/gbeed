@@ -182,7 +182,7 @@ fn test_disassembly_boot() -> Result<()> {
     let mut setup_logo = false;
 
     loop {
-        let _instr = gb.step()?;
+        let _instr = gb.step();
 
         if gb.cpu.cycles >= 70224 {
             gb.cpu.cycles = 0;
