@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    # test on test/run-blarggs-test-suite first
+    branches: [ test/run-blarggs-test-suite ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v22
+        with:
+          nix_path: nixpkgs=channel:nixos-25.11
+
+      - name: Enable cachix
+        uses: cachix/cachix-action@v12
+        with:
+          name: app-flakes
+          
+      - name: Clone Blargg's ROM test suite
+        run: git clone https://github.com/retrio/gb-test-roms.git
+
+      - name: Download open source DMG Boot ROM
+        run: |
+          wget https://github.com/alloncm/MagenBoot/releases/download/0.2.0/dmg_boot.bin -O dmg_boot.bin
+      - name: Download open source game ROM
+        run: |
+          wget https://github.com/flozz/gameboy-examples/raw/master/03-tic-tac-toe/tictactoe.gb -O tictactoe.gb
+
+      - name: Run tests
+        run: |
+          nix develop .#x11 --command -- just test

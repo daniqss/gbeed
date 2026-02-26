@@ -1,7 +1,7 @@
 use gbeed::Cartridge;
 use gbeed::Dmg;
-use gbeed::core::AFTER_BOOT_CPU;
 use gbeed::core::Accessible;
+use gbeed::core::Cpu;
 use gbeed::prelude::*;
 
 /// Testing dmg boot rom, which is disassembled to
@@ -173,7 +173,7 @@ use gbeed::prelude::*;
 #[test]
 fn test_disassembly_boot() -> Result<()> {
     let boot_rom_data = std::fs::read("dmg_boot.bin")?;
-    let game_data = std::fs::read("sml2.gb")?;
+    let game_data = std::fs::read("tictactoe.gb")?;
     let game = Cartridge::new(game_data);
     // it actually needs a game to compare the logos
     let mut gb = Dmg::new(game, Some(boot_rom_data));
@@ -226,8 +226,26 @@ fn test_disassembly_boot() -> Result<()> {
             setup_logo = true;
         }
 
+        // new used boot rom has different cpu state at the end the boot sequence
         if gb.cpu.pc == 0x0100 {
-            assert_eq!(gb.cpu, AFTER_BOOT_CPU);
+            assert_eq!(
+                gb.cpu,
+                Cpu {
+                    a: 1,
+                    f: 192,
+                    b: 0,
+                    c: 0,
+                    d: 0,
+                    e: 113,
+                    h: 129,
+                    l: 208,
+                    pc: 256,
+                    sp: 65534,
+                    cycles: 54462,
+                    ime: false,
+                    halted: false
+                }
+            );
             println!("Boot sequence completed successfully!");
             println!("Cpu after boot: {}", gb.cpu);
             break;
