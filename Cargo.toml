@@ -1,12 +1,6 @@
-[package]
-name = "gbeed"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-thiserror = "2.0.17"
-paste = "1.0.15"
-
-[dependencies.raylib]
-git = "https://github.com/raylib-rs/raylib-rs"
-version = "5.7.0"
+[workspace]
+resolver = "2"
+members = [
+    "core",
+    "ui",
+]
