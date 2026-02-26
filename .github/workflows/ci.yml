@@ -2,8 +2,7 @@ name: CI
 
 on:
   push:
-    # test on test/run-blarggs-test-suite first
-    branches: [ test/run-blarggs-test-suite ]
+    branches: [ main ]
   pull_request:
 
 jobs:
