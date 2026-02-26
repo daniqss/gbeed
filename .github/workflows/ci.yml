@@ -17,9 +17,14 @@ jobs:
         uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixos-25.11
+
+      - name: Upgrade nix
+        run: |
+          nix upgrade-nix
           
       - name: Clone Blargg's ROM test suite
-        run: git clone https://github.com/retrio/gb-test-roms.git
+        run: |
+          git clone https://github.com/retrio/gb-test-roms.git
 
       - name: Download open source DMG Boot ROM
         run: |
