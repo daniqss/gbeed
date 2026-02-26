@@ -11,16 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v22
+        uses: cachix/install-nix-action@v31
         with:
-          nix_path: nixpkgs=channel:nixos-25.11
-
-      - name: Upgrade nix
-        run: |
-          nix upgrade-nix
+          nix_path: nixpkgs=channel:nixos-unstable
           
       - name: Clone Blargg's ROM test suite
         run: |
