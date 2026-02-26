@@ -14,7 +14,8 @@ impl Halt {
 }
 
 impl Instruction for Halt {
-    fn exec(&mut self, _: &mut Dmg) -> InstructionResult {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        gb.cpu.halted = true;
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }

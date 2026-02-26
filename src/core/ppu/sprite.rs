@@ -29,7 +29,7 @@ impl Sprite {
         }
     }
 
-    pub fn to_oam(&self, gb: &mut Dmg, index: u16) {
+    pub fn _to_oam(&self, gb: &mut Dmg, index: u16) {
         gb.write(index, self.ypos);
         gb.write(index + 1, self.xpos);
         gb.write(index + 2, self.tile_index);

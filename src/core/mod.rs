@@ -3,7 +3,6 @@ mod cartrigde;
 mod cpu;
 mod interrupts;
 mod joypad;
-mod license;
 mod memory;
 pub mod ppu;
 mod serial;
@@ -13,10 +12,8 @@ pub use crate::prelude::*;
 use crate::{
     core::{
         apu::{APU_REGISTER_END, APU_REGISTER_START},
-        cpu::{Instruction, Len, R8, R16},
-        interrupts::{
-            IE, JOYPAD_INTERRUPT, LCD_STAT_INTERRUPT, SERIAL_INTERRUPT, TIMER_INTERRUPT, VBLANK_INTERRUPT,
-        },
+        cpu::{Instruction, R8, R16},
+        interrupts::IE,
         ppu::{DMA_REGISTER, PPU_REGISTER_END, PPU_REGISTER_START},
         serial::{SERIAL_REGISTER_END, SERIAL_REGISTER_START},
         timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
@@ -32,7 +29,7 @@ pub use joypad::Joypad;
 pub use joypad::JoypadButton;
 pub use memory::*;
 pub use ppu::Ppu;
-pub use serial::Serial;
+pub use serial::{Serial, SerialListener};
 pub use timer::Timer;
 
 use self::{interrupts::IF, joypad::JOYP};
@@ -41,8 +38,9 @@ const BANK_REGISTER: u16 = 0xFF50;
 
 #[derive(Debug, Default)]
 pub struct Dmg {
-    pub bus: Memory,
     pub cpu: Cpu,
+    pub cartridge: Cartridge,
+    pub bus: Memory,
     pub ppu: Ppu,
     pub joypad: Joypad,
     pub serial: Serial,
@@ -54,7 +52,7 @@ pub struct Dmg {
 }
 
 impl Dmg {
-    pub fn new(game: Option<Cartridge>, boot_rom: Option<Vec<u8>>) -> Dmg {
+    pub fn new(mut cartridge: Cartridge, boot_rom: Option<Vec<u8>>) -> Dmg {
         let joypad = Joypad::default();
         let serial = Serial::new();
         let timer = Timer::new();
@@ -64,14 +62,15 @@ impl Dmg {
         let interrupt_enable = Interrupt::new();
 
         let start_at_boot = boot_rom.is_some();
-        let bus = Memory::new(game, boot_rom);
+        let bus = Memory::new(&mut cartridge, boot_rom);
 
         Dmg {
             cpu: Cpu::new(start_at_boot),
+            bus,
+            cartridge,
             ppu,
             joypad,
             serial,
-            bus,
             timer,
             apu,
             interrupt_flag,
@@ -80,13 +79,17 @@ impl Dmg {
         }
     }
 
+    // pub fn get_serial_output(&self) -> String {
+    //     self.serial.get_output()
+    // }
+
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     /// Modifies the DMG state by executing one CPU instruction, and return the executed instruction
     pub fn run(&mut self) -> Result<()> {
-        // one frame (70224 cycles)
+        // one frame == 70224 T-cycles == 17556 M-cycles
         while self.cpu.cycles < 17556 {
-            let _instr = self.step()?;
+            let _instr = self.step();
 
             // println!(
             //     "Executing instruction at {:04X} and {}: {}",
@@ -102,91 +105,29 @@ impl Dmg {
         Ok(())
     }
 
-    pub fn step(&mut self) -> Result<Box<dyn Instruction>> {
-        let start_cycles = self.cpu.cycles;
+    pub fn step(&mut self) -> Option<Box<dyn Instruction>> {
+        let instruction = Cpu::step(self);
 
-        // check if is neccessatry to handle interrupts before executing the instruction
-        if self.cpu.ime || self.cpu.halted {
-            if self.handle_interrupts() {
-                self.cpu.ime = false;
-                self.cpu.halted = false;
-
-                self.cpu.cycles = self.cpu.cycles.wrapping_add(20);
-            }
-        }
-
-        // cpu
-        let opcode = self.read(self.cpu.pc);
-
-        let mut instruction = match Cpu::fetch(self, opcode) {
-            Ok(instr) => instr,
-            Err(e) => Err(Error::Generic(format!(
-                "Error fetching instruction at {:04X}: {}",
-                self.cpu.pc, e
-            )))?,
-        };
-
-        let effect = match instruction.exec(self) {
-            Ok(effect) => effect,
-            Err(e) => Err(Error::Generic(format!(
-                "Error executing instruction at {:04X}: {}",
-                self.cpu.pc, e
-            )))?,
-        };
-
-        let cycles = self.cpu.cycles.wrapping_add(effect.cycles as usize);
-
-        self.cpu.cycles = cycles;
-        self.cpu.pc = match effect.len {
-            Len::Jump(_) => self.cpu.pc,
-            Len::AddLen(len) => self.cpu.pc.wrapping_add(len as u16),
-        };
-        effect.flags.apply(&mut self.cpu.f);
-
+        // TODO: both ppu and timer use Tcycles
         // ppu
-        Ppu::step(self, cycles * 4);
+        Ppu::step(self, self.cpu.cycles * 4);
 
         // timer
-        let delta_cycles = cycles - start_cycles;
-        self.timer.step(delta_cycles * 4);
+        self.timer.step(self.cpu.cycles * 4, &mut self.interrupt_flag);
 
-        Ok(instruction)
-    }
+        // serial
+        // self.serial.step(&mut self.interrupt_flag);
 
-    fn handle_interrupts(&mut self) -> bool {
-        let enabled_interrupts = self.interrupt_enable.0 & self.interrupt_flag.0;
-
-        if enabled_interrupts & 0b00011111 == 0 {
-            if self.cpu.halted && !self.cpu.ime {
-                self.cpu.halted = false;
-            }
-            return false;
-        }
-
-        if enabled_interrupts & VBLANK_INTERRUPT != 0 {
-            Cpu::service_interrupt(self, 0x40, VBLANK_INTERRUPT);
-        } else if enabled_interrupts & LCD_STAT_INTERRUPT != 0 {
-            Cpu::service_interrupt(self, 0x48, LCD_STAT_INTERRUPT);
-        } else if enabled_interrupts & TIMER_INTERRUPT != 0 {
-            Cpu::service_interrupt(self, 0x50, TIMER_INTERRUPT);
-        } else if enabled_interrupts & SERIAL_INTERRUPT != 0 {
-            Cpu::service_interrupt(self, 0x58, SERIAL_INTERRUPT);
-        } else if enabled_interrupts & JOYPAD_INTERRUPT != 0 {
-            Cpu::service_interrupt(self, 0x60, JOYPAD_INTERRUPT);
-        }
-
-        true
+        instruction
     }
 }
 
 impl Accessible<u16> for Dmg {
     fn read(&self, address: u16) -> u8 {
         match address {
-            ROM_BANK00_START..=ROM_BANKNN_END => self.bus.rom[address as usize],
+            ROM_BANK00_START..=ROM_BANKNN_END => self.cartridge.read(address),
             VRAM_START..=VRAM_END => self.bus.vram[(address - VRAM_START) as usize],
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
-                self.bus.external_ram[(address - EXTERNAL_RAM_START) as usize]
-            }
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.cartridge.read(address),
             WRAM_BANK0_START..=WRAM_BANKN_END => self.bus.ram[(address - WRAM_BANK0_START) as usize],
             ECHO_RAM_START..=ECHO_RAM_END => {
                 let offset = (address - ECHO_RAM_START) as usize;
@@ -226,11 +167,9 @@ impl Accessible<u16> for Dmg {
 
     fn write(&mut self, address: u16, value: u8) {
         match address {
-            ROM_BANK00_START..=ROM_BANKNN_END => self.bus.rom[address as usize] = value,
+            ROM_BANK00_START..=ROM_BANKNN_END => self.cartridge.write(address, value),
             VRAM_START..=VRAM_END => self.bus.vram[(address - VRAM_START) as usize] = value,
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
-                self.bus.external_ram[(address - EXTERNAL_RAM_START) as usize] = value
-            }
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.cartridge.write(address, value),
             WRAM_BANK0_START..=WRAM_BANKN_END => self.bus.ram[(address - WRAM_BANK0_START) as usize] = value,
             ECHO_RAM_START..=ECHO_RAM_END => {
                 let offset = (address - ECHO_RAM_START) as usize;
@@ -257,7 +196,7 @@ impl Accessible<u16> for Dmg {
 
                 BANK_REGISTER => {
                     if self.bank == 0 {
-                        self.bus.unmap_boot_rom();
+                        self.cartridge.unmap_boot_rom();
                     }
 
                     self.bank = value;

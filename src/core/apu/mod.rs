@@ -7,7 +7,6 @@ const NR11: u16 = 0xFF11;
 const NR12: u16 = 0xFF12;
 const NR13: u16 = 0xFF13;
 const NR14: u16 = 0xFF14;
-const NOT_USED_15: u16 = 0xFF15;
 const NR21: u16 = 0xFF16;
 const NR22: u16 = 0xFF17;
 const NR23: u16 = 0xFF18;
@@ -144,7 +143,7 @@ impl Accessible<u16> for Apu {
             NR12 => self.nr12,
             NR13 => self.nr13,
             NR14 => self.nr14,
-            NOT_USED_15 => 0xFF,
+
             NR21 => self.nr21,
             NR22 => self.nr22,
             NR23 => self.nr23,
@@ -154,6 +153,7 @@ impl Accessible<u16> for Apu {
             NR32 => self.nr32,
             NR33 => self.nr33,
             NR34 => self.nr34,
+
             NR41 => self.nr41,
             NR42 => self.nr42,
             NR43 => self.nr43,
@@ -163,6 +163,10 @@ impl Accessible<u16> for Apu {
             NR52 => self.nr52,
             addr @ 0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize],
 
+            0xFF15 | 0xFF1F | 0xFF27..=0xFF2F => {
+                println!("Reads to unimplemented Apu register {address:04X} return 0xFF");
+                0xFF
+            }
             _ => unreachable!(
                 "Apu: read of address {address:04X} should have been handled by other components"
             ),
@@ -176,6 +180,7 @@ impl Accessible<u16> for Apu {
             NR12 => self.nr12 = value,
             NR13 => self.nr13 = value,
             NR14 => self.nr14 = value,
+            0xFF15 => println!("Writes in unused Apu memory range are ignored, {address:04X}"),
             NR21 => self.nr21 = value,
             NR22 => self.nr22 = value,
             NR23 => self.nr23 = value,
@@ -185,6 +190,7 @@ impl Accessible<u16> for Apu {
             NR32 => self.nr32 = value,
             NR33 => self.nr33 = value,
             NR34 => self.nr34 = value,
+            0xFF1F => println!("Writes in unused Apu memory range are ignored, {address:04X}"),
             NR41 => self.nr41 = value,
             NR42 => self.nr42 = value,
             NR43 => self.nr43 = value,
@@ -193,6 +199,7 @@ impl Accessible<u16> for Apu {
             NR51 => self.nr51 = value,
             // audio master control, if turning off audio, disable all channels
             NR52 => self.nr52 = (value & AUDIO_ON_OFF) | (self.nr52 & 0x7F),
+            0xFF27..=0xFF2F => println!("Writes in unused Apu memory range are ignored, {address:04X}"),
             addr @ 0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize] = value,
 
             _ => unreachable!(

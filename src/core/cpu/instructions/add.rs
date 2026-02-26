@@ -4,12 +4,15 @@ use crate::{
         Accessible16,
         cpu::{
             R8, R16,
-            flags::{Flags, check_overflow_cy, check_overflow_hc, check_zero},
+            flags::{
+                Flags, check_overflow_cy, check_overflow_cy16, check_overflow_hc, check_overflow_hc16,
+                check_zero,
+            },
             instructions::{Instruction, InstructionEffect, InstructionResult},
         },
         memory::Accessible,
     },
-    utils::{high, low},
+    utils::low,
 };
 
 #[inline(always)]
@@ -88,13 +91,14 @@ impl AddR16 {
 impl Instruction for AddR16 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let old_hl = gb.cpu.hl();
-        let result = add_u16(gb, gb.load(self.src));
+        let val = gb.load(self.src);
+        let result = add_u16(gb, val);
 
         let flags = Flags {
             z: None,
             n: Some(false),
-            h: Some(check_overflow_hc(high(result), high(old_hl))),
-            c: Some(check_overflow_cy(high(result), high(old_hl))),
+            h: Some(check_overflow_hc16(result, old_hl)),
+            c: Some(check_overflow_cy16(result, old_hl)),
         };
         Ok(InstructionEffect::new(self.info(), flags))
     }
@@ -102,20 +106,21 @@ impl Instruction for AddR16 {
     fn disassembly(&self) -> String { format!("add hl,{}", self.src) }
 }
 
-pub struct AddSP;
-impl AddSP {
+pub struct AddHLSP;
+impl AddHLSP {
     pub fn new() -> Box<Self> { Box::new(Self) }
 }
-impl Instruction for AddSP {
+impl Instruction for AddHLSP {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let old_hl = gb.cpu.hl();
-        let result = add_u16(gb, gb.cpu.sp);
+        let val = gb.cpu.sp;
+        let result = add_u16(gb, val);
 
         let flags = Flags {
             z: None,
             n: Some(false),
-            h: Some(check_overflow_hc(high(result), high(old_hl))),
-            c: Some(check_overflow_cy(high(result), high(old_hl))),
+            h: Some(check_overflow_hc16(result, old_hl)),
+            c: Some(check_overflow_cy16(result, old_hl)),
         };
         Ok(InstructionEffect::new(self.info(), flags))
     }
@@ -144,4 +149,77 @@ impl Instruction for AddSPImm8 {
     }
     fn info(&self) -> (u8, u8) { (4, 2) }
     fn disassembly(&self) -> String { format!("add sp,{:+}", self.val) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_hl_sp_flags() {
+        let mut dmg = Dmg::default();
+        let mut add_sp = AddHLSP::new();
+
+        dmg.store(R16::HL, 0x0000);
+        dmg.cpu.sp = 0x0001;
+        dmg.cpu.f = 0;
+        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        assert_eq!(dmg.load(R16::HL), 0x0001);
+        assert!(!dmg.cpu.half_carry());
+        assert!(!dmg.cpu.carry());
+
+        dmg.store(R16::HL, 0x0FFF);
+        dmg.cpu.sp = 0x0001;
+        dmg.cpu.f = 0;
+        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        assert_eq!(dmg.load(R16::HL), 0x1000);
+        assert!(dmg.cpu.half_carry());
+        assert!(!dmg.cpu.carry());
+
+        // carry and half Carry
+        dmg.store(R16::HL, 0xFFFF);
+        dmg.cpu.sp = 0x0001;
+        dmg.cpu.f = 0;
+        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        assert_eq!(dmg.load(R16::HL), 0x0000);
+        assert!(dmg.cpu.half_carry());
+        assert!(dmg.cpu.carry());
+
+        // half Carry with 0x0800 + 0x0800
+        dmg.store(R16::HL, 0x0800);
+        dmg.cpu.sp = 0x0800;
+        dmg.cpu.f = 0;
+        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        assert_eq!(dmg.load(R16::HL), 0x1000);
+        assert!(dmg.cpu.half_carry());
+        assert!(!dmg.cpu.carry());
+
+        // carry with 0x8000 + 0x8000
+        dmg.store(R16::HL, 0x8000);
+        dmg.cpu.sp = 0x8000;
+        dmg.cpu.f = 0;
+        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        assert_eq!(dmg.load(R16::HL), 0x0000);
+        assert!(!dmg.cpu.half_carry());
+        assert!(dmg.cpu.carry());
+
+        // half carry edge case
+        dmg.store(R16::HL, 0x0F80);
+        dmg.cpu.sp = 0x0080;
+        dmg.cpu.f = 0;
+        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        assert_eq!(dmg.load(R16::HL), 0x1000);
+        assert!(dmg.cpu.half_carry());
+        assert!(!dmg.cpu.carry());
+
+        // high bit addition
+        dmg.store(R16::HL, 0x0001);
+        dmg.cpu.sp = 0xFFFF;
+        dmg.cpu.f = 0;
+        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        assert_eq!(dmg.load(R16::HL), 0x0000);
+        // 0x001 + 0xFFF = 0x1000. 1+F=16. H=1.
+        assert!(dmg.cpu.half_carry());
+        assert!(dmg.cpu.carry());
+    }
 }
