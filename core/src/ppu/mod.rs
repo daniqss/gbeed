@@ -528,9 +528,10 @@ impl Ppu {
     /// CPU can access only HRAM and PPU can't access OAM
     /// Most games transfer to HRAM code to continue execution in CPU, and execute DMA transfer in VBlank
     pub fn dma_transfer(gb: &mut Dmg, src_addr: u8) {
+        let src_addr = (src_addr as u16) << 8;
         for i in 0..(OAM_END - OAM_START + 1) {
-            let byte = gb.read((src_addr as u16 + i) as u16);
-            gb.write((OAM_START + i) as u16, byte);
+            let byte = gb.read(src_addr + i);
+            gb.write(OAM_START + i, byte);
         }
 
         gb.ppu.dma = 0;

@@ -19,7 +19,6 @@ pub struct Cartridge {
 
     // banks
     pub rom_bank00: Vec<u8>,
-    rom_bank_nn: Vec<u8>,
     ram_bank: Vec<u8>,
 
     // checked in runtime to select currently used banks
@@ -50,20 +49,12 @@ impl Cartridge {
             .map(|&b| b)
             .collect();
 
-        let rom_bank_nn: Vec<u8> = raw_rom
-            .iter()
-            .skip(ROM_BANK00_SIZE as usize)
-            .take((header.rom_size - ROM_BANK00_SIZE as u32) as usize)
-            .map(|&b| b)
-            .collect();
-
         let ram_bank = vec![0; header.external_ram_size as usize];
 
         let cartridge = Self {
             header,
             raw_rom,
             rom_bank00,
-            rom_bank_nn,
             ram_bank,
             selected_rom_bank: 1,
             selected_ram_bank: 0,
@@ -151,12 +142,13 @@ impl Accessible<u16> for Cartridge {
         match address {
             ROM_BANK00_START..=ROM_BANK00_END => self.rom_bank00[address as usize],
             ROM_BANKNN_START..=ROM_BANKNN_END => {
-                let bank_offset = if self.header.rom_banks_count == 2 {
-                    0
+                let bank_index = if self.header.rom_banks_count <= 2 {
+                    1
                 } else {
-                    (self.selected_rom_bank % self.header.rom_banks_count) as usize * ROM_BANKNN_SIZE as usize
+                    self.selected_rom_bank % self.header.rom_banks_count
                 };
-                self.rom_bank_nn[(address as usize - ROM_BANKNN_START as usize) + bank_offset]
+                let bank_offset = bank_index as usize * ROM_BANKNN_SIZE as usize;
+                self.raw_rom[(address as usize - ROM_BANKNN_START as usize) + bank_offset]
             }
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END if self.ram_enabled => {
                 if matches!(
@@ -194,7 +186,12 @@ impl Accessible<u16> for Cartridge {
             ROM_BANKNN_START..=0x5FFF => mbc::select_ram_bank(self, value),
             0x6000..=ROM_BANKNN_END => mbc::select_banking_mode(self, value),
 
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END if self.ram_enabled => {
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
+                if !self.ram_enabled {
+                    eprintln!("Cartrigde: Attempted to write to RAM at {address:04X} but RAM is not enabled");
+                    return;
+                }
+
                 if matches!(
                     self.header.cartridge_type,
                     Mbc::Mbc3

@@ -104,7 +104,7 @@ fn run_blargg_test(dir_path: &str, rom_name: &str) -> Result<()> {
 mod cpu_instrs {
     use super::*;
 
-    const DIR_PATH: &str = "gb-test-roms/cpu_instrs/individual";
+    const DIR_PATH: &str = "../gb-test-roms/cpu_instrs/individual";
 
     #[test]
     fn test_01_special() -> Result<()> { run_blargg_test(DIR_PATH, "01-special.gb") }
