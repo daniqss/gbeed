@@ -77,10 +77,8 @@ fn run_blargg_test(dir_path: &str, rom_name: &str) -> Result<()> {
 
     let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
     let cartridge = Cartridge::new(rom);
-    let mut gb = Dmg::new(cartridge, None);
-
     let listener = Rc::new(RefCell::new(BlarggListener::new(rom_name)));
-    gb.serial.set_serial_listener(listener.clone());
+    let mut gb = Dmg::new(cartridge, None, Some(listener.clone()), None);
 
     // should be enough for the all tests in cpu_instrs/individual at least
     let timeout_cycles = 1_000_000;

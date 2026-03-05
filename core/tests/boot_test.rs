@@ -172,7 +172,7 @@ fn test_disassembly_boot() -> Result<()> {
     let game_data = std::fs::read("../tictactoe.gb")?;
     let game = Cartridge::new(game_data);
     // it actually needs a game to compare the logos
-    let mut gb = Dmg::new(game, Some(boot_rom_data));
+    let mut gb = Dmg::new(game, Some(boot_rom_data), None, None);
     let mut init_ram = false;
     let mut set_audio = false;
     let mut setup_logo = false;

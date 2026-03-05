@@ -1,12 +1,18 @@
+mod renderer;
 mod sprite;
 
 use crate::{
     dmg::Dmg,
     mem_range,
     memory::{OAM_END, OAM_START, VRAM_START},
-    ppu::sprite::{Sprite, MAX_SPRITES_IN_OAM, MAX_SPRITES_PER_LINE},
+    ppu::{
+        renderer::DefaultRenderer,
+        sprite::{Sprite, MAX_SPRITES_IN_OAM, MAX_SPRITES_PER_LINE},
+    },
     prelude::*,
 };
+
+pub use renderer::Renderer;
 
 mem_range!(PPU_REGISTER, 0xFF40, 0xFF4B);
 
@@ -71,17 +77,6 @@ impl LCDMode {
     }
 }
 
-// pub struct PixelFifo {
-//     tile: [u8; 16],
-//     head: usize,
-//     tail: usize,
-// }
-
-// impl PixelFifo {
-//     pub fn push
-// }
-
-#[derive(Debug)]
 pub struct Ppu {
     /// A "dot" = one 222 Hz (aprox 4.194 MHz) time unit. A frame is not exactly one 60th of a second: the Game Boy runs slightly slower than 60 Hz, as one frame takes ~16.74 ms instead of ~16.67
     dots: usize,
@@ -104,17 +99,39 @@ pub struct Ppu {
 
     pub last_cycles: usize,
 
-    pub framebuffer: [[u32; DMG_SCREEN_WIDTH]; DMG_SCREEN_HEIGHT],
-
+    renderer: Rc<RefCell<dyn Renderer>>,
     pub colors: [u32; 4],
 }
 
 impl Default for Ppu {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self { Self::new(Rc::new(RefCell::new(DefaultRenderer::new()))) }
+}
+
+impl std::fmt::Debug for Ppu {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Ppu {{ dots: {}, frames: {}, lcd_control: {:#04X}, lcd_status: {:#04X}, scroll_y: {}, scroll_x: {}, ly: {}, lyc: {}, dma: {}, bg_palette: {:#04X}, obj0_palette: {:#04X}, obj1_palette: {:#04X}, wy: {}, wx: {} }}",
+            self.dots,
+            self.frames,
+            self.lcd_control,
+            self.lcd_status,
+            self.scroll_y,
+            self.scroll_x,
+            self.ly,
+            self.lyc,
+            self.dma,
+            self.bg_palette,
+            self.obj0_palette,
+            self.obj1_palette,
+            self.wy,
+            self.wx
+        )
+    }
 }
 
 impl Ppu {
-    pub fn new() -> Self {
+    pub fn new(renderer: Rc<RefCell<dyn Renderer>>) -> Self {
         Self {
             dots: 0,
             frames: 0,
@@ -135,8 +152,7 @@ impl Ppu {
 
             last_cycles: 0,
 
-            framebuffer: [[0; DMG_SCREEN_WIDTH]; DMG_SCREEN_HEIGHT],
-
+            renderer,
             colors: DEFAULT_DMG_COLORS,
         }
     }
@@ -254,6 +270,8 @@ impl Ppu {
                     if gb.ppu.vblank_interrupt() {
                         gb.interrupt_flag.set_lcd_stat_interrupt(true);
                     }
+
+                    gb.ppu.renderer.borrow_mut().draw_screen();
 
                     LCDMode::VBlank
                 }
@@ -386,14 +404,21 @@ impl Ppu {
 
                 // sprite under de background
                 if sprite.priority() {
-                    let bg_pixel = gb.ppu.framebuffer[current_line as usize][screen_x as usize];
+                    let bg_pixel = gb
+                        .ppu
+                        .renderer
+                        .borrow()
+                        .read_pixel(screen_x as usize, current_line as usize);
                     if bg_pixel != gb.ppu.colors[0] {
                         continue;
                     }
                 }
 
-                gb.ppu.framebuffer[current_line as usize][screen_x as usize] =
-                    gb.ppu.get_color(palette, color_id);
+                gb.ppu.renderer.borrow_mut().write_pixel(
+                    screen_x as usize,
+                    current_line as usize,
+                    gb.ppu.get_color(palette, color_id),
+                );
             }
 
             drawn_sprites += 1;
@@ -464,7 +489,10 @@ impl Ppu {
             let color_id = (high_pixel << 1) | low_pixel;
             let color = gb.ppu.get_color(gb.ppu.bg_palette, color_id);
 
-            gb.ppu.framebuffer[current_line as usize][pixel] = color;
+            gb.ppu
+                .renderer
+                .borrow_mut()
+                .write_pixel(pixel, current_line as usize, color);
         }
 
         if window_rendered {
@@ -519,7 +547,10 @@ impl Ppu {
             let color_id = (high_pixel << 1) | low_pixel;
             let color = gb.ppu.get_color(gb.ppu.bg_palette, color_id);
 
-            gb.ppu.framebuffer[current_line as usize][pixel] = color;
+            gb.ppu
+                .renderer
+                .borrow_mut()
+                .write_pixel(pixel, current_line as usize, color);
         }
     }
 

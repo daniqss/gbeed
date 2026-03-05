@@ -13,6 +13,14 @@ pub trait SerialListener {
     fn on_transfer(&mut self, data: u8);
 }
 
+pub struct DefaultSerialListener;
+
+impl SerialListener for DefaultSerialListener {
+    fn on_transfer(&mut self, data: u8) {
+        println!("Serial transfer: {data:02X}");
+    }
+}
+
 /// # Serial Data Transfer
 /// Used for serial communication using a Link Cable between two Game Boys
 /// ## Serial transfer data (SB) - 0xFF01
@@ -22,11 +30,10 @@ pub trait SerialListener {
 /// - Transfer enable (Read/Write): If 1, a transfer is either requested or in progress.
 /// - Clock speed [CGB Mode only] (Read/Write): If set to 1, enable high speed serial clock (~256 kHz in normal-speed mode)
 /// - Clock select (Read/Write): 0 = External clock ("slave"), 1 = Internal clock ("master").
-#[derive(Default)]
 pub struct Serial {
     pub sb: u8,
     pub sc: u8,
-    serial_listener: Option<Rc<RefCell<dyn SerialListener>>>,
+    listener: Rc<RefCell<dyn SerialListener>>,
     pub data: Vec<char>,
 }
 
@@ -36,21 +43,21 @@ impl std::fmt::Debug for Serial {
     }
 }
 
+impl Default for Serial {
+    fn default() -> Self { Serial::new(Rc::new(RefCell::new(DefaultSerialListener))) }
+}
+
 impl Serial {
-    pub fn new() -> Self {
+    pub fn new(serial_listener: Rc<RefCell<dyn SerialListener>>) -> Self {
         Self {
             sb: 0x00,
             sc: 0x7E,
-            serial_listener: None,
+            listener: serial_listener,
             data: Vec::new(),
         }
     }
 
     bit_accessors!(target: sc; SC_TRANSFER_START, SC_CLOCK_SPEED, SC_CLOCK_SELECT);
-
-    pub fn set_serial_listener(&mut self, listener: Rc<RefCell<dyn SerialListener>>) {
-        self.serial_listener = Some(listener);
-    }
 }
 
 impl Accessible<u16> for Serial {
@@ -77,9 +84,7 @@ impl Accessible<u16> for Serial {
                 if self.sc_transfer_start() && self.sc_clock_select() {
                     self.data.push(self.sb as char);
 
-                    if let Some(listener) = &mut self.serial_listener {
-                        listener.borrow_mut().on_transfer(self.sb);
-                    }
+                    self.listener.borrow_mut().on_transfer(self.sb);
 
                     self.sc &= 0x7F;
                     self.sb = 0xFF;

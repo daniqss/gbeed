@@ -5,11 +5,11 @@ use crate::{
     interrupts::{IE, IF},
     joypad::JOYP,
     memory::*,
-    ppu::{DMA_REGISTER, PPU_REGISTER_END, PPU_REGISTER_START},
+    ppu::{Renderer, DMA_REGISTER, PPU_REGISTER_END, PPU_REGISTER_START},
     serial::{SERIAL_REGISTER_END, SERIAL_REGISTER_START},
     timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
     utils::{high, low, to_u16},
-    Apu, Cartridge, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
+    Apu, Cartridge, Cpu, Interrupt, Joypad, Ppu, Serial, SerialListener, Timer,
 };
 
 const BANK_REGISTER: u16 = 0xFF50;
@@ -30,13 +30,26 @@ pub struct Dmg {
 }
 
 impl Dmg {
-    pub fn new(mut cartridge: Cartridge, boot_rom: Option<Vec<u8>>) -> Dmg {
+    pub fn new(
+        mut cartridge: Cartridge,
+        boot_rom: Option<Vec<u8>>,
+        serial_listener: Option<Rc<RefCell<dyn SerialListener>>>,
+        renderer: Option<Rc<RefCell<dyn Renderer>>>,
+    ) -> Dmg {
         let joypad = Joypad::default();
-        let serial = Serial::new();
+        let serial = if let Some(listener) = serial_listener {
+            Serial::new(listener)
+        } else {
+            Serial::default()
+        };
         let timer = Timer::new();
         let apu = Apu::new();
         let interrupt_flag = Interrupt::new();
-        let ppu = Ppu::new();
+        let ppu = if let Some(renderer) = renderer {
+            Ppu::new(renderer)
+        } else {
+            Ppu::default()
+        };
         let interrupt_enable = Interrupt::new();
 
         let start_at_boot = boot_rom.is_some();
