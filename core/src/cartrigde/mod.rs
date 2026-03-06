@@ -15,7 +15,7 @@ pub struct Cartridge {
     pub raw_rom: Vec<u8>,
 
     // header
-    header: CartridgeHeader,
+    pub header: CartridgeHeader,
 
     // banks
     pub rom_bank00: Vec<u8>,
