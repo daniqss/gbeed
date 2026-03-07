@@ -3,25 +3,22 @@ use gbeed_core::Renderer;
 use raylib::ffi::PixelFormat;
 use raylib::prelude::*;
 
-// gb screen: scale 3 → 480×432
-const GB_SCALE: i32 = 3;
+const GB_SCALE: i32 = 4;
 const GB_W: i32 = DMG_SCREEN_WIDTH as i32 * GB_SCALE;
 const GB_H: i32 = DMG_SCREEN_HEIGHT as i32 * GB_SCALE;
 
 const PAD: i32 = 16;
-const HEADER_H: i32 = 38;
-// x where the right panel begins
+const HEADER_H: i32 = 34;
 const RIGHT_X: i32 = PAD + GB_W + PAD * 2;
 
-// tile viewer: 128 tiles in a 16×8 grid, native 8×8 px, upscaled ×3
 const T_COLS: i32 = 16;
 const T_ROWS: i32 = 8;
 const T_PX: i32 = 8;
 const T_SCALE: i32 = 3;
-const T_TEX_W: i32 = T_COLS * T_PX; // 128
-const T_TEX_H: i32 = T_ROWS * T_PX; // 64
-const TV_W: i32 = T_TEX_W * T_SCALE; // 384
-const TV_H: i32 = T_TEX_H * T_SCALE; // 192
+const T_TEX_W: i32 = T_COLS * T_PX;
+const T_TEX_H: i32 = T_ROWS * T_PX;
+const TV_W: i32 = T_TEX_W * T_SCALE;
+const TV_H: i32 = T_TEX_H * T_SCALE;
 
 const C_BG: Color = Color {
     r: 8,
@@ -72,7 +69,6 @@ const C_DIVIDER: Color = Color {
     a: 255,
 };
 
-// classic dmg 4-shade palette (0 = lightest, 3 = darkest)
 const GB_PAL: [Color; 4] = [
     Color {
         r: 230,
@@ -99,8 +95,6 @@ const GB_PAL: [Color; 4] = [
         a: 255,
     },
 ];
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 pub struct Texture {
     pub texture: Texture2D,
@@ -241,16 +235,18 @@ impl RaylibRenderer {
     }
 
     pub fn fps_btn_clicked(&self) -> bool {
-        let bx = RIGHT_X + 156;
-        let by = PAD + 14;
-        let bw = 118_i32;
-        let bh = 26_i32;
+        // button coords must stay in sync with draw_screen
+        let fb_w = 118_i32;
+        let fb_h = 26_i32;
+        let fb_x = PAD + GB_W - fb_w;
+        let header_cy = PAD + HEADER_H / 2;
+        let fb_y = header_cy - fb_h / 2;
         let mp = self.rl.get_mouse_position();
         self.rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT)
-            && (mp.x as i32) >= bx
-            && (mp.x as i32) < bx + bw
-            && (mp.y as i32) >= by
-            && (mp.y as i32) < by + bh
+            && (mp.x as i32) >= fb_x
+            && (mp.x as i32) < fb_x + fb_w
+            && (mp.y as i32) >= fb_y
+            && (mp.y as i32) < fb_y + fb_h
     }
 }
 
@@ -272,7 +268,6 @@ impl Renderer for RaylibRenderer {
     fn draw_screen(&mut self) {
         self.screen_texture.update();
 
-        // borrow distinct fields before begin_drawing takes &mut self.rl
         let thread = &self.thread;
         let screen_tex = &self.screen_texture.texture;
         let tile_texs = [
@@ -290,20 +285,62 @@ impl Renderer for RaylibRenderer {
         };
 
         let mut d = self.rl.begin_drawing(thread);
-        let _sw = d.get_screen_width();
+        let sw = d.get_screen_width();
         let sh = d.get_screen_height();
 
         d.clear_background(C_BG);
+
+        // vertical divider spanning full height
         d.draw_rectangle(RIGHT_X - PAD, 0, 1, sh, C_DIVIDER);
 
         // LEFT PANEL
+
         let gx = PAD;
 
-        // header: game name + region above the screen
-        d.draw_text(&game_name, gx, PAD, 22, C_TEXT);
-        d.draw_text(&format!("{game_region}"), gx, PAD + 24, 10, C_SUB);
+        // header vertically centred around header_cy
+        let header_cy = PAD + HEADER_H / 2;
 
-        // gb screen with accent border
+        let title_fs = 22;
+        let title_y = header_cy - title_fs / 2;
+        let name_w = d.measure_text(&game_name, title_fs);
+        d.draw_text(&game_name, gx, title_y, title_fs, C_TEXT);
+
+        let region_fs = 11;
+        let region_y = header_cy - region_fs / 2;
+        d.draw_text(&game_region, gx + name_w + 10, region_y, region_fs, C_SUB);
+
+        let fps_fs = 26;
+        let fps_val = d.get_fps();
+        let fps_str = format!("{fps_val:3}");
+        let fps_label_fs = 11;
+        let fps_label = "fps";
+        let fps_num_w = d.measure_text(&fps_str, fps_fs);
+        let fps_label_w = d.measure_text(fps_label, fps_label_fs);
+
+        let fb_w = 118_i32;
+        let fb_h = 26_i32;
+        let fb_x = gx + GB_W - fb_w;
+        let fb_y = header_cy - fb_h / 2;
+
+        let fps_group_w = fps_num_w + 4 + fps_label_w;
+        let fps_x = fb_x - 16 - fps_group_w;
+        let fps_y = header_cy - fps_fs / 2;
+        let fps_label_y = header_cy - fps_label_fs / 2;
+        d.draw_text(&fps_str, fps_x, fps_y, fps_fs, C_TEXT);
+        d.draw_text(fps_label, fps_x + fps_num_w + 4, fps_label_y, fps_label_fs, C_SUB);
+
+        d.draw_rectangle(fb_x, fb_y, fb_w, fb_h, C_PANEL);
+        d.draw_rectangle_lines(fb_x, fb_y, fb_w, fb_h, Color::WHITE);
+        let tw = d.measure_text(target_str, 12);
+        d.draw_text(
+            target_str,
+            fb_x + (fb_w - tw) / 2,
+            fb_y + (fb_h - 12) / 2,
+            12,
+            Color::WHITE,
+        );
+
+        // gb screen starts immediately after header
         let gy = PAD + HEADER_H;
         d.draw_rectangle(gx - 3, gy - 3, GB_W + 6, GB_H + 6, C_ACCENT_DIM);
         d.draw_rectangle_lines(gx - 3, gy - 3, GB_W + 6, GB_H + 6, C_ACCENT);
@@ -316,79 +353,67 @@ impl Renderer for RaylibRenderer {
             Color::WHITE,
         );
 
-        // controls
+        // controls centred under the gb screen
+        // screen spans gx..gx+GB_W, centre = gx + GB_W/2
         let ctrl_y = gy + GB_H + PAD * 2;
-        d.draw_text("controls", gx, ctrl_y, 10, C_SUB);
+        let screen_cx = gx + GB_W / 2;
 
-        // d-pad
-        let dpx = gx + 78;
-        let dpy = ctrl_y + 72;
-        let bs = 34_i32;
-        let gap = 3_i32;
-        draw_pad_btn(
-            &mut d,
-            dpx - bs / 2,
-            dpy - bs - gap,
-            bs,
-            bs,
-            "W",
-            "UP",
-            buttons.up,
-        );
-        draw_pad_btn(&mut d, dpx - bs / 2, dpy + gap, bs, bs, "S", "DN", buttons.down);
-        draw_pad_btn(
-            &mut d,
-            dpx - bs - gap,
-            dpy - bs / 2,
-            bs,
-            bs,
-            "A",
-            "LT",
-            buttons.left,
-        );
-        draw_pad_btn(&mut d, dpx + gap, dpy - bs / 2, bs, bs, "D", "RT", buttons.right);
-        // centre cap
-        d.draw_rectangle(dpx - bs / 2, dpy - bs / 2, bs, bs, C_PANEL);
-        d.draw_rectangle_lines(dpx - bs / 2, dpy - bs / 2, bs, bs, C_BORDER);
+        // dpad: centre the cross on screen_cx - 160 (leave room for a/b on the right)
+        let dpx = screen_cx - 160;
+        let dpy = ctrl_y + 50;
+        let arm = 28_i32;
+        let s = 17_i32;
 
-        // a/b (diagonal like the real dmg)
-        let abx = gx + 340;
+        // apex toward center: up=0°, down=180°, left=270°, right=90°
+        draw_pad_btn(&mut d, dpx, dpy - arm, s, 0.0, "W", buttons.up);
+        draw_pad_btn(&mut d, dpx, dpy + arm, s, 180.0, "S", buttons.down);
+        draw_pad_btn(&mut d, dpx - arm, dpy, s, 270.0, "A", buttons.left);
+        draw_pad_btn(&mut d, dpx + arm, dpy, s, 90.0, "D", buttons.right);
+
+        // start / select centred between dpad and a/b
+        let ss_cx = screen_cx;
+        let ss_w = 60_i32;
+        let ss_gap = 18_i32;
+        let ss_total = ss_w * 2 + ss_gap;
+        let ss_x = ss_cx - ss_total / 2;
+        let ss_y = dpy - 10;
+        draw_small_btn(
+            &mut d,
+            ss_x,
+            ss_y,
+            ss_w,
+            20,
+            "SELECT",
+            "SHIFT / ;",
+            buttons.select,
+        );
+        draw_small_btn(
+            &mut d,
+            ss_x + ss_w + ss_gap,
+            ss_y,
+            ss_w,
+            20,
+            "START",
+            "L",
+            buttons.start,
+        );
+
+        // a/b: centre on screen_cx + 160
+        let abx = screen_cx + 160;
         let aby = ctrl_y + 24;
         let abs = 36_i32;
-        draw_action_btn(&mut d, abx + 48, aby, abs, "A", "Z / J", buttons.a);
-        draw_action_btn(&mut d, abx, aby + 44, abs, "B", "X / K", buttons.b);
-
-        // start / select
-        let ss_x = gx + 148;
-        let ss_y = ctrl_y + 106;
-        draw_small_btn(&mut d, ss_x, ss_y, 60, 20, "SELECT", "SHIFT / ;", buttons.select);
-        draw_small_btn(&mut d, ss_x + 78, ss_y, 60, 20, "START", "L", buttons.start);
+        draw_action_btn(&mut d, abx - abs / 2 + 24, aby, abs, "A", "Z / J", buttons.a);
+        draw_action_btn(&mut d, abx - abs / 2 - 24, aby + 44, abs, "B", "X / K", buttons.b);
 
         // RIGHT PANEL
         let rx = RIGHT_X;
 
-        // fps counter + cycle button
-        let fps_val = d.get_fps();
-        d.draw_text("frame rate", rx, PAD, 10, C_SUB);
-        d.draw_text(&format!("{fps_val:3}"), rx, PAD + 14, 26, C_TEXT);
-        d.draw_text("fps", rx + 48, PAD + 22, 12, C_SUB);
-
-        let fb_x = rx + 156;
-        let fb_y = PAD + 14;
-        let fb_w = 118_i32;
-        let fb_h = 26_i32;
-        d.draw_rectangle(fb_x, fb_y, fb_w, fb_h, C_PANEL);
-        d.draw_rectangle_lines(fb_x, fb_y, fb_w, fb_h, C_ACCENT);
-        let tw = d.measure_text(target_str, 12);
-        d.draw_text(target_str, fb_x + (fb_w - tw) / 2, fb_y + 7, 12, C_ACCENT);
-
-        // three vram tile viewers
         const TV_LABELS: [&str; 3] = [
             "vram  $8000-$87ff  (block 0)",
             "vram  $8800-$8fff  (block 1)",
             "vram  $9000-$97ff  (block 2)",
         ];
-        let tv_start_y = PAD + 50;
+        let tv_start_y = PAD;
         let tv_stride = 12 + TV_H + 14;
 
         for i in 0..3_usize {
@@ -407,7 +432,6 @@ impl Renderer for RaylibRenderer {
                 Color::WHITE,
             );
 
-            // tile grid overlay
             let grid_col = Color {
                 r: 0,
                 g: 0,
@@ -427,12 +451,11 @@ impl Renderer for RaylibRenderer {
 
 fn draw_pad_btn(
     d: &mut RaylibDrawHandle,
-    x: i32,
-    y: i32,
-    w: i32,
-    h: i32,
+    cx: i32,
+    cy: i32,
+    s: i32,
+    rotation_deg: f32,
     key: &str,
-    hint: &str,
     pressed: bool,
 ) {
     let (bg, fg, bd) = if pressed {
@@ -440,20 +463,36 @@ fn draw_pad_btn(
     } else {
         (C_PANEL, C_TEXT, C_BORDER)
     };
-    d.draw_rectangle(x, y, w, h, bg);
-    d.draw_rectangle_lines(x, y, w, h, bd);
-    let fs = 14;
+
+    let sf = s as f32;
+    let base: [(f32, f32); 5] = [(-sf, -sf), (sf, -sf), (sf, 0.0), (0.0, sf), (-sf, 0.0)];
+
+    let rad = rotation_deg.to_radians();
+    let (sin_r, cos_r) = rad.sin_cos();
+
+    let verts: Vec<Vector2> = base
+        .iter()
+        .map(|&(x, y)| {
+            Vector2::new(
+                cx as f32 + x * cos_r - y * sin_r,
+                cy as f32 + x * sin_r + y * cos_r,
+            )
+        })
+        .collect();
+
+    // fan of 3 triangles, CCW winding in screen space
+    d.draw_triangle(verts[0], verts[3], verts[1], bg); // A D B
+    d.draw_triangle(verts[0], verts[4], verts[3], bg); // A E D
+    d.draw_triangle(verts[1], verts[3], verts[2], bg); // B D C
+
+    // outline
+    for i in 0..5 {
+        d.draw_line_v(verts[i], verts[(i + 1) % 5], bd);
+    }
+
+    let fs = 11;
     let tw = d.measure_text(key, fs);
-    d.draw_text(key, x + (w - tw) / 2, y + (h - fs) / 2 - 3, fs, fg);
-    let hs = 8;
-    let hw = d.measure_text(hint, hs);
-    d.draw_text(
-        hint,
-        x + (w - hw) / 2,
-        y + (h - fs) / 2 + fs - 1,
-        hs,
-        if pressed { C_BG } else { C_SUB },
-    );
+    d.draw_text(key, cx - tw / 2, cy - fs / 2, fs, fg);
 }
 
 fn draw_action_btn(
