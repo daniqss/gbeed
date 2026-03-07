@@ -3,6 +3,8 @@ use gbeed_core::Renderer;
 use raylib::ffi::PixelFormat;
 use raylib::prelude::*;
 
+use crate::colors;
+
 const GB_SCALE: i32 = 4;
 const GB_W: i32 = DMG_SCREEN_WIDTH as i32 * GB_SCALE;
 const GB_H: i32 = DMG_SCREEN_HEIGHT as i32 * GB_SCALE;
@@ -20,82 +22,6 @@ const T_TEX_H: i32 = T_ROWS * T_PX;
 const TV_W: i32 = T_TEX_W * T_SCALE;
 const TV_H: i32 = T_TEX_H * T_SCALE;
 
-const C_BG: Color = Color {
-    r: 8,
-    g: 10,
-    b: 16,
-    a: 255,
-};
-const C_PANEL: Color = Color {
-    r: 15,
-    g: 19,
-    b: 29,
-    a: 255,
-};
-const C_BORDER: Color = Color {
-    r: 30,
-    g: 40,
-    b: 56,
-    a: 255,
-};
-const C_ACCENT: Color = Color {
-    r: 68,
-    g: 210,
-    b: 84,
-    a: 255,
-};
-const C_ACCENT_DIM: Color = Color {
-    r: 24,
-    g: 58,
-    b: 30,
-    a: 255,
-};
-const C_TEXT: Color = Color {
-    r: 216,
-    g: 238,
-    b: 216,
-    a: 255,
-};
-const C_SUB: Color = Color {
-    r: 80,
-    g: 116,
-    b: 82,
-    a: 255,
-};
-const C_DIVIDER: Color = Color {
-    r: 28,
-    g: 36,
-    b: 50,
-    a: 255,
-};
-
-const GB_PAL: [Color; 4] = [
-    Color {
-        r: 230,
-        g: 252,
-        b: 214,
-        a: 255,
-    },
-    Color {
-        r: 136,
-        g: 194,
-        b: 112,
-        a: 255,
-    },
-    Color {
-        r: 48,
-        g: 106,
-        b: 80,
-        a: 255,
-    },
-    Color {
-        r: 8,
-        g: 18,
-        b: 22,
-        a: 255,
-    },
-];
-
 pub struct Texture {
     pub texture: Texture2D,
     pub pixels: Vec<u8>,
@@ -103,7 +29,7 @@ pub struct Texture {
 
 impl Texture {
     pub fn new(rl: &mut RaylibHandle, thread: &RaylibThread, width: i32, height: i32) -> Self {
-        let mut img = Image::gen_image_color(width, height, Color::BLACK);
+        let mut img = Image::gen_image_color(width, height, colors::BACKGROUND);
         img.set_format(PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
         let texture = rl.load_texture_from_image(thread, &img).unwrap();
         let pixels = vec![0u8; (width * height * 3) as usize];
@@ -204,7 +130,7 @@ impl RaylibRenderer {
                 for col in 0..8_usize {
                     let bit = 7 - col;
                     let color_idx = (((hi >> bit) & 1) << 1) | ((lo >> bit) & 1);
-                    let c = GB_PAL[color_idx as usize];
+                    let c = colors::GB_PALETTE[color_idx as usize];
                     let px = tile_base_x + col;
                     let py = tile_base_y + row;
                     let i = (py * stride + px) * 3;
@@ -285,13 +211,13 @@ impl Renderer for RaylibRenderer {
         };
 
         let mut d = self.rl.begin_drawing(thread);
-        let sw = d.get_screen_width();
+        let _sw = d.get_screen_width();
         let sh = d.get_screen_height();
 
-        d.clear_background(C_BG);
+        d.clear_background(colors::BACKGROUND);
 
         // vertical divider spanning full height
-        d.draw_rectangle(RIGHT_X - PAD, 0, 1, sh, C_DIVIDER);
+        d.draw_rectangle(RIGHT_X - PAD, 0, 1, sh, colors::SECONDARY);
 
         // LEFT PANEL
 
@@ -303,11 +229,17 @@ impl Renderer for RaylibRenderer {
         let title_fs = 22;
         let title_y = header_cy - title_fs / 2;
         let name_w = d.measure_text(&game_name, title_fs);
-        d.draw_text(&game_name, gx, title_y, title_fs, C_TEXT);
+        d.draw_text(&game_name, gx, title_y, title_fs, colors::FOREGROUND);
 
         let region_fs = 11;
         let region_y = header_cy - region_fs / 2;
-        d.draw_text(&game_region, gx + name_w + 10, region_y, region_fs, C_SUB);
+        d.draw_text(
+            &game_region,
+            gx + name_w + 10,
+            region_y,
+            region_fs,
+            colors::SECONDARY,
+        );
 
         let fps_fs = 26;
         let fps_val = d.get_fps();
@@ -326,24 +258,30 @@ impl Renderer for RaylibRenderer {
         let fps_x = fb_x - 16 - fps_group_w;
         let fps_y = header_cy - fps_fs / 2;
         let fps_label_y = header_cy - fps_label_fs / 2;
-        d.draw_text(&fps_str, fps_x, fps_y, fps_fs, C_TEXT);
-        d.draw_text(fps_label, fps_x + fps_num_w + 4, fps_label_y, fps_label_fs, C_SUB);
+        d.draw_text(&fps_str, fps_x, fps_y, fps_fs, colors::FOREGROUND);
+        d.draw_text(
+            fps_label,
+            fps_x + fps_num_w + 4,
+            fps_label_y,
+            fps_label_fs,
+            colors::SECONDARY,
+        );
 
-        d.draw_rectangle(fb_x, fb_y, fb_w, fb_h, C_PANEL);
-        d.draw_rectangle_lines(fb_x, fb_y, fb_w, fb_h, Color::WHITE);
+        d.draw_rectangle(fb_x, fb_y - 4, fb_w, fb_h, colors::BACKGROUND);
+        d.draw_rectangle_lines(fb_x, fb_y - 4, fb_w, fb_h, colors::PRIMARY);
         let tw = d.measure_text(target_str, 12);
         d.draw_text(
             target_str,
             fb_x + (fb_w - tw) / 2,
-            fb_y + (fb_h - 12) / 2,
+            fb_y + (fb_h - 15) / 2,
             12,
-            Color::WHITE,
+            colors::PRIMARY,
         );
 
         // gb screen starts immediately after header
         let gy = PAD + HEADER_H;
-        d.draw_rectangle(gx - 3, gy - 3, GB_W + 6, GB_H + 6, C_ACCENT_DIM);
-        d.draw_rectangle_lines(gx - 3, gy - 3, GB_W + 6, GB_H + 6, C_ACCENT);
+        d.draw_rectangle(gx - 3, gy - 3, GB_W + 6, GB_H + 6, colors::PRIMARY);
+        d.draw_rectangle_lines(gx - 3, gy - 3, GB_W + 6, GB_H + 6, colors::PRIMARY);
         d.draw_texture_pro(
             screen_tex,
             Rectangle::new(0.0, 0.0, DMG_SCREEN_WIDTH as f32, DMG_SCREEN_HEIGHT as f32),
@@ -420,9 +358,9 @@ impl Renderer for RaylibRenderer {
             let ty = tv_start_y + i as i32 * tv_stride;
             let tty = ty + 12;
 
-            d.draw_text(TV_LABELS[i], rx, ty, 10, C_SUB);
-            d.draw_rectangle(rx - 2, tty - 2, TV_W + 4, TV_H + 4, C_PANEL);
-            d.draw_rectangle_lines(rx - 2, tty - 2, TV_W + 4, TV_H + 4, C_BORDER);
+            d.draw_text(TV_LABELS[i], rx, ty, 10, colors::SECONDARY);
+            d.draw_rectangle(rx - 2, tty - 2, TV_W + 4, TV_H + 4, colors::BACKGROUND);
+            d.draw_rectangle_lines(rx - 2, tty - 2, TV_W + 4, TV_H + 4, colors::BACKGROUND);
             d.draw_texture_pro(
                 tile_texs[i],
                 Rectangle::new(0.0, 0.0, T_TEX_W as f32, T_TEX_H as f32),
@@ -432,12 +370,8 @@ impl Renderer for RaylibRenderer {
                 Color::WHITE,
             );
 
-            let grid_col = Color {
-                r: 0,
-                g: 0,
-                b: 0,
-                a: 60,
-            };
+            let mut grid_col = colors::BACKGROUND;
+            grid_col.a = 60;
             let cell = T_PX * T_SCALE;
             for col in 0..=T_COLS {
                 d.draw_line(rx + col * cell, tty, rx + col * cell, tty + TV_H, grid_col);
@@ -459,9 +393,9 @@ fn draw_pad_btn(
     pressed: bool,
 ) {
     let (bg, fg, bd) = if pressed {
-        (C_ACCENT, C_BG, C_ACCENT)
+        (colors::PRIMARY, colors::BACKGROUND, colors::PRIMARY)
     } else {
-        (C_PANEL, C_TEXT, C_BORDER)
+        (colors::BACKGROUND, colors::FOREGROUND, colors::SECONDARY)
     };
 
     let sf = s as f32;
@@ -505,9 +439,9 @@ fn draw_action_btn(
     pressed: bool,
 ) {
     let (bg, fg, bd) = if pressed {
-        (C_ACCENT, C_BG, C_ACCENT)
+        (colors::PRIMARY, colors::BACKGROUND, colors::PRIMARY)
     } else {
-        (C_PANEL, C_TEXT, C_BORDER)
+        (colors::BACKGROUND, colors::FOREGROUND, colors::SECONDARY)
     };
     d.draw_rectangle(x, y, size, size, bg);
     d.draw_rectangle_lines(x, y, size, size, bd);
@@ -516,7 +450,7 @@ fn draw_action_btn(
     d.draw_text(label, x + (size - tw) / 2, y + (size - fs) / 2, fs, fg);
     let ks = 8;
     let kw = d.measure_text(key, ks);
-    d.draw_text(key, x + (size - kw) / 2, y + size + 4, ks, C_SUB);
+    d.draw_text(key, x + (size - kw) / 2, y + size + 4, ks, colors::SECONDARY);
 }
 
 fn draw_small_btn(
@@ -530,14 +464,14 @@ fn draw_small_btn(
     pressed: bool,
 ) {
     let (bg, fg, bd) = if pressed {
-        (C_ACCENT, C_BG, C_ACCENT)
+        (colors::PRIMARY, colors::BACKGROUND, colors::PRIMARY)
     } else {
-        (C_PANEL, C_TEXT, C_BORDER)
+        (colors::BACKGROUND, colors::FOREGROUND, colors::SECONDARY)
     };
     d.draw_rectangle(x, y, w, h, bg);
     d.draw_rectangle_lines(x, y, w, h, bd);
     let fs = 9;
     let tw = d.measure_text(label, fs);
     d.draw_text(label, x + (w - tw) / 2, y + (h - fs) / 2, fs, fg);
-    d.draw_text(key, x, y + h + 3, 7, C_SUB);
+    d.draw_text(key, x, y + h + 3, 7, colors::SECONDARY);
 }
