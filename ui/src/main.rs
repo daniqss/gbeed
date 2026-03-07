@@ -123,11 +123,13 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         {
             let mut r = renderer.borrow_mut();
 
-            let vram: Vec<u8> = (0x8000_u16..=0x97FF_u16).map(|addr| gb.read(addr)).collect();
+            let vram: Vec<u8> = (0x8000_u16..=0x9BFF_u16).map(|addr| gb.read(addr)).collect();
 
             r.update_tiles(0, &vram[0x0000..0x0800]);
             r.update_tiles(1, &vram[0x0800..0x1000]);
             r.update_tiles(2, &vram[0x1000..0x1800]);
+
+            r.update_bg_map(&vram[0x1800..0x1C00], &vram[0x0000..0x1000]);
         }
     }
 

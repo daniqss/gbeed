@@ -12,6 +12,9 @@ const GB_H: i32 = DMG_SCREEN_HEIGHT as i32 * GB_SCALE;
 const PAD: i32 = 16;
 const HEADER_H: i32 = 34;
 const RIGHT_X: i32 = PAD + GB_W + PAD * 2;
+const BG_MAP_W: i32 = GB_H;
+const BG_MAP_H: i32 = GB_H;
+const FAR_RIGHT_X: i32 = RIGHT_X + BG_MAP_W + PAD * 2;
 
 const T_COLS: i32 = 16;
 const T_ROWS: i32 = 8;
@@ -78,7 +81,7 @@ pub struct RaylibRenderer {
 
 impl RaylibRenderer {
     pub fn new() -> Self {
-        let (mut rl, thread) = raylib::init().size(1280, 720).title("gbeed").resizable().build();
+        let (mut rl, thread) = raylib::init().size(1920, 1080).title("gbeed").resizable().build();
         rl.set_target_fps(60);
 
         let screen_texture = Texture::new(
@@ -137,6 +140,37 @@ impl RaylibRenderer {
                     tex.pixels[i] = c.r;
                     tex.pixels[i + 1] = c.g;
                     tex.pixels[i + 2] = c.b;
+                }
+            }
+        }
+        tex.update();
+    }
+
+    pub fn update_bg_map(&mut self, map_data: &[u8], tile_data: &[u8]) {
+        let tex = &mut self.bg_map_texture;
+        let stride = 256;
+
+        for ty in 0..32_usize {
+            for tx in 0..32_usize {
+                let tile_idx = map_data[ty * 32 + tx] as usize;
+                let tile_base = tile_idx * 16;
+                let px_base = tx * 8;
+                let py_base = ty * 8;
+
+                for row in 0..8_usize {
+                    let lo = tile_data.get(tile_base + row * 2).copied().unwrap_or(0);
+                    let hi = tile_data.get(tile_base + row * 2 + 1).copied().unwrap_or(0);
+                    for col in 0..8_usize {
+                        let bit = 7 - col;
+                        let color_idx = (((hi >> bit) & 1) << 1) | ((lo >> bit) & 1);
+                        let c = colors::GB_PALETTE[color_idx as usize];
+                        let px = px_base + col;
+                        let py = py_base + row;
+                        let i = (py * stride + px) * 3;
+                        tex.pixels[i] = c.r;
+                        tex.pixels[i + 1] = c.g;
+                        tex.pixels[i + 2] = c.b;
+                    }
                 }
             }
         }
@@ -343,24 +377,35 @@ impl Renderer for RaylibRenderer {
         draw_action_btn(&mut d, abx - abs / 2 + 24, aby, abs, "A", "Z / J", buttons.a);
         draw_action_btn(&mut d, abx - abs / 2 - 24, aby + 44, abs, "B", "X / K", buttons.b);
 
-        // RIGHT PANEL
-        let rx = RIGHT_X;
+        // MIDDLE PANEL (BG Map)
+        let mx = RIGHT_X;
+        let bgy = gy;
+        let bg_map_y = bgy - 12;
+        d.draw_text("bg map $9800", mx, bg_map_y, 10, colors::SECONDARY);
+        d.draw_texture_pro(
+            &self.bg_map_texture.texture,
+            Rectangle::new(0.0, 0.0, 256.0, 256.0),
+            Rectangle::new(mx as f32, bgy as f32, BG_MAP_W as f32, BG_MAP_H as f32),
+            Vector2::ZERO,
+            0.0,
+            Color::WHITE,
+        );
+
+        // RIGHT PANEL (Tiles)
+        let rx = FAR_RIGHT_X;
 
         const TV_LABELS: [&str; 3] = [
             "vram  $8000-$87ff  (block 0)",
             "vram  $8800-$8fff  (block 1)",
             "vram  $9000-$97ff  (block 2)",
         ];
-        let tv_start_y = PAD;
-        let tv_stride = 12 + TV_H + 14;
+        let tv_stride = TV_H + 16;
 
         for i in 0..3_usize {
-            let ty = tv_start_y + i as i32 * tv_stride;
-            let tty = ty + 12;
+            let tty = gy + i as i32 * tv_stride;
+            let ty = tty - 12;
 
             d.draw_text(TV_LABELS[i], rx, ty, 10, colors::SECONDARY);
-            d.draw_rectangle(rx - 2, tty - 2, TV_W + 4, TV_H + 4, colors::BACKGROUND);
-            d.draw_rectangle_lines(rx - 2, tty - 2, TV_W + 4, TV_H + 4, colors::BACKGROUND);
             d.draw_texture_pro(
                 tile_texs[i],
                 Rectangle::new(0.0, 0.0, T_TEX_W as f32, T_TEX_H as f32),
