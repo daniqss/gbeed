@@ -32,13 +32,13 @@ pub struct CartridgeHeader {
 }
 
 impl CartridgeHeader {
-    pub fn new(raw_rom: &Vec<u8>) -> Self {
+    pub fn new(raw_rom: &[u8]) -> Self {
         let (rom_size, rom_banks_count) = get_rom_size(raw_rom[ROM_SIZE_ADDRESS]);
         let (external_ram_size, external_ram_banks_count) = get_ram_size(raw_rom[RAM_SIZE_ADDRESS]);
 
         Self {
-            is_pre_sgb: get_license(&raw_rom).0,
-            license: get_license(&raw_rom).1,
+            is_pre_sgb: get_license(raw_rom).0,
+            license: get_license(raw_rom).1,
             title: raw_rom[TITLE_START..TITLE_END]
                 .iter()
                 .map(|&c| c as char)
@@ -106,12 +106,7 @@ impl std::fmt::Display for CartridgeHeader {
 }
 
 /// indicates if the game supports Super Gameboy
-fn get_supports_sgb(flag: u8) -> bool {
-    match flag {
-        0x03 => true,
-        _ => false,
-    }
-}
+fn get_supports_sgb(flag: u8) -> bool { matches!(flag, 0x03) }
 
 fn get_cartridge_type(byte: u8) -> Mbc {
     match byte {

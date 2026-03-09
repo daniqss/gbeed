@@ -21,7 +21,6 @@ pub use interrupts::Interrupt;
 pub use joypad::Joypad;
 pub use joypad::JoypadButton;
 pub use memory::*;
-pub use ppu::Ppu;
-pub use ppu::Renderer;
+pub use ppu::{DefaultRenderer, Ppu, Renderer};
 pub use serial::{Serial, SerialListener};
 pub use timer::Timer;

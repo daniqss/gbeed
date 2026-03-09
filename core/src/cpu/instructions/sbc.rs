@@ -57,7 +57,7 @@ impl Instruction for SbcPointedByHL {
         Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
-    fn disassembly(&self) -> String { format!("sbc a,[hl]") }
+    fn disassembly(&self) -> String { "sbc a,[hl]".to_string() }
 }
 
 /// Subtraction with carry instruction

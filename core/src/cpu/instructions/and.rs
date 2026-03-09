@@ -44,7 +44,7 @@ impl Instruction for AndPointedByHL {
         Ok(InstructionEffect::new(self.info(), and_u8_flags(gb.cpu.a)))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
-    fn disassembly(&self) -> String { format!("and [hl]") }
+    fn disassembly(&self) -> String { "and [hl]".to_string() }
 }
 
 pub struct AndImm8 {

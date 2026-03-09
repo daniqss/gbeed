@@ -57,7 +57,7 @@ impl Instruction for AdcPointedByHL {
         Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
-    fn disassembly(&self) -> String { format!("adc a,[hl]") }
+    fn disassembly(&self) -> String { "adc a,[hl]".to_string() }
 }
 
 /// Add with carry instruction

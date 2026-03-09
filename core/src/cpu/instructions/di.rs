@@ -19,5 +19,5 @@ impl Instruction for Di {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
-    fn disassembly(&self) -> String { format!("di") }
+    fn disassembly(&self) -> String { "di".to_string() }
 }

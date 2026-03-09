@@ -1,0 +1,42 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "just build",
+      "type": "shell",
+      "command": "just",
+      "args": ["build"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "cargo build (ui)",
+      "type": "cargo",
+      "command": "build",
+      "args": [
+        "--package",
+        "gbeed-ui"
+      ],
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "cargo build (core)",
+      "type": "cargo",
+      "command": "build",
+      "args": [
+        "--package",
+        "gbeed-core"
+      ],
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "group": "build"
+    }
+  ]
+}

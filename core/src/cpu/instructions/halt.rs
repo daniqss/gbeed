@@ -19,5 +19,5 @@ impl Instruction for Halt {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }
-    fn disassembly(&self) -> String { format!("halt") }
+    fn disassembly(&self) -> String { "halt".to_string() }
 }

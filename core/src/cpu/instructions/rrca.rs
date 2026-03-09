@@ -40,7 +40,7 @@ impl Instruction for Rrca {
     }
 
     fn info(&self) -> (u8, u8) { (1, 1) }
-    fn disassembly(&self) -> String { format!("rrca") }
+    fn disassembly(&self) -> String { "rrca".to_string() }
 }
 
 #[cfg(test)]

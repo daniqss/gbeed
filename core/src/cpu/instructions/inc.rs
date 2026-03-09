@@ -50,7 +50,7 @@ impl Instruction for IncPointedByHL {
         Ok(InstructionEffect::new(self.info(), inc_u8_flags(n8, result)))
     }
     fn info(&self) -> (u8, u8) { (3, 1) }
-    fn disassembly(&self) -> String { format!("inc [hl]") }
+    fn disassembly(&self) -> String { "inc [hl]".to_string() }
 }
 
 pub struct IncR16 {
@@ -84,5 +84,5 @@ impl Instruction for IncStackPointer {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
-    fn disassembly(&self) -> String { format!("inc sp") }
+    fn disassembly(&self) -> String { "inc sp".to_string() }
 }

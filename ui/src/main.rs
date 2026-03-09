@@ -26,6 +26,7 @@ impl RaylibController {
 impl Renderer for RaylibController {
     fn read_pixel(&self, x: usize, y: usize) -> u32 { self.renderer.read_pixel(x, y) }
     fn write_pixel(&mut self, x: usize, y: usize, color: u32) { self.renderer.write_pixel(x, y, color); }
+    fn get_color(&self, palette: u8, color_id: u8) -> u32 { self.renderer.get_color(palette, color_id) }
     fn draw_screen(&mut self) { self.renderer.draw_screen() }
 }
 
@@ -113,10 +114,12 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let region = game.header.destination;
     controller.renderer.set_game_info(title, region);
 
+    println!("Starting emulator with game ROM and boot ROM (if provided)...");
+
     let mut gb = Dmg::new(game, boot_rom);
 
-    while controller.renderer.rl.window_should_close()
-        || controller.renderer.rl.is_key_down(KeyboardKey::KEY_ESCAPE)
+    while !controller.renderer.rl.window_should_close()
+        && !controller.renderer.rl.is_key_down(KeyboardKey::KEY_ESCAPE)
     {
         let input = read_input(&controller.renderer.rl);
 

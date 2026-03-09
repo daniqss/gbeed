@@ -57,7 +57,7 @@ impl Instruction for AddAPointedByHL {
         Ok(InstructionEffect::new(self.info(), add_u8_flags(gb.cpu.a, old_a)))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
-    fn disassembly(&self) -> String { format!("add a,[hl]") }
+    fn disassembly(&self) -> String { "add a,[hl]".to_string() }
 }
 
 pub struct AddImm8 {
@@ -119,7 +119,7 @@ impl Instruction for AddHLSP {
         Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
-    fn disassembly(&self) -> String { format!("add hl,sp") }
+    fn disassembly(&self) -> String { "add hl,sp".to_string() }
 }
 
 pub struct AddSPImm8 {

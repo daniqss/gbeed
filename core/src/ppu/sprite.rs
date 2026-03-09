@@ -1,4 +1,4 @@
-use crate::{dmg::Dmg, prelude::*};
+use crate::{prelude::*, Ppu};
 
 const PRIORITY: u8 = 0x80;
 const YFLIP: u8 = 0x40;
@@ -20,20 +20,20 @@ pub struct Sprite {
 
 impl Sprite {
     // we should probably implement slices for mmu to have better access
-    pub fn from_oam(gb: &Dmg, index: u16) -> Self {
+    pub fn from_oam(ppu: &Ppu, index: u16) -> Self {
         Self {
-            ypos: gb.read(index).wrapping_sub(16),
-            xpos: gb.read(index + 1).wrapping_sub(8),
-            tile_index: gb.read(index + 2),
-            flags: gb.read(index + 3),
+            ypos: ppu.read(index).wrapping_sub(16),
+            xpos: ppu.read(index + 1).wrapping_sub(8),
+            tile_index: ppu.read(index + 2),
+            flags: ppu.read(index + 3),
         }
     }
 
-    pub fn _to_oam(&self, gb: &mut Dmg, index: u16) {
-        gb.write(index, self.ypos);
-        gb.write(index + 1, self.xpos);
-        gb.write(index + 2, self.tile_index);
-        gb.write(index + 3, self.flags);
+    pub fn _to_oam(&self, ppu: &mut Ppu, index: u16) {
+        ppu.write(index, self.ypos);
+        ppu.write(index + 1, self.xpos);
+        ppu.write(index + 2, self.tile_index);
+        ppu.write(index + 3, self.flags);
     }
 
     bit_accessors! {

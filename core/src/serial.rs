@@ -76,8 +76,6 @@ impl Accessible<u16> for Serial {
     }
 
     fn write(&mut self, address: u16, value: u8) {
-        let value = value & 0xFF;
-
         match address {
             SB => self.sb = value,
 

@@ -55,7 +55,7 @@ impl Instruction for CpPointedByHL {
         ))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
-    fn disassembly(&self) -> String { format!("cp [hl]") }
+    fn disassembly(&self) -> String { "cp [hl]".to_string() }
 }
 
 pub struct CpImm8 {

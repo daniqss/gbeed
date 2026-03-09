@@ -27,5 +27,5 @@ impl Instruction for Ccf {
         ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
-    fn disassembly(&self) -> String { format!("ccf") }
+    fn disassembly(&self) -> String { "ccf".to_string() }
 }

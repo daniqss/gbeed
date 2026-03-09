@@ -42,7 +42,7 @@ impl Instruction for Rla {
     }
 
     fn info(&self) -> (u8, u8) { (1, 1) }
-    fn disassembly(&self) -> String { format!("rla") }
+    fn disassembly(&self) -> String { "rla".to_string() }
 }
 
 #[cfg(test)]

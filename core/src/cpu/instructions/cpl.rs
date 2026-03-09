@@ -29,5 +29,5 @@ impl Instruction for Cpl {
         ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
-    fn disassembly(&self) -> String { format!("cpl") }
+    fn disassembly(&self) -> String { "cpl".to_string() }
 }

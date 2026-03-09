@@ -7,6 +7,7 @@ use crate::{
     memory::{OAM_END, OAM_START, VRAM_START},
     ppu::sprite::{Sprite, MAX_SPRITES_IN_OAM, MAX_SPRITES_PER_LINE},
     prelude::*,
+    Interrupt, OAM_SIZE, VRAM_END, VRAM_SIZE,
 };
 
 pub use renderer::{DefaultRenderer, Renderer};
@@ -41,8 +42,6 @@ const FINISH_OAM_SCAN_DOTS: usize = 80;
 const FINISH_DRAWING_DOTS: usize = 172;
 const FINISH_HBLANK_DOTS: usize = 204;
 const FINISH_VBLANK_DOTS: usize = DOTS_PER_SCANLINE;
-
-const DEFAULT_DMG_COLORS: [u32; 4] = [0xC4CFA1, 0x8B956D, 0x4D533C, 0x1F1F1F];
 
 const DEFAULT_WINDOW_BASE_ADDR: u16 = 0x9800;
 const COND_WINDOW_BASE_ADDR: u16 = 0x9C00;
@@ -79,6 +78,9 @@ pub struct Ppu {
     dots: usize,
     frames: usize,
 
+    pub vram: [u8; VRAM_SIZE as usize],
+    pub oam_ram: [u8; OAM_SIZE as usize],
+
     lcd_control: u8,
     lcd_status: u8,
     scroll_y: u8,
@@ -95,8 +97,6 @@ pub struct Ppu {
     window_line_counter: u8,
 
     pub last_cycles: usize,
-
-    pub colors: [u32; 4],
 }
 
 impl Default for Ppu {
@@ -132,6 +132,9 @@ impl Ppu {
             dots: 0,
             frames: 0,
 
+            vram: [0; VRAM_SIZE as usize],
+            oam_ram: [0; OAM_SIZE as usize],
+
             lcd_control: 0x91,
             lcd_status: 0,
             scroll_y: 0,
@@ -147,8 +150,6 @@ impl Ppu {
             window_line_counter: 0,
 
             last_cycles: 0,
-
-            colors: DEFAULT_DMG_COLORS,
         }
     }
 
@@ -194,21 +195,16 @@ impl Ppu {
     #[inline]
     /// If LY equals LYC, the LYC=LY flag in STAT register is set.
     /// And if the corresponding interrupt is enabled, the LCD STAT interrupt is requested.
-    fn ly_equals_lyc_check(gb: &mut Dmg) {
-        if gb.ppu.ly == gb.ppu.lyc {
-            gb.ppu.set_lyc_eq_ly_flag(true);
+    fn ly_equals_lyc_check(&mut self, interrupt_flag: &mut Interrupt) {
+        if self.ly == self.lyc {
+            self.set_lyc_eq_ly_flag(true);
 
-            if gb.ppu.lyc_eq_ly_interrupt() {
-                gb.interrupt_flag.set_lcd_stat_interrupt(true);
+            if self.lyc_eq_ly_interrupt() {
+                interrupt_flag.set_lcd_stat_interrupt(true);
             }
         } else {
-            gb.ppu.set_lyc_eq_ly_flag(false);
+            self.set_lyc_eq_ly_flag(false);
         }
-    }
-
-    pub fn get_color(&self, palette: u8, color_id: u8) -> u32 {
-        let shade = (palette >> (color_id * 2)) & 0x03;
-        self.colors[shade as usize]
     }
 
     // # Step the PPU by the number of cycles the last instruction took
@@ -219,51 +215,50 @@ impl Ppu {
     //            | Search    | Transfer  | HBlank
     // -------------------------------------------------
     // 10 lines   |             VBlank
-    pub fn step<R: Renderer>(gb: &mut Dmg, cycles: usize, renderer: &mut R) {
-        if !gb.ppu.lcd_display_enable() {
+    pub fn step<R: Renderer>(&mut self, renderer: &mut R, cycles: usize, interrupt_flag: &mut Interrupt) {
+        if !self.lcd_display_enable() {
             return;
         }
 
-        let instruction_cycles = if cycles >= gb.ppu.last_cycles {
-            cycles - gb.ppu.last_cycles
+        let instruction_cycles = if cycles >= self.last_cycles {
+            cycles - self.last_cycles
         } else {
             cycles
         };
-        gb.ppu.last_cycles = cycles;
+        self.last_cycles = cycles;
 
-        gb.ppu.dots += instruction_cycles;
+        self.dots += instruction_cycles;
 
-        let mode = gb.ppu.get_mode();
-
+        let mode = self.get_mode();
         // look current mode
         let next_mode = match mode {
-            LCDMode::OAMScan if gb.ppu.dots >= FINISH_OAM_SCAN_DOTS => Some(LCDMode::Drawing),
+            LCDMode::OAMScan if self.dots >= FINISH_OAM_SCAN_DOTS => Some(LCDMode::Drawing),
 
-            LCDMode::Drawing if gb.ppu.dots >= FINISH_DRAWING_DOTS => {
+            LCDMode::Drawing if self.dots >= FINISH_DRAWING_DOTS => {
                 // render scanline if we're not at the bottom of the screen yet
-                if gb.ppu.ly < DMG_SCREEN_HEIGHT as u8 {
+                if self.ly < DMG_SCREEN_HEIGHT as u8 {
                     // render scanline
-                    Ppu::draw_scanline(gb, renderer);
+                    self.draw_scanline(renderer);
                 }
 
                 // set interrupt flag if hblank interrupt is needed
-                if gb.ppu.hblank_interrupt() {
-                    gb.interrupt_flag.set_lcd_stat_interrupt(true);
+                if self.hblank_interrupt() {
+                    interrupt_flag.set_lcd_stat_interrupt(true);
                 }
 
                 Some(LCDMode::HBlank)
             }
 
-            LCDMode::HBlank if gb.ppu.dots >= FINISH_HBLANK_DOTS => {
-                gb.ppu.ly += 1;
+            LCDMode::HBlank if self.dots >= FINISH_HBLANK_DOTS => {
+                self.ly += 1;
 
                 // check for LYC=LY coincidence
-                Ppu::ly_equals_lyc_check(gb);
+                self.ly_equals_lyc_check(interrupt_flag);
 
-                let next_mode = if gb.ppu.ly == DMG_SCREEN_HEIGHT as u8 {
+                let next_mode = if self.ly == DMG_SCREEN_HEIGHT as u8 {
                     // frame draw is finished
-                    if gb.ppu.vblank_interrupt() {
-                        gb.interrupt_flag.set_lcd_stat_interrupt(true);
+                    if self.vblank_interrupt() {
+                        interrupt_flag.set_lcd_stat_interrupt(true);
                     }
 
                     renderer.draw_screen();
@@ -272,8 +267,8 @@ impl Ppu {
                 }
                 // frame not done yet
                 else {
-                    if gb.ppu.oam_interrupt() {
-                        gb.interrupt_flag.set_lcd_stat_interrupt(true);
+                    if self.oam_interrupt() {
+                        interrupt_flag.set_lcd_stat_interrupt(true);
                     }
                     LCDMode::OAMScan
                 };
@@ -283,23 +278,23 @@ impl Ppu {
 
             LCDMode::VBlank => {
                 // set VBlank interrupt at the start of VBlank period
-                if gb.ppu.lcd_display_enable() && gb.ppu.ly >= DMG_SCREEN_HEIGHT as u8 {
-                    gb.interrupt_flag.set_vblank_interrupt(true);
+                if self.lcd_display_enable() && self.ly >= DMG_SCREEN_HEIGHT as u8 {
+                    interrupt_flag.set_vblank_interrupt(true);
                 }
 
-                if gb.ppu.dots >= FINISH_VBLANK_DOTS {
-                    gb.ppu.ly += 1;
+                if self.dots >= FINISH_VBLANK_DOTS {
+                    self.ly += 1;
 
                     // check for LYC=LY coincidence
-                    Ppu::ly_equals_lyc_check(gb);
+                    self.ly_equals_lyc_check(interrupt_flag);
 
                     // if we finished all VBlank lines, go to next frame
-                    if gb.ppu.ly > SCANLINES_PER_FRAME as u8 - 1 {
-                        gb.ppu.ly = 0;
-                        gb.ppu.frames += 1;
+                    if self.ly > SCANLINES_PER_FRAME as u8 - 1 {
+                        self.ly = 0;
+                        self.frames += 1;
 
-                        if gb.ppu.oam_interrupt() {
-                            gb.interrupt_flag.set_lcd_stat_interrupt(true);
+                        if self.oam_interrupt() {
+                            interrupt_flag.set_lcd_stat_interrupt(true);
                         }
                         Some(LCDMode::OAMScan)
                     } else {
@@ -316,35 +311,35 @@ impl Ppu {
 
         // reset dots and update mode in memory
         if let Some(next_mode) = next_mode {
-            gb.ppu.dots -= mode.reset_cycles_at_finish();
-            gb.ppu.set_mode(next_mode);
+            self.dots -= mode.reset_cycles_at_finish();
+            self.set_mode(next_mode);
         }
     }
 
-    pub fn draw_scanline<R: Renderer>(gb: &mut Dmg, renderer: &mut R) {
+    pub fn draw_scanline<R: Renderer>(&mut self, renderer: &mut R) {
         // draw background
-        Ppu::draw_bg(gb, renderer);
+        self.draw_bg(renderer);
 
         // draw window
-        if gb.ppu.window_enable() {
-            Ppu::draw_window(gb, renderer);
+        if self.window_enable() {
+            self.draw_window(renderer);
         }
 
         // draw sprites
-        if gb.ppu.obj_enable() {
-            Ppu::draw_sprites(gb, renderer)
+        if self.obj_enable() {
+            self.draw_sprites(renderer)
         };
     }
 
-    fn draw_sprites<R: Renderer>(gb: &mut Dmg, renderer: &mut R) {
-        let current_line = gb.ppu.ly;
-        let sprite_height = if gb.ppu.obj_size() { 16 } else { 8 };
+    fn draw_sprites<R: Renderer>(&mut self, renderer: &mut R) {
+        let current_line = self.ly;
+        let sprite_height = if self.obj_size() { 16 } else { 8 };
         let mut drawn_sprites = 0u8;
         let mut sprites_count = 0u8;
 
         while drawn_sprites < MAX_SPRITES_PER_LINE && sprites_count < MAX_SPRITES_IN_OAM {
             let oam_addr = OAM_START + (sprites_count as u16) * 4;
-            let sprite = Sprite::from_oam(gb, oam_addr);
+            let sprite = Sprite::from_oam(self, oam_addr);
 
             // is sprite in current line?
             if current_line < sprite.ypos || current_line >= sprite.ypos + sprite_height {
@@ -369,13 +364,13 @@ impl Ppu {
             }
 
             let tile_addr = VRAM_START + (tile_index as u16) * 16 + (line_in_sprite as u16) * 2;
-            let low_tile_byte = gb.read(tile_addr);
-            let high_tile_byte = gb.read(tile_addr + 1);
+            let low_tile_byte = self.read(tile_addr);
+            let high_tile_byte = self.read(tile_addr + 1);
 
             let palette = if sprite.palette_number() {
-                gb.ppu.obj1_palette
+                self.obj1_palette
             } else {
-                gb.ppu.obj0_palette
+                self.obj0_palette
             };
 
             // maybe we can use this tile draw for bg and windows
@@ -400,7 +395,7 @@ impl Ppu {
                 // sprite under de background
                 if sprite.priority() {
                     let bg_pixel = renderer.read_pixel(screen_x as usize, current_line as usize);
-                    if bg_pixel != gb.ppu.colors[0] {
+                    if bg_pixel != renderer.get_color(self.bg_palette, 0) {
                         continue;
                     }
                 }
@@ -408,7 +403,7 @@ impl Ppu {
                 renderer.write_pixel(
                     screen_x as usize,
                     current_line as usize,
-                    gb.ppu.get_color(palette, color_id),
+                    renderer.get_color(palette, color_id),
                 );
             }
 
@@ -417,21 +412,21 @@ impl Ppu {
         }
     }
 
-    fn draw_window<R: Renderer>(gb: &mut Dmg, renderer: &mut R) {
+    fn draw_window<R: Renderer>(&mut self, renderer: &mut R) {
         // window enable check is done in draw_scanline
-        let current_line = gb.ppu.ly;
-        let window_y = gb.ppu.wy;
-        let window_x = gb.ppu.wx as isize - 7;
+        let current_line = self.ly;
+        let window_y = self.wy;
+        let window_x = self.wx as isize - 7;
 
         if current_line < window_y {
             return;
         }
 
         if current_line == window_y {
-            gb.ppu.window_line_counter = 0;
+            self.window_line_counter = 0;
         }
 
-        let tile_map_base = if gb.ppu.window_tile_map_address() {
+        let tile_map_base = if self.window_tile_map_address() {
             COND_WINDOW_BASE_ADDR
         } else {
             DEFAULT_WINDOW_BASE_ADDR
@@ -447,12 +442,12 @@ impl Ppu {
 
             let window_column = (pixel as isize) - window_x;
             let tile_x = window_column / 8;
-            let tile_y = gb.ppu.window_line_counter as isize / 8;
+            let tile_y = self.window_line_counter as isize / 8;
 
             let tile_index = tile_y * 32 + tile_x;
 
             let tile_address_in_map = tile_map_base + tile_index as u16;
-            let tile_number = gb.read(tile_address_in_map);
+            let tile_number = self.read(tile_address_in_map);
 
             // The "$8000 method" uses $8000 as its base pointer and uses an unsigned addressing,
             // meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
@@ -460,17 +455,17 @@ impl Ppu {
             // The "$8800 method" uses $9000 as its base pointer and uses a signed addressing,
             // meaning that tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1; or, to put it differently,
             // "$8800 addressing" takes tiles 0-127 from block 2 and tiles 128-255 from block 1.
-            let tile_data_base = if gb.ppu.bg_and_window_tile_data() || tile_number >= 128 {
+            let tile_data_base = if self.bg_and_window_tile_data() || tile_number >= 128 {
                 0x8000
             } else {
                 0x9000
             };
             let tile_address = tile_data_base + (tile_number as u16) * 16;
 
-            let line_in_tile = gb.ppu.window_line_counter % 8;
+            let line_in_tile = self.window_line_counter % 8;
 
-            let first_byte = gb.read(tile_address + (line_in_tile as u16) * 2);
-            let second_byte = gb.read(tile_address + (line_in_tile as u16) * 2 + 1);
+            let first_byte = self.read(tile_address + (line_in_tile as u16) * 2);
+            let second_byte = self.read(tile_address + (line_in_tile as u16) * 2 + 1);
 
             let bit_index = 7 - (window_column % 8);
 
@@ -478,22 +473,22 @@ impl Ppu {
             let high_pixel = (second_byte >> bit_index) & 1;
 
             let color_id = (high_pixel << 1) | low_pixel;
-            let color = gb.ppu.get_color(gb.ppu.bg_palette, color_id);
+            let color = renderer.get_color(self.bg_palette, color_id);
 
             renderer.write_pixel(pixel, current_line as usize, color);
         }
 
         if window_rendered {
-            gb.ppu.window_line_counter += 1;
+            self.window_line_counter += 1;
         }
     }
 
-    fn draw_bg<R: Renderer>(gb: &mut Dmg, renderer: &mut R) {
-        let current_line = gb.ppu.ly;
-        let scroll_x = gb.ppu.scroll_x;
-        let scroll_y = gb.ppu.scroll_y;
+    fn draw_bg<R: Renderer>(&mut self, renderer: &mut R) {
+        let current_line = self.ly;
+        let scroll_x = self.scroll_x;
+        let scroll_y = self.scroll_y;
 
-        let tile_map_base = if gb.ppu.bg_tile_map_address() {
+        let tile_map_base = if self.bg_tile_map_address() {
             COND_WINDOW_BASE_ADDR
         } else {
             DEFAULT_WINDOW_BASE_ADDR
@@ -507,7 +502,8 @@ impl Ppu {
 
             let tile_index: usize = tile_y as usize * 32 + tile_x as usize;
             let tile_address_in_map = tile_map_base + tile_index as u16;
-            let tile_number = gb.read(tile_address_in_map);
+            // let tile_number = gb.read(tile_address_in_map);
+            let tile_number = self.read(tile_address_in_map);
 
             // The "$8000 method" uses $8000 as its base pointer and uses an unsigned addressing,
             // meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
@@ -515,7 +511,7 @@ impl Ppu {
             // The "$8800 method" uses $9000 as its base pointer and uses a signed addressing,
             // meaning that tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1; or, to put it differently,
             // "$8800 addressing" takes tiles 0-127 from block 2 and tiles 128-255 from block 1.
-            let tile_data_base = if gb.ppu.bg_and_window_tile_data() || tile_number >= 128 {
+            let tile_data_base = if self.bg_and_window_tile_data() || tile_number >= 128 {
                 0x8000
             } else {
                 0x9000
@@ -524,8 +520,8 @@ impl Ppu {
 
             let line_in_tile = bg_y % 8;
 
-            let first_byte = gb.read(tile_address + (line_in_tile as u16) * 2);
-            let second_byte = gb.read(tile_address + (line_in_tile as u16) * 2 + 1);
+            let first_byte = self.read(tile_address + (line_in_tile as u16) * 2);
+            let second_byte = self.read(tile_address + (line_in_tile as u16) * 2 + 1);
 
             let bit_index = 7 - (bg_x % 8);
 
@@ -533,7 +529,7 @@ impl Ppu {
             let high_pixel = (second_byte >> bit_index) & 1;
 
             let color_id = (high_pixel << 1) | low_pixel;
-            let color = gb.ppu.get_color(gb.ppu.bg_palette, color_id);
+            let color = renderer.get_color(self.bg_palette, color_id);
 
             renderer.write_pixel(pixel, current_line as usize, color);
         }
@@ -557,6 +553,9 @@ impl Ppu {
 impl Accessible<u16> for Ppu {
     fn read(&self, address: u16) -> u8 {
         match address {
+            VRAM_START..=VRAM_END => self.vram[(address - VRAM_START) as usize],
+            OAM_START..=OAM_END => self.oam_ram[(address - OAM_START) as usize],
+
             0xFF40 => self.lcd_control,
             0xFF41 => self.lcd_status,
             0xFF42 => self.scroll_y,
@@ -577,6 +576,9 @@ impl Accessible<u16> for Ppu {
 
     fn write(&mut self, address: u16, value: u8) {
         match address {
+            VRAM_START..=VRAM_END => self.vram[(address - VRAM_START) as usize] = value,
+            OAM_START..=OAM_END => self.oam_ram[(address - OAM_START) as usize] = value,
+
             0xFF40 => {
                 self.lcd_control = value;
 

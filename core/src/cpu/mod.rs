@@ -392,10 +392,7 @@ impl Cpu {
             0xCA => JpToImm16::new(JC::Zero(cpu.zero()), gb.load(cpu.pc.wrapping_add(1))),
             0xCB => {
                 let cb_opcode = gb.read(cpu.pc.wrapping_add(1));
-                match Cpu::fetch_cb(gb, cb_opcode) {
-                    Ok(instruction) => instruction,
-                    Err(e) => return Err(e),
-                }
+                Cpu::fetch_cb(gb, cb_opcode)?
             }
             0xCC => Call::new(JC::Zero(cpu.zero()), gb.load(cpu.pc.wrapping_add(1))),
             0xCD => Call::new(JC::None, gb.load(cpu.pc.wrapping_add(1))),

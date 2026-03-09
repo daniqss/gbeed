@@ -43,11 +43,7 @@ impl Cartridge {
 
         println!("Cartridge header: {header}");
 
-        let rom_bank00: Vec<u8> = raw_rom
-            .iter()
-            .take(ROM_BANK00_SIZE as usize)
-            .map(|&b| b)
-            .collect();
+        let rom_bank00: Vec<u8> = raw_rom.iter().take(ROM_BANK00_SIZE as usize).copied().collect();
 
         let ram_bank = vec![0; header.external_ram_size as usize];
 

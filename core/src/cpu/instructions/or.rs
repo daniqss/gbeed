@@ -44,7 +44,7 @@ impl Instruction for OrPointedByHL {
         Ok(InstructionEffect::new(self.info(), or_u8_flags(gb.cpu.a)))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
-    fn disassembly(&self) -> String { format!("or [hl]") }
+    fn disassembly(&self) -> String { "or [hl]".to_string() }
 }
 
 pub struct OrImm8 {

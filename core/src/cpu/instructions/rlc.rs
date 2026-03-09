@@ -18,7 +18,7 @@ fn rlc_flags(result: u8, dst: u8) -> Flags {
 }
 
 #[inline(always)]
-fn rlc(value: u8) -> u8 { (value << 1) | (value >> 7) }
+fn rlc(value: u8) -> u8 { value.rotate_left(1) }
 
 /// rotate bits left
 /// ┏━ Flags ━┓   ┏━━━━━━━ r8 | [hl] ━━━━━━┓
@@ -64,7 +64,7 @@ impl Instruction for RlcPointedByHL {
     }
 
     fn info(&self) -> (u8, u8) { (4, 2) }
-    fn disassembly(&self) -> String { format!("rlc [hl]") }
+    fn disassembly(&self) -> String { "rlc [hl]".to_string() }
 }
 
 #[cfg(test)]

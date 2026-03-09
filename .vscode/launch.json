@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Binary (gbeed)",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=gbeed",
+          "--package=gbeed-ui",
+          "--features",
+          "${env:DISPLAY_FEATURES}"
+        ],
+        "filter": {
+          "name": "gbeed",
+          "kind": "bin"
+        }
+      },
+      "args": ["-g", "tetris.gb"],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

@@ -42,7 +42,7 @@ impl Instruction for Rra {
     }
 
     fn info(&self) -> (u8, u8) { (1, 1) }
-    fn disassembly(&self) -> String { format!("rra") }
+    fn disassembly(&self) -> String { "rra".to_string() }
 }
 
 #[cfg(test)]

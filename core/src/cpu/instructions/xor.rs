@@ -44,7 +44,7 @@ impl Instruction for XorPointedByHL {
         Ok(InstructionEffect::new(self.info(), xor_u8_flags(gb.cpu.a)))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
-    fn disassembly(&self) -> String { format!("xor [hl]") }
+    fn disassembly(&self) -> String { "xor [hl]".to_string() }
 }
 
 pub struct XorImm8 {

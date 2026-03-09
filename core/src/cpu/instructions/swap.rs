@@ -27,7 +27,7 @@ impl SwapR8 {
 impl Instruction for SwapR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let r8 = gb.read(self.dst);
-        let result = (r8 << 4) | (r8 >> 4);
+        let result = r8.rotate_right(4);
         gb.write(self.dst, result);
 
         Ok(InstructionEffect::new(self.info(), swap_u8_flags(result)))
@@ -43,11 +43,11 @@ impl SwapPointedByHL {
 impl Instruction for SwapPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let n8 = gb.read(gb.cpu.hl());
-        let result = (n8 << 4) | (n8 >> 4);
+        let result = n8.rotate_right(4);
         gb.write(gb.cpu.hl(), result);
 
         Ok(InstructionEffect::new(self.info(), swap_u8_flags(result)))
     }
     fn info(&self) -> (u8, u8) { (4, 2) }
-    fn disassembly(&self) -> String { format!("swap [hl]") }
+    fn disassembly(&self) -> String { "swap [hl]".to_string() }
 }

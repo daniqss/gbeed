@@ -59,7 +59,7 @@ impl Instruction for SubPointedByHL {
         ))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
-    fn disassembly(&self) -> String { format!("sub a,[hl]") }
+    fn disassembly(&self) -> String { "sub a,[hl]".to_string() }
 }
 
 /// Subtraction instruction

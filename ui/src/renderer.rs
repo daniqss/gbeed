@@ -4,6 +4,7 @@ use raylib::ffi::PixelFormat;
 use raylib::prelude::*;
 
 use crate::colors;
+use crate::colors::GB_PALETTE;
 
 const GB_SCALE: i32 = 4;
 const GB_W: i32 = DMG_SCREEN_WIDTH as i32 * GB_SCALE;
@@ -223,6 +224,12 @@ impl Renderer for RaylibRenderer {
         self.screen_texture.pixels[i] = ((color >> 16) & 0xFF) as u8;
         self.screen_texture.pixels[i + 1] = ((color >> 8) & 0xFF) as u8;
         self.screen_texture.pixels[i + 2] = (color & 0xFF) as u8;
+    }
+
+    fn get_color(&self, palette: u8, color_id: u8) -> u32 {
+        let shade = (palette >> (color_id * 2)) & 0x03;
+        let color = GB_PALETTE[shade as usize];
+        ((color.r as u32) << 16) | ((color.g as u32) << 8) | (color.b as u32)
     }
 
     fn draw_screen(&mut self) {
@@ -498,6 +505,7 @@ fn draw_action_btn(
     d.draw_text(key, x + (size - kw) / 2, y + size + 4, ks, colors::SECONDARY);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn draw_small_btn(
     d: &mut RaylibDrawHandle,
     x: i32,

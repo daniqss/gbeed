@@ -37,7 +37,7 @@ mem_range!(HRAM, 0xFF80, 0xFFFE);
 
 pub const BOOT_REGISTER: u16 = 0xFF50;
 
-pub fn is_high_address(address: u16) -> bool { address >= IO_REGISTERS_START && address <= ADDRESABLE_MEMORY }
+pub fn is_high_address(address: u16) -> bool { (IO_REGISTERS_START..=ADDRESABLE_MEMORY).contains(&address) }
 
 /// # Memory mapped trait for addressable components
 /// This trait allows to read and write from Dmg and its components, indexing it with a memory address
@@ -58,10 +58,7 @@ pub trait Accessible16<Address16, Address8>: Accessible<Address8> {
 /// from this 16 bits address memory bus we can access all the memory mapped components
 #[derive(Debug)]
 pub struct Memory {
-    pub vram: [u8; VRAM_SIZE as usize],
     pub ram: [u8; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize],
-
-    pub oam_ram: [u8; OAM_SIZE as usize],
     pub hram: [u8; HRAM_SIZE as usize],
 }
 
@@ -76,10 +73,7 @@ impl Memory {
         }
 
         Memory {
-            vram: [0; VRAM_SIZE as usize],
             ram: [0; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize],
-
-            oam_ram: [0; OAM_SIZE as usize],
             hram: [0; HRAM_SIZE as usize],
         }
     }

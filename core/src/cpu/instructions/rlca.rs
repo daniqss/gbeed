@@ -17,7 +17,7 @@ fn rlca_flags(dst: u8) -> Flags {
 }
 
 #[inline(always)]
-fn rlca(value: u8) -> u8 { (value << 1) | (value >> 7) }
+fn rlca(value: u8) -> u8 { value.rotate_left(1) }
 
 /// rotate bits left a
 /// ┏━ Flags ━┓   ┏━━━━━━━  a  ━━━━━━┓
@@ -39,7 +39,7 @@ impl Instruction for Rlca {
         Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
-    fn disassembly(&self) -> String { format!("rlca") }
+    fn disassembly(&self) -> String { "rlca".to_string() }
 }
 
 #[cfg(test)]

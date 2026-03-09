@@ -4,8 +4,10 @@ use crate::Cartridge;
 /// Is mostly used to indicates memory bank controllers
 /// No licensed game uses RomRam and RomRamBattery
 /// Mbc3Ram, Mbc3TimerBattery, Mbc3TimerRamBattery with 64kb of RAM is Pokemon Crystal Version
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Mbc {
+    #[default]
     RomOnly,
     Mbc1,
     Mbc1Ram,
@@ -32,10 +34,6 @@ pub enum Mbc {
     BandaiTama5,
     HuC3,
     HuC1RamBattery,
-}
-
-impl Default for Mbc {
-    fn default() -> Self { Mbc::RomOnly }
 }
 
 pub fn enable_ram(cartridge: &mut Cartridge, address: u16, value: u8) {
@@ -112,11 +110,20 @@ pub fn select_ram_bank(cartridge: &mut Cartridge, value: u8) {
             cartridge.selected_rom_bank = (cartridge.selected_rom_bank & 0x1F) | ((val as u16) << 5);
         }
         Mbc::Mbc3 | Mbc::Mbc3Ram | Mbc::Mbc3RamBattery | Mbc::Mbc3TimerBattery | Mbc::Mbc3TimerRamBattery => {
+            // TODO: mmm suspicius
+            #[allow(clippy::if_same_then_else)]
             if value <= 0x03 {
                 cartridge.selected_ram_bank = value as u16;
-            } else if value >= 0x08 && value <= 0x0C {
+            } else if (0x08..=0x0C).contains(&value) {
                 cartridge.selected_ram_bank = value as u16;
             }
+            // if value <= 0x07 {
+            //     cartridge.selected_ram_bank = value as u16;
+            //     cartridge.rtc_enabled = false;
+            // } else if value >= 0x08 && value <= 0x0C {
+            //     cartridge.selected_ram_bank = value as u16;
+            //     cartridge.rtc_enabled = true;
+            // }
         }
         Mbc::Mbc5 | Mbc::Mbc5Ram | Mbc::Mbc5RamBattery => {
             cartridge.selected_ram_bank = (value & 0x0F) as u16;

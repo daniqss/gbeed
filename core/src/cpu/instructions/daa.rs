@@ -49,5 +49,5 @@ impl Instruction for Daa {
         Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
-    fn disassembly(&self) -> String { format!("daa") }
+    fn disassembly(&self) -> String { "daa".to_string() }
 }

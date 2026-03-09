@@ -1,4 +1,4 @@
-use gbeed_core::{prelude::*, Controller, Renderer, SerialListener};
+use gbeed_core::{prelude::*, Controller, DefaultRenderer, Renderer, SerialListener};
 use std::{fs, path::Path};
 
 struct BlarggListener {
@@ -18,7 +18,7 @@ impl BlarggListener {
                 .take_while(|c| *c != '.')
                 .collect::<Vec<char>>()
                 .into_iter()
-                .chain(vec!['\n'].into_iter())
+                .chain(vec!['\n'])
                 .collect(),
             separator: "\n\n".chars().collect(),
             passed_line: "Passed\n".chars().collect(),
@@ -74,33 +74,47 @@ impl SerialListener for BlarggListener {
     }
 }
 
-impl Renderer for BlarggListener {
-    fn read_pixel(&self, _: usize, _: usize) -> u32 { 0 }
-    fn write_pixel(&mut self, _: usize, _: usize, _: u32) {}
-    fn draw_screen(&mut self) {}
+struct BlarggController {
+    listener: BlarggListener,
+    renderer: DefaultRenderer,
 }
 
-impl Controller for BlarggListener {}
+impl Renderer for BlarggController {
+    fn read_pixel(&self, x: usize, y: usize) -> u32 { self.renderer.read_pixel(x, y) }
+    fn write_pixel(&mut self, x: usize, y: usize, color: u32) { self.renderer.write_pixel(x, y, color) }
+    fn get_color(&self, palette: u8, color_id: u8) -> u32 { self.renderer.get_color(palette, color_id) }
+    fn draw_screen(&mut self) { self.renderer.draw_screen() }
+}
+
+impl SerialListener for BlarggController {
+    fn on_transfer(&mut self, data: u8) { self.listener.on_transfer(data) }
+}
+
+impl Controller for BlarggController {}
 
 fn run_blargg_test(dir_path: &str, rom_name: &str) -> Result<()> {
     let rom_path = format!("{}/{}", dir_path, rom_name);
 
     let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
     let cartridge = Cartridge::new(rom);
-    let mut listener = BlarggListener::new(rom_name);
+    let listener = BlarggListener::new(rom_name);
+    let mut controller = BlarggController {
+        listener,
+        renderer: DefaultRenderer::new(),
+    };
     let mut gb = Dmg::new(cartridge, None);
 
     // should be enough for the all tests in cpu_instrs/individual at least
     let timeout_cycles = 1_000_000;
     let mut cycles = 0;
 
-    while !listener.test_passed && cycles < timeout_cycles {
-        gb.run(&mut listener)?;
+    while !controller.listener.test_passed && cycles < timeout_cycles {
+        gb.run(&mut controller)?;
         cycles += gb.cpu.cycles;
     }
 
     assert!(
-        listener.test_passed,
+        controller.listener.test_passed,
         "Test did not pass within {} cycles",
         timeout_cycles
     );

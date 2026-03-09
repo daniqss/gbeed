@@ -58,7 +58,7 @@ impl Instruction for RlPointedByHL {
         Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (4, 2) }
-    fn disassembly(&self) -> String { format!("rl [hl]") }
+    fn disassembly(&self) -> String { "rl [hl]".to_string() }
 }
 
 #[cfg(test)]

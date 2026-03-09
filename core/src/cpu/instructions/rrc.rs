@@ -64,7 +64,7 @@ impl Instruction for RrcPointedByHL {
     }
 
     fn info(&self) -> (u8, u8) { (4, 2) }
-    fn disassembly(&self) -> String { format!("rrc [hl]") }
+    fn disassembly(&self) -> String { "rrc [hl]".to_string() }
 }
 
 #[cfg(test)]

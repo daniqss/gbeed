@@ -66,7 +66,7 @@ mod test {
         gb.cpu.pc = 0x100;
         let pc = gb.cpu.pc;
         let e8: u8 = 0x07;
-        gb.write(pc + 1, e8 as u8);
+        gb.write(pc + 1, e8);
 
         let mut instr = Jr::new(JC::None, e8);
         let result = instr.exec(&mut gb).unwrap();
@@ -107,7 +107,7 @@ mod test {
         gb.cpu.pc = 0x100;
         let pc = gb.cpu.pc;
         let e8: u8 = 0x64;
-        gb.write(pc + 1, e8 as u8);
+        gb.write(pc + 1, e8);
         // carry is not set, so it should not jump
         gb.cpu.f = !CARRY_FLAG_MASK;
 

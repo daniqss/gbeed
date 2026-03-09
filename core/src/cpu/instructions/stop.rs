@@ -21,5 +21,5 @@ impl Instruction for Stop {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }
-    fn disassembly(&self) -> String { format!("stop") }
+    fn disassembly(&self) -> String { "stop".to_string() }
 }
