@@ -41,7 +41,7 @@ The flake exposes three different shells for different display environments. Dir
 - `drm`: `nix develop .#drm`
 
 The default shell is `x11`, because will at least run in wayland sessions too using xwayland.
-DRM support is by now only tested in AMD hardware. In Nvidia both `opengl_es_20` and `opengl_es_30` segfault at init (`dic 20 13:12:41 stoneward kernel: gbeed[6765]: segfault at 0 ip 00007fa29f9b4d31 sp 00007fff9c2052d0 error 4 in libnvidia-egl-gbm.so.1.1.2[1d31,7fa29f9b4000+3000] likely on CPU 0 (core 0, socket 0)`).
+DRM support works in both AMD and ARM GPU. In Nvidia both `opengl_es_20` and `opengl_es_30` segfault at init (`dic 20 13:12:41 stoneward kernel: gbeed[6765]: segfault at 0 ip 00007fa29f9b4d31 sp 00007fff9c2052d0 error 4 in libnvidia-egl-gbm.so.1.1.2[1d31,7fa29f9b4000+3000] likely on CPU 0 (core 0, socket 0)`).
 
 ### How to run tests
 To run the tests, you can use just:
