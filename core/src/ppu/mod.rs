@@ -548,6 +548,13 @@ impl Ppu {
 
         gb.ppu.dma = 0;
     }
+
+    pub fn tile_block0(&self) -> &[u8] { &self.vram[0..0x800] }
+    pub fn tile_block1(&self) -> &[u8] { &self.vram[0x800..0x1000] }
+    pub fn tile_block2(&self) -> &[u8] { &self.vram[0x1000..0x1800] }
+    pub fn tile_data(&self) -> &[u8] { &self.vram[0..0x1800] }
+    pub fn bg_map0(&self) -> &[u8] { &self.vram[0x1800..0x1C00] }
+    pub fn bg_map1(&self) -> &[u8] { &self.vram[0x1C00..0x2000] }
 }
 
 impl Accessible<u16> for Ppu {

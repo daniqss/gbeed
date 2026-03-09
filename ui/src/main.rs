@@ -133,14 +133,12 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
         gb.run(&mut controller)?;
 
-        let vram: Vec<u8> = (0x8000_u16..=0x9BFF_u16).map(|addr| gb.read(addr)).collect();
-
-        controller.renderer.update_tiles(0, &vram[0x0000..0x0800]);
-        controller.renderer.update_tiles(1, &vram[0x0800..0x1000]);
-        controller.renderer.update_tiles(2, &vram[0x1000..0x1800]);
+        controller.renderer.update_tiles(0, gb.ppu.tile_block0());
+        controller.renderer.update_tiles(1, gb.ppu.tile_block1());
+        controller.renderer.update_tiles(2, gb.ppu.tile_block2());
         controller
             .renderer
-            .update_bg_map(&vram[0x1800..0x1C00], &vram[0x0000..0x1000]);
+            .update_bg_map(gb.ppu.bg_map0(), gb.ppu.tile_data());
     }
 
     Ok(())
