@@ -1,0 +1,39 @@
+use crate::{
+    cpu::{
+        flags::Flags,
+        instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
+    },
+    prelude::*,
+};
+
+/// restart instruction, same that call, but faster for suitable addresses
+/// used to call a interruption routine
+pub struct Rst {
+    pub vec: u8,
+}
+
+impl Rst {
+    pub fn new(vec: u8) -> Box<Self> { Box::new(Self { vec }) }
+}
+
+impl Instruction for Rst {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        if self.vec & 0x07 != 0 {
+            return Err(InstructionError::MalformedInstruction);
+        }
+
+        // maybe this logic should be shared with call
+        let mut sp = gb.cpu.sp.wrapping_sub(1);
+        gb.write(sp, utils::high(gb.cpu.pc.wrapping_add(1)));
+        sp = sp.wrapping_sub(1);
+        gb.write(sp, utils::low(gb.cpu.pc.wrapping_add(1)));
+        gb.cpu.sp = sp;
+
+        // implicit jump to called address
+        gb.cpu.pc = self.vec as u16;
+
+        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+    }
+    fn info(&self) -> (u8, u8) { (4, 1) }
+    fn disassembly(&self) -> String { format!("rst ${:02X}", self.vec) }
+}

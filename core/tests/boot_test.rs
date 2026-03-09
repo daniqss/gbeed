@@ -1,0 +1,88 @@
+use gbeed_core::{prelude::*, Cpu, DefaultController};
+
+#[test]
+fn test_disassembly_boot() -> Result<()> {
+    let boot_rom_data = std::fs::read("../dmg_boot.bin")?;
+    let game_data = std::fs::read("../tictactoe.gb")?;
+    let game = Cartridge::new(game_data);
+    // it actually needs a game to compare the logos
+    let mut gb = Dmg::new(game, Some(boot_rom_data));
+    let mut init_ram = false;
+    let mut set_audio = false;
+    let mut setup_logo = false;
+
+    let mut controller = DefaultController::new();
+
+    loop {
+        let _instr = gb.step(&mut controller);
+
+        if gb.cpu.cycles >= 70224 {
+            gb.cpu.cycles = 0;
+            gb.ppu.last_cycles = 0;
+        }
+
+        // finish initing ram
+        if gb.cpu.pc == 0x000C && !init_ram {
+            println!("Cpu after initing RAM: {}", gb.cpu);
+            assert_eq!(gb.cpu.f, 0xA0);
+            assert_eq!(gb.cpu.h, 0x7F);
+            assert_eq!(gb.cpu.l, 0xFF);
+            assert_eq!(gb.cpu.sp, 0xFFFE);
+            assert_eq!(gb.cpu.cycles, 57350);
+
+            init_ram = true;
+        }
+
+        // finish setting audio
+        if gb.cpu.pc == 0x001D && !set_audio {
+            println!("Cpu after setting audio: {}", gb.cpu);
+            assert_eq!(gb.cpu.a, 0x77);
+            assert_eq!(gb.cpu.c, 0x12);
+            assert_eq!(gb.cpu.hl(), 0xFF24);
+            assert_eq!(gb.read(gb.cpu.hl()), 0x77);
+            assert_eq!(gb.cpu.cycles, 57372);
+
+            set_audio = true;
+        }
+
+        // set up logo
+        if gb.cpu.pc == 0x0053 && !setup_logo {
+            println!("Cpu after setting up logo: {}", gb.cpu);
+            assert_eq!(gb.cpu.af(), 0x0DC0);
+            assert_eq!(gb.cpu.bc(), 0x0000);
+            assert_eq!(gb.cpu.de(), 0x00E0);
+            assert_eq!(gb.cpu.hl(), 0x990F);
+            assert_eq!(gb.cpu.sp, 0xFFFE);
+            assert_eq!(gb.cpu.cycles, 66482);
+
+            setup_logo = true;
+        }
+
+        // new used boot rom has different cpu state at the end the boot sequence
+        if gb.cpu.pc == 0x0100 {
+            assert_eq!(
+                gb.cpu,
+                Cpu {
+                    a: 1,
+                    f: 192,
+                    b: 0,
+                    c: 0,
+                    d: 0,
+                    e: 113,
+                    h: 129,
+                    l: 208,
+                    pc: 256,
+                    sp: 65534,
+                    cycles: 54462,
+                    ime: false,
+                    halted: false
+                }
+            );
+            println!("Boot sequence completed successfully!");
+            println!("Cpu after boot: {}", gb.cpu);
+            break;
+        }
+    }
+
+    Ok(())
+}

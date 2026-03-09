@@ -1,0 +1,163 @@
+use gbeed_core::{prelude::*, Controller, DefaultRenderer, Renderer, SerialListener};
+use std::{fs, path::Path};
+
+struct BlarggListener {
+    rom_name: Vec<char>,
+    separator: Vec<char>,
+    passed_line: Vec<char>,
+    received_data: Vec<char>,
+
+    test_passed: bool,
+}
+
+impl BlarggListener {
+    fn new(rom_name: &str) -> Self {
+        Self {
+            rom_name: rom_name
+                .chars()
+                .take_while(|c| *c != '.')
+                .collect::<Vec<char>>()
+                .into_iter()
+                .chain(vec!['\n'])
+                .collect(),
+            separator: "\n\n".chars().collect(),
+            passed_line: "Passed\n".chars().collect(),
+            received_data: Vec::new(),
+            test_passed: false,
+        }
+    }
+}
+
+impl SerialListener for BlarggListener {
+    fn on_transfer(&mut self, data: u8) {
+        print!("{}", data as char);
+
+        self.received_data.push(data as char);
+
+        if self.received_data.len() == self.rom_name.len() {
+            assert_eq!(
+                self.received_data[..self.rom_name.len()],
+                self.rom_name[..],
+                "ROM name mismatch: expected '{}', got '{}'",
+                self.rom_name.iter().collect::<String>(),
+                self.received_data.iter().collect::<String>()
+            );
+
+            println!("ROM name received: {}", self.rom_name.iter().collect::<String>());
+        } else if self.received_data.len() == self.rom_name.len() + self.separator.len() {
+            let separator_start = self.rom_name.len();
+            let separator_end = separator_start + self.separator.len();
+
+            assert_eq!(
+                self.received_data[separator_start..separator_end],
+                self.separator[..],
+                "Separator mismatch: expected '{}', got '{}'",
+                self.separator.iter().collect::<String>(),
+                &self.received_data.iter().collect::<String>()
+            );
+        } else if self.received_data.len()
+            >= self.rom_name.len() + self.separator.len() + self.passed_line.len()
+        {
+            let passed_line_start = self.rom_name.len() + self.separator.len();
+            let passed_line_end = passed_line_start + self.passed_line.len();
+
+            assert_eq!(
+                self.received_data[passed_line_start..passed_line_end],
+                self.passed_line[..],
+                "Test did not pass: expected '{}', got '{}'",
+                self.passed_line.iter().collect::<String>(),
+                &self.received_data.iter().collect::<String>()
+            );
+
+            self.test_passed = true;
+        }
+    }
+}
+
+struct BlarggController {
+    listener: BlarggListener,
+    renderer: DefaultRenderer,
+}
+
+impl Renderer for BlarggController {
+    fn read_pixel(&self, x: usize, y: usize) -> u32 { self.renderer.read_pixel(x, y) }
+    fn write_pixel(&mut self, x: usize, y: usize, color: u32) { self.renderer.write_pixel(x, y, color) }
+    fn get_color(&self, palette: u8, color_id: u8) -> u32 { self.renderer.get_color(palette, color_id) }
+    fn draw_screen(&mut self) { self.renderer.draw_screen() }
+}
+
+impl SerialListener for BlarggController {
+    fn on_transfer(&mut self, data: u8) { self.listener.on_transfer(data) }
+}
+
+impl Controller for BlarggController {}
+
+fn run_blargg_test(dir_path: &str, rom_name: &str) -> Result<()> {
+    let rom_path = format!("{}/{}", dir_path, rom_name);
+
+    let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
+    let cartridge = Cartridge::new(rom);
+    let listener = BlarggListener::new(rom_name);
+    let mut controller = BlarggController {
+        listener,
+        renderer: DefaultRenderer::new(),
+    };
+    let mut gb = Dmg::new(cartridge, None);
+
+    // should be enough for the all tests in cpu_instrs/individual at least
+    let timeout_cycles = 1_000_000;
+    let mut cycles = 0;
+
+    while !controller.listener.test_passed && cycles < timeout_cycles {
+        gb.run(&mut controller)?;
+        cycles += gb.cpu.cycles;
+    }
+
+    assert!(
+        controller.listener.test_passed,
+        "Test did not pass within {} cycles",
+        timeout_cycles
+    );
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod cpu_instrs {
+    use super::*;
+
+    const DIR_PATH: &str = "../gb-test-roms/cpu_instrs/individual";
+
+    #[test]
+    fn test_01_special() -> Result<()> { run_blargg_test(DIR_PATH, "01-special.gb") }
+
+    // #[test]
+    // fn test_02_interrupts() -> Result<()> { run_blargg_test(DIR_PATH, "02-interrupts.gb") }
+
+    #[test]
+    fn test_03_op_sp_hl() -> Result<()> { run_blargg_test(DIR_PATH, "03-op sp,hl.gb") }
+
+    #[test]
+    fn test_04_op_r_imm() -> Result<()> { run_blargg_test(DIR_PATH, "04-op r,imm.gb") }
+
+    #[test]
+    fn test_05_op_rp() -> Result<()> { run_blargg_test(DIR_PATH, "05-op rp.gb") }
+
+    #[test]
+    fn test_06_ld_r_r() -> Result<()> { run_blargg_test(DIR_PATH, "06-ld r,r.gb") }
+
+    #[test]
+    fn test_07_jr() -> Result<()> { run_blargg_test(DIR_PATH, "07-jr,jp,call,ret,rst.gb") }
+
+    #[test]
+    fn test_08_misc_instrs() -> Result<()> { run_blargg_test(DIR_PATH, "08-misc instrs.gb") }
+
+    #[test]
+    fn test_09_op_r_r() -> Result<()> { run_blargg_test(DIR_PATH, "09-op r,r.gb") }
+
+    #[test]
+    fn test_10_bit_ops() -> Result<()> { run_blargg_test(DIR_PATH, "10-bit ops.gb") }
+
+    #[test]
+    fn test_11_op_a_hl() -> Result<()> { run_blargg_test(DIR_PATH, "11-op a,(hl).gb") }
+}
