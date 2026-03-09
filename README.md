@@ -1,6 +1,7 @@
 # gbeed
 WIP DMG Game Boy emulator for embedded devices. This project aims to provide a simple DMG Game Boy emulator that can run both over a graphical session and in a DRM/KMS environment, in a normal x86-64 Linux pc or in a Raspberry Pi Zero running Linux. To allow this it'll use raylib as a library to deal with graphics, input and audio.
 
+![gbeed](./assets/image.png)
 
 ## How to use
 ### Dependencies
