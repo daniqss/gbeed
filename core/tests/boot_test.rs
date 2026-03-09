@@ -1,4 +1,4 @@
-use gbeed_core::{prelude::*, Cpu};
+use gbeed_core::{prelude::*, Cpu, DefaultController};
 
 /// Testing dmg boot rom, which is disassembled to
 /// ```asm
@@ -172,13 +172,15 @@ fn test_disassembly_boot() -> Result<()> {
     let game_data = std::fs::read("../tictactoe.gb")?;
     let game = Cartridge::new(game_data);
     // it actually needs a game to compare the logos
-    let mut gb = Dmg::new(game, Some(boot_rom_data), None, None);
+    let mut gb = Dmg::new(game, Some(boot_rom_data));
     let mut init_ram = false;
     let mut set_audio = false;
     let mut setup_logo = false;
 
+    let mut controller = DefaultController::new();
+
     loop {
-        let _instr = gb.step();
+        let _instr = gb.step(&mut controller);
 
         if gb.cpu.cycles >= 70224 {
             gb.cpu.cycles = 0;

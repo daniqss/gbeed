@@ -33,8 +33,7 @@ impl SerialListener for DefaultSerialListener {
 pub struct Serial {
     pub sb: u8,
     pub sc: u8,
-    listener: Rc<RefCell<dyn SerialListener>>,
-    pub data: Vec<char>,
+    pub pending_data: Vec<u8>,
 }
 
 impl std::fmt::Debug for Serial {
@@ -44,16 +43,21 @@ impl std::fmt::Debug for Serial {
 }
 
 impl Default for Serial {
-    fn default() -> Self { Serial::new(Rc::new(RefCell::new(DefaultSerialListener))) }
+    fn default() -> Self { Serial::new() }
 }
 
 impl Serial {
-    pub fn new(serial_listener: Rc<RefCell<dyn SerialListener>>) -> Self {
+    pub fn new() -> Self {
         Self {
             sb: 0x00,
             sc: 0x7E,
-            listener: serial_listener,
-            data: Vec::new(),
+            pending_data: Vec::new(),
+        }
+    }
+
+    pub fn step<S: SerialListener>(&mut self, listener: &mut S) {
+        for data in self.pending_data.drain(..) {
+            listener.on_transfer(data);
         }
     }
 
@@ -82,9 +86,7 @@ impl Accessible<u16> for Serial {
                 self.sc = value;
 
                 if self.sc_transfer_start() && self.sc_clock_select() {
-                    self.data.push(self.sb as char);
-
-                    self.listener.borrow_mut().on_transfer(self.sb);
+                    self.pending_data.push(self.sb);
 
                     self.sc &= 0x7F;
                     self.sb = 0xFF;

@@ -1,4 +1,4 @@
-use gbeed_core::prelude::*;
+use gbeed_core::{prelude::*, Controller, Renderer, SerialListener};
 
 mod colors;
 mod listener;
@@ -8,6 +8,32 @@ use listener::RaylibSerialListener;
 use renderer::{ButtonStates, RaylibRenderer};
 
 use raylib::prelude::*;
+
+struct RaylibController {
+    renderer: RaylibRenderer,
+    serial_listener: RaylibSerialListener,
+}
+
+impl RaylibController {
+    fn new() -> Self {
+        Self {
+            renderer: RaylibRenderer::new(),
+            serial_listener: RaylibSerialListener,
+        }
+    }
+}
+
+impl Renderer for RaylibController {
+    fn read_pixel(&self, x: usize, y: usize) -> u32 { self.renderer.read_pixel(x, y) }
+    fn write_pixel(&mut self, x: usize, y: usize, color: u32) { self.renderer.write_pixel(x, y, color); }
+    fn draw_screen(&mut self) { self.renderer.draw_screen() }
+}
+
+impl SerialListener for RaylibController {
+    fn on_transfer(&mut self, data: u8) { self.serial_listener.on_transfer(data) }
+}
+
+impl Controller for RaylibController {}
 
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
@@ -81,56 +107,37 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         None
     };
 
-    let renderer = Rc::new(RefCell::new(RaylibRenderer::new()));
+    let mut controller = RaylibController::new();
 
+    let title = game.header.title.clone();
+    let region = game.header.destination;
+    controller.renderer.set_game_info(title, region);
+
+    let mut gb = Dmg::new(game, boot_rom);
+
+    while controller.renderer.rl.window_should_close()
+        || controller.renderer.rl.is_key_down(KeyboardKey::KEY_ESCAPE)
     {
-        let mut r = renderer.borrow_mut();
-
-        let title = game.header.title.clone();
-        let region = game.header.destination;
-        r.set_game_info(title, region);
-    }
-
-    let serial_listener = Rc::new(RefCell::new(RaylibSerialListener));
-    let mut gb = Dmg::new(game, boot_rom, Some(serial_listener), Some(renderer.clone()));
-
-    loop {
-        {
-            let r = renderer.borrow();
-            if r.rl.window_should_close() || r.rl.is_key_down(KeyboardKey::KEY_ESCAPE) {
-                break;
-            }
-        }
-
-        let input = {
-            let r = renderer.borrow();
-            read_input(&r.rl)
-        };
+        let input = read_input(&controller.renderer.rl);
 
         apply_joypad(&input, &mut gb.joypad);
 
-        {
-            let mut r = renderer.borrow_mut();
-            r.buttons = input;
+        controller.renderer.buttons = input;
+
+        if controller.renderer.fps_btn_clicked() {
+            controller.renderer.cycle_fps();
         }
 
-        if renderer.borrow().fps_btn_clicked() {
-            renderer.borrow_mut().cycle_fps();
-        }
+        gb.run(&mut controller)?;
 
-        gb.run()?;
+        let vram: Vec<u8> = (0x8000_u16..=0x9BFF_u16).map(|addr| gb.read(addr)).collect();
 
-        {
-            let mut r = renderer.borrow_mut();
-
-            let vram: Vec<u8> = (0x8000_u16..=0x9BFF_u16).map(|addr| gb.read(addr)).collect();
-
-            r.update_tiles(0, &vram[0x0000..0x0800]);
-            r.update_tiles(1, &vram[0x0800..0x1000]);
-            r.update_tiles(2, &vram[0x1000..0x1800]);
-
-            r.update_bg_map(&vram[0x1800..0x1C00], &vram[0x0000..0x1000]);
-        }
+        controller.renderer.update_tiles(0, &vram[0x0000..0x0800]);
+        controller.renderer.update_tiles(1, &vram[0x0800..0x1000]);
+        controller.renderer.update_tiles(2, &vram[0x1000..0x1800]);
+        controller
+            .renderer
+            .update_bg_map(&vram[0x1800..0x1C00], &vram[0x0000..0x1000]);
     }
 
     Ok(())

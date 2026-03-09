@@ -1,5 +1,5 @@
-use gbeed_core::{prelude::*, SerialListener};
-use std::{fs, path::Path, rc::Rc};
+use gbeed_core::{prelude::*, Controller, Renderer, SerialListener};
+use std::{fs, path::Path};
 
 struct BlarggListener {
     rom_name: Vec<char>,
@@ -30,6 +30,8 @@ impl BlarggListener {
 
 impl SerialListener for BlarggListener {
     fn on_transfer(&mut self, data: u8) {
+        print!("{}", data as char);
+
         self.received_data.push(data as char);
 
         if self.received_data.len() == self.rom_name.len() {
@@ -72,25 +74,33 @@ impl SerialListener for BlarggListener {
     }
 }
 
+impl Renderer for BlarggListener {
+    fn read_pixel(&self, _: usize, _: usize) -> u32 { 0 }
+    fn write_pixel(&mut self, _: usize, _: usize, _: u32) {}
+    fn draw_screen(&mut self) {}
+}
+
+impl Controller for BlarggListener {}
+
 fn run_blargg_test(dir_path: &str, rom_name: &str) -> Result<()> {
     let rom_path = format!("{}/{}", dir_path, rom_name);
 
     let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
     let cartridge = Cartridge::new(rom);
-    let listener = Rc::new(RefCell::new(BlarggListener::new(rom_name)));
-    let mut gb = Dmg::new(cartridge, None, Some(listener.clone()), None);
+    let mut listener = BlarggListener::new(rom_name);
+    let mut gb = Dmg::new(cartridge, None);
 
     // should be enough for the all tests in cpu_instrs/individual at least
     let timeout_cycles = 1_000_000;
     let mut cycles = 0;
 
-    while !listener.borrow().test_passed && cycles < timeout_cycles {
-        gb.run()?;
+    while !listener.test_passed && cycles < timeout_cycles {
+        gb.run(&mut listener)?;
         cycles += gb.cpu.cycles;
     }
 
     assert!(
-        listener.borrow().test_passed,
+        listener.test_passed,
         "Test did not pass within {} cycles",
         timeout_cycles
     );

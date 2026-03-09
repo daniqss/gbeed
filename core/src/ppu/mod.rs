@@ -5,14 +5,11 @@ use crate::{
     dmg::Dmg,
     mem_range,
     memory::{OAM_END, OAM_START, VRAM_START},
-    ppu::{
-        renderer::DefaultRenderer,
-        sprite::{Sprite, MAX_SPRITES_IN_OAM, MAX_SPRITES_PER_LINE},
-    },
+    ppu::sprite::{Sprite, MAX_SPRITES_IN_OAM, MAX_SPRITES_PER_LINE},
     prelude::*,
 };
 
-pub use renderer::Renderer;
+pub use renderer::{DefaultRenderer, Renderer};
 
 mem_range!(PPU_REGISTER, 0xFF40, 0xFF4B);
 
@@ -99,12 +96,11 @@ pub struct Ppu {
 
     pub last_cycles: usize,
 
-    renderer: Rc<RefCell<dyn Renderer>>,
     pub colors: [u32; 4],
 }
 
 impl Default for Ppu {
-    fn default() -> Self { Self::new(Rc::new(RefCell::new(DefaultRenderer::new()))) }
+    fn default() -> Self { Self::new() }
 }
 
 impl std::fmt::Debug for Ppu {
@@ -131,7 +127,7 @@ impl std::fmt::Debug for Ppu {
 }
 
 impl Ppu {
-    pub fn new(renderer: Rc<RefCell<dyn Renderer>>) -> Self {
+    pub fn new() -> Self {
         Self {
             dots: 0,
             frames: 0,
@@ -152,7 +148,6 @@ impl Ppu {
 
             last_cycles: 0,
 
-            renderer,
             colors: DEFAULT_DMG_COLORS,
         }
     }
@@ -224,7 +219,7 @@ impl Ppu {
     //            | Search    | Transfer  | HBlank
     // -------------------------------------------------
     // 10 lines   |             VBlank
-    pub fn step(gb: &mut Dmg, cycles: usize) {
+    pub fn step<R: Renderer>(gb: &mut Dmg, cycles: usize, renderer: &mut R) {
         if !gb.ppu.lcd_display_enable() {
             return;
         }
@@ -248,7 +243,7 @@ impl Ppu {
                 // render scanline if we're not at the bottom of the screen yet
                 if gb.ppu.ly < DMG_SCREEN_HEIGHT as u8 {
                     // render scanline
-                    Ppu::draw_scanline(gb);
+                    Ppu::draw_scanline(gb, renderer);
                 }
 
                 // set interrupt flag if hblank interrupt is needed
@@ -271,7 +266,7 @@ impl Ppu {
                         gb.interrupt_flag.set_lcd_stat_interrupt(true);
                     }
 
-                    gb.ppu.renderer.borrow_mut().draw_screen();
+                    renderer.draw_screen();
 
                     LCDMode::VBlank
                 }
@@ -326,22 +321,22 @@ impl Ppu {
         }
     }
 
-    pub fn draw_scanline(gb: &mut Dmg) {
+    pub fn draw_scanline<R: Renderer>(gb: &mut Dmg, renderer: &mut R) {
         // draw background
-        Ppu::draw_bg(gb);
+        Ppu::draw_bg(gb, renderer);
 
         // draw window
         if gb.ppu.window_enable() {
-            Ppu::draw_window(gb);
+            Ppu::draw_window(gb, renderer);
         }
 
         // draw sprites
         if gb.ppu.obj_enable() {
-            Ppu::draw_sprites(gb)
+            Ppu::draw_sprites(gb, renderer)
         };
     }
 
-    fn draw_sprites(gb: &mut Dmg) {
+    fn draw_sprites<R: Renderer>(gb: &mut Dmg, renderer: &mut R) {
         let current_line = gb.ppu.ly;
         let sprite_height = if gb.ppu.obj_size() { 16 } else { 8 };
         let mut drawn_sprites = 0u8;
@@ -404,17 +399,13 @@ impl Ppu {
 
                 // sprite under de background
                 if sprite.priority() {
-                    let bg_pixel = gb
-                        .ppu
-                        .renderer
-                        .borrow()
-                        .read_pixel(screen_x as usize, current_line as usize);
+                    let bg_pixel = renderer.read_pixel(screen_x as usize, current_line as usize);
                     if bg_pixel != gb.ppu.colors[0] {
                         continue;
                     }
                 }
 
-                gb.ppu.renderer.borrow_mut().write_pixel(
+                renderer.write_pixel(
                     screen_x as usize,
                     current_line as usize,
                     gb.ppu.get_color(palette, color_id),
@@ -426,7 +417,7 @@ impl Ppu {
         }
     }
 
-    fn draw_window(gb: &mut Dmg) {
+    fn draw_window<R: Renderer>(gb: &mut Dmg, renderer: &mut R) {
         // window enable check is done in draw_scanline
         let current_line = gb.ppu.ly;
         let window_y = gb.ppu.wy;
@@ -489,10 +480,7 @@ impl Ppu {
             let color_id = (high_pixel << 1) | low_pixel;
             let color = gb.ppu.get_color(gb.ppu.bg_palette, color_id);
 
-            gb.ppu
-                .renderer
-                .borrow_mut()
-                .write_pixel(pixel, current_line as usize, color);
+            renderer.write_pixel(pixel, current_line as usize, color);
         }
 
         if window_rendered {
@@ -500,7 +488,7 @@ impl Ppu {
         }
     }
 
-    fn draw_bg(gb: &mut Dmg) {
+    fn draw_bg<R: Renderer>(gb: &mut Dmg, renderer: &mut R) {
         let current_line = gb.ppu.ly;
         let scroll_x = gb.ppu.scroll_x;
         let scroll_y = gb.ppu.scroll_y;
@@ -547,10 +535,7 @@ impl Ppu {
             let color_id = (high_pixel << 1) | low_pixel;
             let color = gb.ppu.get_color(gb.ppu.bg_palette, color_id);
 
-            gb.ppu
-                .renderer
-                .borrow_mut()
-                .write_pixel(pixel, current_line as usize, color);
+            renderer.write_pixel(pixel, current_line as usize, color);
         }
     }
 
