@@ -84,17 +84,15 @@ impl Dmg {
     }
 
     pub fn step<C: Controller>(&mut self, controller: &mut C) -> Option<Box<dyn Instruction>> {
+        let prev_cycles = self.cpu.cycles;
+
         let instruction = Cpu::step(self);
 
-        // TODO: both ppu and timer use Tcycles
-        // ppu
+        let delta = self.cpu.cycles - prev_cycles;
+
         self.ppu
             .step(controller, self.cpu.cycles * 4, &mut self.interrupt_flag);
-
-        // timer
-        self.timer.step(self.cpu.cycles * 4, &mut self.interrupt_flag);
-
-        // serial
+        self.timer.step(delta * 4, &mut self.interrupt_flag);
         self.serial.step(controller);
 
         instruction

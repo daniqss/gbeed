@@ -114,8 +114,6 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let region = game.header.destination;
     controller.renderer.set_game_info(title, region);
 
-    println!("Starting emulator with game ROM and boot ROM (if provided)...");
-
     let mut gb = Dmg::new(game, boot_rom);
 
     while !controller.renderer.rl.window_should_close()

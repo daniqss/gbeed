@@ -92,8 +92,8 @@ impl SerialListener for BlarggController {
 
 impl Controller for BlarggController {}
 
-fn run_blargg_test(dir_path: &str, rom_name: &str) -> Result<()> {
-    let rom_path = format!("{}/{}", dir_path, rom_name);
+fn run_blargg_test(rom_dir: &str, rom_name: &str) -> Result<()> {
+    let rom_path = format!("{}/{}", rom_dir, rom_name);
 
     let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
     let cartridge = Cartridge::new(rom);
@@ -105,7 +105,7 @@ fn run_blargg_test(dir_path: &str, rom_name: &str) -> Result<()> {
     let mut gb = Dmg::new(cartridge, None);
 
     // should be enough for the all tests in cpu_instrs/individual at least
-    let timeout_cycles = 1_000_000;
+    let timeout_cycles = 100_000;
     let mut cycles = 0;
 
     while !controller.listener.test_passed && cycles < timeout_cycles {
@@ -126,38 +126,68 @@ fn run_blargg_test(dir_path: &str, rom_name: &str) -> Result<()> {
 mod cpu_instrs {
     use super::*;
 
-    const DIR_PATH: &str = "../gb-test-roms/cpu_instrs/individual";
+    const CPU_INSTRS_DIR: &str = "../gb-test-roms/cpu_instrs/individual";
+    const INSTR_TIMINGS_DIR: &str = "../gb-test-roms/instr_timing/";
+    const MEM_TIMING_DIR: &str = "../gb-test-roms/mem_timing/individual";
+    const MEM_TIMING_DIR_2: &str = "../gb-test-roms/mem_timing-2/rom_singles/";
 
     #[test]
-    fn test_01_special() -> Result<()> { run_blargg_test(DIR_PATH, "01-special.gb") }
-
-    // #[test]
-    // fn test_02_interrupts() -> Result<()> { run_blargg_test(DIR_PATH, "02-interrupts.gb") }
+    fn test_01_special() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "01-special.gb") }
 
     #[test]
-    fn test_03_op_sp_hl() -> Result<()> { run_blargg_test(DIR_PATH, "03-op sp,hl.gb") }
+    fn test_02_interrupts() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "02-interrupts.gb") }
 
     #[test]
-    fn test_04_op_r_imm() -> Result<()> { run_blargg_test(DIR_PATH, "04-op r,imm.gb") }
+    fn test_03_op_sp_hl() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "03-op sp,hl.gb") }
 
     #[test]
-    fn test_05_op_rp() -> Result<()> { run_blargg_test(DIR_PATH, "05-op rp.gb") }
+    fn test_04_op_r_imm() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "04-op r,imm.gb") }
 
     #[test]
-    fn test_06_ld_r_r() -> Result<()> { run_blargg_test(DIR_PATH, "06-ld r,r.gb") }
+    fn test_05_op_rp() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "05-op rp.gb") }
 
     #[test]
-    fn test_07_jr() -> Result<()> { run_blargg_test(DIR_PATH, "07-jr,jp,call,ret,rst.gb") }
+    fn test_06_ld_r_r() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "06-ld r,r.gb") }
 
     #[test]
-    fn test_08_misc_instrs() -> Result<()> { run_blargg_test(DIR_PATH, "08-misc instrs.gb") }
+    fn test_07_jr() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "07-jr,jp,call,ret,rst.gb") }
 
     #[test]
-    fn test_09_op_r_r() -> Result<()> { run_blargg_test(DIR_PATH, "09-op r,r.gb") }
+    fn test_08_misc_instrs() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "08-misc instrs.gb") }
 
     #[test]
-    fn test_10_bit_ops() -> Result<()> { run_blargg_test(DIR_PATH, "10-bit ops.gb") }
+    fn test_09_op_r_r() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "09-op r,r.gb") }
 
     #[test]
-    fn test_11_op_a_hl() -> Result<()> { run_blargg_test(DIR_PATH, "11-op a,(hl).gb") }
+    fn test_10_bit_ops() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "10-bit ops.gb") }
+
+    #[test]
+    fn test_11_op_a_hl() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "11-op a,(hl).gb") }
+
+    #[test]
+    fn test_instr_timing() -> Result<()> { run_blargg_test(INSTR_TIMINGS_DIR, "instr_timing.gb") }
+
+    #[ignore]
+    #[test]
+    fn test_read_timing() -> Result<()> { run_blargg_test(MEM_TIMING_DIR, "01-read_timing.gb") }
+
+    #[ignore]
+    #[test]
+    fn test_write_timing() -> Result<()> { run_blargg_test(MEM_TIMING_DIR, "02-write_timing.gb") }
+
+    #[ignore]
+    #[test]
+    fn test_modify_timing() -> Result<()> { run_blargg_test(MEM_TIMING_DIR, "03-modify_timing.gb") }
+
+    #[ignore]
+    #[test]
+    fn test_read_timing2() -> Result<()> { run_blargg_test(MEM_TIMING_DIR_2, "01-read_timing.gb") }
+
+    #[ignore]
+    #[test]
+    fn test_write_timing2() -> Result<()> { run_blargg_test(MEM_TIMING_DIR_2, "02-write_timing.gb") }
+
+    #[ignore]
+    #[test]
+    fn test_modify_timing2() -> Result<()> { run_blargg_test(MEM_TIMING_DIR_2, "03-modify_timing.gb") }
 }
