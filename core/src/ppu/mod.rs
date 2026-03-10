@@ -320,15 +320,15 @@ impl Ppu {
         // draw background
         self.draw_bg(renderer);
 
-        // draw window
-        if self.window_enable() {
-            self.draw_window(renderer);
-        }
-
         // draw sprites
         if self.obj_enable() {
             self.draw_sprites(renderer)
         };
+
+        // draw window
+        if self.window_enable() {
+            self.draw_window(renderer);
+        }
     }
 
     fn draw_sprites<R: Renderer>(&mut self, renderer: &mut R) {
@@ -336,6 +336,9 @@ impl Ppu {
         let sprite_height = if self.obj_size() { 16 } else { 8 };
         let mut drawn_sprites = 0u8;
         let mut sprites_count = 0u8;
+
+        // track which sprite owns each pixel in the current line
+        let mut pixel_owner: [Option<u8>; DMG_SCREEN_WIDTH] = [None; DMG_SCREEN_WIDTH];
 
         while drawn_sprites < MAX_SPRITES_PER_LINE && sprites_count < MAX_SPRITES_IN_OAM {
             let oam_addr = OAM_START + (sprites_count as u16) * 4;
@@ -373,7 +376,6 @@ impl Ppu {
                 self.obj0_palette
             };
 
-            // maybe we can use this tile draw for bg and windows
             for pixel in 0..8 {
                 let bit_index = if sprite.xflip() { pixel } else { 7 - pixel };
 
@@ -386,25 +388,32 @@ impl Ppu {
                     continue;
                 }
 
-                // out of screen
                 let screen_x = sprite.xpos.wrapping_add(pixel);
                 if screen_x >= DMG_SCREEN_WIDTH as u8 {
                     continue;
                 }
 
-                // sprite under de background
+                let sx = screen_x as usize;
+
+                // sprite under background
+
                 if sprite.priority() {
-                    let bg_pixel = renderer.read_pixel(screen_x as usize, current_line as usize);
+                    let bg_pixel = renderer.read_pixel(sx, current_line as usize);
                     if bg_pixel != renderer.get_color(self.bg_palette, 0) {
                         continue;
                     }
                 }
 
-                renderer.write_pixel(
-                    screen_x as usize,
-                    current_line as usize,
-                    renderer.get_color(palette, color_id),
-                );
+                let should_draw = match pixel_owner[sx] {
+                    Some(owner_x) => sprite.xpos < owner_x,
+                    None => true,
+                };
+
+                if should_draw {
+                    pixel_owner[sx] = Some(sprite.xpos);
+
+                    renderer.write_pixel(sx, current_line as usize, renderer.get_color(palette, color_id));
+                }
             }
 
             drawn_sprites += 1;
