@@ -13,7 +13,12 @@ pub trait SerialListener {
     fn on_transfer(&mut self, data: u8);
 }
 
+#[derive(Default)]
 pub struct DefaultSerialListener;
+
+impl DefaultSerialListener {
+    pub fn new() -> Self { DefaultSerialListener }
+}
 
 impl SerialListener for DefaultSerialListener {
     fn on_transfer(&mut self, data: u8) {

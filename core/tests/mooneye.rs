@@ -35,23 +35,7 @@ impl SerialListener for MooneyeListener {
     }
 }
 
-struct MooneyeController {
-    listener: MooneyeListener,
-    renderer: DefaultRenderer,
-}
-
-impl Renderer for MooneyeController {
-    fn read_pixel(&self, x: usize, y: usize) -> u32 { self.renderer.read_pixel(x, y) }
-    fn write_pixel(&mut self, x: usize, y: usize, color: u32) { self.renderer.write_pixel(x, y, color) }
-    fn get_color(&self, palette: u8, color_id: u8) -> u32 { self.renderer.get_color(palette, color_id) }
-    fn draw_screen(&mut self) { self.renderer.draw_screen() }
-}
-
-impl SerialListener for MooneyeController {
-    fn on_transfer(&mut self, data: u8) { self.listener.on_transfer(data) }
-}
-
-impl Controller for MooneyeController {}
+controller!(MooneyeController, MooneyeListener, DefaultRenderer);
 
 fn run_mooneye_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let rom_path = format!("{}/{}", rom_dir, rom_name);

@@ -87,8 +87,8 @@ impl Cartridge {
             //     "Header checksum mismatch, {:#04X} != {:#04X}",
             //     header_sum, self.header.header_checksum
             // ))),
-            false => Err(Box::new(io::Error::new(
-                io::ErrorKind::InvalidData,
+            false => Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
                 format!(
                     "Header checksum mismatch, {:#04X} != {:#04X}",
                     header_sum, self.header.header_checksum
@@ -110,8 +110,8 @@ impl Cartridge {
 
         match cartridge_sum == self.header.global_checksum {
             true => Ok(()),
-            false => Err(Box::new(io::Error::new(
-                io::ErrorKind::InvalidData,
+            false => Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
                 format!(
                     "Global checksum mismatch, {:#04X} != {:#04X}",
                     cartridge_sum, self.header.global_checksum
