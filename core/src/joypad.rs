@@ -86,10 +86,10 @@ impl Accessible<u16> for Joypad {
                 let mut current_input = 0x0F;
 
                 // select nibble by checking select bits
-                if self.select_buttons() {
+                if !self.select_buttons() {
                     current_input &= self.input >> 4;
                 }
-                if self.select_dpad() {
+                if !self.select_dpad() {
                     current_input &= self.input & 0x0F;
                 }
 
