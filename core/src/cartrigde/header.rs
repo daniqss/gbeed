@@ -90,7 +90,7 @@ impl std::fmt::Display for CartridgeHeader {
         )?;
         writeln!(
             f,
-            "External RAM Size -> {} {}",
+            "External RAM Size -> {} KB {}",
             self.external_ram_size / 1024,
             match self.external_ram_banks_count {
                 Some(count) => format!("({} banks)", count),

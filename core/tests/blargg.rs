@@ -88,7 +88,6 @@ fn run_blargg_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     };
     let mut gb = Dmg::new(cartridge, None);
 
-    // should be enough for the all tests in cpu_instrs/individual at least
     let timeout_cycles = 100_000;
     let mut cycles = 0;
 
@@ -113,37 +112,37 @@ mod cpu_instrs {
     const CPU_INSTRS_DIR: &str = "../gb-test-roms/cpu_instrs/individual";
 
     #[test]
-    fn test_01_special() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "01-special.gb") }
+    fn special() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "01-special.gb") }
 
     #[test]
-    fn test_02_interrupts() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "02-interrupts.gb") }
+    fn interrupts() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "02-interrupts.gb") }
 
     #[test]
-    fn test_03_op_sp_hl() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "03-op sp,hl.gb") }
+    fn op_sp_hl() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "03-op sp,hl.gb") }
 
     #[test]
-    fn test_04_op_r_imm() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "04-op r,imm.gb") }
+    fn op_r_imm() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "04-op r,imm.gb") }
 
     #[test]
-    fn test_05_op_rp() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "05-op rp.gb") }
+    fn op_rp() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "05-op rp.gb") }
 
     #[test]
-    fn test_06_ld_r_r() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "06-ld r,r.gb") }
+    fn ld_r_r() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "06-ld r,r.gb") }
 
     #[test]
-    fn test_07_jr() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "07-jr,jp,call,ret,rst.gb") }
+    fn jr() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "07-jr,jp,call,ret,rst.gb") }
 
     #[test]
-    fn test_08_misc_instrs() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "08-misc instrs.gb") }
+    fn misc_instrs() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "08-misc instrs.gb") }
 
     #[test]
-    fn test_09_op_r_r() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "09-op r,r.gb") }
+    fn op_r_r() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "09-op r,r.gb") }
 
     #[test]
-    fn test_10_bit_ops() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "10-bit ops.gb") }
+    fn bit_ops() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "10-bit ops.gb") }
 
     #[test]
-    fn test_11_op_a_hl() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "11-op a,(hl).gb") }
+    fn op_a_hl() -> Result<()> { run_blargg_test(CPU_INSTRS_DIR, "11-op a,(hl).gb") }
 }
 
 #[cfg(test)]
@@ -153,7 +152,7 @@ mod instr_timing {
     const INSTR_TIMINGS_DIR: &str = "../gb-test-roms/instr_timing/";
 
     #[test]
-    fn test_instr_timing() -> Result<()> { run_blargg_test(INSTR_TIMINGS_DIR, "instr_timing.gb") }
+    fn instr_timing() -> Result<()> { run_blargg_test(INSTR_TIMINGS_DIR, "instr_timing.gb") }
 }
 
 #[cfg(test)]
@@ -164,15 +163,15 @@ mod mem_timing_2 {
 
     #[ignore]
     #[test]
-    fn test_read_timing2() -> Result<()> { run_blargg_test(MEM_TIMING_DIR_2, "01-read_timing.gb") }
+    fn read_timing2() -> Result<()> { run_blargg_test(MEM_TIMING_DIR_2, "01-read_timing.gb") }
 
     #[ignore]
     #[test]
-    fn test_write_timing2() -> Result<()> { run_blargg_test(MEM_TIMING_DIR_2, "02-write_timing.gb") }
+    fn write_timing2() -> Result<()> { run_blargg_test(MEM_TIMING_DIR_2, "02-write_timing.gb") }
 
     #[ignore]
     #[test]
-    fn test_modify_timing2() -> Result<()> { run_blargg_test(MEM_TIMING_DIR_2, "03-modify_timing.gb") }
+    fn modify_timing2() -> Result<()> { run_blargg_test(MEM_TIMING_DIR_2, "03-modify_timing.gb") }
 }
 
 #[cfg(test)]
@@ -183,13 +182,13 @@ mod mem_timing {
 
     #[ignore]
     #[test]
-    fn test_read_timing() -> Result<()> { run_blargg_test(MEM_TIMING_DIR, "01-read_timing.gb") }
+    fn read_timing() -> Result<()> { run_blargg_test(MEM_TIMING_DIR, "01-read_timing.gb") }
 
     #[ignore]
     #[test]
-    fn test_write_timing() -> Result<()> { run_blargg_test(MEM_TIMING_DIR, "02-write_timing.gb") }
+    fn write_timing() -> Result<()> { run_blargg_test(MEM_TIMING_DIR, "02-write_timing.gb") }
 
     #[ignore]
     #[test]
-    fn test_modify_timing() -> Result<()> { run_blargg_test(MEM_TIMING_DIR, "03-modify_timing.gb") }
+    fn modify_timing() -> Result<()> { run_blargg_test(MEM_TIMING_DIR, "03-modify_timing.gb") }
 }

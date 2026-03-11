@@ -21,8 +21,7 @@ impl SerialListener for MooneyeListener {
 
         // fibonacci sequence
         let success_sequence = [3, 5, 8, 13, 21, 34];
-        // 0x42
-        let failure_sequence = [66, 66, 66, 66, 66, 66];
+        let failure_sequence = [0x42, 0x42, 0x42, 0x42, 0x42, 0x42];
 
         if self.received_data.len() >= 6 {
             let last_6 = &self.received_data[self.received_data.len() - 6..];
