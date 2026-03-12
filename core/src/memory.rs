@@ -67,10 +67,10 @@ impl Memory {
         // copy first from boot rom, and then from game
         // both initial copies are required in real hardware for nintendo logo check from boot rom and cartridge
         // used in real hardware to required games to have a nintendo logo in rom and allow nintendo to sue them if they're not allow (trademark violation)
-        if let Some(boot_rom) = boot_rom {
-            let boot_len = boot_rom.len().min(BOOT_ROM_SIZE as usize);
-            game.rom_bank00[..boot_len].copy_from_slice(&boot_rom[..boot_len]);
-        }
+        // if let Some(boot_rom) = boot_rom {
+        //     let boot_len = boot_rom.len().min(BOOT_ROM_SIZE as usize);
+        //     game.rom_bank00[..boot_len].copy_from_slice(&boot_rom[..boot_len]);
+        // }
 
         Memory {
             ram: [0; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize],

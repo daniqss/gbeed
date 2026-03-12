@@ -102,9 +102,9 @@ impl Dmg {
 impl Accessible<u16> for Dmg {
     fn read(&self, address: u16) -> u8 {
         match address {
-            ROM_BANK00_START..=ROM_BANKNN_END => self.cartridge.read(address),
+            ROM_BANK00_START..=ROM_BANKNN_END => 0xFF, //self.cartridge.read(address),
             VRAM_START..=VRAM_END => self.ppu.read(address),
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.cartridge.read(address),
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => 0xFF, // self.cartridge.read(address),
             WRAM_BANK0_START..=WRAM_BANKN_END => self.bus.ram[(address - WRAM_BANK0_START) as usize],
             ECHO_RAM_START..=ECHO_RAM_END => {
                 let offset = (address - ECHO_RAM_START) as usize;
@@ -144,9 +144,9 @@ impl Accessible<u16> for Dmg {
 
     fn write(&mut self, address: u16, value: u8) {
         match address {
-            ROM_BANK00_START..=ROM_BANKNN_END => self.cartridge.write(address, value),
+            ROM_BANK00_START..=ROM_BANKNN_END => {} // self.cartridge.write(address, value),
             VRAM_START..=VRAM_END => self.ppu.write(address, value),
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.cartridge.write(address, value),
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {} // self.cartridge.write(address, value),
             WRAM_BANK0_START..=WRAM_BANKN_END => self.bus.ram[(address - WRAM_BANK0_START) as usize] = value,
             ECHO_RAM_START..=ECHO_RAM_END => {
                 let offset = (address - ECHO_RAM_START) as usize;

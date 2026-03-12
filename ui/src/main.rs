@@ -79,7 +79,16 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     let game: Cartridge = match game_path {
         Some(ref path) => match std::fs::read(path) {
-            Ok(data) => Cartridge::new(data),
+            Ok(data) => match Cartridge::new(data) {
+                Ok(cartridge) => cartridge,
+                Err(e) => {
+                    print_help();
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        format!("Failed to create cartridge from ROM at {path}: {e}"),
+                    )));
+                }
+            },
             Err(e) => {
                 print_help();
                 return Err(Box::new(std::io::Error::new(

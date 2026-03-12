@@ -1,68 +1,76 @@
 mod header;
-mod license;
 mod mbc;
 
-use crate::{
-    prelude::*, Accessible, EXTERNAL_RAM_END, EXTERNAL_RAM_SIZE, EXTERNAL_RAM_START, ROM_BANK00_END,
-    ROM_BANK00_SIZE, ROM_BANK00_START, ROM_BANKNN_END, ROM_BANKNN_SIZE, ROM_BANKNN_START,
-};
+use crate::{prelude::*, ROM_BANK00_SIZE, ROM_BANKNN_SIZE};
 
 use header::CartridgeHeader;
-use mbc::Mbc;
+pub use header::{RamSize, RomSize};
+use mbc::{CartridgeType, MbcType};
+
+pub enum CartridgeError {
+    InvalidRomSize(Option<RomSize>, &'static str),
+    InvalidRamSize(Option<RamSize>, &'static str),
+    UnsupportedCartridgeType(CartridgeType),
+}
+
+impl std::fmt::Display for CartridgeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CartridgeError::InvalidRomSize(size, message) => write!(
+                f,
+                "Invalid ROM size: {}. {}",
+                size.map_or("Unknown".to_string(), |s| format!("{:?}", s)),
+                message
+            ),
+            CartridgeError::InvalidRamSize(size, message) => write!(
+                f,
+                "Invalid RAM size: {}. {}",
+                size.map_or("Unknown".to_string(), |s| format!("{:?}", s)),
+                message
+            ),
+            CartridgeError::UnsupportedCartridgeType(cartridge_type) => {
+                write!(f, "Unsupported cartridge type: {:?}", cartridge_type)
+            }
+        }
+    }
+}
+
+pub type CartridgeResult<T> = std::result::Result<T, CartridgeError>;
 
 #[derive(Debug)]
 pub struct Cartridge {
     pub raw_rom: Vec<u8>,
-
-    // header
     pub header: CartridgeHeader,
-
-    // banks
-    pub rom_bank00: Vec<u8>,
-    ram_bank: Vec<u8>,
-
-    // checked in runtime to select currently used banks
-    selected_rom_bank: u16,
-    selected_ram_bank: u16,
-    ram_enabled: bool,
-    banking_mode: bool,
-
-    rtc_registers: [u8; 5],
-    rtc_latched_registers: [u8; 5],
-    rtc_latch_ready: bool,
-    rumble_active: bool,
+    pub mbc: CartridgeType,
 }
 
 impl Default for Cartridge {
-    fn default() -> Self { Cartridge::new(vec![0; (ROM_BANK00_SIZE + ROM_BANKNN_SIZE) as usize]) }
+    fn default() -> Self { Cartridge::new(vec![0; (ROM_BANK00_SIZE + ROM_BANKNN_SIZE) as usize]).unwrap() }
 }
 
 impl Cartridge {
-    pub fn new(raw_rom: Vec<u8>) -> Self {
-        let header = CartridgeHeader::new(&raw_rom);
-
-        println!("Cartridge header: {header}");
-
-        let rom_bank00: Vec<u8> = raw_rom.iter().take(ROM_BANK00_SIZE as usize).copied().collect();
-
-        let ram_bank = vec![0; header.external_ram_size as usize];
-
-        let cartridge = Self {
-            header,
-            raw_rom,
-            rom_bank00,
-            ram_bank,
-            selected_rom_bank: 1,
-            selected_ram_bank: 0,
-            ram_enabled: false,
-            banking_mode: false,
-
-            // TODO: better RTC handling
-            rtc_registers: [0; 5],
-            rtc_latched_registers: [0; 5],
-            rtc_latch_ready: false,
-            rumble_active: false,
+    pub fn new(raw_rom: Vec<u8>) -> Result<Self> {
+        let header = match CartridgeHeader::new(&raw_rom) {
+            Ok(header) => header,
+            Err(e) => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("Failed to parse cartridge header: {e}"),
+                )));
+            }
         };
+
+        let mbc = match MbcType::new(header.cartridge_type, header.rom, header.ram) {
+            Ok(mbc) => mbc,
+            Err(e) => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("Unsupported cartridge type: {e}"),
+                )));
+            }
+        };
+
+        let cartridge = Self { raw_rom, header, mbc };
 
         #[cfg(not(test))]
         if let Err(e) = cartridge.check_header_checksum() {
@@ -71,22 +79,18 @@ impl Cartridge {
             );
         }
 
-        cartridge
+        Ok(cartridge)
     }
 
     /// # Header checksum
     /// Checked by real hardware by the boot ROM
     pub fn check_header_checksum(&self) -> Result<()> {
-        let header_sum = self.raw_rom[header::TITLE_START..=header::GAME_VERSION]
+        let header_sum = self.raw_rom[header::TITLE_START as usize..=header::GAME_VERSION]
             .iter()
             .fold(0u8, |acc, &b| acc.wrapping_sub(b).wrapping_sub(1));
 
         match header_sum == self.header.header_checksum {
             true => Ok(()),
-            // false =>
-            //     "Header checksum mismatch, {:#04X} != {:#04X}",
-            //     header_sum, self.header.header_checksum
-            // ))),
             false => Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!(
@@ -102,7 +106,7 @@ impl Cartridge {
     /// We'll use in Cartridge creation for now to verify correct file parsing and integrity
     pub fn check_global_checksum(&self) -> Result<()> {
         let cartridge_sum: u16 = self.raw_rom.iter().enumerate().fold(0u16, |acc, (i, &b)| {
-            match i != header::GLOBAL_CHECKSUM_START && i != header::GLOBAL_CHECKSUM_END {
+            match i != header::GLOBAL_CHECKSUM_START as usize && i != header::GLOBAL_CHECKSUM_END as usize {
                 true => acc.wrapping_add(b as u16),
                 false => acc,
             }
@@ -128,95 +132,8 @@ impl Cartridge {
     /// Next instruction will be the first `nop` in 0x0100, in the cartridge rom
     pub fn unmap_boot_rom(&mut self) {
         println!("Unmapping boot rom, switching to cartridge rom");
-        self.rom_bank00
-            .copy_from_slice(&self.raw_rom[..ROM_BANK00_SIZE as usize]);
-    }
-}
-
-impl Accessible<u16> for Cartridge {
-    fn read(&self, address: u16) -> u8 {
-        match address {
-            ROM_BANK00_START..=ROM_BANK00_END => self.rom_bank00[address as usize],
-            ROM_BANKNN_START..=ROM_BANKNN_END => {
-                let bank_index = if self.header.rom_banks_count <= 2 {
-                    1
-                } else {
-                    self.selected_rom_bank % self.header.rom_banks_count
-                };
-                let bank_offset = bank_index as usize * ROM_BANKNN_SIZE as usize;
-                self.raw_rom[(address as usize - ROM_BANKNN_START as usize) + bank_offset]
-            }
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END if self.ram_enabled => {
-                if matches!(
-                    self.header.cartridge_type,
-                    Mbc::Mbc3
-                        | Mbc::Mbc3Ram
-                        | Mbc::Mbc3RamBattery
-                        | Mbc::Mbc3TimerBattery
-                        | Mbc::Mbc3TimerRamBattery
-                ) && self.selected_ram_bank >= 0x08
-                    && self.selected_ram_bank <= 0x0C
-                {
-                    self.rtc_latched_registers[(self.selected_ram_bank - 0x08) as usize]
-                } else if let Some(bank_count) = self.header.external_ram_banks_count {
-                    let bank_offset = (self.selected_ram_bank % bank_count) * EXTERNAL_RAM_SIZE;
-                    self.ram_bank[(address as usize - EXTERNAL_RAM_START as usize) + bank_offset as usize]
-                } else {
-                    eprintln!(
-                        "Cartrigde: Attempted to read from RAM at {address:04X} but cartridge has no RAM"
-                    );
-                    0xFF
-                }
-            }
-            _ => {
-                eprintln!("Cartrigde: Attempted to read from unmapped cartridge address: {address:04X}");
-                0xFF
-            }
-        }
-    }
-
-    fn write(&mut self, address: u16, value: u8) {
-        match address {
-            ROM_BANK00_START..=0x1FFF => mbc::enable_ram(self, address, value),
-            0x2000..=ROM_BANK00_END => mbc::select_rom_bank(self, address, value),
-            ROM_BANKNN_START..=0x5FFF => mbc::select_ram_bank(self, value),
-            0x6000..=ROM_BANKNN_END => mbc::select_banking_mode(self, value),
-
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
-                if !self.ram_enabled {
-                    eprintln!("Cartrigde: Attempted to write to RAM at {address:04X} but RAM is not enabled");
-                    return;
-                }
-
-                if matches!(
-                    self.header.cartridge_type,
-                    Mbc::Mbc3
-                        | Mbc::Mbc3Ram
-                        | Mbc::Mbc3RamBattery
-                        | Mbc::Mbc3TimerBattery
-                        | Mbc::Mbc3TimerRamBattery
-                ) && self.selected_ram_bank >= 0x08
-                    && self.selected_ram_bank <= 0x0C
-                {
-                    self.rtc_registers[(self.selected_ram_bank - 0x08) as usize] = value;
-                    return;
-                }
-
-                if let Some(bank_count) = self.header.external_ram_banks_count {
-                    let bank_offset = (self.selected_ram_bank % bank_count) * EXTERNAL_RAM_SIZE;
-                    self.ram_bank[(address as usize - EXTERNAL_RAM_START as usize) + bank_offset as usize] =
-                        value;
-                } else {
-                    eprintln!(
-                        "Cartridge: Attempted to write to RAM at {address:04X} but cartridge has no RAM"
-                    );
-                }
-            }
-
-            _ => unreachable!(
-                "Cartrigde: write of address {address:04X} should have been handled by other components"
-            ),
-        }
+        // self.rom_bank00
+        //     .copy_from_slice(&self.raw_rom[..ROM_BANK00_SIZE as usize]);
     }
 }
 

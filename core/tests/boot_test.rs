@@ -4,7 +4,7 @@ use gbeed_core::{prelude::*, Cpu, DefaultController};
 fn test_disassembly_boot() -> Result<()> {
     let boot_rom_data = std::fs::read("../dmg_boot.bin")?;
     let game_data = std::fs::read("../tictactoe.gb")?;
-    let game = Cartridge::new(game_data);
+    let game = Cartridge::new(game_data).map_err(|e| format!("Failed to create cartridge: {e}"))?;
     // it actually needs a game to compare the logos
     let mut gb = Dmg::new(game, Some(boot_rom_data));
     let mut init_ram = false;
