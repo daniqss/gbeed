@@ -1,11 +1,14 @@
 mod header;
 mod mbc;
 
-use crate::{prelude::*, ROM_BANK00_SIZE, ROM_BANKNN_SIZE};
+use crate::{
+    prelude::*, EXTERNAL_RAM_END, EXTERNAL_RAM_START, ROM_BANK00_SIZE, ROM_BANK00_START, ROM_BANKNN_END,
+    ROM_BANKNN_SIZE,
+};
 
 use header::CartridgeHeader;
 pub use header::{RamSize, RomSize};
-use mbc::{CartridgeType, MbcType};
+use mbc::{select_mbc, CartridgeType, MemoryBankController};
 
 pub enum CartridgeError {
     InvalidRomSize(Option<RomSize>, &'static str),
@@ -37,11 +40,16 @@ impl std::fmt::Display for CartridgeError {
 
 pub type CartridgeResult<T> = std::result::Result<T, CartridgeError>;
 
-#[derive(Debug)]
 pub struct Cartridge {
     pub raw_rom: Vec<u8>,
     pub header: CartridgeHeader,
-    pub mbc: CartridgeType,
+    pub mbc: Box<dyn MemoryBankController>,
+}
+
+impl std::fmt::Debug for Cartridge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Cartridge").field("header", &self.header).finish()
+    }
 }
 
 impl Default for Cartridge {
@@ -60,7 +68,7 @@ impl Cartridge {
             }
         };
 
-        let mbc = match MbcType::new(header.cartridge_type, header.rom, header.ram) {
+        let mbc = match select_mbc(header.cartridge_type, header.rom, header.ram) {
             Ok(mbc) => mbc,
             Err(e) => {
                 return Err(Box::new(std::io::Error::new(
@@ -134,6 +142,30 @@ impl Cartridge {
         println!("Unmapping boot rom, switching to cartridge rom");
         // self.rom_bank00
         //     .copy_from_slice(&self.raw_rom[..ROM_BANK00_SIZE as usize]);
+    }
+}
+
+impl Accessible<u16> for Cartridge {
+    fn read(&self, address: u16) -> u8 {
+        match address {
+            ROM_BANK00_START..=ROM_BANKNN_END => self.mbc.read_rom(address),
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.mbc.read_ram(address),
+
+            _ => unreachable!(
+                "Cartrigde: read of address {address:04X} should have been handled by other components"
+            ),
+        }
+    }
+
+    fn write(&mut self, address: u16, value: u8) {
+        match address {
+            ROM_BANK00_START..=ROM_BANKNN_END => self.mbc.write_rom(address, value),
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.mbc.write_ram(address, value),
+
+            _ => unreachable!(
+                "Cartrigde: write of address {address:04X} should have been handled by other components"
+            ),
+        }
     }
 }
 

@@ -4,7 +4,10 @@ mod mbc2;
 mod mbc3;
 mod mbc5;
 
-use crate::cartrigde::{CartridgeError, CartridgeResult};
+use crate::cartrigde::{
+    header::{RamSize, RomSize},
+    CartridgeError, CartridgeResult,
+};
 
 use mbc0::Mbc0;
 use mbc1::Mbc1;
@@ -143,6 +146,7 @@ impl CartridgeType {
     pub fn has_sensor(&self) -> bool { matches!(self, CartridgeType::Mbc7SensorRumbleRamBattery) }
 }
 
+#[derive(Debug, Default)]
 pub struct MbcFeatures {
     pub has_ram: bool,
     pub has_battery: bool,
@@ -163,43 +167,8 @@ impl From<CartridgeType> for MbcFeatures {
     }
 }
 
-pub enum MbcType {
-    Mbc0(Mbc0),
-    Mbc1(Mbc1),
-    Mbc2(Mbc2),
-    Mbc3(Mbc3),
-    Mbc5(Mbc5),
-}
-
-impl MbcType {
-    pub fn new(cartridge_type: CartridgeType, rom_type: RomType, ram_type: RamType) -> CartridgeResult<Self> {
-        use CartridgeType as CT;
-
-        match cartridge_type {
-            CT::RomOnly | CT::RomRam | CT::RomRamBattery => {
-                Ok(MbcType::Mbc0(Mbc0::new(cartridge_type, rom_type, ram_type)))
-            }
-            CT::Mbc1 | CT::Mbc1Ram | CT::Mbc1RamBattery => {
-                Ok(MbcType::Mbc1(Mbc1::new(cartridge_type, rom_type, ram_type)))
-            }
-            CT::Mbc2 | CT::Mbc2Battery => Ok(MbcType::Mbc2(Mbc2::new(cartridge_type, rom_type, ram_type))),
-            CT::Mbc3 | CT::Mbc3Ram | CT::Mbc3RamBattery | CT::Mbc3TimerBattery | CT::Mbc3TimerRamBattery => {
-                Ok(MbcType::Mbc3(Mbc3::new(cartridge_type, rom_type, ram_type)))
-            }
-            CT::Mbc5
-            | CT::Mbc5Ram
-            | CT::Mbc5RamBattery
-            | CT::Mbc5Rumble
-            | CT::Mbc5RumbleRam
-            | CT::Mbc5RumbleRamBattery => Ok(MbcType::Mbc5(Mbc5::new(cartridge_type, rom_type, ram_type))),
-
-            _ => Err(CartridgeError::UnsupportedCartridgeType(cartridge_type)),
-        }
-    }
-}
-
 pub trait MemoryBankController {
-    fn new(cartridge_type: CartridgeType, rom_type: RomType, ram_type: RamType) -> Self
+    fn new(cartridge_type: CartridgeType, rom_type: RomSize, ram_type: RamSize) -> CartridgeResult<Self>
     where
         Self: Sized;
 
@@ -207,4 +176,33 @@ pub trait MemoryBankController {
     fn write_rom(&mut self, address: u16, value: u8);
     fn read_ram(&self, address: u16) -> u8;
     fn write_ram(&mut self, address: u16, value: u8);
+}
+
+pub fn select_mbc(
+    cartridge_type: CartridgeType,
+    rom_type: RomSize,
+    ram_type: RamSize,
+) -> CartridgeResult<Box<dyn MemoryBankController>> {
+    use CartridgeType as CT;
+
+    match cartridge_type {
+        CT::RomOnly | CT::RomRam | CT::RomRamBattery => {
+            Ok(Box::new(Mbc0::new(cartridge_type, rom_type, ram_type)?))
+        }
+        CT::Mbc1 | CT::Mbc1Ram | CT::Mbc1RamBattery => {
+            Ok(Box::new(Mbc1::new(cartridge_type, rom_type, ram_type)?))
+        }
+        CT::Mbc2 | CT::Mbc2Battery => Ok(Box::new(Mbc2::new(cartridge_type, rom_type, ram_type)?)),
+        CT::Mbc3 | CT::Mbc3Ram | CT::Mbc3RamBattery | CT::Mbc3TimerBattery | CT::Mbc3TimerRamBattery => {
+            Ok(Box::new(Mbc3::new(cartridge_type, rom_type, ram_type)?))
+        }
+        CT::Mbc5
+        | CT::Mbc5Ram
+        | CT::Mbc5RamBattery
+        | CT::Mbc5Rumble
+        | CT::Mbc5RumbleRam
+        | CT::Mbc5RumbleRamBattery => Ok(Box::new(Mbc5::new(cartridge_type, rom_type, ram_type)?)),
+
+        _ => Err(CartridgeError::UnsupportedCartridgeType(cartridge_type)),
+    }
 }

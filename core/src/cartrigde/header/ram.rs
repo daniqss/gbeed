@@ -2,7 +2,7 @@ use crate::cartrigde::{CartridgeError, CartridgeResult};
 
 /// # Ram Size
 /// Defines how much RAM is provided by the cartridge
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum RamSize {
     #[default]
     None,

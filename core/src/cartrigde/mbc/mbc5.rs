@@ -6,11 +6,11 @@ use crate::cartrigde::{
 use super::MemoryBankController;
 
 #[derive(Debug, Default)]
-pub struct Mbc1 {
+pub struct Mbc5 {
     features: MbcFeatures,
 }
 
-impl MemoryBankController for Mbc1 {
+impl MemoryBankController for Mbc5 {
     fn new(cartridge_type: CartridgeType, rom_type: RomSize, ram_type: RamSize) -> CartridgeResult<Self> {
         Ok(Self {
             features: MbcFeatures::from(cartridge_type),
