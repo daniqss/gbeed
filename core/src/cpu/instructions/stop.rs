@@ -20,6 +20,6 @@ impl Instruction for Stop {
     fn exec(&mut self, _: &mut Dmg) -> InstructionResult {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
-    fn info(&self) -> (u8, u8) { (2, 2) }
+    fn info(&self) -> (u8, u8) { (1, 2) }
     fn disassembly(&self) -> String { "stop".to_string() }
 }

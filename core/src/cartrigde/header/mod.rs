@@ -21,8 +21,38 @@ mem_range!(GLOBAL_CHECKSUM, 0x14E, 0x14F);
 enum GBCSupport {
     #[default]
     None,
-    Enhancements,
-    Only,
+    Enhancements = 0x80,
+    Only = 0xC0,
+}
+
+impl GBCSupport {
+    fn new(raw_rom: &[u8]) -> GBCSupport {
+        match raw_rom[CARTRIDGE_TYPE] {
+            0x80 => GBCSupport::Enhancements,
+            0xC0 => GBCSupport::Only,
+            _ => GBCSupport::None,
+        }
+    }
+}
+
+/// # Destination Code
+/// Whether the game is made for japanese or overseas markets
+#[derive(Debug, Default, Clone, Copy)]
+pub enum Destination {
+    #[default]
+    Japan = 0x00,
+    Overseas = 0x01,
+    Undefined,
+}
+
+impl Destination {
+    fn new(byte: u8) -> Self {
+        match byte {
+            0x00 => Destination::Japan,
+            0x01 => Destination::Overseas,
+            _ => Destination::Undefined,
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -33,9 +63,9 @@ pub struct CartridgeHeader {
     supports_cgb: GBCSupport,
     supports_sgb: bool,
     pub cartridge_type: CartridgeType,
-    pub rom: RomSize,
-    pub ram: RamSize,
-    pub destination: &'static str,
+    pub rom_size: RomSize,
+    pub ram_size: RamSize,
+    pub destination: Destination,
     game_version: u8,
     pub header_checksum: u8,
     pub global_checksum: u16,
@@ -43,8 +73,8 @@ pub struct CartridgeHeader {
 
 impl CartridgeHeader {
     pub fn new(raw_rom: &[u8]) -> CartridgeResult<Self> {
-        let rom = RomSize::new(raw_rom[ROM_SIZE_ADDRESS])?;
-        let ram = RamSize::new(raw_rom[RAM_SIZE_ADDRESS])?;
+        let rom_size = RomSize::new(raw_rom[ROM_SIZE_ADDRESS])?;
+        let ram_size = RamSize::new(raw_rom[RAM_SIZE_ADDRESS])?;
 
         Ok(Self {
             is_pre_sgb: get_license(raw_rom).0,
@@ -53,12 +83,12 @@ impl CartridgeHeader {
                 .iter()
                 .map(|&c| c as char)
                 .collect(),
-            supports_cgb: get_supports_cgb(raw_rom[TITLE_END as usize]),
-            supports_sgb: get_supports_sgb(raw_rom[SGB_FLAG]),
-            cartridge_type: CartridgeType::new(raw_rom[CARTRIDGE_TYPE]),
-            rom,
-            ram,
-            destination: get_destination_code(raw_rom[DESTINATION_CODE]),
+            supports_cgb: GBCSupport::new(raw_rom),
+            supports_sgb: get_supports_sgb(raw_rom),
+            cartridge_type: CartridgeType::new(raw_rom),
+            rom_size,
+            ram_size,
+            destination: Destination::new(raw_rom[DESTINATION_CODE]),
             game_version: raw_rom[GAME_VERSION],
             header_checksum: raw_rom[HEADER_CHECKSUM],
             global_checksum: ((raw_rom[GLOBAL_CHECKSUM_START as usize] as u16) << 8)
@@ -95,19 +125,19 @@ impl std::fmt::Display for CartridgeHeader {
         writeln!(
             f,
             "ROM Size -> {} KB ({} banks)",
-            self.rom.get_size() / 1024,
-            self.rom.get_banks_count()
+            self.rom_size.get_size() / 1024,
+            self.rom_size.get_banks_count()
         )?;
         writeln!(
             f,
             "External RAM Size -> {} KB {}",
-            self.ram.get_size() / 1024,
-            match self.ram.get_banks_count() {
+            self.ram_size.get_size() / 1024,
+            match self.ram_size.get_banks_count() {
                 Some(count) => format!("({} banks)", count),
                 None => "No RAM".to_string(),
             }
         )?;
-        writeln!(f, "Destination code -> {}", self.destination)?;
+        writeln!(f, "Destination code -> {:?}", self.destination)?;
         writeln!(f, "Game version -> {}", self.game_version)?;
         writeln!(f, "Header checksum -> {:#04X}", self.header_checksum)?;
         writeln!(f, "Global checksum -> {:#06X}", self.global_checksum)?;
@@ -115,23 +145,5 @@ impl std::fmt::Display for CartridgeHeader {
     }
 }
 
-fn get_supports_cgb(flag: u8) -> GBCSupport {
-    match flag {
-        0x80 => GBCSupport::Enhancements,
-        0xC0 => GBCSupport::Only,
-        _ => GBCSupport::None,
-    }
-}
-
 /// indicates if the game supports Super Gameboy
-fn get_supports_sgb(flag: u8) -> bool { matches!(flag, 0x03) }
-
-/// # Destination Code
-/// Whether the game is made for japanese or overseas markets
-fn get_destination_code(byte: u8) -> &'static str {
-    match byte {
-        0x00 => "Japanese",
-        0x01 => "Overseas",
-        _ => unreachable!("Unknown destination code: {byte:#X}"),
-    }
-}
+fn get_supports_sgb(raw_rom: &[u8]) -> bool { matches!(raw_rom[SGB_FLAG], 0x03) }

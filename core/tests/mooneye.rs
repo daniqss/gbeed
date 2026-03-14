@@ -81,7 +81,6 @@ mod mbc1 {
     #[test]
     fn bits_ramg() -> Result<()> { run_mooneye_test(MBC1_DIR, "bits_ramg.gb") }
 
-    #[ignore]
     #[test]
     fn multicart_rom_8mb() -> Result<()> { run_mooneye_test(MBC1_DIR, "multicart_rom_8Mb.gb") }
 

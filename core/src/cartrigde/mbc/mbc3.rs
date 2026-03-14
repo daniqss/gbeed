@@ -1,5 +1,6 @@
 use crate::cartrigde::{
     CartridgeResult, RamSize, RomSize,
+    header::CartridgeHeader,
     mbc::{CartridgeType, MbcFeatures},
 };
 
@@ -11,14 +12,9 @@ pub struct Mbc3 {
 }
 
 impl MemoryBankController for Mbc3 {
-    fn new(
-        raw_rom: &[u8],
-        cartridge_type: CartridgeType,
-        rom_type: RomSize,
-        ram_type: RamSize,
-    ) -> CartridgeResult<Self> {
+    fn new(raw_rom: &[u8], header: &CartridgeHeader) -> CartridgeResult<Self> {
         Ok(Self {
-            features: MbcFeatures::from(cartridge_type),
+            features: MbcFeatures::new(&header.cartridge_type),
         })
     }
 

@@ -2,8 +2,8 @@ use crate::{
     EXTERNAL_RAM_SIZE, EXTERNAL_RAM_START, ROM_BANK00_END, ROM_BANK00_START, ROM_BANKNN_END, ROM_BANKNN_SIZE,
     ROM_BANKNN_START,
     cartrigde::{
-        CartridgeError, CartridgeResult, RamSize, RomSize,
-        mbc::{CartridgeType, MbcFeatures},
+        CARTRIDGE_LOGO_START, CartridgeError, CartridgeResult, NINTENDO_LOGO, RamSize, RomSize,
+        header::CartridgeHeader, mbc::MbcFeatures,
     },
     mem_range,
 };
@@ -25,8 +25,8 @@ enum BankingMode {
 #[derive(Debug, Default)]
 pub struct Mbc1 {
     features: MbcFeatures,
-
     mode: BankingMode,
+    is_multicart: bool,
 
     rom: Vec<u8>,
     rom_size: RomSize,
@@ -38,74 +38,98 @@ pub struct Mbc1 {
     ram_size: RamSize,
 }
 
+fn check_mbc1m_multicart(raw_rom: &[u8], header: &CartridgeHeader) -> bool {
+    if header.rom_size != RomSize::Rom1MB {
+        return false;
+    }
+
+    let mut logo_matches = 0;
+
+    let logo_offset = ROM_BANKNN_SIZE as usize * 0x10;
+    for i in 0..4 {
+        let offset = i * logo_offset + (CARTRIDGE_LOGO_START as usize);
+        if let Some(slice) = raw_rom.get(offset..offset + NINTENDO_LOGO.len())
+            && slice == NINTENDO_LOGO
+        {
+            logo_matches += 1;
+        }
+    }
+    // if we find at least two matches we can be reasonably sure this is a MBC1M multicart
+    logo_matches >= 2
+}
+
 impl MemoryBankController for Mbc1 {
-    fn new(
-        raw_rom: &[u8],
-        cartridge_type: CartridgeType,
-        rom_size: RomSize,
-        ram_size: RamSize,
-    ) -> CartridgeResult<Self> {
-        if rom_size > RomSize::Rom2MB || ram_size > RamSize::Ram32KB {
+    fn new(raw_rom: &[u8], header: &CartridgeHeader) -> CartridgeResult<Self> {
+        if header.rom_size > RomSize::Rom2MB || header.ram_size > RamSize::Ram32KB {
             return Err(CartridgeError::InvalidMBCRomRamCombination(
-                cartridge_type,
-                rom_size,
-                ram_size,
+                header.cartridge_type,
+                header.rom_size,
+                header.ram_size,
                 "MBC1 only supports up to 2MB ROM and 32KB RAM",
             ));
         }
 
-        let rom = if raw_rom.len() == rom_size.get_size() as usize {
+        let is_multicart = check_mbc1m_multicart(raw_rom, header);
+
+        let rom = if raw_rom.len() == header.rom_size.get_size() as usize {
             raw_rom.to_vec()
         } else {
             return Err(CartridgeError::InvalidRomSize(
-                Some(rom_size),
+                Some(header.rom_size),
                 "ROM size does not match the expected size for the cartridge",
             ));
         };
 
-        let ram = vec![0; ram_size.get_size() as usize];
+        let ram = vec![0; header.ram_size.get_size() as usize];
 
         Ok(Self {
-            features: MbcFeatures::from(cartridge_type),
+            features: MbcFeatures::new(&header.cartridge_type),
             mode: BankingMode::Simple,
+            is_multicart,
             rom,
-            rom_size,
+            rom_size: header.rom_size,
             primary_bank: 0,
             secondary_bank: 0,
             ram_enabled: false,
             ram,
-            ram_size,
+            ram_size: header.ram_size,
         })
     }
 
     fn read_rom(&self, address: u16) -> u8 {
+        let banks_count = self.rom_size.get_banks_count() as usize;
+
         match address {
-            // first bank in simple mode, or bank selected by bank_reg_2 in advanced mode
+            // first bank in simple mode, or bank selected by secondary_bank in advanced mode
             ROM_BANK00_START..=ROM_BANK00_END => {
                 let bank = if self.mode == BankingMode::Advanced {
-                    (self.secondary_bank << 5) as usize
+                    if self.is_multicart {
+                        (self.secondary_bank << 4) as usize
+                    } else {
+                        (self.secondary_bank << 5) as usize
+                    }
                 } else {
                     0
                 };
 
-                let bank = bank % self.rom_size.get_banks_count() as usize;
+                let bank = bank % banks_count;
                 let offset = (bank * ROM_BANKNN_SIZE as usize) + (address as usize);
-                self.rom.get(offset).copied().unwrap_or(0xFF)
+                self.rom[offset]
             }
 
-            // bank selected by bank_reg_1 and bank_reg_2
+            // bank selected by primary_bank and secondary_bank
             ROM_BANKNN_START..=ROM_BANKNN_END => {
-                // treat bank 0 as bank 1
-                let primary_bank = if self.primary_bank == 0 {
-                    1
+                // bank 0 is treated as bank 1
+                let primary_bank = (self.primary_bank as usize).max(1);
+
+                let bank = if self.is_multicart {
+                    (self.secondary_bank << 4) as usize | (primary_bank & 0x0F)
                 } else {
-                    self.primary_bank
+                    (self.secondary_bank << 5) as usize | (primary_bank & 0x1F)
                 };
+                let bank = bank % banks_count;
 
-                let bank = ((self.secondary_bank << 5) | primary_bank) as usize;
-
-                let bank = bank % self.rom_size.get_banks_count() as usize;
-                let offset = (bank * ROM_BANKNN_SIZE as usize) + (address - ROM_BANKNN_START) as usize;
+                let offset = bank * ROM_BANKNN_SIZE as usize + (address - ROM_BANKNN_START) as usize;
                 self.rom.get(offset).copied().unwrap_or(0xFF)
             }
 

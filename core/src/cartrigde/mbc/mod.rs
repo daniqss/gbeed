@@ -4,11 +4,9 @@ mod mbc2;
 mod mbc3;
 mod mbc5;
 
-use std::os::linux::raw;
-
 use crate::cartrigde::{
-    CartridgeError, CartridgeResult,
-    header::{RamSize, RomSize},
+    CartridgeError, CartridgeResult, RomSize,
+    header::{CARTRIDGE_TYPE, CartridgeHeader, DESTINATION_CODE},
 };
 
 use mbc0::Mbc0;
@@ -55,9 +53,9 @@ pub enum CartridgeType {
 }
 
 impl CartridgeType {
-    pub fn new(byte: u8) -> CartridgeType {
+    pub fn new(raw_rom: &[u8]) -> CartridgeType {
         use CartridgeType::*;
-        match byte {
+        match raw_rom[CARTRIDGE_TYPE] {
             0x00 => RomOnly,
             0x01 => Mbc1,
             0x02 => Mbc1Ram,
@@ -87,7 +85,7 @@ impl CartridgeType {
             0xFE => HuC3,
             0xFF => HuC1RamBattery,
 
-            _ => unreachable!("Unknown cartridge type: {byte:#X}"),
+            _ => unreachable!("Unknown cartridge type: {:#X}", raw_rom[CARTRIDGE_TYPE]),
         }
     }
 
@@ -157,8 +155,8 @@ pub struct MbcFeatures {
     pub has_sensor: bool,
 }
 
-impl From<CartridgeType> for MbcFeatures {
-    fn from(cartridge_type: CartridgeType) -> Self {
+impl MbcFeatures {
+    fn new(cartridge_type: &CartridgeType) -> Self {
         MbcFeatures {
             has_ram: cartridge_type.has_ram(),
             has_battery: cartridge_type.has_battery(),
@@ -170,12 +168,7 @@ impl From<CartridgeType> for MbcFeatures {
 }
 
 pub trait MemoryBankController {
-    fn new(
-        raw_rom: &[u8],
-        cartridge_type: CartridgeType,
-        rom_type: RomSize,
-        ram_type: RamSize,
-    ) -> CartridgeResult<Self>
+    fn new(raw_rom: &[u8], header: &CartridgeHeader) -> CartridgeResult<Self>
     where
         Self: Sized;
 
@@ -185,42 +178,51 @@ pub trait MemoryBankController {
     fn write_ram(&mut self, address: u16, value: u8);
 }
 
+pub fn _check_multicart(raw_rom: &[u8], header: &CartridgeHeader) -> bool {
+    let wisdom_tree = (header.title == "WISDOM TREE"
+        && header.cartridge_type == CartridgeType::RomOnly
+        && header.rom_size != RomSize::Rom32KB) // > 32KB según el spec
+        || (raw_rom.get(CARTRIDGE_TYPE).copied() == Some(0xC0)
+            && raw_rom.get(DESTINATION_CODE).copied() == Some(0xD1));
+
+    let ems_multicart = header.cartridge_type == CartridgeType::Mbc5RamBattery
+        && raw_rom.get(DESTINATION_CODE).copied() == Some(0xE1);
+
+    let bung_multicart = raw_rom.get(CARTRIDGE_TYPE).copied() == Some(0xBE);
+
+    wisdom_tree || ems_multicart || bung_multicart
+}
+
 pub fn select_mbc(
     raw_rom: &[u8],
-    cartridge_type: CartridgeType,
-    rom_type: RomSize,
-    ram_type: RamSize,
+    header: &CartridgeHeader,
 ) -> CartridgeResult<Box<dyn MemoryBankController>> {
     use CartridgeType as CT;
 
-    match cartridge_type {
-        CT::RomOnly | CT::RomRam | CT::RomRamBattery => {
-            Ok(Box::new(Mbc0::new(raw_rom, cartridge_type, rom_type, ram_type)?))
-        }
-        CT::Mbc1 | CT::Mbc1Ram | CT::Mbc1RamBattery => {
-            Ok(Box::new(Mbc1::new(raw_rom, cartridge_type, rom_type, ram_type)?))
-        }
-        CT::Mbc2 | CT::Mbc2Battery => Ok(Box::new(Mbc2::new(raw_rom, cartridge_type, rom_type, ram_type)?)),
+    match header.cartridge_type {
+        CT::RomOnly | CT::RomRam | CT::RomRamBattery => Ok(Box::new(Mbc0::new(raw_rom, header)?)),
+        CT::Mbc1 | CT::Mbc1Ram | CT::Mbc1RamBattery => Ok(Box::new(Mbc1::new(raw_rom, header)?)),
+        CT::Mbc2 | CT::Mbc2Battery => Ok(Box::new(Mbc2::new(raw_rom, header)?)),
         CT::Mbc3 | CT::Mbc3Ram | CT::Mbc3RamBattery | CT::Mbc3TimerBattery | CT::Mbc3TimerRamBattery => {
-            Ok(Box::new(Mbc3::new(raw_rom, cartridge_type, rom_type, ram_type)?))
+            Ok(Box::new(Mbc3::new(raw_rom, header)?))
         }
         CT::Mbc5
         | CT::Mbc5Ram
         | CT::Mbc5RamBattery
         | CT::Mbc5Rumble
         | CT::Mbc5RumbleRam
-        | CT::Mbc5RumbleRamBattery => Ok(Box::new(Mbc5::new(raw_rom, cartridge_type, rom_type, ram_type)?)),
+        | CT::Mbc5RumbleRamBattery => Ok(Box::new(Mbc5::new(raw_rom, header)?)),
 
         CT::MMM01 | CT::MMM01Ram | CT::MMM01RamBattery => {
-            Err(CartridgeError::UnsupportedCartridgeType(cartridge_type))
+            Err(CartridgeError::UnsupportedCartridgeType(header.cartridge_type))
         }
 
         CT::Mbc6 | CT::Mbc7SensorRumbleRamBattery => {
-            Err(CartridgeError::UnsupportedCartridgeType(cartridge_type))
+            Err(CartridgeError::UnsupportedCartridgeType(header.cartridge_type))
         }
 
         CT::PocketCamera | CT::BandaiTama5 | CT::HuC3 | CT::HuC1RamBattery => {
-            Err(CartridgeError::UnsupportedCartridgeType(cartridge_type))
+            Err(CartridgeError::UnsupportedCartridgeType(header.cartridge_type))
         }
     }
 }

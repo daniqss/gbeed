@@ -18,6 +18,6 @@ impl Instruction for Halt {
         gb.cpu.halted = true;
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
-    fn info(&self) -> (u8, u8) { (2, 2) }
+    fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { "halt".to_string() }
 }

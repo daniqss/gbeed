@@ -10,6 +10,15 @@ use header::CartridgeHeader;
 pub use header::{RamSize, RomSize};
 use mbc::{CartridgeType, MemoryBankController, select_mbc};
 
+/// Used for MBC1M multicart cartridge detection
+/// Used in several emulators for this purpose, considered fair use of the cartridge data
+pub const NINTENDO_LOGO: [u8; 48] = [
+    0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00,
+    0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB,
+    0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E,
+];
+mem_range!(CARTRIDGE_LOGO, 0x0104, 0x0104 + NINTENDO_LOGO.len() as u16 - 1);
+
 pub enum CartridgeError {
     InvalidRomSize(Option<RomSize>, &'static str),
     InvalidRamSize(Option<RamSize>, &'static str),
@@ -66,7 +75,7 @@ impl Default for Cartridge {
 
 impl Cartridge {
     pub fn new(raw_rom: &[u8]) -> Result<Self> {
-        let header = match CartridgeHeader::new(&raw_rom) {
+        let header = match CartridgeHeader::new(raw_rom) {
             Ok(header) => header,
             Err(e) => {
                 return Err(Box::new(std::io::Error::new(
@@ -76,7 +85,7 @@ impl Cartridge {
             }
         };
 
-        let mbc = match select_mbc(&raw_rom, header.cartridge_type, header.rom, header.ram) {
+        let mbc = match select_mbc(raw_rom, &header) {
             Ok(mbc) => mbc,
             Err(e) => {
                 return Err(Box::new(std::io::Error::new(
