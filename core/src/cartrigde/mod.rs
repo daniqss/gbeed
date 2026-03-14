@@ -2,17 +2,18 @@ mod header;
 mod mbc;
 
 use crate::{
-    prelude::*, EXTERNAL_RAM_END, EXTERNAL_RAM_START, ROM_BANK00_SIZE, ROM_BANK00_START, ROM_BANKNN_END,
-    ROM_BANKNN_SIZE,
+    EXTERNAL_RAM_END, EXTERNAL_RAM_START, ROM_BANK00_SIZE, ROM_BANK00_START, ROM_BANKNN_END, ROM_BANKNN_SIZE,
+    prelude::*,
 };
 
 use header::CartridgeHeader;
 pub use header::{RamSize, RomSize};
-use mbc::{select_mbc, CartridgeType, MemoryBankController};
+use mbc::{CartridgeType, MemoryBankController, select_mbc};
 
 pub enum CartridgeError {
     InvalidRomSize(Option<RomSize>, &'static str),
     InvalidRamSize(Option<RamSize>, &'static str),
+    InvalidMBCRomRamCombination(CartridgeType, RomSize, RamSize, &'static str),
     UnsupportedCartridgeType(CartridgeType),
 }
 
@@ -34,6 +35,14 @@ impl std::fmt::Display for CartridgeError {
             CartridgeError::UnsupportedCartridgeType(cartridge_type) => {
                 write!(f, "Unsupported cartridge type: {:?}", cartridge_type)
             }
+            CartridgeError::InvalidMBCRomRamCombination(cartridge_type, rom_size, ram_size, message) => {
+                writeln!(
+                    f,
+                    "Invalid ROM/RAM combination for cartridge type {:?}: ROM size: {:?}, RAM size: {:?}.",
+                    cartridge_type, rom_size, ram_size,
+                )?;
+                writeln!(f, "{}", message)
+            }
         }
     }
 }
@@ -41,7 +50,6 @@ impl std::fmt::Display for CartridgeError {
 pub type CartridgeResult<T> = std::result::Result<T, CartridgeError>;
 
 pub struct Cartridge {
-    pub raw_rom: Vec<u8>,
     pub header: CartridgeHeader,
     pub mbc: Box<dyn MemoryBankController>,
 }
@@ -53,11 +61,11 @@ impl std::fmt::Debug for Cartridge {
 }
 
 impl Default for Cartridge {
-    fn default() -> Self { Cartridge::new(vec![0; (ROM_BANK00_SIZE + ROM_BANKNN_SIZE) as usize]).unwrap() }
+    fn default() -> Self { Cartridge::new(&[0; (ROM_BANK00_SIZE + ROM_BANKNN_SIZE) as usize]).unwrap() }
 }
 
 impl Cartridge {
-    pub fn new(raw_rom: Vec<u8>) -> Result<Self> {
+    pub fn new(raw_rom: &[u8]) -> Result<Self> {
         let header = match CartridgeHeader::new(&raw_rom) {
             Ok(header) => header,
             Err(e) => {
@@ -68,7 +76,7 @@ impl Cartridge {
             }
         };
 
-        let mbc = match select_mbc(header.cartridge_type, header.rom, header.ram) {
+        let mbc = match select_mbc(&raw_rom, header.cartridge_type, header.rom, header.ram) {
             Ok(mbc) => mbc,
             Err(e) => {
                 return Err(Box::new(std::io::Error::new(
@@ -78,22 +86,15 @@ impl Cartridge {
             }
         };
 
-        let cartridge = Self { raw_rom, header, mbc };
-
-        #[cfg(not(test))]
-        if let Err(e) = cartridge.check_header_checksum() {
-            eprintln!(
-                "Header checksum mismatch: the cartridge may be corrupted or the file may be malformed:\n{e}"
-            );
-        }
+        let cartridge = Self { header, mbc };
 
         Ok(cartridge)
     }
 
     /// # Header checksum
     /// Checked by real hardware by the boot ROM
-    pub fn check_header_checksum(&self) -> Result<()> {
-        let header_sum = self.raw_rom[header::TITLE_START as usize..=header::GAME_VERSION]
+    pub fn check_header_checksum(&self, raw_rom: &[u8]) -> Result<()> {
+        let header_sum = raw_rom[header::TITLE_START as usize..=header::GAME_VERSION]
             .iter()
             .fold(0u8, |acc, &b| acc.wrapping_sub(b).wrapping_sub(1));
 
@@ -112,8 +113,8 @@ impl Cartridge {
     /// # Global checksum
     /// Not actually checked by real hardware
     /// We'll use in Cartridge creation for now to verify correct file parsing and integrity
-    pub fn check_global_checksum(&self) -> Result<()> {
-        let cartridge_sum: u16 = self.raw_rom.iter().enumerate().fold(0u16, |acc, (i, &b)| {
+    pub fn check_global_checksum(&self, raw_rom: &[u8]) -> Result<()> {
+        let cartridge_sum: u16 = raw_rom.iter().enumerate().fold(0u16, |acc, (i, &b)| {
             match i != header::GLOBAL_CHECKSUM_START as usize && i != header::GLOBAL_CHECKSUM_END as usize {
                 true => acc.wrapping_add(b as u16),
                 false => acc,

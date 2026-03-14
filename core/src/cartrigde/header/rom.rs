@@ -2,7 +2,7 @@ use crate::cartrigde::{CartridgeError, CartridgeResult};
 
 /// # Rom Size
 /// Other formats are listed in unofficial docs, but they're not found in real cartridges
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RomSize {
     #[default]
     Rom32KB = 0x00,

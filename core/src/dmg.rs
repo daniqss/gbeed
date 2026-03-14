@@ -1,7 +1,8 @@
 pub use crate::prelude::*;
 use crate::{
+    Apu, Cartridge, Controller, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
     apu::{APU_REGISTER_END, APU_REGISTER_START},
-    cpu::{Instruction, R16, R8},
+    cpu::{Instruction, R8, R16},
     interrupts::{IE, IF},
     joypad::JOYP,
     memory::*,
@@ -9,7 +10,6 @@ use crate::{
     serial::{SERIAL_REGISTER_END, SERIAL_REGISTER_START},
     timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
     utils::{high, low, to_u16},
-    Apu, Cartridge, Controller, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
 };
 
 const BANK_REGISTER: u16 = 0xFF50;
@@ -30,7 +30,7 @@ pub struct Dmg {
 }
 
 impl Dmg {
-    pub fn new(mut cartridge: Cartridge, boot_rom: Option<Vec<u8>>) -> Dmg {
+    pub fn new(cartridge: Cartridge, boot_rom: Option<Vec<u8>>) -> Dmg {
         let joypad = Joypad::default();
         let serial = Serial::default();
         let timer = Timer::new();
@@ -40,7 +40,7 @@ impl Dmg {
         let interrupt_enable = Interrupt::new();
 
         let start_at_boot = boot_rom.is_some();
-        let bus = Memory::new(&mut cartridge, boot_rom);
+        let bus = Memory::new(boot_rom);
 
         Dmg {
             cpu: Cpu::new(start_at_boot),
@@ -57,10 +57,6 @@ impl Dmg {
         }
     }
 
-    // pub fn get_serial_output(&self) -> String {
-    //     self.serial.get_output()
-    // }
-
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     /// Modifies the DMG state by executing one CPU instruction, and return the executed instruction
@@ -73,7 +69,10 @@ impl Dmg {
             //     "Executing instruction at {:04X} and {}: {}",
             //     self.cpu.pc,
             //     self.cpu.cycles,
-            //     _instr.disassembly()
+            //     match &_instr {
+            //         Some(instr) => format!("{}", instr),
+            //         None => "None".to_string(),
+            //     }
             // );
         }
 
@@ -102,9 +101,9 @@ impl Dmg {
 impl Accessible<u16> for Dmg {
     fn read(&self, address: u16) -> u8 {
         match address {
-            ROM_BANK00_START..=ROM_BANKNN_END => 0xFF, //self.cartridge.read(address),
+            ROM_BANK00_START..=ROM_BANKNN_END => self.cartridge.read(address),
             VRAM_START..=VRAM_END => self.ppu.read(address),
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => 0xFF, // self.cartridge.read(address),
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.cartridge.read(address),
             WRAM_BANK0_START..=WRAM_BANKN_END => self.bus.ram[(address - WRAM_BANK0_START) as usize],
             ECHO_RAM_START..=ECHO_RAM_END => {
                 let offset = (address - ECHO_RAM_START) as usize;
@@ -144,9 +143,9 @@ impl Accessible<u16> for Dmg {
 
     fn write(&mut self, address: u16, value: u8) {
         match address {
-            ROM_BANK00_START..=ROM_BANKNN_END => {} // self.cartridge.write(address, value),
+            ROM_BANK00_START..=ROM_BANKNN_END => self.cartridge.write(address, value),
             VRAM_START..=VRAM_END => self.ppu.write(address, value),
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {} // self.cartridge.write(address, value),
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.cartridge.write(address, value),
             WRAM_BANK0_START..=WRAM_BANKN_END => self.bus.ram[(address - WRAM_BANK0_START) as usize] = value,
             ECHO_RAM_START..=ECHO_RAM_END => {
                 let offset = (address - ECHO_RAM_START) as usize;

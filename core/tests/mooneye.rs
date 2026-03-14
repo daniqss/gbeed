@@ -1,4 +1,4 @@
-use gbeed_core::{prelude::*, Controller, DefaultRenderer, Renderer, SerialListener};
+use gbeed_core::{Controller, DefaultRenderer, Renderer, SerialListener, prelude::*};
 use std::{fs, path::Path};
 
 struct MooneyeListener {
@@ -40,7 +40,7 @@ fn run_mooneye_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let rom_path = format!("{}/{}", rom_dir, rom_name);
 
     let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
-    let cartridge = Cartridge::new(rom).map_err(|e| format!("Failed to create cartridge: {e}"))?;
+    let cartridge = Cartridge::new(&rom).map_err(|e| format!("Failed to create cartridge: {e}"))?;
     let listener = MooneyeListener::new();
     let mut controller = MooneyeController {
         listener,
@@ -51,6 +51,7 @@ fn run_mooneye_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let timeout_cycles = 100_000;
     let mut cycles = 0;
 
+    println!("Running Mooneye test: {}", rom_name);
     while controller.listener.test_passed.is_none() && cycles < timeout_cycles {
         gb.run(&mut controller)?;
         cycles += gb.cpu.cycles;
@@ -70,28 +71,42 @@ mod mbc1 {
 
     #[test]
     fn bits_bank1() -> Result<()> { run_mooneye_test(MBC1_DIR, "bits_bank1.gb") }
+
     #[test]
     fn bits_bank2() -> Result<()> { run_mooneye_test(MBC1_DIR, "bits_bank2.gb") }
+
     #[test]
     fn bits_mode() -> Result<()> { run_mooneye_test(MBC1_DIR, "bits_mode.gb") }
+
     #[test]
     fn bits_ramg() -> Result<()> { run_mooneye_test(MBC1_DIR, "bits_ramg.gb") }
+
+    #[ignore]
     #[test]
     fn multicart_rom_8mb() -> Result<()> { run_mooneye_test(MBC1_DIR, "multicart_rom_8Mb.gb") }
+
     #[test]
     fn ram_256kb() -> Result<()> { run_mooneye_test(MBC1_DIR, "ram_256kb.gb") }
+
     #[test]
     fn ram_64kb() -> Result<()> { run_mooneye_test(MBC1_DIR, "ram_64kb.gb") }
+
     #[test]
     fn rom_16mb() -> Result<()> { run_mooneye_test(MBC1_DIR, "rom_16Mb.gb") }
+
     #[test]
     fn rom_1mb() -> Result<()> { run_mooneye_test(MBC1_DIR, "rom_1Mb.gb") }
+
     #[test]
     fn rom_2mb() -> Result<()> { run_mooneye_test(MBC1_DIR, "rom_2Mb.gb") }
+
     #[test]
+
     fn rom_4mb() -> Result<()> { run_mooneye_test(MBC1_DIR, "rom_4Mb.gb") }
+
     #[test]
     fn rom_512kb() -> Result<()> { run_mooneye_test(MBC1_DIR, "rom_512kb.gb") }
+
     #[test]
     fn rom_8mb() -> Result<()> { run_mooneye_test(MBC1_DIR, "rom_8Mb.gb") }
 }

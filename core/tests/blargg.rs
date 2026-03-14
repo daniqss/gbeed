@@ -1,4 +1,4 @@
-use gbeed_core::{prelude::*, Controller, DefaultRenderer, Renderer, SerialListener};
+use gbeed_core::{Controller, DefaultRenderer, Renderer, SerialListener, prelude::*};
 use std::{fs, path::Path};
 
 struct BlarggListener {
@@ -80,7 +80,7 @@ fn run_blargg_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let rom_path = format!("{}/{}", rom_dir, rom_name);
 
     let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
-    let cartridge = Cartridge::new(rom).map_err(|e| format!("Failed to create cartridge: {e}"))?;
+    let cartridge = Cartridge::new(&rom).map_err(|e| format!("Failed to create cartridge: {e}"))?;
     let listener = BlarggListener::new(rom_name);
     let mut controller = BlarggController {
         listener,

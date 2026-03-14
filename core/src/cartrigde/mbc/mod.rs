@@ -4,9 +4,11 @@ mod mbc2;
 mod mbc3;
 mod mbc5;
 
+use std::os::linux::raw;
+
 use crate::cartrigde::{
-    header::{RamSize, RomSize},
     CartridgeError, CartridgeResult,
+    header::{RamSize, RomSize},
 };
 
 use mbc0::Mbc0;
@@ -168,7 +170,12 @@ impl From<CartridgeType> for MbcFeatures {
 }
 
 pub trait MemoryBankController {
-    fn new(cartridge_type: CartridgeType, rom_type: RomSize, ram_type: RamSize) -> CartridgeResult<Self>
+    fn new(
+        raw_rom: &[u8],
+        cartridge_type: CartridgeType,
+        rom_type: RomSize,
+        ram_type: RamSize,
+    ) -> CartridgeResult<Self>
     where
         Self: Sized;
 
@@ -179,6 +186,7 @@ pub trait MemoryBankController {
 }
 
 pub fn select_mbc(
+    raw_rom: &[u8],
     cartridge_type: CartridgeType,
     rom_type: RomSize,
     ram_type: RamSize,
@@ -187,22 +195,32 @@ pub fn select_mbc(
 
     match cartridge_type {
         CT::RomOnly | CT::RomRam | CT::RomRamBattery => {
-            Ok(Box::new(Mbc0::new(cartridge_type, rom_type, ram_type)?))
+            Ok(Box::new(Mbc0::new(raw_rom, cartridge_type, rom_type, ram_type)?))
         }
         CT::Mbc1 | CT::Mbc1Ram | CT::Mbc1RamBattery => {
-            Ok(Box::new(Mbc1::new(cartridge_type, rom_type, ram_type)?))
+            Ok(Box::new(Mbc1::new(raw_rom, cartridge_type, rom_type, ram_type)?))
         }
-        CT::Mbc2 | CT::Mbc2Battery => Ok(Box::new(Mbc2::new(cartridge_type, rom_type, ram_type)?)),
+        CT::Mbc2 | CT::Mbc2Battery => Ok(Box::new(Mbc2::new(raw_rom, cartridge_type, rom_type, ram_type)?)),
         CT::Mbc3 | CT::Mbc3Ram | CT::Mbc3RamBattery | CT::Mbc3TimerBattery | CT::Mbc3TimerRamBattery => {
-            Ok(Box::new(Mbc3::new(cartridge_type, rom_type, ram_type)?))
+            Ok(Box::new(Mbc3::new(raw_rom, cartridge_type, rom_type, ram_type)?))
         }
         CT::Mbc5
         | CT::Mbc5Ram
         | CT::Mbc5RamBattery
         | CT::Mbc5Rumble
         | CT::Mbc5RumbleRam
-        | CT::Mbc5RumbleRamBattery => Ok(Box::new(Mbc5::new(cartridge_type, rom_type, ram_type)?)),
+        | CT::Mbc5RumbleRamBattery => Ok(Box::new(Mbc5::new(raw_rom, cartridge_type, rom_type, ram_type)?)),
 
-        _ => Err(CartridgeError::UnsupportedCartridgeType(cartridge_type)),
+        CT::MMM01 | CT::MMM01Ram | CT::MMM01RamBattery => {
+            Err(CartridgeError::UnsupportedCartridgeType(cartridge_type))
+        }
+
+        CT::Mbc6 | CT::Mbc7SensorRumbleRamBattery => {
+            Err(CartridgeError::UnsupportedCartridgeType(cartridge_type))
+        }
+
+        CT::PocketCamera | CT::BandaiTama5 | CT::HuC3 | CT::HuC1RamBattery => {
+            Err(CartridgeError::UnsupportedCartridgeType(cartridge_type))
+        }
     }
 }

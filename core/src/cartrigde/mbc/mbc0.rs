@@ -16,15 +16,26 @@ const MBC0_RAM_SIZE: usize = EXTERNAL_RAM_SIZE as usize;
 #[derive(Debug)]
 pub struct Mbc0 {
     rom: [u8; MBC0_ROM_SIZE],
-    ram: Option<[u8; MBC0_RAM_SIZE]>,
+    ram: Option<Vec<u8>>,
 }
 
 impl MemoryBankController for Mbc0 {
-    fn new(cartridge_type: CartridgeType, rom_type: RomSize, ram_type: RamSize) -> CartridgeResult<Self> {
+    fn new(
+        raw_rom: &[u8],
+        cartridge_type: CartridgeType,
+        rom_type: RomSize,
+        ram_type: RamSize,
+    ) -> CartridgeResult<Self> {
         let features = MbcFeatures::from(cartridge_type);
 
         let rom = match rom_type {
-            RomSize::Rom32KB => [0; MBC0_ROM_SIZE],
+            RomSize::Rom32KB => raw_rom
+                .get(..MBC0_ROM_SIZE)
+                .and_then(|slice| slice.try_into().ok())
+                .ok_or(CartridgeError::InvalidRomSize(
+                    Some(rom_type),
+                    "ROM size must be exactly 32KB for MBC0",
+                ))?,
             _ => {
                 return Err(CartridgeError::InvalidRomSize(
                     Some(rom_type),
@@ -35,7 +46,7 @@ impl MemoryBankController for Mbc0 {
 
         let ram = match (features.has_ram, ram_type) {
             (false, RamSize::None) => None,
-            (true, RamSize::Ram8KB) => Some([0; MBC0_RAM_SIZE]),
+            (true, RamSize::Ram8KB) => Some(vec![0; MBC0_RAM_SIZE]),
             (_, ram) => {
                 return Err(CartridgeError::InvalidRamSize(
                     Some(ram),

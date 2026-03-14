@@ -79,7 +79,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     let game: Cartridge = match game_path {
         Some(ref path) => match std::fs::read(path) {
-            Ok(data) => match Cartridge::new(data) {
+            Ok(data) => match Cartridge::new(&data) {
                 Ok(cartridge) => cartridge,
                 Err(e) => {
                     print_help();
@@ -105,6 +105,8 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             )));
         }
     };
+
+    println!("{game}");
 
     let boot_rom = if let Some(ref path) = boot_path {
         Some(std::fs::read(path).map_err(|e| {

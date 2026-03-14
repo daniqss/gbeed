@@ -13,7 +13,7 @@ use crate::{
 // TODO: not expose individual instructions
 pub use instructions::{Instruction, Len, Nop};
 use instructions::{JumpCondition as JC, *};
-pub use registers::{Register16 as R16, Register8 as R8};
+pub use registers::{Register8 as R8, Register16 as R16};
 
 use std::fmt::{self, Display, Formatter};
 
@@ -114,6 +114,7 @@ impl Cpu {
             Ok(instr) => instr,
             Err(e) => {
                 eprintln!("Error fetching instruction at {:04X}: {}", gb.cpu.pc, e);
+                std::thread::sleep(std::time::Duration::from_secs(1));
                 return None;
             }
         };
