@@ -3,7 +3,7 @@ use crate::{
     ROM_BANKNN_START,
     cartrigde::{
         CARTRIDGE_LOGO_START, CartridgeError, CartridgeResult, NINTENDO_LOGO, RamSize, RomSize,
-        header::CartridgeHeader, mbc::MbcFeatures,
+        features::MbcFeatures, header::CartridgeHeader,
     },
     mem_range,
 };

@@ -132,10 +132,7 @@ impl CartridgeType {
 
     pub fn has_timer(&self) -> bool {
         use CartridgeType::*;
-        matches!(
-            self,
-            Mbc3TimerBattery | Mbc3TimerRamBattery | Mbc7SensorRumbleRamBattery
-        )
+        matches!(self, Mbc3TimerBattery | Mbc3TimerRamBattery)
     }
 
     pub fn has_rumble(&self) -> bool {
@@ -147,27 +144,6 @@ impl CartridgeType {
     }
 
     pub fn has_sensor(&self) -> bool { matches!(self, CartridgeType::Mbc7SensorRumbleRamBattery) }
-}
-
-#[derive(Debug, Default)]
-pub struct MbcFeatures {
-    pub has_ram: bool,
-    pub has_battery: bool,
-    pub has_timer: bool,
-    pub has_rumble: bool,
-    pub has_sensor: bool,
-}
-
-impl MbcFeatures {
-    fn new(cartridge_type: &CartridgeType) -> Self {
-        MbcFeatures {
-            has_ram: cartridge_type.has_ram(),
-            has_battery: cartridge_type.has_battery(),
-            has_timer: cartridge_type.has_timer(),
-            has_rumble: cartridge_type.has_rumble(),
-            has_sensor: cartridge_type.has_sensor(),
-        }
-    }
 }
 
 pub trait MemoryBankController {

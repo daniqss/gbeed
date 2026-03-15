@@ -1,6 +1,6 @@
 use crate::{
     ROM_BANK00_END, ROM_BANK00_START, ROM_BANKNN_END, ROM_BANKNN_SIZE, ROM_BANKNN_START,
-    cartrigde::{CartridgeResult, header::CartridgeHeader, mbc::MbcFeatures},
+    cartrigde::{CartridgeError, CartridgeResult, RomSize, features::MbcFeatures, header::CartridgeHeader},
 };
 
 use super::MemoryBankController;
@@ -9,8 +9,8 @@ use super::MemoryBankController;
 pub struct Mbc2 {
     _features: MbcFeatures,
     rom: Vec<u8>,
-    rom_size_banks: usize,
-    rom_bank: u8,
+    rom_size: RomSize,
+    rom_selected_bank: u8,
 
     ram: [u8; 512],
     ram_enabled: bool,
@@ -21,8 +21,8 @@ impl Default for Mbc2 {
         Self {
             _features: MbcFeatures::default(),
             rom: Vec::new(),
-            rom_size_banks: 0,
-            rom_bank: 1,
+            rom_size: RomSize::Rom512KB,
+            rom_selected_bank: 1,
             ram: [0; 512],
             ram_enabled: false,
         }
@@ -31,15 +31,21 @@ impl Default for Mbc2 {
 
 impl MemoryBankController for Mbc2 {
     fn new(raw_rom: &[u8], header: &CartridgeHeader) -> CartridgeResult<Self> {
-        let rom = raw_rom.to_vec();
-        // Use the actual number of banks available in the provided buffer
-        let rom_size_banks = rom.len() / ROM_BANKNN_SIZE as usize;
+        let rom = if raw_rom.len() == header.rom_size.get_size() as usize {
+            raw_rom.to_vec()
+        } else {
+            return Err(CartridgeError::InvalidRomSize(
+                Some(header.rom_size),
+                "ROM size does not match the expected size for the cartridge",
+            ));
+        };
 
         Ok(Self {
             _features: MbcFeatures::new(&header.cartridge_type),
             rom,
-            rom_size_banks,
-            rom_bank: 1,
+            rom_size: header.rom_size,
+
+            rom_selected_bank: 1,
             ram: [0; 512],
             ram_enabled: false,
         })
@@ -47,14 +53,15 @@ impl MemoryBankController for Mbc2 {
 
     fn read_rom(&self, address: u16) -> u8 {
         match address {
-            ROM_BANK00_START..=ROM_BANK00_END => self.rom.get(address as usize).copied().unwrap_or(0xFF),
+            ROM_BANK00_START..=ROM_BANK00_END => self.rom[address as usize],
             ROM_BANKNN_START..=ROM_BANKNN_END => {
                 // 16 banks max, changing bank 0 to 1 since bank 0 is fixed to the first 16KB of the ROM
-                let bank = (self.rom_bank as usize % 16).max(1);
+                let bank = self.rom_selected_bank.max(1);
 
-                let bank = bank % self.rom_size_banks;
-                let offset = (bank * ROM_BANKNN_SIZE as usize) + (address - ROM_BANKNN_START) as usize;
-                self.rom.get(offset).copied().unwrap_or(0xFF)
+                let bank = bank % self.rom_size.get_banks_count() as u8;
+                let offset =
+                    (bank as usize * ROM_BANKNN_SIZE as usize) + (address - ROM_BANKNN_START) as usize;
+                self.rom[offset]
             }
 
             _ => unreachable!(
@@ -70,7 +77,7 @@ impl MemoryBankController for Mbc2 {
                 self.ram_enabled = (value & 0x0F) == 0x0A;
             } else {
                 // only lower 4 bits for bank selection
-                self.rom_bank = value & 0x0F;
+                self.rom_selected_bank = value & 0x0F;
             }
         }
     }

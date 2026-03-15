@@ -1,7 +1,7 @@
 use crate::{
     EXTERNAL_RAM_SIZE, EXTERNAL_RAM_START, ROM_BANK00_SIZE, ROM_BANKNN_SIZE,
     cartrigde::{
-        CartridgeError, CartridgeResult, RamSize, RomSize, header::CartridgeHeader, mbc::MbcFeatures,
+        CartridgeError, CartridgeResult, RamSize, RomSize, features::MbcFeatures, header::CartridgeHeader,
     },
 };
 
