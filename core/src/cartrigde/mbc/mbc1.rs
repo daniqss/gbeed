@@ -10,7 +10,7 @@ use crate::{
 
 use super::MemoryBankController;
 
-mem_range!(RAM_ENABLE, 0x0000, 0x1FFF);
+mem_range!(MBC1_RAM_ENABLE, 0x0000, 0x1FFF);
 mem_range!(ROM_BANK_NUMBER, 0x2000, 0x3FFF);
 mem_range!(RAM_BANK_NUMBER, 0x4000, 0x5FFF);
 mem_range!(BANKING_MODE_SELECT, 0x6000, 0x7FFF);
@@ -38,6 +38,8 @@ pub struct Mbc1 {
     ram_size: RamSize,
 }
 
+/// Checks for Nintendo logo in the various ROMs of the multicart
+/// Tested against (https://github.com/Gekkio/mooneye-test-suite/blob/main/emulator-only/mbc1/multicart_rom_8Mb.s)
 fn check_mbc1m_multicart(raw_rom: &[u8], header: &CartridgeHeader) -> bool {
     if header.rom_size != RomSize::Rom1MB {
         return false;
@@ -143,7 +145,7 @@ impl MemoryBankController for Mbc1 {
     fn write_rom(&mut self, address: u16, value: u8) {
         match address {
             // any 0xA in lower bits enables RAM, any other value disables it
-            RAM_ENABLE_START..=RAM_ENABLE_END if self.features.has_ram => {
+            MBC1_RAM_ENABLE_START..=MBC1_RAM_ENABLE_END if self.features.has_ram => {
                 self.ram_enabled = (value & 0x0F) == 0x0A
             }
 

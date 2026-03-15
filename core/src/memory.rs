@@ -1,4 +1,4 @@
-use crate::{Cartridge, prelude::*};
+use crate::prelude::*;
 
 /// addressable memory size, 64KB
 pub const ADDRESABLE_MEMORY: u16 = 0xFFFF;

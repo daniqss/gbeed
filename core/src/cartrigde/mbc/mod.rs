@@ -97,6 +97,9 @@ impl CartridgeType {
                 | Mbc1RamBattery
                 | RomRam
                 | RomRamBattery
+                // they have build in RAM in MBC2
+                | Mbc2
+                | Mbc2Battery
                 | Mbc3Ram
                 | Mbc3RamBattery
                 | Mbc3TimerRamBattery
@@ -181,7 +184,7 @@ pub trait MemoryBankController {
 pub fn _check_multicart(raw_rom: &[u8], header: &CartridgeHeader) -> bool {
     let wisdom_tree = (header.title == "WISDOM TREE"
         && header.cartridge_type == CartridgeType::RomOnly
-        && header.rom_size != RomSize::Rom32KB) // > 32KB según el spec
+        && header.rom_size > RomSize::Rom32KB)
         || (raw_rom.get(CARTRIDGE_TYPE).copied() == Some(0xC0)
             && raw_rom.get(DESTINATION_CODE).copied() == Some(0xD1));
 
