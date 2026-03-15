@@ -181,7 +181,7 @@ impl MemoryBankController for Mbc1 {
 
         let bank = bank % banks_count;
         let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
-        self.ram.get(offset).copied().unwrap_or(0xFF)
+        self.ram[offset]
     }
 
     fn write_ram(&mut self, address: u16, value: u8) {
@@ -201,8 +201,7 @@ impl MemoryBankController for Mbc1 {
 
         let bank = bank % banks_count;
         let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
-        if let Some(ram_cell) = self.ram.get_mut(offset) {
-            *ram_cell = value;
-        }
+
+        self.ram[offset] = value;
     }
 }

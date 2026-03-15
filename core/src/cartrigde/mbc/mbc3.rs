@@ -147,7 +147,7 @@ impl MemoryBankController for Mbc3 {
             if banks_count > 0 {
                 let bank = (self.ram_selected_bank as usize) % banks_count;
                 let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
-                return self.ram.get(offset).copied().unwrap_or(0xFF);
+                return self.ram[offset];
             }
         }
 
@@ -168,9 +168,8 @@ impl MemoryBankController for Mbc3 {
             if banks_count > 0 {
                 let bank = (self.ram_selected_bank as usize) % banks_count;
                 let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
-                if let Some(ram_cell) = self.ram.get_mut(offset) {
-                    *ram_cell = value;
-                }
+
+                self.ram[offset] = value;
             }
         }
     }

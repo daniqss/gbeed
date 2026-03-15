@@ -1,6 +1,10 @@
-#[derive(Debug, Default)]
-pub struct Rumble;
+#[derive(Debug, Default, Clone)]
+pub struct Rumble {
+    pub enabled: bool,
+}
 
 impl Rumble {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self { enabled: false }
+    }
 }
