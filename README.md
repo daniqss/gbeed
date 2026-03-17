@@ -20,7 +20,7 @@ The following games, the best-selling games of the DMG catalog, are tested in in
 | 11              | Link's Awakining   | 🟩 Playable              | GB MBC1 + RAM + Battery          | 512 KB   | 8 KB     |
 
 <sub>
-<sup>1</sup> This game save file tend to get corrupted, crashing the game sometimes<br>
+<sup>1</sup> This game save file tends to get corrupted, crashing the game sometimes<br>
 </sub>
 
 ### Tests
