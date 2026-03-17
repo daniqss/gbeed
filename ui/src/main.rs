@@ -8,6 +8,10 @@ use listener::RaylibSerialListener;
 use renderer::{ButtonStates, RaylibRenderer};
 
 use raylib::prelude::*;
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 struct RaylibController {
     renderer: RaylibRenderer,
@@ -77,41 +81,52 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         i += 1;
     }
 
-    let game: Cartridge = match game_path {
-        Some(ref path) => match std::fs::read(path) {
-            Ok(data) => match Cartridge::new(&data) {
-                Ok(cartridge) => cartridge,
-                Err(e) => {
-                    print_help();
-                    return Err(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        format!("Failed to create cartridge from ROM at {path}: {e}"),
-                    )));
-                }
-            },
-            Err(e) => {
-                print_help();
-                return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    format!("Failed to read game ROM at {path}: {e}"),
-                )));
-            }
-        },
+    let (game_path, save_path) = match game_path {
+        Some(path) => {
+            let save_path = save_path_from_rom(&path);
+            (path, save_path)
+        }
         None => {
             print_help();
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidInput,
                 "No game ROM provided",
             )));
         }
     };
 
+    let game_data = fs::read(&game_path).map_err(|e| {
+        io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("Failed to read game ROM at {game_path}: {e}"),
+        )
+    })?;
+
+    // attempt to read the save file, if cartridge doesn't support saves it will discard it
+    let save = match fs::read(&save_path) {
+        Ok(data) => Some(data),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => None,
+        Err(e) => {
+            return Err(Box::new(io::Error::other(format!(
+                "Failed to read save file at {}: {e}",
+                save_path.display()
+            ))))
+        }
+    };
+
+    let game = Cartridge::new(&game_data, save).map_err(|e| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Failed to create cartridge from ROM at {game_path}: {e}"),
+        )
+    })?;
+
     println!("{game}");
 
     let boot_rom = if let Some(ref path) = boot_path {
-        Some(std::fs::read(path).map_err(|e| {
-            std::io::Error::new(
-                std::io::ErrorKind::NotFound,
+        Some(fs::read(path).map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::NotFound,
                 format!("Failed to read boot ROM at {path}: {e}"),
             )
         })?)
@@ -150,7 +165,21 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             .update_bg_map(gb.ppu.bg_map0(), gb.ppu.tile_data());
     }
 
+    if let Some(save_data) = gb.cartridge.save_game() {
+        if let Err(e) = fs::write(&save_path, save_data) {
+            eprintln!("Failed to write save file at {}: {e}", save_path.display());
+        }
+    }
+
     Ok(())
+}
+
+fn save_path_from_rom(rom_path: &str) -> PathBuf {
+    let path = Path::new(rom_path);
+    match path.extension().and_then(|e| e.to_str()) {
+        Some("gb" | "gbc") => path.with_extension("sav"),
+        _ => path.with_added_extension("sav"),
+    }
 }
 
 fn read_input(rl: &RaylibHandle) -> ButtonStates {

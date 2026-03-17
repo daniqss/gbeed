@@ -1,6 +1,8 @@
 use gbeed_core::{Controller, DefaultRenderer, Renderer, SerialListener, prelude::*};
 use std::{fs, path::Path};
 
+type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 struct MooneyeListener {
     received_data: Vec<u8>,
     test_passed: Option<bool>,
@@ -40,7 +42,7 @@ fn run_mooneye_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let rom_path = format!("{}/{}", rom_dir, rom_name);
 
     let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
-    let cartridge = Cartridge::new(&rom).map_err(|e| format!("Failed to create cartridge: {e}"))?;
+    let cartridge = Cartridge::new(&rom, None).map_err(|e| format!("Failed to create cartridge: {e}"))?;
     let listener = MooneyeListener::new();
     let mut controller = MooneyeController {
         listener,

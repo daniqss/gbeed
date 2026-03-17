@@ -3,7 +3,7 @@ use crate::{
     ROM_BANKNN_START,
     cartrigde::{
         CartridgeError, CartridgeResult, RamSize, RomSize,
-        features::{MbcFeatures, Rtc},
+        features::{CartridgeFeatures, Rtc},
         header::CartridgeHeader,
     },
     prelude::*,
@@ -18,11 +18,10 @@ mem_range!(LATCH_CLOCK_DATA, 0x6000, 0x7FFF);
 
 #[derive(Debug, Default)]
 pub struct Mbc3 {
-    features: MbcFeatures,
     rom: Vec<u8>,
     rom_size: RomSize,
     rom_selected_bank: u8,
-    ram: Vec<u8>,
+    ram: Option<Vec<u8>>,
     ram_enabled: bool,
     ram_size: RamSize,
     ram_selected_bank: u8,
@@ -33,9 +32,12 @@ pub struct Mbc3 {
 }
 
 impl MemoryBankController for Mbc3 {
-    fn new(raw_rom: &[u8], header: &CartridgeHeader) -> CartridgeResult<Self> {
-        let features = MbcFeatures::new(&header.cartridge_type);
-
+    fn new(
+        raw_rom: &[u8],
+        save: Option<Vec<u8>>,
+        features: &CartridgeFeatures,
+        header: &CartridgeHeader,
+    ) -> CartridgeResult<Self> {
         let rom = if raw_rom.len() == header.rom_size.get_size() as usize {
             raw_rom.to_vec()
         } else {
@@ -45,7 +47,11 @@ impl MemoryBankController for Mbc3 {
             ));
         };
 
-        let ram = vec![0; header.ram_size.get_size() as usize];
+        let ram = features.has_ram.then(|| {
+            let ram_size = header.ram_size.get_size() as usize;
+            save.filter(|s| features.has_battery && s.len() == ram_size)
+                .unwrap_or_else(|| vec![0; ram_size])
+        });
 
         let timer = if features.has_timer {
             Some(Rtc::new())
@@ -54,7 +60,6 @@ impl MemoryBankController for Mbc3 {
         };
 
         Ok(Self {
-            features,
             rom,
             rom_size: header.rom_size,
             rom_selected_bank: 1,
@@ -91,7 +96,7 @@ impl MemoryBankController for Mbc3 {
             RAM_AND_TIMER_ENABLE_START..=RAM_AND_TIMER_ENABLE_END => {
                 let enabled = (value & 0x0F) == 0x0A;
 
-                if self.features.has_ram {
+                if self.ram.is_some() {
                     self.ram_enabled = enabled;
                 }
 
@@ -108,8 +113,7 @@ impl MemoryBankController for Mbc3 {
                 if value <= 0x03 {
                     self.ram_selected_bank = value;
                     self.rtc_selected = false;
-                } else if self.features.has_timer
-                    && (0x08..=0x0C).contains(&value)
+                } else if (0x08..=0x0C).contains(&value)
                     && let Some(timer) = &mut self.timer
                 {
                     timer.select_register(value);
@@ -142,12 +146,14 @@ impl MemoryBankController for Mbc3 {
             if let Some(timer) = &self.timer {
                 return timer.read();
             }
-        } else if !self.ram.is_empty() && self.features.has_ram {
+        } else if let Some(ram) = &self.ram
+            && !ram.is_empty()
+        {
             let banks_count = self.ram_size.get_banks_count().unwrap_or(0) as usize;
             if banks_count > 0 {
                 let bank = (self.ram_selected_bank as usize) % banks_count;
                 let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
-                return self.ram[offset];
+                return ram[offset];
             }
         }
 
@@ -163,14 +169,18 @@ impl MemoryBankController for Mbc3 {
             if let Some(timer) = &mut self.timer {
                 timer.write(value);
             }
-        } else if !self.ram.is_empty() && self.features.has_ram {
+        } else if let Some(ram) = &mut self.ram
+            && !ram.is_empty()
+        {
             let banks_count = self.ram_size.get_banks_count().unwrap_or(0) as usize;
             if banks_count > 0 {
                 let bank = (self.ram_selected_bank as usize) % banks_count;
                 let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
 
-                self.ram[offset] = value;
+                ram[offset] = value;
             }
         }
     }
+
+    fn get_ram(&self) -> Option<&[u8]> { self.ram.as_deref() }
 }

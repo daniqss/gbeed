@@ -60,7 +60,7 @@ impl Dmg {
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     /// Modifies the DMG state by executing one CPU instruction, and return the executed instruction
-    pub fn run<C: Controller>(&mut self, controller: &mut C) -> Result<()> {
+    pub fn run<C: Controller>(&mut self, controller: &mut C) -> Result<(), Box<dyn std::error::Error>> {
         // one frame == 70224 T-cycles == 17556 M-cycles
         while self.cpu.cycles < 17556 {
             let _instr = self.step(controller);

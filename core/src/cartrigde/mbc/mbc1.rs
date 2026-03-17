@@ -3,7 +3,7 @@ use crate::{
     ROM_BANKNN_START,
     cartrigde::{
         CARTRIDGE_LOGO_START, CartridgeError, CartridgeResult, NINTENDO_LOGO, RamSize, RomSize,
-        features::MbcFeatures, header::CartridgeHeader,
+        features::CartridgeFeatures, header::CartridgeHeader,
     },
     mem_range,
 };
@@ -24,7 +24,6 @@ enum BankingMode {
 
 #[derive(Debug, Default)]
 pub struct Mbc1 {
-    features: MbcFeatures,
     mode: BankingMode,
     is_multicart: bool,
 
@@ -34,12 +33,12 @@ pub struct Mbc1 {
     secondary_bank: u8,
 
     ram_enabled: bool,
-    ram: Vec<u8>,
+    ram: Option<Vec<u8>>,
     ram_size: RamSize,
 }
 
 /// Checks for Nintendo logo in the various ROMs of the multicart
-/// Tested against (https://github.com/Gekkio/mooneye-test-suite/blob/main/emulator-only/mbc1/multicart_rom_8Mb.s)
+/// Tested against [this test](https://github.com/Gekkio/mooneye-test-suite/blob/main/emulator-only/mbc1/multicart_rom_8Mb.s)
 fn check_mbc1m_multicart(raw_rom: &[u8], header: &CartridgeHeader) -> bool {
     if header.rom_size != RomSize::Rom1MB {
         return false;
@@ -61,7 +60,12 @@ fn check_mbc1m_multicart(raw_rom: &[u8], header: &CartridgeHeader) -> bool {
 }
 
 impl MemoryBankController for Mbc1 {
-    fn new(raw_rom: &[u8], header: &CartridgeHeader) -> CartridgeResult<Self> {
+    fn new(
+        raw_rom: &[u8],
+        save: Option<Vec<u8>>,
+        features: &CartridgeFeatures,
+        header: &CartridgeHeader,
+    ) -> CartridgeResult<Self> {
         if header.rom_size > RomSize::Rom2MB || header.ram_size > RamSize::Ram32KB {
             return Err(CartridgeError::InvalidMBCRomRamCombination(
                 header.cartridge_type,
@@ -82,10 +86,13 @@ impl MemoryBankController for Mbc1 {
             ));
         };
 
-        let ram = vec![0; header.ram_size.get_size() as usize];
+        let ram = features.has_ram.then(|| {
+            let ram_size = header.ram_size.get_size() as usize;
+            save.filter(|s| features.has_battery && s.len() == ram_size)
+                .unwrap_or_else(|| vec![0; ram_size])
+        });
 
         Ok(Self {
-            features: MbcFeatures::new(&header.cartridge_type),
             mode: BankingMode::Simple,
             is_multicart,
             rom,
@@ -145,8 +152,10 @@ impl MemoryBankController for Mbc1 {
     fn write_rom(&mut self, address: u16, value: u8) {
         match address {
             // any 0xA in lower bits enables RAM, any other value disables it
-            MBC1_RAM_ENABLE_START..=MBC1_RAM_ENABLE_END if self.features.has_ram => {
-                self.ram_enabled = (value & 0x0F) == 0x0A
+            MBC1_RAM_ENABLE_START..=MBC1_RAM_ENABLE_END => {
+                if self.ram.is_some() {
+                    self.ram_enabled = (value & 0x0F) == 0x0A
+                }
             }
 
             ROM_BANK_NUMBER_START..=ROM_BANK_NUMBER_END => self.primary_bank = value & 0x1F,
@@ -164,28 +173,22 @@ impl MemoryBankController for Mbc1 {
     }
 
     fn read_ram(&self, address: u16) -> u8 {
-        if !self.ram_enabled || self.ram.is_empty() {
-            return 0xFF;
+        match (&self.ram, self.ram_enabled, self.ram_size.get_banks_count()) {
+            (Some(ram), true, Some(banks_count)) if banks_count > 0 => {
+                let bank = match self.mode {
+                    BankingMode::Advanced => self.secondary_bank as usize % banks_count as usize,
+                    BankingMode::Simple => 0,
+                };
+
+                let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
+                ram[offset]
+            }
+            _ => 0xFF,
         }
-
-        let bank = match self.mode {
-            BankingMode::Advanced => self.secondary_bank as usize,
-            BankingMode::Simple => 0,
-        };
-
-        // if the cart is not large enough to use the 2 bit register (<= 8 KiB RAM) this mode select has no observable effect.
-        let banks_count = self.ram_size.get_banks_count().unwrap_or(0) as usize;
-        if banks_count == 0 {
-            return 0xFF;
-        }
-
-        let bank = bank % banks_count;
-        let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
-        self.ram[offset]
     }
 
     fn write_ram(&mut self, address: u16, value: u8) {
-        if !self.ram_enabled || self.ram.is_empty() {
+        if !self.ram_enabled || self.ram.is_none() {
             return;
         }
 
@@ -202,6 +205,10 @@ impl MemoryBankController for Mbc1 {
         let bank = bank % banks_count;
         let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
 
-        self.ram[offset] = value;
+        if let Some(ram) = &mut self.ram {
+            ram[offset] = value;
+        }
     }
+
+    fn get_ram(&self) -> Option<&[u8]> { self.ram.as_deref() }
 }

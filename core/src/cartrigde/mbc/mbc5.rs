@@ -3,7 +3,7 @@ use crate::{
     ROM_BANKNN_START,
     cartrigde::{
         CartridgeError, CartridgeResult, RamSize, RomSize,
-        features::{MbcFeatures, Rumble},
+        features::{CartridgeFeatures, Rumble},
         header::CartridgeHeader,
     },
     prelude::*,
@@ -18,23 +18,25 @@ mem_range!(RAM_BANK_NUMBER, 0x4000, 0x5FFF);
 
 #[derive(Debug, Default)]
 pub struct Mbc5 {
-    features: MbcFeatures,
     rumble: Option<Rumble>,
 
     rom: Vec<u8>,
     rom_size: RomSize,
     rom_selected_bank: u16,
 
-    ram: Vec<u8>,
+    ram: Option<Vec<u8>>,
     ram_enabled: bool,
     ram_size: RamSize,
     ram_selected_bank: u8,
 }
 
 impl MemoryBankController for Mbc5 {
-    fn new(raw_rom: &[u8], header: &CartridgeHeader) -> CartridgeResult<Self> {
-        let features = MbcFeatures::new(&header.cartridge_type);
-
+    fn new(
+        raw_rom: &[u8],
+        save: Option<Vec<u8>>,
+        features: &CartridgeFeatures,
+        header: &CartridgeHeader,
+    ) -> CartridgeResult<Self> {
         let rom = if raw_rom.len() == header.rom_size.get_size() as usize {
             raw_rom.to_vec()
         } else {
@@ -44,15 +46,20 @@ impl MemoryBankController for Mbc5 {
             ));
         };
 
-        let ram = vec![0; header.ram_size.get_size() as usize];
+        let ram = features.has_ram.then(|| {
+            let ram_size = header.ram_size.get_size() as usize;
+            save.filter(|s| features.has_battery && s.len() == ram_size)
+                .unwrap_or_else(|| vec![0; ram_size])
+        });
+
+        let rumble = if header.cartridge_type.has_rumble() {
+            Some(Rumble::new())
+        } else {
+            None
+        };
 
         Ok(Self {
-            features,
-            rumble: if header.cartridge_type.has_rumble() {
-                Some(Rumble::new())
-            } else {
-                None
-            },
+            rumble,
             rom,
             rom_size: header.rom_size,
             rom_selected_bank: 1,
@@ -82,11 +89,10 @@ impl MemoryBankController for Mbc5 {
 
     fn write_rom(&mut self, address: u16, value: u8) {
         match address {
-            RAM_ENABLE_START..=RAM_ENABLE_END => {
-                if self.features.has_ram {
-                    self.ram_enabled = (value & 0x0F) == 0x0A;
-                }
+            RAM_ENABLE_START..=RAM_ENABLE_END if self.ram.is_some() => {
+                self.ram_enabled = (value & 0x0F) == 0x0A
             }
+
             ROM_BANK_NUMBER_LOW_START..=ROM_BANK_NUMBER_LOW_END => {
                 self.rom_selected_bank = (self.rom_selected_bank & 0xFF00) | (value as u16);
             }
@@ -96,10 +102,10 @@ impl MemoryBankController for Mbc5 {
             RAM_BANK_NUMBER_START..=RAM_BANK_NUMBER_END => {
                 if let Some(rumble) = &mut self.rumble {
                     rumble.enabled = (value & 0x08) != 0;
-                    if self.features.has_ram {
+                    if self.ram.is_some() {
                         self.ram_selected_bank = value & 0x07;
                     }
-                } else if self.features.has_ram {
+                } else if self.ram.is_some() {
                     self.ram_selected_bank = value & 0x0F;
                 }
             }
@@ -109,32 +115,26 @@ impl MemoryBankController for Mbc5 {
     }
 
     fn read_ram(&self, address: u16) -> u8 {
-        if !self.ram_enabled || self.ram.is_empty() || !self.features.has_ram {
-            return 0xFF;
+        match (&self.ram, self.ram_enabled, self.ram_size.get_banks_count()) {
+            (Some(ram), true, Some(banks_count)) if !ram.is_empty() && banks_count > 0 => {
+                let bank = (self.ram_selected_bank as usize) % banks_count as usize;
+                let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
+                ram[offset]
+            }
+            _ => 0xFF,
         }
-
-        let banks_count = self.ram_size.get_banks_count().unwrap_or(0) as usize;
-        if banks_count > 0 {
-            let bank = (self.ram_selected_bank as usize) % banks_count;
-            let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
-
-            return self.ram[offset];
-        }
-
-        0xFF
     }
 
     fn write_ram(&mut self, address: u16, value: u8) {
-        if !self.ram_enabled || self.ram.is_empty() || !self.features.has_ram {
-            return;
-        }
-
-        let banks_count = self.ram_size.get_banks_count().unwrap_or(0) as usize;
-        if banks_count > 0 {
-            let bank = (self.ram_selected_bank as usize) % banks_count;
-            let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
-
-            self.ram[offset] = value;
+        match (&mut self.ram, self.ram_enabled, self.ram_size.get_banks_count()) {
+            (Some(ram), true, Some(banks_count)) if !ram.is_empty() && banks_count > 0 => {
+                let bank = (self.ram_selected_bank as usize) % banks_count as usize;
+                let offset = (bank * EXTERNAL_RAM_SIZE as usize) + (address - EXTERNAL_RAM_START) as usize;
+                ram[offset] = value;
+            }
+            _ => {}
         }
     }
+
+    fn get_ram(&self) -> Option<&[u8]> { self.ram.as_deref() }
 }

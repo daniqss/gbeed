@@ -10,7 +10,7 @@ pub use sensor::Sensor;
 use crate::cartrigde::mbc::CartridgeType;
 
 #[derive(Debug, Default)]
-pub struct MbcFeatures {
+pub struct CartridgeFeatures {
     pub has_ram: bool,
     pub has_battery: bool,
     pub has_timer: bool,
@@ -18,9 +18,9 @@ pub struct MbcFeatures {
     pub has_sensor: bool,
 }
 
-impl MbcFeatures {
+impl CartridgeFeatures {
     pub fn new(cartridge_type: &CartridgeType) -> Self {
-        MbcFeatures {
+        CartridgeFeatures {
             has_ram: cartridge_type.has_ram(),
             has_battery: cartridge_type.has_battery(),
             has_timer: cartridge_type.has_timer(),
@@ -28,4 +28,6 @@ impl MbcFeatures {
             has_sensor: cartridge_type.has_sensor(),
         }
     }
+
+    pub fn supports_saves(&self) -> bool { self.has_ram && self.has_battery }
 }

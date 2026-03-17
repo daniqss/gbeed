@@ -1,13 +1,14 @@
 use crate::{
     ROM_BANK00_END, ROM_BANK00_START, ROM_BANKNN_END, ROM_BANKNN_SIZE, ROM_BANKNN_START,
-    cartrigde::{CartridgeError, CartridgeResult, RomSize, features::MbcFeatures, header::CartridgeHeader},
+    cartrigde::{
+        CartridgeError, CartridgeResult, RomSize, features::CartridgeFeatures, header::CartridgeHeader,
+    },
 };
 
 use super::MemoryBankController;
 
 #[derive(Debug)]
 pub struct Mbc2 {
-    _features: MbcFeatures,
     rom: Vec<u8>,
     rom_size: RomSize,
     rom_selected_bank: u8,
@@ -19,7 +20,6 @@ pub struct Mbc2 {
 impl Default for Mbc2 {
     fn default() -> Self {
         Self {
-            _features: MbcFeatures::default(),
             rom: Vec::new(),
             rom_size: RomSize::Rom512KB,
             rom_selected_bank: 1,
@@ -30,7 +30,12 @@ impl Default for Mbc2 {
 }
 
 impl MemoryBankController for Mbc2 {
-    fn new(raw_rom: &[u8], header: &CartridgeHeader) -> CartridgeResult<Self> {
+    fn new(
+        raw_rom: &[u8],
+        _: Option<Vec<u8>>,
+        _: &CartridgeFeatures,
+        header: &CartridgeHeader,
+    ) -> CartridgeResult<Self> {
         let rom = if raw_rom.len() == header.rom_size.get_size() as usize {
             raw_rom.to_vec()
         } else {
@@ -41,7 +46,6 @@ impl MemoryBankController for Mbc2 {
         };
 
         Ok(Self {
-            _features: MbcFeatures::new(&header.cartridge_type),
             rom,
             rom_size: header.rom_size,
 
@@ -100,4 +104,6 @@ impl MemoryBankController for Mbc2 {
         let offset = (address & 0x01FF) as usize;
         self.ram[offset] = value & 0x0F;
     }
+
+    fn get_ram(&self) -> Option<&[u8]> { Some(&self.ram) }
 }

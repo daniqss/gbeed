@@ -7,6 +7,7 @@ use crate::{
     prelude::*,
 };
 
+use features::CartridgeFeatures;
 use header::CartridgeHeader;
 pub use header::{RamSize, RomSize};
 use mbc::{CartridgeType, MemoryBankController, select_mbc};
@@ -20,11 +21,14 @@ pub const NINTENDO_LOGO: [u8; 48] = [
 ];
 mem_range!(CARTRIDGE_LOGO, 0x0104, 0x0104 + NINTENDO_LOGO.len() as u16 - 1);
 
+#[derive(Debug)]
 pub enum CartridgeError {
     InvalidRomSize(Option<RomSize>, &'static str),
     InvalidRamSize(Option<RamSize>, &'static str),
     InvalidMBCRomRamCombination(CartridgeType, RomSize, RamSize, &'static str),
     UnsupportedCartridgeType(CartridgeType),
+    IncorrectHeaderChecksum(u8, u8),
+    IncorrectGlobalChecksum(u16, u16),
 }
 
 impl std::fmt::Display for CartridgeError {
@@ -53,6 +57,14 @@ impl std::fmt::Display for CartridgeError {
                 )?;
                 writeln!(f, "{}", message)
             }
+            CartridgeError::IncorrectHeaderChecksum(calculated, expected) => write!(
+                f,
+                "Incorrect header checksum: calculated 0x{calculated:02X}, expected 0x{expected:02X}"
+            ),
+            CartridgeError::IncorrectGlobalChecksum(calculated, expected) => write!(
+                f,
+                "Incorrect global checksum: calculated 0x{calculated:04X}, expected 0x{expected:04X}"
+            ),
         }
     }
 }
@@ -61,6 +73,7 @@ pub type CartridgeResult<T> = std::result::Result<T, CartridgeError>;
 
 pub struct Cartridge {
     pub header: CartridgeHeader,
+    pub features: CartridgeFeatures,
     pub mbc: Box<dyn MemoryBankController>,
 }
 
@@ -71,59 +84,64 @@ impl std::fmt::Debug for Cartridge {
 }
 
 impl Default for Cartridge {
-    fn default() -> Self { Cartridge::new(&[0; (ROM_BANK00_SIZE + ROM_BANKNN_SIZE) as usize]).unwrap() }
+    fn default() -> Self { Cartridge::new(&[0; (ROM_BANK00_SIZE + ROM_BANKNN_SIZE) as usize], None).unwrap() }
 }
 
 impl Cartridge {
-    pub fn new(raw_rom: &[u8]) -> Result<Self> {
-        let header = match CartridgeHeader::new(raw_rom) {
-            Ok(header) => header,
-            Err(e) => {
-                return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    format!("Failed to parse cartridge header: {e}"),
-                )));
-            }
-        };
+    pub fn new(raw_rom: &[u8], save: Option<Vec<u8>>) -> CartridgeResult<Self> {
+        let header = CartridgeHeader::new(raw_rom)?;
 
-        let mbc = match select_mbc(raw_rom, &header) {
-            Ok(mbc) => mbc,
-            Err(e) => {
-                return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    format!("Unsupported cartridge type: {e}"),
-                )));
-            }
-        };
+        let features = CartridgeFeatures::new(&header.cartridge_type);
+        if !features.supports_saves() && save.is_some() {
+            return Err(CartridgeError::InvalidMBCRomRamCombination(
+                header.cartridge_type,
+                header.rom_size,
+                header.ram_size,
+                "Cartridge does not support saves, but save data was provided",
+            ));
+        }
 
-        let cartridge = Self { header, mbc };
+        let mbc = select_mbc(raw_rom, save, &features, &header)?;
 
-        Ok(cartridge)
+        Ok(Self {
+            header,
+            features,
+            mbc,
+        })
+    }
+
+    #[inline(always)]
+    pub fn supports_saves(&self) -> bool { self.features.supports_saves() }
+
+    #[inline(always)]
+    pub fn save_game(&self) -> Option<&[u8]> {
+        if self.supports_saves() {
+            self.mbc.get_ram()
+        } else {
+            None
+        }
     }
 
     /// # Header checksum
     /// Checked by real hardware by the boot ROM
-    pub fn check_header_checksum(&self, raw_rom: &[u8]) -> Result<()> {
+    pub fn check_header_checksum(&self, raw_rom: &[u8]) -> CartridgeResult<()> {
         let header_sum = raw_rom[header::TITLE_START as usize..=header::GAME_VERSION]
             .iter()
             .fold(0u8, |acc, &b| acc.wrapping_sub(b).wrapping_sub(1));
 
         match header_sum == self.header.header_checksum {
             true => Ok(()),
-            false => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!(
-                    "Header checksum mismatch, {:#04X} != {:#04X}",
-                    header_sum, self.header.header_checksum
-                ),
-            ))),
+            false => Err(CartridgeError::IncorrectHeaderChecksum(
+                header_sum,
+                self.header.header_checksum,
+            )),
         }
     }
 
     /// # Global checksum
     /// Not actually checked by real hardware
     /// We'll use in Cartridge creation for now to verify correct file parsing and integrity
-    pub fn check_global_checksum(&self, raw_rom: &[u8]) -> Result<()> {
+    pub fn check_global_checksum(&self, raw_rom: &[u8]) -> CartridgeResult<()> {
         let cartridge_sum: u16 = raw_rom.iter().enumerate().fold(0u16, |acc, (i, &b)| {
             match i != header::GLOBAL_CHECKSUM_START as usize && i != header::GLOBAL_CHECKSUM_END as usize {
                 true => acc.wrapping_add(b as u16),
@@ -133,13 +151,10 @@ impl Cartridge {
 
         match cartridge_sum == self.header.global_checksum {
             true => Ok(()),
-            false => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!(
-                    "Global checksum mismatch, {:#04X} != {:#04X}",
-                    cartridge_sum, self.header.global_checksum
-                ),
-            ))),
+            false => Err(CartridgeError::IncorrectGlobalChecksum(
+                cartridge_sum,
+                self.header.global_checksum,
+            )),
         }
     }
 
