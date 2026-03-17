@@ -1,10 +1,10 @@
 use crate::{
+    IO_REGISTERS_START,
     cpu::{
         flags::Flags,
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
-    IO_REGISTERS_START,
 };
 
 /// Load from/to high memory area instruction

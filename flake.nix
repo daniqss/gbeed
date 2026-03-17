@@ -21,20 +21,22 @@
         }));
   in {
     devShells = eachSystem (system: pkgs: let
-      commonPackages = with pkgs; [
-        just
-
-        cargo
-        cargo-expand
-        rust-analyzer
-        rustc
-        clippy
-        fenix.packages.${system}.latest.rustfmt
-
-        cmake
-        clang
-        glfw
+      rustToolchain = with fenix.packages.${system}; [
+        stable.cargo
+        stable.rust-analyzer
+        stable.rustc
+        stable.clippy
+        latest.rustfmt
       ];
+
+      commonPackages = with pkgs;
+        [
+          just
+          cmake
+          clang
+          glfw
+        ]
+        ++ rustToolchain;
     in {
       # shell for x11 environments
       x11 = let

@@ -1,8 +1,8 @@
 use crate::{
     cpu::{
-        flags::{Flags, CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
-        instructions::{Instruction, InstructionEffect, InstructionResult},
         R16,
+        flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
+        instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };

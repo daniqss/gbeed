@@ -37,12 +37,6 @@ impl Instruction for Call {
         Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
     }
 
-    fn info(&self) -> (u8, u8) {
-        if !self.jc.should_jump() {
-            (3, 3)
-        } else {
-            (6, 3)
-        }
-    }
+    fn info(&self) -> (u8, u8) { if !self.jc.should_jump() { (3, 3) } else { (6, 3) } }
     fn disassembly(&self) -> String { format!("call {}${:04X}", self.jc, self.n16) }
 }

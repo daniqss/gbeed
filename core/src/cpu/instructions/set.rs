@@ -1,8 +1,8 @@
 use crate::{
     cpu::{
+        R8,
         flags::Flags,
         instructions::{Instruction, InstructionEffect, InstructionResult},
-        R8,
     },
     prelude::*,
 };
@@ -47,7 +47,7 @@ impl Instruction for SetPointedByHL {
 
 #[cfg(test)]
 mod tests {
-    use crate::{cpu::R16, Accessible16};
+    use crate::{Accessible16, cpu::R16};
 
     use super::*;
 

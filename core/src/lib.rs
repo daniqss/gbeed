@@ -15,7 +15,7 @@ pub mod utils;
 pub use apu::Apu;
 pub use cartrigde::Cartridge;
 pub use controller::{Controller, DefaultController};
-pub use cpu::{Cpu, AFTER_BOOT_CPU};
+pub use cpu::{AFTER_BOOT_CPU, Cpu};
 pub use dmg::Dmg;
 pub use interrupts::Interrupt;
 pub use joypad::Joypad;

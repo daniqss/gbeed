@@ -1,4 +1,4 @@
-use crate::{prelude::*, Ppu};
+use crate::{Ppu, prelude::*};
 
 const PRIORITY: u8 = 0x80;
 const YFLIP: u8 = 0x40;

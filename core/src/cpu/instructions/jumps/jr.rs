@@ -41,13 +41,7 @@ impl Instruction for Jr {
             Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
         }
     }
-    fn info(&self) -> (u8, u8) {
-        if self.jc.should_jump() {
-            (3, 2)
-        } else {
-            (2, 2)
-        }
-    }
+    fn info(&self) -> (u8, u8) { if self.jc.should_jump() { (3, 2) } else { (2, 2) } }
     fn disassembly(&self) -> String { format!("jr {}{}", self.jc, self.offset as i8) }
 }
 

@@ -1,8 +1,8 @@
 use crate::{
     cpu::{
-        flags::{check_zero, Flags},
-        instructions::{Instruction, InstructionEffect, InstructionResult},
         R8,
+        flags::{Flags, check_zero},
+        instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };
@@ -65,7 +65,7 @@ impl Instruction for RlPointedByHL {
 mod tests {
     use super::*;
 
-    use crate::cpu::{flags::Flags, R8};
+    use crate::cpu::{R8, flags::Flags};
 
     #[test]
     fn test_rl_no_carry() {

@@ -1,8 +1,8 @@
 use crate::{
     cpu::{
-        flags::{check_zero, Flags},
-        instructions::{Instruction, InstructionEffect, InstructionResult},
         R8,
+        flags::{Flags, check_zero},
+        instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };
@@ -70,8 +70,8 @@ impl Instruction for RrcPointedByHL {
 #[cfg(test)]
 mod tests {
     use crate::{
-        cpu::{flags::Flags, R8},
         Accessible,
+        cpu::{R8, flags::Flags},
     };
 
     use super::*;

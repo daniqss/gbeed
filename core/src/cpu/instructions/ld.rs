@@ -1,8 +1,8 @@
 use crate::{
     cpu::{
-        flags::{check_overflow_cy, check_overflow_hc, Flags},
+        R8, R16,
+        flags::{Flags, check_overflow_cy, check_overflow_hc},
         instructions::{Instruction, InstructionEffect, InstructionResult},
-        R16, R8,
     },
     prelude::*,
 };

@@ -4,7 +4,5 @@ pub struct Rumble {
 }
 
 impl Rumble {
-    pub fn new() -> Self {
-        Self { enabled: false }
-    }
+    pub fn new() -> Self { Self { enabled: false } }
 }

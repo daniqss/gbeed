@@ -31,9 +31,7 @@ pub struct Rtc {
 }
 
 impl Rtc {
-    pub fn new() -> Self {
-        Self::default()
-    }
+    pub fn new() -> Self { Self::default() }
 
     pub fn select_register(&mut self, value: u8) {
         self.selected_register = match value {

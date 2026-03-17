@@ -1,8 +1,8 @@
 use crate::{
     cpu::{
-        flags::{check_borrow_hc, check_zero, Flags},
-        instructions::{Instruction, InstructionEffect, InstructionResult},
         R8,
+        flags::{Flags, check_borrow_hc, check_zero},
+        instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };

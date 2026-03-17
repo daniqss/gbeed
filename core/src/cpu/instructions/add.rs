@@ -1,10 +1,10 @@
 use crate::{
     cpu::{
+        R8, R16,
         flags::{
-            check_overflow_cy, check_overflow_cy16, check_overflow_hc, check_overflow_hc16, check_zero, Flags,
+            Flags, check_overflow_cy, check_overflow_cy16, check_overflow_hc, check_overflow_hc16, check_zero,
         },
         instructions::{Instruction, InstructionEffect, InstructionResult},
-        R16, R8,
     },
     prelude::*,
 };
