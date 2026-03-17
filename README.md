@@ -72,23 +72,27 @@ RUSTFLAGS="-L /tmp" cargo build --features "raylib/drm raylib/opengl_es_20"
 > [!WARNING]
 > This is not an optimal way to build the project, as it will take a very long time. Also, the emulator's frontend is not yet adapted for this platform.
 
-#### Cross compilation in x86-64
-The easiest way to build the project for armv6l is through a podman or docker container. Using the `arm32v6/alpine` image, you can create a container and replicate the steps of the previous section. In a fraction of the time it can be build the release build of the project. The resulting binary can be easily copied to the Raspberry Pi Zero and run there, without the need of installing the rust toolchain or any static dependency.
+#### Cross-compilation in x86-64/aarch64
+The easiest way to build the project for armv6l is through a podman or docker container using the provided `Dockerfile.cross`. This provides a fully isolated build environment.
 
+Alternatively, you can use the following command to automate the process:
 ```sh
-sudo podman run --rm --privileged docker.io/tonistiigi/binfmt --install all
-podman run --platform linux/arm/v6 --rm -it -v "$PWD":/app -w /app arm32v6/alpine:latest /bin/sh
-
-# inside the container
-apk add git cargo build-base cmake clang clang-dev pkgconf alsa-lib-dev libdrm-dev mesa-dev
-git clone https://github.com/daniqss/gbeed
-cd gbeed
-touch im-libglvnd-fr-fr.c
-cc -shared -o /tmp/libGLdispatch.so /tmp/im-libglvnd-fr-fr.c
-export LIBCLANG_PATH=/usr/lib
-RUSTFLAGS="-L /tmp" cargo build --release --features "raylib/drm raylib/opengl_es_20"
+just crossbuild
 ```
 
+This will:
+1. Install the `arm` binfmt if needed.
+2. Build the project inside an `arm32v6/alpine` container.
+3. Extract the resulting binary as `./gbeed-armv6l`.
+
+Or manually:
+```sh
+sudo podman run --rm --privileged docker.io/tonistiigi/binfmt --install arm
+podman build --platform linux/arm/v6 -f Dockerfile.cross -t gbeed-armv6l .
+podman create --name gbeed-armv6l-tmp gbeed-armv6l
+podman cp gbeed-armv6l-tmp:/app/target/release/gbeed ./gbeed
+podman rm gbeed-armv6l-tmp
+```
 
 
 ### How to run tests
