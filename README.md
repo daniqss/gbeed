@@ -73,7 +73,22 @@ RUSTFLAGS="-L /tmp" cargo build --features "raylib/drm raylib/opengl_es_20"
 > This is not an optimal way to build the project, as it will take a very long time. Also, the emulator's frontend is not yet adapted for this platform.
 
 #### Cross compilation in x86-64
-TODO
+The easiest way to build the project for armv6l is through a podman or docker container. Using the `arm32v6/alpine` image, you can create a container and replicate the steps of the previous section. In a fraction of the time it can be build the release build of the project. The resulting binary can be easily copied to the Raspberry Pi Zero and run there, without the need of installing the rust toolchain or any static dependency.
+
+```sh
+sudo podman run --rm --privileged docker.io/tonistiigi/binfmt --install all
+podman run --platform linux/arm/v6 --rm -it -v "$PWD":/app -w /app arm32v6/alpine:latest /bin/sh
+
+# inside the container
+apk add git cargo build-base cmake clang clang-dev pkgconf alsa-lib-dev libdrm-dev mesa-dev
+git clone https://github.com/daniqss/gbeed
+cd gbeed
+touch im-libglvnd-fr-fr.c
+cc -shared -o /tmp/libGLdispatch.so /tmp/im-libglvnd-fr-fr.c
+export LIBCLANG_PATH=/usr/lib
+RUSTFLAGS="-L /tmp" cargo build --release --features "raylib/drm raylib/opengl_es_20"
+```
+
 
 
 ### How to run tests
