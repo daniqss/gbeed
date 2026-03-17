@@ -5,19 +5,28 @@ WIP DMG Game Boy emulator for embedded devices. This project aims to provide a s
 
 ## Status
 ### Games
-Core emulator is mostly complete, not including audio and game saving. Some games are playable, but others crash the emulator or have severe slowdowns.
+Core emulator is mostly complete, and allow sufficintly good emulation in most games, besides some minor graphical glitches and deacceleration in some areas. The last remaining core feature that is not implemented yet is audio emulation.
 
-| Game                   | Cartridge Type                  | ROM Size | ROM Banks | RAM Size | RAM Banks | Playable           |
-|------------------------|---------------------------------|----------|-----------|----------|-----------|--------------------|
-| Tetris                 | ROM Only                        | 32 KB    | 2         | None     | 0         | Playable           |
-| SML                    | MBC1                            | 64 KB    | 4         | None     | 0         | Not Playable       |
-| SML2                   | MBC1 + RAM + Battery            | 512 KB   | 32        | 8 KB     | 1         | Playable           |
-| Pokémon Red            | MBC3 + RAM + Battery            | 1024 KB  | 64        | 32 KB    | 4         | Severe slowdown    |
-| Pokémon Gold           | MBC3 + Timer + RAM + Battery    | 2048 KB  | 128       | 32 KB    | 4         | Playable           |
-| Link's Awakining       | MBC1 + RAM + Battery            | 512 KB   | 32        | 8 KB     | 1         | Crash the emulator |
+The following games, the best-selling games of the DMG catalog, are tested in initial areas and are playable without major issues.
+
+| Selling Ranking | Game               | Playable                 | Cartridge Type                   | ROM Size | RAM Size |
+|-----------------|--------------------|--------------------------|----------------------------------|----------|----------|
+| 1               | Pokémon Red        | 🟩 Playable              | GB MBC3 + RAM + Battery          | 1024 KB  | 32 KB    |
+| 2               | Tetris             | 🟩 Playable              | GB ROM Only                      | 32 KB    | None     |
+| 3               | Pokémon Gold       | 🟩 Playable              | GBC MBC3 + Timer + RAM + Battery | 2048 KB  | 32 KB    |
+| 4               | Super Mario Land   | 🟩 Playable              | GB MBC1                          | 64 KB    | None     |
+| 5               | Super Mario Land 2 | 🟩 Playable<sup>*1</sup> | GB MBC1 + RAM + Battery          | 512 KB   | 8 KB     |
+| 7               | Pokemon Pinball    | 🟥 Unplayable            | GBC MBC5 Rumble + RAM + Battery  | 1024 KB  | 8 KB     |
+| 11              | Link's Awakining   | 🟩 Playable              | GB MBC1 + RAM + Battery          | 512 KB   | 8 KB     |
+
+<sub>
+<sup>1</sup> This game save file tend to get corrupted, crashing the game sometimes<br>
+</sub>
 
 ### Tests
 The emulator is tested using [Blargg's rom test](https://github.com/retrio/gb-test-roms) and [Mooneye test suite](https://github.com/Gekkio/mooneye-test-suite) and passes basic CPU instructions and MBC tests, but fails most of the timing tests. See passed tests in `core/tests`.
+
+For PPU testing, gbeed passes [dmg-acid2](https://github.com/mattcurrie/dmg-acid2) test, so basic rendering is correct besides some minor issues and not fully accurate timing. This test must be run manually because it needs manual verification of the result.
 
 ## How to use
 ### Dependencies
