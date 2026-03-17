@@ -34,7 +34,6 @@
           just
           cmake
           clang
-          glfw
         ]
         ++ rustToolchain;
     in {
@@ -70,6 +69,7 @@
           wayland
           libxkbcommon
           alsa-lib
+          glfw
         ];
         waylandFeatures = [
           "raylib/wayland"
@@ -115,9 +115,7 @@
             NIX_CFLAGS_COMPILE = "-I${pkgs.libdrm.dev}/include/libdrm";
 
             LD_LIBRARY_PATH = with pkgs;
-              lib.makeLibraryPath [
-                alsa-lib
-              ];
+              lib.makeLibraryPath drmPackages;
           };
         };
 
