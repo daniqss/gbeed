@@ -320,15 +320,15 @@ impl Ppu {
         // draw background
         self.draw_bg(renderer);
 
-        // draw sprites
-        if self.obj_enable() {
-            self.draw_sprites(renderer)
-        };
-
         // draw window
         if self.window_enable() {
             self.draw_window(renderer);
         }
+
+        // draw sprites
+        if self.obj_enable() {
+            self.draw_sprites(renderer)
+        };
     }
 
     fn draw_sprites<R: Renderer>(&mut self, renderer: &mut R) {
@@ -345,15 +345,16 @@ impl Ppu {
             let sprite = Sprite::from_oam(self, oam_addr);
 
             // is sprite in current line?
-            if current_line < sprite.ypos || current_line >= sprite.ypos + sprite_height {
+            let line_offset = current_line.wrapping_sub(sprite.ypos);
+            if line_offset >= sprite_height {
                 sprites_count += 1;
                 continue;
             }
 
             let mut line_in_sprite = if sprite.yflip() {
-                sprite_height - 1 - (current_line - sprite.ypos)
+                sprite_height - 1 - line_offset
             } else {
-                current_line - sprite.ypos
+                line_offset
             };
 
             // adjust if sprite is 8x16
@@ -396,7 +397,6 @@ impl Ppu {
                 let sx = screen_x as usize;
 
                 // sprite under background
-
                 if sprite.priority() {
                     let bg_pixel = renderer.read_pixel(sx, current_line as usize);
                     if bg_pixel != renderer.get_color(self.bg_palette, 0) {
