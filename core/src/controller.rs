@@ -5,33 +5,44 @@ use crate::serial::SerialListener;
 
 pub trait Controller: SerialListener + Renderer {}
 
-pub struct DefaultController {
-    renderer: DefaultRenderer,
-    serial: DefaultSerialListener,
+#[macro_export]
+macro_rules! controller {
+    ($name:ident, $listener:ty, $renderer:ty) => {
+        pub struct $name {
+            listener: $listener,
+            renderer: $renderer,
+        }
+
+        impl Renderer for $name {
+            fn read_pixel(&self, x: usize, y: usize) -> u32 { self.renderer.read_pixel(x, y) }
+
+            fn write_pixel(&mut self, x: usize, y: usize, color: u32) {
+                self.renderer.write_pixel(x, y, color)
+            }
+
+            fn get_color(&self, palette: u8, color_id: u8) -> u32 {
+                self.renderer.get_color(palette, color_id)
+            }
+
+            fn draw_screen(&mut self) { self.renderer.draw_screen() }
+        }
+
+        impl SerialListener for $name {
+            fn on_transfer(&mut self, data: u8) { self.listener.on_transfer(data) }
+        }
+
+        impl Controller for $name {}
+    };
 }
 
+controller!(DefaultController, DefaultSerialListener, DefaultRenderer);
+
 impl DefaultController {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
+            listener: DefaultSerialListener::new(),
             renderer: DefaultRenderer::new(),
-            serial: DefaultSerialListener,
         }
     }
 }
-
-impl Default for DefaultController {
-    fn default() -> Self { Self::new() }
-}
-
-impl Renderer for DefaultController {
-    fn read_pixel(&self, x: usize, y: usize) -> u32 { self.renderer.read_pixel(x, y) }
-    fn write_pixel(&mut self, x: usize, y: usize, color: u32) { self.renderer.write_pixel(x, y, color) }
-    fn get_color(&self, palette: u8, color_id: u8) -> u32 { self.renderer.get_color(palette, color_id) }
-    fn draw_screen(&mut self) { self.renderer.draw_screen() }
-}
-
-impl SerialListener for DefaultController {
-    fn on_transfer(&mut self, data: u8) { self.serial.on_transfer(data) }
-}
-
-impl Controller for DefaultController {}

@@ -111,10 +111,10 @@ impl RaylibRenderer {
         }
     }
 
-    pub fn set_game_info(&mut self, name: impl Into<String>, region: impl Into<String>) {
+    pub fn set_game_info(&mut self, name: impl Into<String>, region: impl std::fmt::Debug) {
         let clean = |s: String| s.chars().filter(|c| *c != '\0' && !c.is_control()).collect();
         self.game_name = clean(name.into());
-        self.game_region = clean(region.into());
+        self.game_region = clean(format!("{region:?}"));
     }
 
     // decodes a 2bpp vram block into the tile texture (region 0/$8000, 1/$8800, 2/$9000)

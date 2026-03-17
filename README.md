@@ -3,6 +3,22 @@ WIP DMG Game Boy emulator for embedded devices. This project aims to provide a s
 
 ![gbeed](./assets/image.png)
 
+## Status
+### Games
+Core emulator is mostly complete, not including audio and game saving. Some games are playable, but others crash the emulator or have severe slowdowns.
+
+| Game                   | Cartridge Type                  | ROM Size | ROM Banks | RAM Size | RAM Banks | Playable           |
+|------------------------|---------------------------------|----------|-----------|----------|-----------|--------------------|
+| Tetris                 | ROM Only                        | 32 KB    | 2         | None     | 0         | Playable           |
+| SML                    | MBC1                            | 64 KB    | 4         | None     | 0         | Not Playable       |
+| SML2                   | MBC1 + RAM + Battery            | 512 KB   | 32        | 8 KB     | 1         | Playable           |
+| Pokémon Red            | MBC3 + RAM + Battery            | 1024 KB  | 64        | 32 KB    | 4         | Severe slowdown    |
+| Pokémon Gold           | MBC3 + Timer + RAM + Battery    | 2048 KB  | 128       | 32 KB    | 4         | Playable           |
+| Link's Awakining       | MBC1 + RAM + Battery            | 512 KB   | 32        | 8 KB     | 1         | Crash the emulator |
+
+### Tests
+The emulator is tested using [Blargg's rom test](https://github.com/retrio/gb-test-roms) and [Mooneye test suite](https://github.com/Gekkio/mooneye-test-suite) and passes basic CPU instructions and MBC tests, but fails most of the timing tests. See passed tests in `core/tests`.
+
 ## How to use
 ### Dependencies
 This project uses `nix` flakes, and are the recommended way to manage dependencies. If installed and properly configured, using the project should be as easy as:

@@ -2,12 +2,12 @@ mod renderer;
 mod sprite;
 
 use crate::{
+    Interrupt, OAM_SIZE, VRAM_END, VRAM_SIZE,
     dmg::Dmg,
     mem_range,
     memory::{OAM_END, OAM_START, VRAM_START},
-    ppu::sprite::{Sprite, MAX_SPRITES_IN_OAM, MAX_SPRITES_PER_LINE},
+    ppu::sprite::{MAX_SPRITES_IN_OAM, MAX_SPRITES_PER_LINE, Sprite},
     prelude::*,
-    Interrupt, OAM_SIZE, VRAM_END, VRAM_SIZE,
 };
 
 pub use renderer::{DefaultRenderer, Renderer};
@@ -488,7 +488,7 @@ impl Ppu {
         }
 
         if window_rendered {
-            self.window_line_counter += 1;
+            self.window_line_counter = self.window_line_counter.wrapping_add(1);
         }
     }
 

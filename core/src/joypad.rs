@@ -81,9 +81,21 @@ impl Joypad {
 impl Accessible<u16> for Joypad {
     fn read(&self, address: u16) -> u8 {
         match address {
-            JOYP if !self.select_buttons() => SELECT_BUTTONS | (self.input >> 4),
-            JOYP if !self.select_dpad() => SELECT_DPAD | (self.input & 0x0F),
-            JOYP => self.joyp | 0x0F,
+            JOYP => {
+                // input is high by default, no buttons pressed
+                let mut current_input = 0x0F;
+
+                // select nibble by checking select bits
+                if !self.select_buttons() {
+                    current_input &= self.input >> 4;
+                }
+                if !self.select_dpad() {
+                    current_input &= self.input & 0x0F;
+                }
+
+                // bits 7 and 6 are always high, bits 5 and 4 are the select bits, and bits 3 to 0 are the current input
+                0xC0 | (self.joyp & 0x30) | current_input
+            }
             _ => unreachable!(
                 "Attempted to read from Joypad with invalid address {:04X}",
                 address
