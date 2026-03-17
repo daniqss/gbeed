@@ -7,3 +7,5 @@ gb-test-roms/
 *.gbc
 *.sav
 *.bin
+*.zip
+*.tar*

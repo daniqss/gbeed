@@ -4,6 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 jobs:
   test:
@@ -21,12 +22,14 @@ jobs:
         run: |
           git clone https://github.com/retrio/gb-test-roms.git
 
+      - name: Download Mooneye test suite
+        run: |
+          wget https://gekkio.fi/files/mooneye-test-suite/mts-20240926-1737-443f6e1/mts-20240926-1737-443f6e1.tar.xz
+          tar -xJf mts-20240926-1737-443f6e1.tar.xz
+
       - name: Download open source DMG Boot ROM
         run: |
           wget https://github.com/alloncm/MagenBoot/releases/download/0.2.0/dmg_boot.bin -O dmg_boot.bin
-      - name: Download open source game ROM
-        run: |
-          wget https://github.com/flozz/gameboy-examples/raw/master/03-tic-tac-toe/tictactoe.gb -O tictactoe.gb
 
       - name: Run tests
         run: |
