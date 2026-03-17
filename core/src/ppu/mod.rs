@@ -260,7 +260,6 @@ impl Ppu {
                     if self.vblank_interrupt() {
                         interrupt_flag.set_lcd_stat_interrupt(true);
                     }
-
                     renderer.draw_screen();
 
                     LCDMode::VBlank
@@ -318,10 +317,14 @@ impl Ppu {
 
     pub fn draw_scanline<R: Renderer>(&mut self, renderer: &mut R) {
         // draw background
-        self.draw_bg(renderer);
+        if self.bg_enable() {
+            self.draw_bg(renderer);
+        } else {
+            self.draw_no_bg(renderer);
+        }
 
-        // draw window
-        if self.window_enable() {
+        // draw window, in DMG needs both bg and window enabled, in CGB only window enable is needed
+        if self.bg_enable() && self.window_enable() {
             self.draw_window(renderer);
         }
 
@@ -329,6 +332,14 @@ impl Ppu {
         if self.obj_enable() {
             self.draw_sprites(renderer)
         };
+    }
+
+    fn draw_no_bg<R: Renderer>(&mut self, renderer: &mut R) {
+        let current_line = self.ly;
+        let color = renderer.get_color(self.bg_palette, 0);
+        for x in 0..DMG_SCREEN_WIDTH {
+            renderer.write_pixel(x, current_line as usize, color);
+        }
     }
 
     fn draw_sprites<R: Renderer>(&mut self, renderer: &mut R) {
