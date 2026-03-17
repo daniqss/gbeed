@@ -19,6 +19,8 @@ Core emulator is mostly complete, not including audio and game saving. Some game
 ### Tests
 The emulator is tested using [Blargg's rom test](https://github.com/retrio/gb-test-roms) and [Mooneye test suite](https://github.com/Gekkio/mooneye-test-suite) and passes basic CPU instructions and MBC tests, but fails most of the timing tests. See passed tests in `core/tests`.
 
+For Ppu testing, gbeed passes [dmg-acid2](https://github.com/mattcurrie/dmg-acid2) test, so basic rendering is correct besides some minor issues and not fully accurate timing. This test must be run manually because it needs manual verification of the result.
+
 ## How to use
 ### Dependencies
 This project uses `nix` flakes, and are the recommended way to manage dependencies. If installed and properly configured, using the project should be as easy as:
