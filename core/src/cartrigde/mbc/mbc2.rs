@@ -1,5 +1,6 @@
 use crate::{
-    ROM_BANK00_END, ROM_BANK00_START, ROM_BANKNN_END, ROM_BANKNN_SIZE, ROM_BANKNN_START,
+    BOOT_ROM_END, BOOT_ROM_START, ROM_BANK00_END, ROM_BANK00_START, ROM_BANKNN_END, ROM_BANKNN_SIZE,
+    ROM_BANKNN_START,
     cartrigde::{
         CartridgeError, CartridgeResult, RomSize, features::CartridgeFeatures, header::CartridgeHeader,
     },
@@ -106,4 +107,9 @@ impl MemoryBankController for Mbc2 {
     }
 
     fn get_ram(&self) -> Option<&[u8]> { Some(&self.ram) }
+    fn swap_boot_rom(&mut self, boot_rom: &mut [u8]) {
+        let rom_slice = &mut self.rom[BOOT_ROM_START as usize..=BOOT_ROM_END as usize];
+        let boot_rom_slice = &mut boot_rom[..=(BOOT_ROM_END - BOOT_ROM_START) as usize];
+        rom_slice.swap_with_slice(boot_rom_slice);
+    }
 }

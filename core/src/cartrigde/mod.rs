@@ -74,7 +74,7 @@ pub type CartridgeResult<T> = std::result::Result<T, CartridgeError>;
 pub struct Cartridge {
     pub header: CartridgeHeader,
     pub features: CartridgeFeatures,
-    pub mbc: Box<dyn MemoryBankController>,
+    mbc: Box<dyn MemoryBankController>,
 }
 
 impl std::fmt::Debug for Cartridge {
@@ -122,6 +122,9 @@ impl Cartridge {
         }
     }
 
+    /// Used to not need to check if the read/write is for the boot ROM or the cartridge ROM in the MBCs
+    pub fn swap_boot_rom(&mut self, boot_rom: &mut [u8]) { self.mbc.swap_boot_rom(boot_rom); }
+
     /// # Header checksum
     /// Checked by real hardware by the boot ROM
     pub fn check_header_checksum(&self, raw_rom: &[u8]) -> CartridgeResult<()> {
@@ -156,18 +159,6 @@ impl Cartridge {
                 self.header.global_checksum,
             )),
         }
-    }
-
-    /// unmaps boot rom when boot reaches pc = 0x00FE, when load 1 in bank register (0xFF50)
-    /// ```asm
-    /// ld a, $01
-    /// ld [0xFF50], a
-    /// ```
-    /// Next instruction will be the first `nop` in 0x0100, in the cartridge rom
-    pub fn unmap_boot_rom(&mut self) {
-        println!("Unmapping boot rom, switching to cartridge rom");
-        // self.rom_bank00
-        //     .copy_from_slice(&self.raw_rom[..ROM_BANK00_SIZE as usize]);
     }
 }
 

@@ -18,7 +18,7 @@ const BANK_REGISTER: u16 = 0xFF50;
 pub struct Dmg {
     pub cpu: Cpu,
     pub cartridge: Cartridge,
-    pub bus: Memory,
+    pub memory: Memory,
     pub ppu: Ppu,
     pub joypad: Joypad,
     pub serial: Serial,
@@ -30,29 +30,23 @@ pub struct Dmg {
 }
 
 impl Dmg {
-    pub fn new(cartridge: Cartridge, boot_rom: Option<Vec<u8>>) -> Dmg {
-        let joypad = Joypad::default();
-        let serial = Serial::default();
-        let timer = Timer::new();
-        let apu = Apu::new();
-        let interrupt_flag = Interrupt::new();
-        let ppu = Ppu::default();
-        let interrupt_enable = Interrupt::new();
-
-        let start_at_boot = boot_rom.is_some();
-        let bus = Memory::new(boot_rom);
+    pub fn new(mut cartridge: Cartridge, mut boot_rom: Option<Vec<u8>>) -> Dmg {
+        // swap the boot rom with the cartridge data in the memory
+        if let Some(boot) = &mut boot_rom {
+            cartridge.swap_boot_rom(boot);
+        }
 
         Dmg {
-            cpu: Cpu::new(start_at_boot),
-            bus,
+            cpu: Cpu::new(boot_rom.is_some()),
             cartridge,
-            ppu,
-            joypad,
-            serial,
-            timer,
-            apu,
-            interrupt_flag,
-            interrupt_enable,
+            memory: Memory::new(boot_rom),
+            ppu: Ppu::new(),
+            joypad: Joypad::new(),
+            serial: Serial::new(),
+            timer: Timer::new(),
+            apu: Apu::new(),
+            interrupt_flag: Interrupt::new(),
+            interrupt_enable: Interrupt::new(),
             bank: 0,
         }
     }
@@ -104,10 +98,10 @@ impl Accessible<u16> for Dmg {
             ROM_BANK00_START..=ROM_BANKNN_END => self.cartridge.read(address),
             VRAM_START..=VRAM_END => self.ppu.read(address),
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.cartridge.read(address),
-            WRAM_BANK0_START..=WRAM_BANKN_END => self.bus.ram[(address - WRAM_BANK0_START) as usize],
+            WRAM_BANK0_START..=WRAM_BANKN_END => self.memory.ram[(address - WRAM_BANK0_START) as usize],
             ECHO_RAM_START..=ECHO_RAM_END => {
                 let offset = (address - ECHO_RAM_START) as usize;
-                self.bus.ram[offset]
+                self.memory.ram[offset]
             }
             OAM_START..=OAM_END => self.ppu.read(address),
 
@@ -136,7 +130,7 @@ impl Accessible<u16> for Dmg {
                     0xFF
                 }
             },
-            HRAM_START..=HRAM_END => self.bus.hram[(address - HRAM_START) as usize],
+            HRAM_START..=HRAM_END => self.memory.hram[(address - HRAM_START) as usize],
             IE => self.interrupt_enable.0,
         }
     }
@@ -146,10 +140,12 @@ impl Accessible<u16> for Dmg {
             ROM_BANK00_START..=ROM_BANKNN_END => self.cartridge.write(address, value),
             VRAM_START..=VRAM_END => self.ppu.write(address, value),
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.cartridge.write(address, value),
-            WRAM_BANK0_START..=WRAM_BANKN_END => self.bus.ram[(address - WRAM_BANK0_START) as usize] = value,
+            WRAM_BANK0_START..=WRAM_BANKN_END => {
+                self.memory.ram[(address - WRAM_BANK0_START) as usize] = value
+            }
             ECHO_RAM_START..=ECHO_RAM_END => {
                 let offset = (address - ECHO_RAM_START) as usize;
-                self.bus.ram[offset] = value;
+                self.memory.ram[offset] = value;
             }
             OAM_START..=OAM_END => self.ppu.write(address, value),
 
@@ -171,8 +167,16 @@ impl Accessible<u16> for Dmg {
                 PPU_REGISTER_START..=PPU_REGISTER_END => self.ppu.write(address, value),
 
                 BANK_REGISTER => {
-                    if self.bank == 0 {
-                        self.cartridge.unmap_boot_rom();
+                    // unmaps boot rom when boot reaches pc = 0x00FE, when load 1 in bank register (0xFF50)
+                    // ```asm
+                    // ld a, $01
+                    // ld [0xFF50], a
+                    // ```
+                    // Next instruction will be the first `nop` in 0x0100, in the cartridge rom
+                    if self.bank == 0
+                        && let Some(boot) = &mut self.memory.boot_rom
+                    {
+                        self.cartridge.swap_boot_rom(boot);
                     }
 
                     self.bank = value;
@@ -180,7 +184,7 @@ impl Accessible<u16> for Dmg {
 
                 _ => eprintln!("Writes to unimplemented IO register {:04X} are ignored", address),
             },
-            HRAM_START..=HRAM_END => self.bus.hram[(address - HRAM_START) as usize] = value,
+            HRAM_START..=HRAM_END => self.memory.hram[(address - HRAM_START) as usize] = value,
             IE => self.interrupt_enable.0 = value,
         }
     }

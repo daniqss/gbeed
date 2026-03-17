@@ -163,6 +163,7 @@ pub trait MemoryBankController {
     fn write_ram(&mut self, address: u16, value: u8);
 
     fn get_ram(&self) -> Option<&[u8]>;
+    fn swap_boot_rom(&mut self, boot_rom: &mut [u8]);
 }
 
 pub fn _check_multicart(raw_rom: &[u8], header: &CartridgeHeader) -> bool {
