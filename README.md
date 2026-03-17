@@ -43,6 +43,58 @@ The flake exposes three different shells for different display environments. Dir
 The default shell is `x11`, because will at least run in wayland sessions too using xwayland.
 DRM support works in both AMD and ARM GPU. In Nvidia both `opengl_es_20` and `opengl_es_30` segfault at init (`dic 20 13:12:41 stoneward kernel: gbeed[6765]: segfault at 0 ip 00007fa29f9b4d31 sp 00007fff9c2052d0 error 4 in libnvidia-egl-gbm.so.1.1.2[1d31,7fa29f9b4000+3000] likely on CPU 0 (core 0, socket 0)`).
 
+### How to build for Alpine Linux in armv6l
+#### Building in the Raspberry Pi Zero
+1. Fresh Alpine Linux installation in the Raspberry Pi Zero SD card.
+2. Install the dependencies:
+```sh
+doas apk add git cargo build-base cmake clang clang-dev pkgconf alsa-lib-dev libdrm-dev mesa-dev
+```
+
+3. Clone the repository and enter the project directory:
+```sh
+git clone https://github.com/daniqss/gbeed
+cd gbeed
+```
+
+4. Treak the linker
+```sh
+touch im-libglvnd-fr-fr.c
+cc -shared -o /tmp/libGLdispatch.so /tmp/im-libglvnd-fr-fr.c
+```
+
+5. Build the project:
+```sh
+export LIBCLANG_PATH=/usr/lib
+RUSTFLAGS="-L /tmp" cargo build --features "raylib/drm raylib/opengl_es_20"
+```
+
+> [!WARNING]
+> This is not an optimal way to build the project, as it will take a very long time. Also, the emulator's frontend is not yet adapted for this platform.
+
+#### Cross-compilation in x86-64/aarch64
+The easiest way to build the project for armv6l is through a podman or docker container using the provided `Dockerfile.cross`. This provides a fully isolated build environment.
+
+Alternatively, you can use the following command to automate the process:
+```sh
+just crossbuild
+```
+
+This will:
+1. Install the `arm` binfmt if needed.
+2. Build the project inside an `arm32v6/alpine` container.
+3. Extract the resulting binary as `./gbeed-armv6l`.
+
+Or manually:
+```sh
+sudo podman run --rm --privileged docker.io/tonistiigi/binfmt --install arm
+podman build --platform linux/arm/v6 -f Dockerfile.cross -t gbeed-armv6l .
+podman create --name gbeed-armv6l-tmp gbeed-armv6l
+podman cp gbeed-armv6l-tmp:/app/target/release/gbeed ./gbeed
+podman rm gbeed-armv6l-tmp
+```
+
+
 ### How to run tests
 To run the tests, you can use just:
 ```sh

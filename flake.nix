@@ -52,12 +52,14 @@
         pkgs.mkShell {
           buildInputs = commonPackages ++ x11Packages;
 
-          DISPLAY_FEATURES = x11Features;
-          RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
-          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+          env = {
+            DISPLAY_FEATURES = x11Features;
+            RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+            LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
 
-          LD_LIBRARY_PATH = with pkgs;
-            lib.makeLibraryPath x11Packages;
+            LD_LIBRARY_PATH = with pkgs;
+              lib.makeLibraryPath x11Packages;
+          };
         };
 
       # shell for wayland environments
@@ -75,12 +77,14 @@
         pkgs.mkShell {
           buildInputs = commonPackages ++ waylandPackages;
 
-          DISPLAY_FEATURES = pkgs.lib.concatStringsSep " " waylandFeatures;
-          RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
-          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+          env = {
+            DISPLAY_FEATURES = pkgs.lib.concatStringsSep " " waylandFeatures;
+            RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+            LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
 
-          LD_LIBRARY_PATH = with pkgs;
-            lib.makeLibraryPath waylandPackages;
+            LD_LIBRARY_PATH = with pkgs;
+              lib.makeLibraryPath waylandPackages;
+          };
         };
 
       # shell for drm environments
@@ -101,16 +105,18 @@
         pkgs.mkShell {
           buildInputs = commonPackages ++ drmPackages;
 
-          DISPLAY_FEATURES = pkgs.lib.concatStringsSep " " drmFeatures;
-          RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
-          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+          env = {
+            DISPLAY_FEATURES = pkgs.lib.concatStringsSep " " drmFeatures;
+            RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+            LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
 
-          NIX_CFLAGS_COMPILE = "-I${pkgs.libdrm.dev}/include/libdrm";
+            NIX_CFLAGS_COMPILE = "-I${pkgs.libdrm.dev}/include/libdrm";
 
-          LD_LIBRARY_PATH = with pkgs;
-            lib.makeLibraryPath [
-              alsa-lib
-            ];
+            LD_LIBRARY_PATH = with pkgs;
+              lib.makeLibraryPath [
+                alsa-lib
+              ];
+          };
         };
 
       # defaulting to x11 because wayland will use it over xwayland anyway

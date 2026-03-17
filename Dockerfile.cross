@@ -1,0 +1,17 @@
+FROM arm32v6/alpine:latest
+
+# dependencies for building the project
+RUN apk add git cargo build-base cmake clang-dev pkgconf alsa-lib-dev libdrm-dev mesa-dev
+
+WORKDIR /app
+
+COPY . .
+
+# raylib-sys build.rs links against libGLdispatch, although it is not actually used
+RUN touch im-libglvnd-fr-fr.c
+RUN cc -shared -o /tmp/libGLdispatch.so im-libglvnd-fr-fr.c
+
+ENV LIBCLANG_PATH=/usr/lib
+ENV RUSTFLAGS="-L /tmp"
+
+RUN cargo build --release --features "raylib/drm raylib/opengl_es_20"
