@@ -2,16 +2,16 @@ use gbeed_core::prelude::*;
 use gbeed_core::Renderer;
 use raylib::prelude::*;
 
-use crate::colors;
-use crate::colors::GB_PALETTE;
+use crate::colors::{self, GB_PALETTE};
+use crate::input::ButtonStates;
 use crate::texture::Texture;
 
-const SCREEN_SCALE: i32 = 4;
-const SCALED_SCREEN_WIDTH: i32 = DMG_SCREEN_WIDTH as i32 * SCREEN_SCALE;
-const SCALED_SCREEN_HEIGHT: i32 = DMG_SCREEN_HEIGHT as i32 * SCREEN_SCALE;
+pub const SCREEN_SCALE: i32 = 4;
+pub const SCALED_SCREEN_WIDTH: i32 = DMG_SCREEN_WIDTH as i32 * SCREEN_SCALE;
+pub const SCALED_SCREEN_HEIGHT: i32 = DMG_SCREEN_HEIGHT as i32 * SCREEN_SCALE;
 
-const PANEL_PADDING: i32 = 16;
-const HEADER_HEIGHT: i32 = 34;
+pub const PANEL_PADDING: i32 = 16;
+pub const HEADER_HEIGHT: i32 = 34;
 const MIDDLE_PANEL_X: i32 = PANEL_PADDING + SCALED_SCREEN_WIDTH + PANEL_PADDING * 2;
 const BG_MAP_WIDTH: i32 = SCALED_SCREEN_HEIGHT;
 const BG_MAP_HEIGHT: i32 = SCALED_SCREEN_HEIGHT;
@@ -31,18 +31,6 @@ pub enum FpsMode {
     Target60,
     Target120,
     Unlimited,
-}
-
-#[derive(Default)]
-pub struct ButtonStates {
-    pub up: bool,
-    pub down: bool,
-    pub left: bool,
-    pub right: bool,
-    pub a: bool,
-    pub b: bool,
-    pub start: bool,
-    pub select: bool,
 }
 
 pub struct RaylibRenderer {
@@ -86,7 +74,7 @@ impl RaylibRenderer {
             screen_texture,
             bg_map_texture,
             tile_textures,
-            buttons: ButtonStates::default(),
+            buttons: crate::input::ButtonStates::default(),
             game_name: "Unknown".into(),
             game_region: "Unknown".into(),
             fps_mode: FpsMode::Target60,
@@ -121,23 +109,6 @@ impl RaylibRenderer {
                 FpsMode::Target60
             }
         };
-    }
-
-    pub fn fps_btn_clicked(&self) -> bool {
-        // button coords must stay in sync with draw_screen
-        let fps_button_width = 118_i32;
-        let fps_button_height = 26_i32;
-        let fps_button_x = PANEL_PADDING + SCALED_SCREEN_WIDTH - fps_button_width;
-        let header_center_y = PANEL_PADDING + HEADER_HEIGHT / 2;
-        let fps_button_y = header_center_y - fps_button_height / 2;
-
-        let mouse_position = self.rl.get_mouse_position();
-
-        self.rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT)
-            && (mouse_position.x as i32) >= fps_button_x
-            && (mouse_position.x as i32) < fps_button_x + fps_button_width
-            && (mouse_position.y as i32) >= fps_button_y
-            && (mouse_position.y as i32) < fps_button_y + fps_button_height
     }
 }
 
@@ -202,6 +173,7 @@ impl Renderer for RaylibRenderer {
         );
 
         // LEFT PANEL
+
         let game_x = PANEL_PADDING;
 
         // header vertically centred around header_center_y
@@ -230,13 +202,8 @@ impl Renderer for RaylibRenderer {
         let fps_number_width = draw.measure_text(&fps_str, fps_font_size);
         let fps_label_width = draw.measure_text(fps_label, fps_label_font_size);
 
-        let fps_button_width = 118_i32;
-        let fps_button_height = 26_i32;
-        let fps_button_x = game_x + SCALED_SCREEN_WIDTH - fps_button_width;
-        let fps_button_y = header_center_y - fps_button_height / 2;
-
         let fps_group_width = fps_number_width + 4 + fps_label_width;
-        let fps_x = fps_button_x - 16 - fps_group_width;
+        let fps_x = game_x + SCALED_SCREEN_WIDTH - fps_group_width;
         let fps_y = header_center_y - fps_font_size / 2;
         let fps_label_y = header_center_y - fps_label_font_size / 2;
         draw.draw_text(&fps_str, fps_x, fps_y, fps_font_size, colors::FOREGROUND);
@@ -246,29 +213,6 @@ impl Renderer for RaylibRenderer {
             fps_label_y,
             fps_label_font_size,
             colors::SECONDARY,
-        );
-
-        draw.draw_rectangle(
-            fps_button_x,
-            fps_button_y - 4,
-            fps_button_width,
-            fps_button_height,
-            colors::BACKGROUND,
-        );
-        draw.draw_rectangle_lines(
-            fps_button_x,
-            fps_button_y - 4,
-            fps_button_width,
-            fps_button_height,
-            colors::PRIMARY,
-        );
-        let text_width = draw.measure_text(target_str, 12);
-        draw.draw_text(
-            target_str,
-            fps_button_x + (fps_button_width - text_width) / 2,
-            fps_button_y + (fps_button_height - 15) / 2,
-            12,
-            colors::PRIMARY,
         );
 
         // gb screen starts immediately after header
@@ -305,6 +249,35 @@ impl Renderer for RaylibRenderer {
         // screen spans game_x..game_x+SCALED_SCREEN_WIDTH, centre = game_x + SCALED_SCREEN_WIDTH/2
         let controls_y = game_y + SCALED_SCREEN_HEIGHT + PANEL_PADDING * 2;
         let screen_center_x = game_x + SCALED_SCREEN_WIDTH / 2;
+
+        // fps button above others
+        let fps_button_width = 118_i32;
+        let fps_button_height = 26_i32;
+        let fps_button_x = screen_center_x - fps_button_width / 2;
+        let fps_button_y = controls_y - 20;
+
+        draw.draw_rectangle(
+            fps_button_x,
+            fps_button_y,
+            fps_button_width,
+            fps_button_height,
+            colors::BACKGROUND,
+        );
+        draw.draw_rectangle_lines(
+            fps_button_x,
+            fps_button_y,
+            fps_button_width,
+            fps_button_height,
+            colors::PRIMARY,
+        );
+        let text_width = draw.measure_text(target_str, 12);
+        draw.draw_text(
+            target_str,
+            fps_button_x + (fps_button_width - text_width) / 2,
+            fps_button_y + (fps_button_height - 15) / 2,
+            12,
+            colors::PRIMARY,
+        );
 
         // dpad: centre the cross on screen_center_x - 160 (leave room for a/b on the right)
         let dpad_x = screen_center_x - 160;
@@ -592,7 +565,7 @@ fn draw_pad_btn(
         draw.draw_line_v(vertices[i], vertices[(i + 1) % 5], border_color);
     }
 
-    let font_size = 14;
+    let font_size = 11;
     let text_width = draw.measure_text(key, font_size);
     draw.draw_text(
         key,

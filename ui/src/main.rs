@@ -1,12 +1,13 @@
 use gbeed_core::{prelude::*, Controller, Renderer, SerialListener};
 
 mod colors;
+mod input;
 mod listener;
 mod renderer;
 mod texture;
 
 use listener::RaylibSerialListener;
-use renderer::{ButtonStates, RaylibRenderer};
+use renderer::RaylibRenderer;
 
 use raylib::prelude::*;
 use std::{
@@ -146,15 +147,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     while !controller.renderer.rl.window_should_close()
         && !controller.renderer.rl.is_key_down(KeyboardKey::KEY_ESCAPE)
     {
-        let input = read_input(&controller.renderer.rl);
-
-        apply_joypad(&input, &mut gb.joypad);
-
-        controller.renderer.buttons = input;
-
-        if controller.renderer.fps_btn_clicked() {
-            controller.renderer.cycle_fps();
-        }
+        input::update(&mut controller.renderer, &mut gb.joypad);
 
         gb.run(&mut controller)?;
 
@@ -189,31 +182,6 @@ fn save_path_from_rom(rom_path: &str) -> PathBuf {
         Some("gb" | "gbc") => path.with_extension("sav"),
         _ => path.with_added_extension("sav"),
     }
-}
-
-fn read_input(rl: &RaylibHandle) -> ButtonStates {
-    ButtonStates {
-        up: rl.is_key_down(KeyboardKey::KEY_UP) || rl.is_key_down(KeyboardKey::KEY_W),
-        down: rl.is_key_down(KeyboardKey::KEY_DOWN) || rl.is_key_down(KeyboardKey::KEY_S),
-        left: rl.is_key_down(KeyboardKey::KEY_LEFT) || rl.is_key_down(KeyboardKey::KEY_A),
-        right: rl.is_key_down(KeyboardKey::KEY_RIGHT) || rl.is_key_down(KeyboardKey::KEY_D),
-        a: rl.is_key_down(KeyboardKey::KEY_Z) || rl.is_key_down(KeyboardKey::KEY_J),
-        b: rl.is_key_down(KeyboardKey::KEY_X) || rl.is_key_down(KeyboardKey::KEY_K),
-        start: rl.is_key_down(KeyboardKey::KEY_L),
-        select: rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) || rl.is_key_down(KeyboardKey::KEY_SEMICOLON),
-    }
-}
-
-/// Apply a button-state to the emulator joypad.
-fn apply_joypad(s: &ButtonStates, joypad: &mut Joypad) {
-    joypad.button_down(JoypadButton::Up, s.up);
-    joypad.button_down(JoypadButton::Down, s.down);
-    joypad.button_down(JoypadButton::Left, s.left);
-    joypad.button_down(JoypadButton::Right, s.right);
-    joypad.button_down(JoypadButton::A, s.a);
-    joypad.button_down(JoypadButton::B, s.b);
-    joypad.button_down(JoypadButton::Start, s.start);
-    joypad.button_down(JoypadButton::Select, s.select);
 }
 
 fn print_help() {
