@@ -1,4 +1,4 @@
-use gbeed_core::{AFTER_BOOT_CPU, DefaultController, ROM_BANK00_START, prelude::*};
+use gbeed_core::{DefaultController, ROM_BANK00_START, prelude::*};
 
 // copied from cartridge/mod.rs to not expose it in the library
 const NINTENDO_LOGO: [u8; 48] = [

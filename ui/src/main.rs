@@ -3,6 +3,7 @@ use gbeed_core::{prelude::*, Controller, Renderer, SerialListener};
 mod colors;
 mod listener;
 mod renderer;
+mod texture;
 
 use listener::RaylibSerialListener;
 use renderer::{ButtonStates, RaylibRenderer};
@@ -157,13 +158,17 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
         gb.run(&mut controller)?;
 
-        controller.renderer.update_tiles(0, gb.ppu.tile_block0());
-        controller.renderer.update_tiles(1, gb.ppu.tile_block1());
-        controller.renderer.update_tiles(2, gb.ppu.tile_block2());
+        texture::update_tiles(&mut controller.renderer.tile_textures[0], gb.ppu.tile_block0());
+        texture::update_tiles(&mut controller.renderer.tile_textures[1], gb.ppu.tile_block1());
+        texture::update_tiles(&mut controller.renderer.tile_textures[2], gb.ppu.tile_block2());
 
-        controller
-            .renderer
-            .update_bg_map(gb.ppu.bg_map0(), gb.ppu.tile_data(), gb.ppu.bg_tile_map_address());
+        texture::update_bg_map(
+            &mut controller.renderer.bg_map_texture,
+            gb.ppu.bg_map0(),
+            gb.ppu.tile_data(),
+            gb.ppu.bg_tile_map_address(),
+        );
+
         controller
             .renderer
             .update_scroll(gb.read(0xFF43) as i32, gb.read(0xFF42) as i32);
