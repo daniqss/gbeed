@@ -62,17 +62,6 @@ pub enum LCDMode {
     VBlank = 1,
 }
 
-impl LCDMode {
-    pub fn reset_cycles_at_finish(&self) -> usize {
-        match self {
-            LCDMode::OAMScan => FINISH_OAM_SCAN_DOTS,
-            LCDMode::Drawing => FINISH_DRAWING_DOTS,
-            LCDMode::HBlank => FINISH_HBLANK_DOTS,
-            LCDMode::VBlank => FINISH_VBLANK_DOTS,
-        }
-    }
-}
-
 pub struct Ppu {
     /// A "dot" = one 222 Hz (aprox 4.194 MHz) time unit. A frame is not exactly one 60th of a second: the Game Boy runs slightly slower than 60 Hz, as one frame takes ~16.74 ms instead of ~16.67
     dots: usize,
@@ -85,6 +74,7 @@ pub struct Ppu {
     lcd_status: u8,
     scroll_y: u8,
     scroll_x: u8,
+
     /// currently drawn line
     ly: u8,
     lyc: u8,
@@ -95,8 +85,6 @@ pub struct Ppu {
     wy: u8,
     wx: u8,
     window_line_counter: u8,
-
-    pub last_cycles: usize,
 }
 
 impl Default for Ppu {
@@ -136,7 +124,7 @@ impl Ppu {
             oam_ram: [0; OAM_SIZE as usize],
 
             lcd_control: 0x91,
-            lcd_status: 0,
+            lcd_status: 0x82,
             scroll_y: 0,
             scroll_x: 0,
             ly: 0,
@@ -148,8 +136,6 @@ impl Ppu {
             wy: 0,
             wx: 0,
             window_line_counter: 0,
-
-            last_cycles: 0,
         }
     }
 
@@ -207,6 +193,16 @@ impl Ppu {
         }
     }
 
+    #[inline(always)]
+    fn check_mode_dots(&mut self, finish_dots: usize) -> bool {
+        if self.dots >= finish_dots {
+            self.dots -= finish_dots;
+            true
+        } else {
+            false
+        }
+    }
+
     // # Step the PPU by the number of cycles the last instruction took
     //
     //            |  20 dots  | 43+ dots  | 51- dots
@@ -215,29 +211,20 @@ impl Ppu {
     //            | Search    | Transfer  | HBlank
     // -------------------------------------------------
     // 10 lines   |             VBlank
-    pub fn step<R: Renderer>(&mut self, renderer: &mut R, cycles: usize, interrupt_flag: &mut Interrupt) {
+
+    pub fn step<R: Renderer>(&mut self, renderer: &mut R, delta: usize, interrupt_flag: &mut Interrupt) {
         if !self.lcd_display_enable() {
             return;
         }
 
-        let instruction_cycles = if cycles >= self.last_cycles {
-            cycles - self.last_cycles
-        } else {
-            cycles
-        };
-        self.last_cycles = cycles;
+        self.dots += delta;
 
-        self.dots += instruction_cycles;
+        let next_mode = match self.get_mode() {
+            LCDMode::OAMScan if self.check_mode_dots(FINISH_OAM_SCAN_DOTS) => Some(LCDMode::Drawing),
 
-        let mode = self.get_mode();
-        // look current mode
-        let next_mode = match mode {
-            LCDMode::OAMScan if self.dots >= FINISH_OAM_SCAN_DOTS => Some(LCDMode::Drawing),
-
-            LCDMode::Drawing if self.dots >= FINISH_DRAWING_DOTS => {
+            LCDMode::Drawing if self.check_mode_dots(FINISH_DRAWING_DOTS) => {
                 // render scanline if we're not at the bottom of the screen yet
                 if self.ly < DMG_SCREEN_HEIGHT as u8 {
-                    // render scanline
                     self.draw_scanline(renderer);
                 }
 
@@ -249,7 +236,7 @@ impl Ppu {
                 Some(LCDMode::HBlank)
             }
 
-            LCDMode::HBlank if self.dots >= FINISH_HBLANK_DOTS => {
+            LCDMode::HBlank if self.check_mode_dots(FINISH_HBLANK_DOTS) => {
                 self.ly += 1;
 
                 // check for LYC=LY coincidence
@@ -257,9 +244,11 @@ impl Ppu {
 
                 let next_mode = if self.ly == DMG_SCREEN_HEIGHT as u8 {
                     // frame draw is finished
+                    interrupt_flag.set_vblank_interrupt(true);
                     if self.vblank_interrupt() {
                         interrupt_flag.set_lcd_stat_interrupt(true);
                     }
+
                     renderer.draw_screen();
 
                     LCDMode::VBlank
@@ -274,31 +263,24 @@ impl Ppu {
 
                 Some(next_mode)
             }
+            LCDMode::VBlank if self.check_mode_dots(FINISH_VBLANK_DOTS) => {
+                self.ly += 1;
 
-            LCDMode::VBlank => {
-                // set VBlank interrupt at the start of VBlank period
-                if self.lcd_display_enable() && self.ly >= DMG_SCREEN_HEIGHT as u8 {
-                    interrupt_flag.set_vblank_interrupt(true);
-                }
+                // check for LYC=LY coincidence
+                self.ly_equals_lyc_check(interrupt_flag);
 
-                if self.dots >= FINISH_VBLANK_DOTS {
-                    self.ly += 1;
+                // if we finished all VBlank lines, go to next frame
+                if self.ly == SCANLINES_PER_FRAME as u8 {
+                    self.ly = 0;
+                    self.frames += 1;
+                    self.window_line_counter = 0;
 
-                    // check for LYC=LY coincidence
-                    self.ly_equals_lyc_check(interrupt_flag);
-
-                    // if we finished all VBlank lines, go to next frame
-                    if self.ly > SCANLINES_PER_FRAME as u8 - 1 {
-                        self.ly = 0;
-                        self.frames += 1;
-
-                        if self.oam_interrupt() {
-                            interrupt_flag.set_lcd_stat_interrupt(true);
-                        }
-                        Some(LCDMode::OAMScan)
-                    } else {
-                        None
+                    if self.oam_interrupt() {
+                        interrupt_flag.set_lcd_stat_interrupt(true);
                     }
+
+                    self.ly_equals_lyc_check(interrupt_flag);
+                    Some(LCDMode::OAMScan)
                 } else {
                     None
                 }
@@ -308,10 +290,9 @@ impl Ppu {
             _ => None,
         };
 
-        // reset dots and update mode in memory
-        if let Some(next_mode) = next_mode {
-            self.dots -= mode.reset_cycles_at_finish();
-            self.set_mode(next_mode);
+        // update mode
+        if let Some(mode) = next_mode {
+            self.set_mode(mode);
         }
     }
 
@@ -319,8 +300,6 @@ impl Ppu {
         // draw background
         if self.bg_enable() {
             self.draw_bg(renderer);
-        } else {
-            self.draw_no_bg(renderer);
         }
 
         // draw window, in DMG needs both bg and window enabled, in CGB only window enable is needed
@@ -332,14 +311,6 @@ impl Ppu {
         if self.obj_enable() {
             self.draw_sprites(renderer)
         };
-    }
-
-    fn draw_no_bg<R: Renderer>(&mut self, renderer: &mut R) {
-        let current_line = self.ly;
-        let color = renderer.get_color(self.bg_palette, 0);
-        for x in 0..DMG_SCREEN_WIDTH {
-            renderer.write_pixel(x, current_line as usize, color);
-        }
     }
 
     fn draw_sprites<R: Renderer>(&mut self, renderer: &mut R) {
@@ -422,7 +393,6 @@ impl Ppu {
 
                 if should_draw {
                     pixel_owner[sx] = Some(sprite.xpos);
-
                     renderer.write_pixel(sx, current_line as usize, renderer.get_color(palette, color_id));
                 }
             }
@@ -440,10 +410,6 @@ impl Ppu {
 
         if current_line < window_y {
             return;
-        }
-
-        if current_line == window_y {
-            self.window_line_counter = 0;
         }
 
         let tile_map_base = if self.window_tile_map_address() {
@@ -480,6 +446,7 @@ impl Ppu {
             } else {
                 0x9000
             };
+
             let tile_address = tile_data_base + (tile_number as u16) * 16;
 
             let line_in_tile = self.window_line_counter % 8;
@@ -488,14 +455,15 @@ impl Ppu {
             let second_byte = self.read(tile_address + (line_in_tile as u16) * 2 + 1);
 
             let bit_index = 7 - (window_column % 8);
-
             let low_pixel = (first_byte >> bit_index) & 1;
             let high_pixel = (second_byte >> bit_index) & 1;
 
             let color_id = (high_pixel << 1) | low_pixel;
-            let color = renderer.get_color(self.bg_palette, color_id);
-
-            renderer.write_pixel(pixel, current_line as usize, color);
+            renderer.write_pixel(
+                pixel,
+                current_line as usize,
+                renderer.get_color(self.bg_palette, color_id),
+            );
         }
 
         if window_rendered {
@@ -505,8 +473,6 @@ impl Ppu {
 
     fn draw_bg<R: Renderer>(&mut self, renderer: &mut R) {
         let current_line = self.ly;
-        let scroll_x = self.scroll_x;
-        let scroll_y = self.scroll_y;
 
         let tile_map_base = if self.bg_tile_map_address() {
             COND_WINDOW_BASE_ADDR
@@ -515,29 +481,19 @@ impl Ppu {
         };
 
         for pixel in 0..DMG_SCREEN_WIDTH {
-            let bg_x = (pixel as u8).wrapping_add(scroll_x);
-            let bg_y = (current_line).wrapping_add(scroll_y);
-            let tile_x = bg_x >> 3;
-            let tile_y = bg_y >> 3;
+            let bg_x = (pixel as u8).wrapping_add(self.scroll_x);
+            let bg_y = (current_line).wrapping_add(self.scroll_y);
 
-            let tile_index: usize = tile_y as usize * 32 + tile_x as usize;
-            let tile_address_in_map = tile_map_base + tile_index as u16;
-            // let tile_number = gb.read(tile_address_in_map);
-            let tile_number = self.read(tile_address_in_map);
+            let tile_index: usize = (bg_y as usize / 8) * 32 + (bg_x as usize / 8);
+            let tile_number = self.read(tile_map_base + tile_index as u16);
 
-            // The "$8000 method" uses $8000 as its base pointer and uses an unsigned addressing,
-            // meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
-            //
-            // The "$8800 method" uses $9000 as its base pointer and uses a signed addressing,
-            // meaning that tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1; or, to put it differently,
-            // "$8800 addressing" takes tiles 0-127 from block 2 and tiles 128-255 from block 1.
             let tile_data_base = if self.bg_and_window_tile_data() || tile_number >= 128 {
                 0x8000
             } else {
                 0x9000
             };
-            let tile_address = tile_data_base + (tile_number as u16) * 16;
 
+            let tile_address = tile_data_base + (tile_number as u16) * 16;
             let line_in_tile = bg_y % 8;
 
             let first_byte = self.read(tile_address + (line_in_tile as u16) * 2);
@@ -549,9 +505,12 @@ impl Ppu {
             let high_pixel = (second_byte >> bit_index) & 1;
 
             let color_id = (high_pixel << 1) | low_pixel;
-            let color = renderer.get_color(self.bg_palette, color_id);
 
-            renderer.write_pixel(pixel, current_line as usize, color);
+            renderer.write_pixel(
+                pixel,
+                current_line as usize,
+                renderer.get_color(self.bg_palette, color_id),
+            );
         }
     }
 
@@ -561,12 +520,10 @@ impl Ppu {
     /// Most games transfer to HRAM code to continue execution in CPU, and execute DMA transfer in VBlank
     pub fn dma_transfer(gb: &mut Dmg, src_addr: u8) {
         let src_addr = (src_addr as u16) << 8;
-        for i in 0..(OAM_END - OAM_START + 1) {
+        for i in 0..OAM_SIZE {
             let byte = gb.read(src_addr + i);
             gb.write(OAM_START + i, byte);
         }
-
-        gb.ppu.dma = 0;
     }
 
     pub fn tile_block0(&self) -> &[u8] { &self.vram[0..0x800] }
@@ -595,9 +552,8 @@ impl Accessible<u16> for Ppu {
             0xFF49 => self.obj1_palette,
             0xFF4A => self.wy,
             0xFF4B => self.wx,
-            _ => unreachable!(
-                "Ppu: read of address {address:04X} should have been handled by other components",
-            ),
+
+            _ => 0xFF,
         }
     }
 
@@ -611,15 +567,15 @@ impl Accessible<u16> for Ppu {
 
                 // if LCD is turned off, reset some PPU state
                 if !self.lcd_display_enable() {
-                    // clear ppu mode
                     self.lcd_status &= 0x7C;
                     self.ly = 0;
                 }
             }
-            0xFF41 => self.lcd_status = value,
+            0xFF41 => self.lcd_status = (value & 0xF8) | (self.lcd_status & 0x07),
             0xFF42 => self.scroll_y = value,
             0xFF43 => self.scroll_x = value,
-            0xFF44 => self.ly = value,
+            // read only
+            0xFF44 => {}
             0xFF45 => self.lyc = value,
             DMA_REGISTER => unreachable!(
                 "Writing to DMA register should have been handled by Dmg, address: {address:04X}"
