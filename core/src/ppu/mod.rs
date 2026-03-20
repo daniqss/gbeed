@@ -46,27 +46,7 @@ const FINISH_VBLANK_DOTS: usize = DOTS_PER_SCANLINE;
 const DEFAULT_WINDOW_BASE_ADDR: u16 = 0x9800;
 const COND_WINDOW_BASE_ADDR: u16 = 0x9C00;
 
-const UNSIGNED_BASE_ADDR: u16 = 0x8000;
-const SIGNED_BASE_ADDR: u16 = 0x9000;
-
-mem_range!(BLOCK0, 0x0, 0x800);
-mem_range!(BLOCK1, 0x800, 0x1000);
-mem_range!(BLOCK2, 0x1000, 0x1800);
-mem_range!(BG_MAP0, 0x1800, 0x1C00);
-mem_range!(BG_MAP1, 0x1C00, 0x2000);
-
-pub const LCD_CONTROL: u16 = 0xFF40;
-pub const LCD_STATUS: u16 = 0xFF41;
-pub const SCROLL_Y: u16 = 0xFF42;
-pub const SCROLL_X: u16 = 0xFF43;
-pub const LY: u16 = 0xFF44;
-pub const LYC: u16 = 0xFF45;
 pub const DMA_REGISTER: u16 = 0xFF46;
-pub const BG_PALETTE: u16 = 0xFF47;
-pub const OBJ0_PALETTE: u16 = 0xFF48;
-pub const OBJ1_PALETTE: u16 = 0xFF49;
-pub const WY: u16 = 0xFF4A;
-pub const WX: u16 = 0xFF4B;
 
 /// Represents the current mode of the LCD display
 ///   Mode                  | Action                                     | Duration                             | Accessible video memory
@@ -333,116 +313,6 @@ impl Ppu {
         };
     }
 
-    #[inline(always)]
-    pub fn draw_tile<R: Renderer>(
-        &mut self,
-        renderer: &mut R,
-        pixel: (usize, usize),
-        tile: (u8, u8),
-        tile_map_base: u16,
-        line_in_tile: u8,
-    ) {
-        let (pixel_x, pixel_y) = pixel;
-        let (tile_x, tile_y) = tile;
-
-        let tile_index: usize = (tile_y as usize / 8) * 32 + (tile_x as usize / 8);
-        let tile_number = self.read(tile_map_base + tile_index as u16);
-
-        // The "$8000 method" uses $8000 as its base pointer and uses an unsigned addressing,
-        // meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
-        //
-        // The "$8800 method" uses $9000 as its base pointer and uses a signed addressing,
-        // meaning that tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1; or, to put it differently,
-        // "$8800 addressing" takes tiles 0-127 from block 2 and tiles 128-255 from block 1.
-        let tile_data_base = if self.bg_and_window_tile_data() || tile_number >= 128 {
-            UNSIGNED_BASE_ADDR
-        } else {
-            SIGNED_BASE_ADDR
-        };
-
-        let tile_address = tile_data_base + (tile_number as u16) * 16;
-
-        let first_byte = self.read(tile_address + (line_in_tile as u16) * 2);
-        let second_byte = self.read(tile_address + (line_in_tile as u16) * 2 + 1);
-
-        let bit_index = 7 - (tile_x % 8);
-
-        let low_pixel = (first_byte >> bit_index) & 1;
-        let high_pixel = (second_byte >> bit_index) & 1;
-
-        let color_id = (high_pixel << 1) | low_pixel;
-
-        renderer.write_pixel(pixel_x, pixel_y, renderer.get_color(self.bg_palette, color_id));
-    }
-
-    fn draw_bg<R: Renderer>(&mut self, renderer: &mut R) {
-        let current_line = self.ly;
-
-        let tile_map_base = if self.bg_tile_map_address() {
-            COND_WINDOW_BASE_ADDR
-        } else {
-            DEFAULT_WINDOW_BASE_ADDR
-        };
-
-        for pixel in 0..DMG_SCREEN_WIDTH {
-            let bg_x = (pixel as u8).wrapping_add(self.scroll_x);
-            let bg_y = current_line.wrapping_add(self.scroll_y);
-
-            let line_in_tile = bg_y % 8;
-
-            self.draw_tile(
-                renderer,
-                (pixel, current_line as usize),
-                (bg_x, bg_y),
-                tile_map_base,
-                line_in_tile,
-            );
-        }
-    }
-
-    fn draw_window<R: Renderer>(&mut self, renderer: &mut R) {
-        let current_line = self.ly;
-        let window_y = self.wy;
-        let window_x = self.wx as isize - 7;
-
-        if current_line < window_y {
-            return;
-        }
-
-        let tile_map_base = if self.window_tile_map_address() {
-            COND_WINDOW_BASE_ADDR
-        } else {
-            DEFAULT_WINDOW_BASE_ADDR
-        };
-
-        let mut window_rendered = false;
-
-        for pixel in 0..DMG_SCREEN_WIDTH {
-            if (pixel as isize) < window_x {
-                continue;
-            }
-
-            window_rendered = true;
-
-            let window_column = (pixel as isize - window_x) as u8;
-            let window_y = self.window_line_counter;
-
-            let line_in_tile = window_y % 8;
-
-            self.draw_tile(
-                renderer,
-                (pixel, current_line as usize),
-                (window_column, window_y),
-                tile_map_base,
-                line_in_tile,
-            );
-        }
-
-        if window_rendered {
-            self.window_line_counter = self.window_line_counter.wrapping_add(1);
-        }
-    }
-
     fn draw_sprites<R: Renderer>(&mut self, renderer: &mut R) {
         let current_line = self.ly;
         let sprite_height = if self.obj_size() { 16 } else { 8 };
@@ -532,6 +402,118 @@ impl Ppu {
         }
     }
 
+    fn draw_window<R: Renderer>(&mut self, renderer: &mut R) {
+        // window enable check is done in draw_scanline
+        let current_line = self.ly;
+        let window_y = self.wy;
+        let window_x = self.wx as isize - 7;
+
+        if current_line < window_y {
+            return;
+        }
+
+        let tile_map_base = if self.window_tile_map_address() {
+            COND_WINDOW_BASE_ADDR
+        } else {
+            DEFAULT_WINDOW_BASE_ADDR
+        };
+
+        let mut window_rendered = false;
+
+        for pixel in 0..DMG_SCREEN_WIDTH {
+            if (pixel as isize) < window_x {
+                continue;
+            }
+            window_rendered = true;
+
+            let window_column = (pixel as isize) - window_x;
+            let tile_x = window_column / 8;
+            let tile_y = self.window_line_counter as isize / 8;
+
+            let tile_index = tile_y * 32 + tile_x;
+
+            let tile_address_in_map = tile_map_base + tile_index as u16;
+            let tile_number = self.read(tile_address_in_map);
+
+            // The "$8000 method" uses $8000 as its base pointer and uses an unsigned addressing,
+            // meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
+            //
+            // The "$8800 method" uses $9000 as its base pointer and uses a signed addressing,
+            // meaning that tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1; or, to put it differently,
+            // "$8800 addressing" takes tiles 0-127 from block 2 and tiles 128-255 from block 1.
+            let tile_data_base = if self.bg_and_window_tile_data() || tile_number >= 128 {
+                0x8000
+            } else {
+                0x9000
+            };
+
+            let tile_address = tile_data_base + (tile_number as u16) * 16;
+
+            let line_in_tile = self.window_line_counter % 8;
+
+            let first_byte = self.read(tile_address + (line_in_tile as u16) * 2);
+            let second_byte = self.read(tile_address + (line_in_tile as u16) * 2 + 1);
+
+            let bit_index = 7 - (window_column % 8);
+            let low_pixel = (first_byte >> bit_index) & 1;
+            let high_pixel = (second_byte >> bit_index) & 1;
+
+            let color_id = (high_pixel << 1) | low_pixel;
+            renderer.write_pixel(
+                pixel,
+                current_line as usize,
+                renderer.get_color(self.bg_palette, color_id),
+            );
+        }
+
+        if window_rendered {
+            self.window_line_counter = self.window_line_counter.wrapping_add(1);
+        }
+    }
+
+    fn draw_bg<R: Renderer>(&mut self, renderer: &mut R) {
+        let current_line = self.ly;
+
+        let tile_map_base = if self.bg_tile_map_address() {
+            COND_WINDOW_BASE_ADDR
+        } else {
+            DEFAULT_WINDOW_BASE_ADDR
+        };
+
+        for pixel in 0..DMG_SCREEN_WIDTH {
+            let bg_x = (pixel as u8).wrapping_add(self.scroll_x);
+            let bg_y = (current_line).wrapping_add(self.scroll_y);
+
+            let tile_index: usize = (bg_y as usize / 8) * 32 + (bg_x as usize / 8);
+            let tile_number = self.read(tile_map_base + tile_index as u16);
+
+            let tile_data_base = if self.bg_and_window_tile_data() || tile_number >= 128 {
+                0x8000
+            } else {
+                0x9000
+            };
+
+            let tile_address = tile_data_base + (tile_number as u16) * 16;
+            let line_in_tile = bg_y % 8;
+
+            let first_byte = self.read(tile_address + (line_in_tile as u16) * 2);
+            let second_byte = self.read(tile_address + (line_in_tile as u16) * 2 + 1);
+
+            let bit_index = 7 - (bg_x % 8);
+
+            let low_pixel = (first_byte >> bit_index) & 1;
+            let high_pixel = (second_byte >> bit_index) & 1;
+
+            let color_id = (high_pixel << 1) | low_pixel;
+
+            renderer.write_pixel(
+                pixel,
+                current_line as usize,
+                renderer.get_color(self.bg_palette, color_id),
+            );
+        }
+    }
+
     /// Writing to DMA register will copy from ROM or RAM to OAM memory
     /// It will take 160 dots or 320 at double speed
     /// CPU can access only HRAM and PPU can't access OAM
@@ -544,12 +526,12 @@ impl Ppu {
         }
     }
 
-    pub fn tile_block0(&self) -> &[u8] { &self.vram[BLOCK0_START as usize..BLOCK0_END as usize] }
-    pub fn tile_block1(&self) -> &[u8] { &self.vram[BLOCK1_START as usize..BLOCK1_END as usize] }
-    pub fn tile_block2(&self) -> &[u8] { &self.vram[BLOCK2_START as usize..BLOCK2_END as usize] }
-    pub fn tile_data(&self) -> &[u8] { &self.vram[0..VRAM_SIZE as usize] }
-    pub fn bg_map0(&self) -> &[u8] { &self.vram[BG_MAP0_START as usize..BG_MAP0_END as usize] }
-    pub fn bg_map1(&self) -> &[u8] { &self.vram[BG_MAP1_START as usize..BG_MAP1_END as usize] }
+    pub fn tile_block0(&self) -> &[u8] { &self.vram[0..0x800] }
+    pub fn tile_block1(&self) -> &[u8] { &self.vram[0x800..0x1000] }
+    pub fn tile_block2(&self) -> &[u8] { &self.vram[0x1000..0x1800] }
+    pub fn tile_data(&self) -> &[u8] { &self.vram[0..0x1800] }
+    pub fn bg_map0(&self) -> &[u8] { &self.vram[0x1800..0x1C00] }
+    pub fn bg_map1(&self) -> &[u8] { &self.vram[0x1C00..0x2000] }
 }
 
 impl Accessible<u16> for Ppu {
@@ -558,18 +540,18 @@ impl Accessible<u16> for Ppu {
             VRAM_START..=VRAM_END => self.vram[(address - VRAM_START) as usize],
             OAM_START..=OAM_END => self.oam_ram[(address - OAM_START) as usize],
 
-            LCD_CONTROL => self.lcd_control,
-            LCD_STATUS => self.lcd_status,
-            SCROLL_Y => self.scroll_y,
-            SCROLL_X => self.scroll_x,
-            LY => self.ly,
-            LYC => self.lyc,
-            DMA_REGISTER => self.dma,
-            BG_PALETTE => self.bg_palette,
-            OBJ0_PALETTE => self.obj0_palette,
-            OBJ1_PALETTE => self.obj1_palette,
-            WY => self.wy,
-            WX => self.wx,
+            0xFF40 => self.lcd_control,
+            0xFF41 => self.lcd_status,
+            0xFF42 => self.scroll_y,
+            0xFF43 => self.scroll_x,
+            0xFF44 => self.ly,
+            0xFF45 => self.lyc,
+            0xFF46 => self.dma,
+            0xFF47 => self.bg_palette,
+            0xFF48 => self.obj0_palette,
+            0xFF49 => self.obj1_palette,
+            0xFF4A => self.wy,
+            0xFF4B => self.wx,
 
             _ => 0xFF,
         }
@@ -580,7 +562,7 @@ impl Accessible<u16> for Ppu {
             VRAM_START..=VRAM_END => self.vram[(address - VRAM_START) as usize] = value,
             OAM_START..=OAM_END => self.oam_ram[(address - OAM_START) as usize] = value,
 
-            LCD_CONTROL => {
+            0xFF40 => {
                 self.lcd_control = value;
 
                 // if LCD is turned off, reset some PPU state
@@ -589,20 +571,20 @@ impl Accessible<u16> for Ppu {
                     self.ly = 0;
                 }
             }
-            LCD_STATUS => self.lcd_status = (value & 0xF8) | (self.lcd_status & 0x07),
-            SCROLL_Y => self.scroll_y = value,
-            SCROLL_X => self.scroll_x = value,
+            0xFF41 => self.lcd_status = (value & 0xF8) | (self.lcd_status & 0x07),
+            0xFF42 => self.scroll_y = value,
+            0xFF43 => self.scroll_x = value,
             // read only
-            LY => {}
-            LYC => self.lyc = value,
+            0xFF44 => {}
+            0xFF45 => self.lyc = value,
             DMA_REGISTER => unreachable!(
                 "Writing to DMA register should have been handled by Dmg, address: {address:04X}"
             ),
-            BG_PALETTE => self.bg_palette = value,
-            OBJ0_PALETTE => self.obj0_palette = value,
-            OBJ1_PALETTE => self.obj1_palette = value,
-            WY => self.wy = value,
-            WX => self.wx = value,
+            0xFF47 => self.bg_palette = value,
+            0xFF48 => self.obj0_palette = value,
+            0xFF49 => self.obj1_palette = value,
+            0xFF4A => self.wy = value,
+            0xFF4B => self.wx = value,
             _ => unreachable!(
                 "Ppu: write of address {address:04X} should have been handled by other components",
             ),

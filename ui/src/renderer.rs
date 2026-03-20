@@ -45,9 +45,6 @@ pub struct RaylibRenderer {
     pub game_name: String,
     pub game_region: String,
     pub fps_mode: FpsMode,
-
-    pub scroll_x: i32,
-    pub scroll_y: i32,
 }
 
 impl RaylibRenderer {
@@ -78,8 +75,6 @@ impl RaylibRenderer {
             game_name: "Unknown".into(),
             game_region: "Unknown".into(),
             fps_mode: FpsMode::Target60,
-            scroll_x: 0,
-            scroll_y: 0,
         }
     }
 
