@@ -78,9 +78,6 @@ pub struct RaylibRenderer {
     pub game_name: String,
     pub game_region: String,
     pub fps_mode: FpsMode,
-
-    pub scroll_x: i32,
-    pub scroll_y: i32,
 }
 
 impl RaylibRenderer {
@@ -111,8 +108,6 @@ impl RaylibRenderer {
             game_name: "Unknown".into(),
             game_region: "Unknown".into(),
             fps_mode: FpsMode::Target60,
-            scroll_x: 0,
-            scroll_y: 0,
         }
     }
 
@@ -120,11 +115,6 @@ impl RaylibRenderer {
         let clean = |s: String| s.chars().filter(|c| *c != '\0' && !c.is_control()).collect();
         self.game_name = clean(name.into());
         self.game_region = clean(format!("{region:?}"));
-    }
-
-    pub fn update_scroll(&mut self, x: i32, y: i32) {
-        self.scroll_x = x;
-        self.scroll_y = y;
     }
 
     // decodes a 2bpp vram block into the tile texture (region 0/$8000, 1/$8800, 2/$9000)
@@ -157,33 +147,27 @@ impl RaylibRenderer {
         tex.update();
     }
 
-    pub fn update_bg_map(&mut self, map_data: &[u8], tile_data: &[u8], is_mode_8000: bool) {
+    pub fn update_bg_map(&mut self, map_data: &[u8], tile_data: &[u8]) {
         let tex = &mut self.bg_map_texture;
-        let stride = 256_usize;
+        let stride = 256;
 
         for ty in 0..32_usize {
             for tx in 0..32_usize {
-                let raw_idx = map_data[ty * 32 + tx];
-
-                let tile_base = if is_mode_8000 {
-                    (raw_idx as usize) * 16
-                } else {
-                    let signed = raw_idx as i8 as i32;
-                    (0x1000_i32 + signed * 16) as usize
-                };
-
+                let tile_idx = map_data[ty * 32 + tx] as usize;
+                let tile_base = tile_idx * 16;
                 let px_base = tx * 8;
                 let py_base = ty * 8;
 
                 for row in 0..8_usize {
                     let lo = tile_data.get(tile_base + row * 2).copied().unwrap_or(0);
                     let hi = tile_data.get(tile_base + row * 2 + 1).copied().unwrap_or(0);
-
                     for col in 0..8_usize {
                         let bit = 7 - col;
                         let color_idx = (((hi >> bit) & 1) << 1) | ((lo >> bit) & 1);
                         let c = colors::GB_PALETTE[color_idx as usize];
-                        let i = ((py_base + row) * stride + (px_base + col)) * 3;
+                        let px = px_base + col;
+                        let py = py_base + row;
+                        let i = (py * stride + px) * 3;
                         tex.pixels[i] = c.r;
                         tex.pixels[i + 1] = c.g;
                         tex.pixels[i + 2] = c.b;
@@ -191,7 +175,6 @@ impl RaylibRenderer {
                 }
             }
         }
-
         tex.update();
     }
 
@@ -405,7 +388,7 @@ impl Renderer for RaylibRenderer {
         let mx = RIGHT_X;
         let bgy = gy;
         let bg_map_y = bgy - 12;
-        d.draw_text("bg map $9800", mx, bg_map_y, 14, colors::SECONDARY);
+        d.draw_text("bg map $9800", mx, bg_map_y, 10, colors::SECONDARY);
         d.draw_texture_pro(
             &self.bg_map_texture.texture,
             Rectangle::new(0.0, 0.0, 256.0, 256.0),
@@ -414,43 +397,6 @@ impl Renderer for RaylibRenderer {
             0.0,
             Color::WHITE,
         );
-
-        // scroll over the bg map
-        let scale = BG_MAP_W as f32 / 256.0;
-        let scx = self.scroll_x;
-        let scy = self.scroll_y;
-        let end_x = (scx + 160) % 256;
-        let end_y = (scy + 144) % 256;
-        let wraps_x = (scx + 160) >= 256;
-        let wraps_y = (scy + 144) >= 256;
-
-        let to_screen =
-            |px: i32, py: i32| Vector2::new(mx as f32 + px as f32 * scale, bgy as f32 + py as f32 * scale);
-
-        const OV: Color = Color {
-            r: 255,
-            g: 220,
-            b: 0,
-            a: 255,
-        };
-        const OV_T: f32 = 1.5;
-
-        for &row_y in &[scy, end_y] {
-            if !wraps_x {
-                d.draw_line_ex(to_screen(scx, row_y), to_screen(scx + 160, row_y), OV_T, OV);
-            } else {
-                d.draw_line_ex(to_screen(scx, row_y), to_screen(256, row_y), OV_T, OV);
-                d.draw_line_ex(to_screen(0, row_y), to_screen(end_x, row_y), OV_T, OV);
-            }
-        }
-        for &col_x in &[scx, end_x] {
-            if !wraps_y {
-                d.draw_line_ex(to_screen(col_x, scy), to_screen(col_x, scy + 144), OV_T, OV);
-            } else {
-                d.draw_line_ex(to_screen(col_x, scy), to_screen(col_x, 256), OV_T, OV);
-                d.draw_line_ex(to_screen(col_x, 0), to_screen(col_x, end_y), OV_T, OV);
-            }
-        }
 
         // RIGHT PANEL (Tiles)
         let rx = FAR_RIGHT_X;
@@ -466,7 +412,7 @@ impl Renderer for RaylibRenderer {
             let tty = gy + i as i32 * tv_stride;
             let ty = tty - 12;
 
-            d.draw_text(TV_LABELS[i], rx, ty, 14, colors::SECONDARY);
+            d.draw_text(TV_LABELS[i], rx, ty, 10, colors::SECONDARY);
             d.draw_texture_pro(
                 tile_texs[i],
                 Rectangle::new(0.0, 0.0, T_TEX_W as f32, T_TEX_H as f32),

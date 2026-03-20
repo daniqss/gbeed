@@ -160,13 +160,9 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         controller.renderer.update_tiles(0, gb.ppu.tile_block0());
         controller.renderer.update_tiles(1, gb.ppu.tile_block1());
         controller.renderer.update_tiles(2, gb.ppu.tile_block2());
-
         controller
             .renderer
-            .update_bg_map(gb.ppu.bg_map0(), gb.ppu.tile_data(), gb.ppu.bg_tile_map_address());
-        controller
-            .renderer
-            .update_scroll(gb.read(0xFF43) as i32, gb.read(0xFF42) as i32);
+            .update_bg_map(gb.ppu.bg_map0(), gb.ppu.tile_data());
     }
 
     if let Some(save_data) = gb.cartridge.save_game() {
