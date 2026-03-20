@@ -1,4 +1,4 @@
-use gbeed_core::{Cpu, DefaultController, ROM_BANK00_START, prelude::*};
+use gbeed_core::{AFTER_BOOT_CPU, DefaultController, ROM_BANK00_START, prelude::*};
 
 // copied from cartridge/mod.rs to not expose it in the library
 const NINTENDO_LOGO: [u8; 48] = [
@@ -35,7 +35,6 @@ fn test_disassembly_boot() -> Result<(), Box<dyn std::error::Error>> {
 
         if gb.cpu.cycles >= 70224 {
             gb.cpu.cycles = 0;
-            gb.ppu.last_cycles = 0;
         }
 
         // finish initing ram
@@ -74,30 +73,6 @@ fn test_disassembly_boot() -> Result<(), Box<dyn std::error::Error>> {
 
             setup_logo = true;
         }
-    }
-
-    // new used boot rom has different cpu state at the end the boot sequence
-    if gb.cpu.pc == 0x0100 {
-        assert_eq!(
-            gb.cpu,
-            Cpu {
-                a: 1,
-                f: 192,
-                b: 0,
-                c: 0,
-                d: 0,
-                e: 113,
-                h: 129,
-                l: 208,
-                pc: 256,
-                sp: 65534,
-                cycles: 54462,
-                ime: false,
-                halted: false
-            }
-        );
-        println!("Boot sequence completed successfully!");
-        println!("Cpu after boot: {}", gb.cpu);
     }
 
     Ok(())

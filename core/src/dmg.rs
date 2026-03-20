@@ -71,7 +71,6 @@ impl Dmg {
         }
 
         self.cpu.cycles = 0;
-        self.ppu.last_cycles = 0;
 
         Ok(())
     }
@@ -81,10 +80,9 @@ impl Dmg {
 
         let instruction = Cpu::step(self);
 
-        let delta = self.cpu.cycles - prev_cycles;
+        let delta = self.cpu.cycles.wrapping_sub(prev_cycles);
 
-        self.ppu
-            .step(controller, self.cpu.cycles * 4, &mut self.interrupt_flag);
+        self.ppu.step(controller, delta * 4, &mut self.interrupt_flag);
         self.timer.step(delta * 4, &mut self.interrupt_flag);
         self.serial.step(controller);
 
@@ -118,7 +116,7 @@ impl Accessible<u16> for Dmg {
                 SERIAL_REGISTER_START..=SERIAL_REGISTER_END => self.serial.read(address),
                 TIMER_REGISTER_START..=TIMER_REGISTER_END => self.timer.read(address),
 
-                IF => self.interrupt_flag.0,
+                IF => self.interrupt_flag.0 | 0xE0,
 
                 APU_REGISTER_START..=APU_REGISTER_END => self.apu.read(address),
                 PPU_REGISTER_START..=PPU_REGISTER_END => self.ppu.read(address),
