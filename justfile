@@ -13,7 +13,7 @@ test *ARGS:
     cargo test --features "${DISPLAY_FEATURES}" {{ARGS}}
 
 web-build *ARGS:
-    RUSTFLAGS="-C link-arg=-lidbfs.js -C link-arg=-sFORCE_FILESYSTEM=1 -C link-arg=-sEXPORTED_RUNTIME_METHODS=['FS']" cargo build --target wasm32-unknown-emscripten --release -p gbeed-ui {{ARGS}}
+    RUSTFLAGS="-C link-arg=-lidbfs.js -C link-arg=-sFORCE_FILESYSTEM=1 -C link-arg=-sEXPORTED_RUNTIME_METHODS=['FS']" cargo build --target wasm32-unknown-emscripten -p gbeed-ui {{ARGS}}
     mkdir -p dist
     cp target/wasm32-unknown-emscripten/release/gbeed.wasm dist/
     cp target/wasm32-unknown-emscripten/release/gbeed.js dist/

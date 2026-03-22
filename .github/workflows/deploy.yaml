@@ -5,23 +5,27 @@ on:
     branches: [ feat/build-and-deploy-web ]
 
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v5
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
-            - name: Install Nix
-              uses: cachix/install-nix-action@v31
-              with:
-                nix_path: nixpkgs=channel:nixos-25.11
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-25.11
 
-            - name: Build WASM target
-              run: |
-                nix develop .#wasm --command -- just web-build
+      - name: Build WASM target
+        run: |
+          nix develop .#wasm --command just web-build --release
 
-            - name: Deploy to GitHub Pages
-              uses: peaceiris/actions-gh-pages@v3
-              with:
-                github_token: ${{ secrets.GITHUB_TOKEN }}
-                publish_dir: ./dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
