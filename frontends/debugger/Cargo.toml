@@ -1,5 +1,5 @@
 [package]
-name = "gbeed-ui"
+name = "gbeed-debugger"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,5 +8,5 @@ name = "gbeed"
 path = "src/main.rs"
 
 [dependencies]
-gbeed-core = { path = "../core" }
+gbeed-core = { path = "../../core" }
 raylib = { git = "https://github.com/raylib-rs/raylib-rs", version = "5.7.0" }

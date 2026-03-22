@@ -1,13 +1,7 @@
-use gbeed_core::{prelude::*, Controller, Renderer, SerialListener};
+use gbeed_core::prelude::*;
 
-mod colors;
+mod controller;
 mod input;
-mod listener;
-mod renderer;
-mod texture;
-
-use listener::RaylibSerialListener;
-use renderer::RaylibRenderer;
 
 use raylib::prelude::*;
 use std::{
@@ -15,32 +9,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-struct RaylibController {
-    renderer: RaylibRenderer,
-    serial_listener: RaylibSerialListener,
-}
-
-impl RaylibController {
-    fn new(rl: RaylibHandle, thread: RaylibThread) -> Self {
-        Self {
-            renderer: RaylibRenderer::new(rl, thread),
-            serial_listener: RaylibSerialListener,
-        }
-    }
-}
-
-impl Renderer for RaylibController {
-    fn read_pixel(&self, x: usize, y: usize) -> u32 { self.renderer.read_pixel(x, y) }
-    fn write_pixel(&mut self, x: usize, y: usize, color: u32) { self.renderer.write_pixel(x, y, color); }
-    fn get_color(&self, palette: u8, color_id: u8) -> u32 { self.renderer.get_color(palette, color_id) }
-    fn draw_screen(&mut self) { self.renderer.draw_screen() }
-}
-
-impl SerialListener for RaylibController {
-    fn on_transfer(&mut self, data: u8) { self.serial_listener.on_transfer(data) }
-}
-
-impl Controller for RaylibController {}
+use controller::{renderer, RaylibController};
 
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
@@ -217,20 +186,20 @@ impl EmulatorApp {
 
             gb.run(&mut self.controller)?;
 
-            texture::update_tiles(
+            renderer::update_tiles(
                 &mut self.controller.renderer.tile_textures[0],
                 gb.ppu.tile_block0(),
             );
-            texture::update_tiles(
+            renderer::update_tiles(
                 &mut self.controller.renderer.tile_textures[1],
                 gb.ppu.tile_block1(),
             );
-            texture::update_tiles(
+            renderer::update_tiles(
                 &mut self.controller.renderer.tile_textures[2],
                 gb.ppu.tile_block2(),
             );
 
-            texture::update_bg_map(
+            renderer::update_bg_map(
                 &mut self.controller.renderer.bg_map_texture,
                 gb.ppu.bg_map0(),
                 gb.ppu.tile_data(),
@@ -248,7 +217,7 @@ impl EmulatorApp {
                 .renderer
                 .rl
                 .begin_drawing(&self.controller.renderer.thread);
-            d.clear_background(colors::BACKGROUND);
+            d.clear_background(renderer::BACKGROUND);
             let msg = "Drag and Drop a Game Boy ROM to start";
             let font_size = 20;
             let width = d.measure_text(msg, font_size);
@@ -257,7 +226,7 @@ impl EmulatorApp {
                 (d.get_screen_width() - width) / 2,
                 (d.get_screen_height() - font_size) / 2,
                 font_size,
-                colors::FOREGROUND,
+                renderer::FOREGROUND,
             );
         }
         Ok(())

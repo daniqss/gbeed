@@ -1,10 +1,17 @@
+mod colors;
+mod texture;
+
 use gbeed_core::prelude::*;
 use gbeed_core::Renderer;
 use raylib::prelude::*;
 
-use crate::colors::{self, GB_PALETTE};
 use crate::input::ButtonStates;
-use crate::texture::Texture;
+use colors::GB_PALETTE;
+use texture::Texture;
+
+#[allow(unused_imports)]
+pub use colors::{BACKGROUND, FOREGROUND, PRIMARY, SECONDARY};
+pub use texture::{update_bg_map, update_tiles};
 
 pub const SCREEN_SCALE: i32 = 4;
 pub const SCALED_SCREEN_WIDTH: i32 = DMG_SCREEN_WIDTH as i32 * SCREEN_SCALE;

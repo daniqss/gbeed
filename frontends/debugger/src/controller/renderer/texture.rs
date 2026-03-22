@@ -1,5 +1,5 @@
-use crate::colors;
-use crate::renderer::{TILES_PER_ROW, TILE_PIXEL_SIZE, TILE_TEXTURE_WIDTH};
+use super::colors;
+use super::{TILES_PER_ROW, TILE_PIXEL_SIZE, TILE_TEXTURE_WIDTH};
 
 use raylib::prelude::*;
 

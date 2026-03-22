@@ -2,7 +2,7 @@ name: Deploy WASM build
 
 on:
   push:
-    branches: [ feat/build-and-deploy-web ]
+    branches: [ main ]
 
 jobs:
   build:
