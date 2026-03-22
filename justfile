@@ -12,15 +12,19 @@ check *ARGS:
 test *ARGS:
     cargo test --features "${DISPLAY_FEATURES}" {{ARGS}}
 
-web-build *ARGS:
-    export RUSTFLAGS="-C link-arg=-lidbfs.js -C link-arg=-sFORCE_FILESYSTEM=1 -C link-arg=-sEXPORTED_RUNTIME_METHODS=['FS']"
-    cargo build --target wasm32-unknown-emscripten -p gbeed-debugger {{ARGS}}
+web-build:
+    cargo build --target wasm32-unknown-emscripten -p gbeed-debugger --release
     mkdir -p dist
     cp target/wasm32-unknown-emscripten/release/gbeed.wasm dist/
     cp target/wasm32-unknown-emscripten/release/gbeed.js dist/
     cp -r frontends/debugger/static/* dist/
 
-web-run: web-build
+web-run:
+    cargo build --target wasm32-unknown-emscripten -p gbeed-debugger
+    mkdir -p dist
+    cp target/wasm32-unknown-emscripten/debug/gbeed.wasm dist/
+    cp target/wasm32-unknown-emscripten/debug/gbeed.js dist/
+    cp -r frontends/debugger/static/* dist/
     python3 -m http.server 8080 --directory dist --bind 0.0.0.0
 
 cross-build:

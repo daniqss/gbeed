@@ -18,7 +18,7 @@ jobs:
 
       - name: Build WASM target
         run: |
-          nix develop .#wasm --command just web-build --release
+          nix develop .#wasm --command just web-build
 
   deploy:
     needs: build
