@@ -195,8 +195,11 @@ impl Ppu {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn set_mode(&mut self, mode: LCDMode) { self.lcd_status = (self.lcd_status & 0xFC) | mode as u8; }
+
+    #[inline(always)]
+    pub fn get_bg_palette(&self) -> u8 { self.bg_palette }
 
     #[inline]
     /// If LY equals LYC, the LYC=LY flag in STAT register is set.

@@ -104,7 +104,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "gbeed-ui"
+name = "gbeed-debugger"
 version = "0.1.0"
 dependencies = [
  "gbeed-core",

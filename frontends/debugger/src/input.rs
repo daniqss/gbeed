@@ -1,7 +1,7 @@
 use gbeed_core::prelude::*;
 use raylib::prelude::*;
 
-use crate::renderer::{
+use crate::controller::renderer::{
     RaylibRenderer, HEADER_HEIGHT, PANEL_PADDING, SCALED_SCREEN_HEIGHT, SCALED_SCREEN_WIDTH,
 };
 

@@ -1,5 +1,5 @@
-use crate::colors;
-use crate::renderer::{TILES_PER_ROW, TILE_PIXEL_SIZE, TILE_TEXTURE_WIDTH};
+use super::colors;
+use super::{TILES_PER_ROW, TILE_PIXEL_SIZE, TILE_TEXTURE_WIDTH};
 
 use raylib::prelude::*;
 
@@ -24,7 +24,13 @@ impl Texture {
     }
 }
 
-pub fn update_bg_map(texture: &mut Texture, map_data: &[u8], tile_data: &[u8], is_mode_8000: bool) {
+pub fn update_bg_map(
+    texture: &mut Texture,
+    map_data: &[u8],
+    tile_data: &[u8],
+    is_mode_8000: bool,
+    palette: u8,
+) {
     let stride = 256_usize;
 
     for tile_y in 0..32_usize {
@@ -49,7 +55,8 @@ pub fn update_bg_map(texture: &mut Texture, map_data: &[u8], tile_data: &[u8], i
                     let bit_index = 7 - column;
                     let color_id = (((high_byte >> bit_index) & 1) << 1) | ((low_byte >> bit_index) & 1);
 
-                    let color = colors::GB_PALETTE[color_id as usize];
+                    let shade = (palette >> (color_id * 2)) & 0x03;
+                    let color = colors::GB_PALETTE[shade as usize];
                     let index = ((pixel_y_base + row) * stride + (pixel_x_base + column)) * 3;
 
                     texture.pixels[index] = color.r;

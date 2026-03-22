@@ -21,21 +21,22 @@
         }));
   in {
     devShells = eachSystem (system: pkgs: let
-      rustToolchain = with fenix.packages.${system}; [
-        stable.cargo
-        stable.rust-analyzer
-        stable.rustc
-        stable.clippy
-        latest.rustfmt
-      ];
+      rustToolchain = with fenix.packages.${system};
+        combine [
+          stable.cargo
+          stable.rustc
+          stable.clippy
+          latest.rustfmt
+          targets.wasm32-unknown-emscripten.stable.rust-std
+        ];
 
-      commonPackages = with pkgs;
-        [
-          just
-          cmake
-          clang
-        ]
-        ++ rustToolchain;
+      commonPackages = with pkgs; [
+        just
+        cmake
+        clang
+
+        rustToolchain
+      ];
     in {
       # shell for x11 environments
       x11 = let
@@ -118,6 +119,26 @@
               lib.makeLibraryPath drmPackages;
           };
         };
+
+      # used to target wasm
+      wasm = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          just
+          cmake
+          clang
+          emscripten
+          python3
+
+          rustToolchain
+        ];
+
+        env = {
+          RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
+          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+
+          EMCC_CFLAGS = "-O3 -sUSE_GLFW=3 -sASSERTIONS=1 -sWASM=1 -sASYNCIFY -sGL_ENABLE_GET_PROC_ADDRESS=1";
+        };
+      };
 
       # defaulting to x11 because wayland will use it over xwayland anyway
       default = self.devShells.${system}.x11;
