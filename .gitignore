@@ -1,5 +1,8 @@
-target/
 .direnv/
+
+target/
+dist/
+
 mts-20240926-1737-443f6e1/
 gb-test-roms/
 

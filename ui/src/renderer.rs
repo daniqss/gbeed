@@ -51,10 +51,7 @@ pub struct RaylibRenderer {
 }
 
 impl RaylibRenderer {
-    pub fn new() -> Self {
-        let (mut rl, thread) = raylib::init().size(1920, 1080).title("gbeed").resizable().build();
-        rl.set_target_fps(60);
-
+    pub fn new(mut rl: RaylibHandle, thread: RaylibThread) -> Self {
         let screen_texture = Texture::new(
             &mut rl,
             &thread,
@@ -151,12 +148,6 @@ impl Renderer for RaylibRenderer {
         let game_name = self.game_name.clone();
         let game_region = self.game_region.clone();
 
-        let target_str = match self.fps_mode {
-            FpsMode::Target60 => "TARGET  60 Hz",
-            FpsMode::Target120 => "TARGET 120 Hz",
-            FpsMode::Unlimited => "TARGET  UNLIM",
-        };
-
         let mut draw = self.rl.begin_drawing(thread);
         let _screen_width = draw.get_screen_width();
         let screen_height = draw.get_screen_height();
@@ -250,33 +241,16 @@ impl Renderer for RaylibRenderer {
         let controls_y = game_y + SCALED_SCREEN_HEIGHT + PANEL_PADDING * 2;
         let screen_center_x = game_x + SCALED_SCREEN_WIDTH / 2;
 
-        // fps button above others
-        let fps_button_width = 118_i32;
-        let fps_button_height = 26_i32;
-        let fps_button_x = screen_center_x - fps_button_width / 2;
-        let fps_button_y = controls_y - 20;
-
-        draw.draw_rectangle(
-            fps_button_x,
-            fps_button_y,
-            fps_button_width,
-            fps_button_height,
-            colors::BACKGROUND,
-        );
-        draw.draw_rectangle_lines(
-            fps_button_x,
-            fps_button_y,
-            fps_button_width,
-            fps_button_height,
-            colors::PRIMARY,
-        );
-        let text_width = draw.measure_text(target_str, 12);
-        draw.draw_text(
-            target_str,
-            fps_button_x + (fps_button_width - text_width) / 2,
-            fps_button_y + (fps_button_height - 15) / 2,
-            12,
-            colors::PRIMARY,
+        #[cfg(not(target_arch = "wasm32"))]
+        draw_fps_btn(
+            &mut draw,
+            screen_center_x,
+            controls_y,
+            match self.fps_mode {
+                FpsMode::Target60 => "TARGET  60 Hz",
+                FpsMode::Target120 => "TARGET 120 Hz",
+                FpsMode::Unlimited => "TARGET  UNLIM",
+            },
         );
 
         // dpad: centre the cross on screen_center_x - 160 (leave room for a/b on the right)
@@ -516,6 +490,37 @@ impl Renderer for RaylibRenderer {
             }
         }
     }
+}
+
+fn draw_fps_btn(draw: &mut RaylibDrawHandle, screen_center_x: i32, controls_y: i32, target_str: &str) {
+    // fps button above others
+    let fps_button_width = 118_i32;
+    let fps_button_height = 26_i32;
+    let fps_button_x = screen_center_x - fps_button_width / 2;
+    let fps_button_y = controls_y - 20;
+
+    draw.draw_rectangle(
+        fps_button_x,
+        fps_button_y,
+        fps_button_width,
+        fps_button_height,
+        colors::BACKGROUND,
+    );
+    draw.draw_rectangle_lines(
+        fps_button_x,
+        fps_button_y,
+        fps_button_width,
+        fps_button_height,
+        colors::PRIMARY,
+    );
+    let text_width = draw.measure_text(target_str, 12);
+    draw.draw_text(
+        target_str,
+        fps_button_x + (fps_button_width - text_width) / 2,
+        fps_button_y + (fps_button_height - 15) / 2,
+        12,
+        colors::PRIMARY,
+    );
 }
 
 fn draw_pad_btn(

@@ -11,7 +11,7 @@ use renderer::RaylibRenderer;
 
 use raylib::prelude::*;
 use std::{
-    fs, io,
+    fs,
     path::{Path, PathBuf},
 };
 
@@ -21,9 +21,9 @@ struct RaylibController {
 }
 
 impl RaylibController {
-    fn new() -> Self {
+    fn new(rl: RaylibHandle, thread: RaylibThread) -> Self {
         Self {
-            renderer: RaylibRenderer::new(),
+            renderer: RaylibRenderer::new(rl, thread),
             serial_listener: RaylibSerialListener,
         }
     }
@@ -54,126 +54,197 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 if i + 1 < args.len() {
                     game_path = Some(args[i + 1].clone());
                     i += 1;
-                } else {
-                    eprintln!("Error: Missing argument for --game");
-                    print_help();
-                    std::process::exit(1);
                 }
             }
             "-b" | "--boot" | "--boot_rom" => {
                 if i + 1 < args.len() {
                     boot_path = Some(args[i + 1].clone());
                     i += 1;
-                } else {
-                    eprintln!("Error: Missing argument for --boot_rom");
-                    print_help();
-                    std::process::exit(1);
                 }
             }
             "-h" | "--help" => {
                 print_help();
-                std::process::exit(0);
+                return Ok(());
             }
-            arg => {
-                eprintln!("Unknown argument: {arg}");
-                print_help();
-                std::process::exit(1);
-            }
+            _ => {}
         }
         i += 1;
     }
 
-    let (game_path, save_path) = match game_path {
-        Some(path) => {
-            let save_path = save_path_from_rom(&path);
-            (path, save_path)
+    let (mut rl, thread) = raylib::init().size(1920, 1080).title("gbeed").resizable().build();
+    rl.set_target_fps(60);
+
+    let mut app = EmulatorApp::new(rl, thread, boot_path);
+
+    if let Some(path) = game_path {
+        if let Err(e) = app.load_rom(&path) {
+            eprintln!("Failed to load ROM from args: {e}");
         }
-        None => {
-            print_help();
-            return Err(Box::new(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "No game ROM provided",
-            )));
-        }
-    };
-
-    let game_data = fs::read(&game_path).map_err(|e| {
-        io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("Failed to read game ROM at {game_path}: {e}"),
-        )
-    })?;
-
-    // attempt to read the save file, if cartridge doesn't support saves it will discard it
-    let save = match fs::read(&save_path) {
-        Ok(data) => Some(data),
-        Err(e) if e.kind() == io::ErrorKind::NotFound => None,
-        Err(e) => {
-            return Err(Box::new(io::Error::other(format!(
-                "Failed to read save file at {}: {e}",
-                save_path.display()
-            ))))
-        }
-    };
-
-    let game = Cartridge::new(&game_data, save).map_err(|e| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("Failed to create cartridge from ROM at {game_path}: {e}"),
-        )
-    })?;
-
-    println!("{game}");
-
-    let boot_rom = if let Some(ref path) = boot_path {
-        Some(fs::read(path).map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::NotFound,
-                format!("Failed to read boot ROM at {path}: {e}"),
-            )
-        })?)
-    } else {
-        None
-    };
-
-    let mut controller = RaylibController::new();
-
-    let title = game.header.title.clone();
-    let region = game.header.destination;
-    controller.renderer.set_game_info(title, region);
-
-    let mut gb = Dmg::new(game, boot_rom);
-
-    while !controller.renderer.rl.window_should_close()
-        && !controller.renderer.rl.is_key_down(KeyboardKey::KEY_ESCAPE)
-    {
-        input::update(&mut controller.renderer, &mut gb.joypad);
-
-        gb.run(&mut controller)?;
-
-        texture::update_tiles(&mut controller.renderer.tile_textures[0], gb.ppu.tile_block0());
-        texture::update_tiles(&mut controller.renderer.tile_textures[1], gb.ppu.tile_block1());
-        texture::update_tiles(&mut controller.renderer.tile_textures[2], gb.ppu.tile_block2());
-
-        texture::update_bg_map(
-            &mut controller.renderer.bg_map_texture,
-            gb.ppu.bg_map0(),
-            gb.ppu.tile_data(),
-            gb.ppu.bg_tile_map_address(),
-        );
-
-        controller
-            .renderer
-            .update_scroll(gb.read(0xFF43) as i32, gb.read(0xFF42) as i32);
     }
 
-    if let Some(save_data) = gb.cartridge.save_game() {
-        if let Err(e) = fs::write(&save_path, save_data) {
-            eprintln!("Failed to write save file at {}: {e}", save_path.display());
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        while !app.controller.renderer.rl.window_should_close()
+            && !app.controller.renderer.rl.is_key_down(KeyboardKey::KEY_ESCAPE)
+        {
+            app.update()?;
         }
+        app.save_game();
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        let app_ptr = Box::into_raw(Box::new(app));
+        emscripten_set_main_loop_arg(wasm_main_loop, app_ptr, 0, 1);
     }
 
     Ok(())
+}
+
+#[cfg(target_arch = "wasm32")]
+extern "C" {
+    fn emscripten_set_main_loop_arg(
+        func: unsafe extern "C" fn(*mut EmulatorApp),
+        arg: *mut EmulatorApp,
+        fps: std::os::raw::c_int,
+        simulate_infinite_loop: std::os::raw::c_int,
+    );
+    fn emscripten_run_script(script: *const std::os::raw::c_char);
+}
+
+#[cfg(target_arch = "wasm32")]
+unsafe fn emscripten_sync_fs() {
+    let script =
+        std::ffi::CString::new("FS.syncfs(false, function (err) { if (err) console.error(err); });").unwrap();
+    emscripten_run_script(script.as_ptr());
+}
+
+#[cfg(target_arch = "wasm32")]
+unsafe extern "C" fn wasm_main_loop(app: *mut EmulatorApp) {
+    let app = &mut *app;
+    if let Err(e) = app.update() {
+        eprintln!("Error during update: {e}");
+    }
+    // probably the best choice will be to add a save button
+}
+
+struct EmulatorApp {
+    gb: Option<Dmg>,
+    controller: RaylibController,
+    save_path: Option<PathBuf>,
+    boot_rom: Option<Vec<u8>>,
+}
+
+impl EmulatorApp {
+    fn new(rl: RaylibHandle, thread: RaylibThread, boot_path: Option<String>) -> Self {
+        let boot_rom = boot_path.and_then(|path| fs::read(path).ok());
+        let controller = RaylibController::new(rl, thread);
+        Self {
+            gb: None,
+            controller,
+            save_path: None,
+            boot_rom,
+        }
+    }
+
+    fn load_rom(&mut self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let game_data = fs::read(path)?;
+        let save_path = save_path_from_rom(path);
+
+        // On WASM, we might want to use a fixed name or raylib storage,
+        // but for now we'll stick to the path-based logic which works with Emscripten's MEMFS/IDBFS
+        let save = fs::read(&save_path).ok();
+
+        let game = Cartridge::new(&game_data, save).map_err(|e| format!("{e}"))?;
+        self.controller
+            .renderer
+            .set_game_info(game.header.title.clone(), game.header.destination);
+
+        self.gb = Some(Dmg::new(game, self.boot_rom.clone()));
+        self.save_path = Some(save_path);
+
+        Ok(())
+    }
+
+    fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // Handle Drag and Drop
+        if self.controller.renderer.rl.is_file_dropped() {
+            let dropped_files = self.controller.renderer.rl.load_dropped_files();
+            if let Some(file_path) = dropped_files.iter().next() {
+                if let Err(e) = self.load_rom(file_path) {
+                    eprintln!("Failed to load dropped ROM: {e}");
+                }
+            }
+        }
+
+        if let Some(ref mut gb) = self.gb {
+            input::update(&mut self.controller.renderer, &mut gb.joypad);
+
+            gb.run(&mut self.controller)?;
+
+            texture::update_tiles(
+                &mut self.controller.renderer.tile_textures[0],
+                gb.ppu.tile_block0(),
+            );
+            texture::update_tiles(
+                &mut self.controller.renderer.tile_textures[1],
+                gb.ppu.tile_block1(),
+            );
+            texture::update_tiles(
+                &mut self.controller.renderer.tile_textures[2],
+                gb.ppu.tile_block2(),
+            );
+
+            texture::update_bg_map(
+                &mut self.controller.renderer.bg_map_texture,
+                gb.ppu.bg_map0(),
+                gb.ppu.tile_data(),
+                gb.ppu.bg_tile_map_address(),
+                gb.ppu.get_bg_palette(),
+            );
+
+            self.controller
+                .renderer
+                .update_scroll(gb.read(0xFF43) as i32, gb.read(0xFF42) as i32);
+        } else {
+            // Draw a "Drop ROM" message
+            let mut d = self
+                .controller
+                .renderer
+                .rl
+                .begin_drawing(&self.controller.renderer.thread);
+            d.clear_background(colors::BACKGROUND);
+            let msg = "Drag and Drop a Game Boy ROM to start";
+            let font_size = 20;
+            let width = d.measure_text(msg, font_size);
+            d.draw_text(
+                msg,
+                (d.get_screen_width() - width) / 2,
+                (d.get_screen_height() - font_size) / 2,
+                font_size,
+                colors::FOREGROUND,
+            );
+        }
+        Ok(())
+    }
+
+    fn save_game(&mut self) {
+        if let Some(ref gb) = self.gb {
+            if let Some(save_data) = gb.cartridge.save_game() {
+                if let Some(ref save_path) = self.save_path {
+                    if let Err(e) = fs::write(save_path, save_data) {
+                        eprintln!("Failed to write save file at {}: {e}", save_path.display());
+                    } else {
+                        #[cfg(target_arch = "wasm32")]
+                        unsafe {
+                            // Sync Emscripten filesystem to IndexedDB if possible
+                            emscripten_sync_fs();
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn save_path_from_rom(rom_path: &str) -> PathBuf {

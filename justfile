@@ -12,8 +12,17 @@ check *ARGS:
 test *ARGS:
     cargo test --features "${DISPLAY_FEATURES}" {{ARGS}}
 
+web-build *ARGS:
+    cargo build --target wasm32-unknown-emscripten --release -p gbeed-ui {{ARGS}}
+    mkdir -p dist
+    cp target/wasm32-unknown-emscripten/release/gbeed.wasm dist/
+    cp target/wasm32-unknown-emscripten/release/gbeed.js dist/
+    cp -r ui/static/* dist/
 
-crossbuild:
+web-run: web-build
+    python3 -m http.server 8080 --directory dist
+
+cross-build:
     sudo podman run --rm --privileged docker.io/tonistiigi/binfmt --install arm
     podman build --platform linux/arm/v6 -f Dockerfile.cross -t gbeed-armv6l .
     podman create --name gbeed-armv6l-tmp gbeed-armv6l
