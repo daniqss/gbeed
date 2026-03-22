@@ -2,6 +2,8 @@ use gbeed_core::prelude::*;
 
 mod controller;
 mod input;
+#[cfg(target_arch = "wasm32")]
+mod web;
 
 use raylib::prelude::*;
 use std::{
@@ -10,6 +12,10 @@ use std::{
 };
 
 use controller::{renderer, RaylibController};
+#[cfg(target_arch = "wasm32")]
+use web::{emscripten_set_main_loop_arg, local_storage, wasm_main_loop};
+#[cfg(target_arch = "wasm32")]
+pub use web::{save_game_wasm, APP_PTR};
 
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
@@ -41,13 +47,9 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     }
 
     let (mut rl, thread) = raylib::init().size(1920, 1080).title("gbeed").resizable().build();
-    rl.set_target_fps(60);
+    rl.set_target_fps(120);
 
     let mut app = EmulatorApp::new(rl, thread, boot_path);
-
-    // Force the linker to keep save_game_wasm
-    #[cfg(target_arch = "wasm32")]
-    let _ = save_game_wasm as *const ();
 
     if let Some(path) = game_path {
         if let Err(e) = app.load_rom(&path) {
@@ -68,6 +70,11 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    // Force the linker to keep save_game_wasm
+    #[cfg(target_arch = "wasm32")]
+    let _ = save_game_wasm as *const ();
+
+    // set up the wasm main loop
     #[cfg(target_arch = "wasm32")]
     unsafe {
         let app_ptr = Box::into_raw(Box::new(app));
@@ -78,40 +85,8 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-static mut APP_PTR: *mut EmulatorApp = std::ptr::null_mut();
-
-#[cfg(target_arch = "wasm32")]
-#[no_mangle]
-pub extern "C" fn save_game_wasm() {
-    unsafe {
-        if !APP_PTR.is_null() {
-            let _ = (*APP_PTR).save_game();
-        }
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-extern "C" {
-    fn emscripten_set_main_loop_arg(
-        func: unsafe extern "C" fn(*mut EmulatorApp),
-        arg: *mut EmulatorApp,
-        fps: std::os::raw::c_int,
-        simulate_infinite_loop: std::os::raw::c_int,
-    );
-    fn emscripten_run_script(script: *const std::os::raw::c_char);
-}
-
-#[cfg(target_arch = "wasm32")]
-unsafe extern "C" fn wasm_main_loop(app: *mut EmulatorApp) {
-    let app = &mut *app;
-    if let Err(e) = app.update() {
-        eprintln!("Error during update: {e}");
-    }
-}
-
 #[repr(C)]
-struct EmulatorApp {
+pub struct EmulatorApp {
     gb: Option<Dmg>,
     controller: RaylibController,
     save_path: Option<PathBuf>,
@@ -144,7 +119,7 @@ impl EmulatorApp {
         };
 
         #[cfg(target_arch = "wasm32")]
-        let save = load_from_local_storage(&save_path);
+        let save = local_storage::load_save(&save_path);
 
         #[cfg(not(target_arch = "wasm32"))]
         let save = match fs::read(&save_path) {
@@ -170,7 +145,7 @@ impl EmulatorApp {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         // Handle Drag and Drop
         if self.controller.renderer.rl.is_file_dropped() {
             let dropped_files = self.controller.renderer.rl.load_dropped_files();
@@ -238,7 +213,7 @@ impl EmulatorApp {
         let save_path = self.save_path.as_ref().ok_or("Save path not set")?;
 
         #[cfg(target_arch = "wasm32")]
-        save_to_local_storage(save_path, save_data);
+        local_storage::store_save(save_path, save_data);
 
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -248,73 +223,6 @@ impl EmulatorApp {
 
         Ok(())
     }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn save_to_local_storage(path: &Path, data: &[u8]) {
-    let filename = path.file_name().and_then(|f| f.to_str()).unwrap_or("unknown");
-
-    // use of MEMFS to bridge the save data to JavaScript
-    let tmp_path = "/tmp_save.sav";
-    if let Err(e) = fs::write(tmp_path, data) {
-        eprintln!("Failed to write bridge file: {:?}", e);
-        return;
-    }
-
-    let script = format!(
-        "try {{ \
-        const bytes = FS.readFile('{}'); \
-        const binary = Array.from(bytes, b => String.fromCharCode(b)).join(''); \
-        const encoded = btoa(binary); \
-        localStorage.setItem('{}', encoded); \
-        console.log('Game saved to localStorage: {}'); \
-    }} catch (e) {{ \
-        console.error('Error saving to localStorage:', e); \
-    }}",
-        tmp_path, filename, filename
-    );
-
-    match std::ffi::CString::new(script) {
-        Ok(script) => unsafe {
-            emscripten_run_script(script.as_ptr());
-        },
-        _ => eprintln!("Failed to create script string for saving to localStorage"),
-    };
-    let _ = fs::remove_file(tmp_path);
-}
-
-#[cfg(target_arch = "wasm32")]
-fn load_from_local_storage(path: &Path) -> Option<Vec<u8>> {
-    let filename = path.file_name().and_then(|f| f.to_str()).unwrap_or("unknown");
-    let tmp_path = "/tmp_load.sav";
-
-    let script = format!(
-        "try {{ \
-        const data = localStorage.getItem('{}'); \
-        if (data) {{ \
-            const binary = atob(data); \
-            const bytes = Uint8Array.from(binary, c => c.charCodeAt(0)); \
-            FS.writeFile('{}', bytes); \
-        }} \
-    }} catch (e) {{ \
-        console.error('Error loading from localStorage:', e); \
-    }}",
-        filename, tmp_path
-    );
-
-    match std::ffi::CString::new(script) {
-        Ok(script) => unsafe {
-            emscripten_run_script(script.as_ptr());
-        },
-        _ => eprintln!("Failed to create script string for loading from localStorage"),
-    };
-
-    let result = fs::read(tmp_path).ok();
-    if result.is_some() {
-        println!("Loaded save from localStorage with key: {}", filename);
-        let _ = fs::remove_file(tmp_path);
-    }
-    result
 }
 
 fn save_path_from_rom(rom_path: &str) -> PathBuf {

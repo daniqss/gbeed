@@ -499,6 +499,7 @@ impl Renderer for RaylibRenderer {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn draw_fps_btn(draw: &mut RaylibDrawHandle, screen_center_x: i32, controls_y: i32, target_str: &str) {
     // fps button above others
     let fps_button_width = 118_i32;
