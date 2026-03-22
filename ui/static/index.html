@@ -24,7 +24,25 @@
   <body>
     <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
     <script type="text/javascript">
-      var Module = { canvas: document.getElementById("canvas") };
+      var Module = {
+        canvas: document.getElementById("canvas"),
+        _is_syncing: false,
+        onRuntimeInitialized: function () {
+          window.addEventListener("beforeunload", function (e) {
+            if (Module._save_game_wasm) {
+              Module._save_game_wasm();
+            }
+            e.preventDefault();
+            e.returnValue = "";
+          });
+
+          document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState === "hidden" && Module._save_game_wasm) {
+              Module._save_game_wasm();
+            }
+          });
+        },
+      };
     </script>
     <script src="gbeed.js"></script>
   </body>

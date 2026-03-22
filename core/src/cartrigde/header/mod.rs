@@ -8,6 +8,7 @@ pub use rom::RomSize;
 use {super::mbc::CartridgeType, license::get_license};
 
 mem_range!(TITLE, 0x0134, 0x0143);
+pub const GBC_FLAG: usize = 0x0143;
 pub const SGB_FLAG: usize = 0x0146;
 pub const CARTRIDGE_TYPE: usize = 0x0147;
 pub const ROM_SIZE_ADDRESS: usize = 0x0148;
@@ -27,7 +28,7 @@ enum GBCSupport {
 
 impl GBCSupport {
     fn new(raw_rom: &[u8]) -> GBCSupport {
-        match raw_rom[CARTRIDGE_TYPE] {
+        match raw_rom[GBC_FLAG] {
             0x80 => GBCSupport::Enhancements,
             0xC0 => GBCSupport::Only,
             _ => GBCSupport::None,
@@ -81,6 +82,7 @@ impl CartridgeHeader {
             license: get_license(raw_rom).1,
             title: raw_rom[TITLE_START as usize..TITLE_END as usize]
                 .iter()
+                .take_while(|&c| *c != 0)
                 .map(|&c| c as char)
                 .collect(),
             supports_cgb: GBCSupport::new(raw_rom),

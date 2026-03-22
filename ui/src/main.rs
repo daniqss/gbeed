@@ -76,6 +76,10 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     let mut app = EmulatorApp::new(rl, thread, boot_path);
 
+    // Force the linker to keep save_game_wasm
+    #[cfg(target_arch = "wasm32")]
+    let _ = save_game_wasm as *const ();
+
     if let Some(path) = game_path {
         if let Err(e) = app.load_rom(&path) {
             eprintln!("Failed to load ROM from args: {e}");
@@ -89,16 +93,34 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         {
             app.update()?;
         }
-        app.save_game();
+
+        if let Err(e) = app.save_game() {
+            eprintln!("Failed to save game on exit: {e}");
+        }
     }
 
     #[cfg(target_arch = "wasm32")]
     unsafe {
+        emscripten_mount_idbfs();
         let app_ptr = Box::into_raw(Box::new(app));
+        APP_PTR = app_ptr;
         emscripten_set_main_loop_arg(wasm_main_loop, app_ptr, 0, 1);
     }
 
     Ok(())
+}
+
+#[cfg(target_arch = "wasm32")]
+static mut APP_PTR: *mut EmulatorApp = std::ptr::null_mut();
+
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub extern "C" fn save_game_wasm() {
+    unsafe {
+        if !APP_PTR.is_null() {
+            (*APP_PTR).save_game();
+        }
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -113,9 +135,43 @@ extern "C" {
 }
 
 #[cfg(target_arch = "wasm32")]
+unsafe fn emscripten_mount_idbfs() {
+    let script = std::ffi::CString::new(
+        "try { \
+            if (!FS.analyzePath('/saves').exists) { \
+                FS.mkdir('/saves'); \
+            } \
+            FS.mount(FS.filesystems.IDBFS, {}, '/saves'); \
+            FS.syncfs(true, function (err) { \
+                if (err) console.error('Error syncing IDBFS:', err); \
+                else console.log('IDBFS synced from IndexedDB'); \
+            }); \
+        } catch (e) { \
+            if (e.name !== 'ErrnoError' || e.errno !== 10) { \
+                console.error('Error mounting IDBFS:', e); \
+            } \
+        }",
+    )
+    .unwrap();
+    emscripten_run_script(script.as_ptr());
+}
+
+#[cfg(target_arch = "wasm32")]
 unsafe fn emscripten_sync_fs() {
-    let script =
-        std::ffi::CString::new("FS.syncfs(false, function (err) { if (err) console.error(err); });").unwrap();
+    let script = std::ffi::CString::new(
+        "if (!Module._is_syncing) { \
+            Module._is_syncing = true; \
+            FS.syncfs(false, function (err) { \
+                Module._is_syncing = false; \
+                if (err) { \
+                    if (err.name !== 'InvalidStateError') console.error('Error syncing IDBFS:', err); \
+                } else { \
+                    console.log('Game saved to IndexedDB'); \
+                } \
+            }); \
+        }",
+    )
+    .unwrap();
     emscripten_run_script(script.as_ptr());
 }
 
@@ -125,9 +181,9 @@ unsafe extern "C" fn wasm_main_loop(app: *mut EmulatorApp) {
     if let Err(e) = app.update() {
         eprintln!("Error during update: {e}");
     }
-    // probably the best choice will be to add a save button
 }
 
+#[repr(C)]
 struct EmulatorApp {
     gb: Option<Dmg>,
     controller: RaylibController,
@@ -149,11 +205,28 @@ impl EmulatorApp {
 
     fn load_rom(&mut self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let game_data = fs::read(path)?;
-        let save_path = save_path_from_rom(path);
 
-        // On WASM, we might want to use a fixed name or raylib storage,
-        // but for now we'll stick to the path-based logic which works with Emscripten's MEMFS/IDBFS
-        let save = fs::read(&save_path).ok();
+        let save_path = if cfg!(target_arch = "wasm32") {
+            // in web we need to clean the /.glfw_dropped_files/ directory
+            PathBuf::from(format!(
+                "saves/{}",
+                save_path_from_rom(path.split('/').next_back().unwrap_or("")).to_string_lossy()
+            ))
+        } else {
+            save_path_from_rom(path)
+        };
+
+        let save = match fs::read(&save_path) {
+            Ok(data) => {
+                println!("Loaded save file from {}", save_path.display());
+                Some(data)
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                println!("No save file found at {}, starting fresh", save_path.display());
+                None
+            }
+            Err(e) => return Err(Box::new(e)),
+        };
 
         let game = Cartridge::new(&game_data, save).map_err(|e| format!("{e}"))?;
         self.controller
@@ -228,22 +301,25 @@ impl EmulatorApp {
         Ok(())
     }
 
-    fn save_game(&mut self) {
-        if let Some(ref gb) = self.gb {
-            if let Some(save_data) = gb.cartridge.save_game() {
-                if let Some(ref save_path) = self.save_path {
-                    if let Err(e) = fs::write(save_path, save_data) {
-                        eprintln!("Failed to write save file at {}: {e}", save_path.display());
-                    } else {
-                        #[cfg(target_arch = "wasm32")]
-                        unsafe {
-                            // Sync Emscripten filesystem to IndexedDB if possible
-                            emscripten_sync_fs();
-                        }
-                    }
-                }
+    fn save_game(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let gb = self.gb.as_ref().ok_or("No game loaded")?;
+        let save_data = gb.cartridge.save_game().ok_or("No save data available")?;
+        let save_path = &self.save_path.as_ref().ok_or("No save path available")?;
+
+        fs::write(save_path, save_data)?;
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            println!("Game is going to be saved once you close the dialog");
+            unsafe {
+                emscripten_sync_fs();
             }
         }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        println!("Game saved successfully to {}", save_path.display());
+
+        Ok(())
     }
 }
 
