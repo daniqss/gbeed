@@ -19,8 +19,12 @@ web-build *ARGS:
     cp target/wasm32-unknown-emscripten/release/gbeed.js dist/
     cp -r ui/static/* dist/
 
+
+ip := `hostname -I | awk '{print $1}'`
+
 web-run: web-build
-    python3 -m http.server 8080 --directory dist
+    @echo "http://{{ip}}:8080"
+    python3 -m http.server 8080 --directory dist --bind 0.0.0.0
 
 cross-build:
     sudo podman run --rm --privileged docker.io/tonistiigi/binfmt --install arm

@@ -101,7 +101,6 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(target_arch = "wasm32")]
     unsafe {
-        emscripten_mount_idbfs();
         let app_ptr = Box::into_raw(Box::new(app));
         APP_PTR = app_ptr;
         emscripten_set_main_loop_arg(wasm_main_loop, app_ptr, 0, 1);
@@ -118,7 +117,7 @@ static mut APP_PTR: *mut EmulatorApp = std::ptr::null_mut();
 pub extern "C" fn save_game_wasm() {
     unsafe {
         if !APP_PTR.is_null() {
-            (*APP_PTR).save_game();
+            let _ = (*APP_PTR).save_game();
         }
     }
 }
@@ -132,47 +131,6 @@ extern "C" {
         simulate_infinite_loop: std::os::raw::c_int,
     );
     fn emscripten_run_script(script: *const std::os::raw::c_char);
-}
-
-#[cfg(target_arch = "wasm32")]
-unsafe fn emscripten_mount_idbfs() {
-    let script = std::ffi::CString::new(
-        "try { \
-            if (!FS.analyzePath('/saves').exists) { \
-                FS.mkdir('/saves'); \
-            } \
-            FS.mount(FS.filesystems.IDBFS, {}, '/saves'); \
-            FS.syncfs(true, function (err) { \
-                if (err) console.error('Error syncing IDBFS:', err); \
-                else console.log('IDBFS synced from IndexedDB'); \
-            }); \
-        } catch (e) { \
-            if (e.name !== 'ErrnoError' || e.errno !== 10) { \
-                console.error('Error mounting IDBFS:', e); \
-            } \
-        }",
-    )
-    .unwrap();
-    emscripten_run_script(script.as_ptr());
-}
-
-#[cfg(target_arch = "wasm32")]
-unsafe fn emscripten_sync_fs() {
-    let script = std::ffi::CString::new(
-        "if (!Module._is_syncing) { \
-            Module._is_syncing = true; \
-            FS.syncfs(false, function (err) { \
-                Module._is_syncing = false; \
-                if (err) { \
-                    if (err.name !== 'InvalidStateError') console.error('Error syncing IDBFS:', err); \
-                } else { \
-                    console.log('Game saved to IndexedDB'); \
-                } \
-            }); \
-        }",
-    )
-    .unwrap();
-    emscripten_run_script(script.as_ptr());
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -216,6 +174,10 @@ impl EmulatorApp {
             save_path_from_rom(path)
         };
 
+        #[cfg(target_arch = "wasm32")]
+        let save = load_from_local_storage(&save_path);
+
+        #[cfg(not(target_arch = "wasm32"))]
         let save = match fs::read(&save_path) {
             Ok(data) => {
                 println!("Loaded save file from {}", save_path.display());
@@ -303,24 +265,87 @@ impl EmulatorApp {
 
     fn save_game(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let gb = self.gb.as_ref().ok_or("No game loaded")?;
-        let save_data = gb.cartridge.save_game().ok_or("No save data available")?;
-        let save_path = &self.save_path.as_ref().ok_or("No save path available")?;
-
-        fs::write(save_path, save_data)?;
+        let save_data = gb.cartridge.save_game().ok_or("Game does not support saving")?;
+        let save_path = self.save_path.as_ref().ok_or("Save path not set")?;
 
         #[cfg(target_arch = "wasm32")]
-        {
-            println!("Game is going to be saved once you close the dialog");
-            unsafe {
-                emscripten_sync_fs();
-            }
-        }
+        save_to_local_storage(save_path, save_data);
 
         #[cfg(not(target_arch = "wasm32"))]
-        println!("Game saved successfully to {}", save_path.display());
+        {
+            fs::write(save_path, save_data)?;
+            println!("Game saved successfully to {}", save_path.display());
+        }
 
         Ok(())
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn save_to_local_storage(path: &Path, data: &[u8]) {
+    let filename = path.file_name().and_then(|f| f.to_str()).unwrap_or("unknown");
+
+    // use of MEMFS to bridge the save data to JavaScript
+    let tmp_path = "/tmp_save.sav";
+    if let Err(e) = fs::write(tmp_path, data) {
+        eprintln!("Failed to write bridge file: {:?}", e);
+        return;
+    }
+
+    let script = format!(
+        "try {{ \
+        const bytes = FS.readFile('{}'); \
+        const binary = Array.from(bytes, b => String.fromCharCode(b)).join(''); \
+        const encoded = btoa(binary); \
+        localStorage.setItem('{}', encoded); \
+        console.log('Game saved to localStorage: {}'); \
+    }} catch (e) {{ \
+        console.error('Error saving to localStorage:', e); \
+    }}",
+        tmp_path, filename, filename
+    );
+
+    match std::ffi::CString::new(script) {
+        Ok(script) => unsafe {
+            emscripten_run_script(script.as_ptr());
+        },
+        _ => eprintln!("Failed to create script string for saving to localStorage"),
+    };
+    let _ = fs::remove_file(tmp_path);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn load_from_local_storage(path: &Path) -> Option<Vec<u8>> {
+    let filename = path.file_name().and_then(|f| f.to_str()).unwrap_or("unknown");
+    let tmp_path = "/tmp_load.sav";
+
+    let script = format!(
+        "try {{ \
+        const data = localStorage.getItem('{}'); \
+        if (data) {{ \
+            const binary = atob(data); \
+            const bytes = Uint8Array.from(binary, c => c.charCodeAt(0)); \
+            FS.writeFile('{}', bytes); \
+        }} \
+    }} catch (e) {{ \
+        console.error('Error loading from localStorage:', e); \
+    }}",
+        filename, tmp_path
+    );
+
+    match std::ffi::CString::new(script) {
+        Ok(script) => unsafe {
+            emscripten_run_script(script.as_ptr());
+        },
+        _ => eprintln!("Failed to create script string for loading from localStorage"),
+    };
+
+    let result = fs::read(tmp_path).ok();
+    if result.is_some() {
+        println!("Loaded save from localStorage with key: {}", filename);
+        let _ = fs::remove_file(tmp_path);
+    }
+    result
 }
 
 fn save_path_from_rom(rom_path: &str) -> PathBuf {

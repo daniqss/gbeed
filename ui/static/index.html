@@ -26,21 +26,26 @@
     <script type="text/javascript">
       var Module = {
         canvas: document.getElementById("canvas"),
-        _is_syncing: false,
-        onRuntimeInitialized: function () {
-          window.addEventListener("beforeunload", function (e) {
+        onRuntimeInitialized: () => {
+          window.addEventListener("beforeunload", () => {
             if (Module._save_game_wasm) {
               Module._save_game_wasm();
             }
-            e.preventDefault();
-            e.returnValue = "";
           });
 
-          document.addEventListener("visibilitychange", function () {
-            if (document.visibilityState === "hidden" && Module._save_game_wasm) {
-              Module._save_game_wasm();
-            }
+          window.addEventListener("pagehide", () => {
+            if (Module._save_game_wasm) Module._save_game_wasm();
           });
+
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "hidden" && Module._save_game_wasm)
+              Module._save_game_wasm();
+          });
+
+          // periodic save just in case, but local storage based saves should work fine
+          setInterval(function () {
+            if (Module._save_game_wasm) Module._save_game_wasm();
+          }, 30000);
         },
       };
     </script>
