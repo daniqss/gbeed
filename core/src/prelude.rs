@@ -1,4 +1,5 @@
 pub use crate::cartrigde::Cartridge;
+pub use crate::controller::Controller;
 pub use crate::dmg::Dmg;
 pub use crate::joypad::{Joypad, JoypadButton};
 pub use crate::memory::{Accessible, Accessible16};
