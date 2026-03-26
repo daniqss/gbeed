@@ -101,6 +101,7 @@ name = "gbeed-console"
 version = "0.1.0"
 dependencies = [
  "gbeed-core",
+ "gbeed-raylib-common",
  "raylib",
 ]
 
@@ -113,6 +114,15 @@ dependencies = [
 
 [[package]]
 name = "gbeed-debugger"
+version = "0.1.0"
+dependencies = [
+ "gbeed-core",
+ "gbeed-raylib-common",
+ "raylib",
+]
+
+[[package]]
+name = "gbeed-raylib-common"
 version = "0.1.0"
 dependencies = [
  "gbeed-core",

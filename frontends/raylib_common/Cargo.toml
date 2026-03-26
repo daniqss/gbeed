@@ -1,13 +1,8 @@
 [package]
-name = "gbeed-debugger"
+name = "gbeed-raylib-common"
 version = "0.1.0"
 edition = "2021"
-
-[[bin]]
-name = "gbeed-debugger"
-path = "src/main.rs"
 
 [dependencies]
 gbeed-core = { path = "../../core" }
 raylib = { git = "https://github.com/raylib-rs/raylib-rs", version = "5.7.0" }
-gbeed-raylib-common = { path = "../raylib_common" }

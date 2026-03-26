@@ -1,9 +1,15 @@
+mod controller;
+
 use gbeed_core::prelude::*;
+use gbeed_raylib_common::texture::Texture;
 use raylib::prelude::*;
-use std::{fs, path::PathBuf};
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 const ROMS_DIR: &str = "/home/daniqss/roms";
-const SAVE_DIR: &str = "/home/daniqss/saves";
+const _SAVE_DIR: &str = "/home/daniqss/saves";
 
 const SCREEN_WIDTH: i32 = 240;
 const SCREEN_HEIGHT: i32 = 240;
@@ -28,8 +34,15 @@ const SECONDARY: Color = Color::new(77, 83, 60, 255);
 const BACKGROUND: Color = Color::new(31, 31, 31, 255);
 
 enum EmulatorState {
-    BootScreen,
-    SelectionMenu,
+    BootScreen {
+        timer: f32,
+    },
+    SelectionMenu {
+        roms: Vec<PathBuf>,
+        selected: usize,
+        scroll_offset: usize,
+        repeat_timer: f32,
+    },
     Emulation,
     GameMenu,
     SettingsMenu,
@@ -38,10 +51,9 @@ enum EmulatorState {
 impl EmulatorState {
     fn get_hint(&self) -> Option<&'static str> {
         use EmulatorState::*;
-
         match self {
-            BootScreen => None,
-            SelectionMenu => Some("w/s move  enter select"),
+            BootScreen { .. } => None,
+            SelectionMenu { .. } => Some("w/s move  enter select"),
             Emulation => None,
             GameMenu => Some("r resume  s save  l load  q quit"),
             SettingsMenu => Some("s save settings  q back"),
@@ -52,9 +64,204 @@ impl EmulatorState {
 struct EmulatorApp {
     state: EmulatorState,
     gb: Option<Dmg>,
-    // controller: ConsoleController,
     rom_path: Option<PathBuf>,
     save_path: Option<PathBuf>,
+
+    rl: RaylibHandle,
+    thread: RaylibThread,
+    screen: Texture,
+}
+
+impl EmulatorApp {
+    pub fn new(mut rl: RaylibHandle, thread: RaylibThread) -> Self {
+        let screen = Texture::new(
+            &mut rl,
+            &thread,
+            DMG_SCREEN_WIDTH as i32,
+            DMG_SCREEN_HEIGHT as i32,
+        );
+
+        Self {
+            state: EmulatorState::BootScreen { timer: 0.0 },
+            gb: None,
+            rom_path: None,
+            save_path: None,
+
+            screen,
+            rl,
+            thread,
+        }
+    }
+
+    pub fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let rl = &mut self.rl;
+        let dt = rl.get_frame_time();
+
+        let next_state = match &mut self.state {
+            EmulatorState::SelectionMenu {
+                roms,
+                selected,
+                scroll_offset,
+                repeat_timer,
+            } => {
+                let up_held = rl.is_key_down(KeyboardKey::KEY_W) || rl.is_key_down(KeyboardKey::KEY_UP);
+                let down_held = rl.is_key_down(KeyboardKey::KEY_S) || rl.is_key_down(KeyboardKey::KEY_DOWN);
+                let up_pressed =
+                    rl.is_key_pressed(KeyboardKey::KEY_W) || rl.is_key_pressed(KeyboardKey::KEY_UP);
+                let down_pressed =
+                    rl.is_key_pressed(KeyboardKey::KEY_S) || rl.is_key_pressed(KeyboardKey::KEY_DOWN);
+
+                let mut move_up = up_pressed;
+                let mut move_down = down_pressed;
+
+                const REPEAT_DELAY: f32 = 0.3;
+                const REPEAT_RATE: f32 = 0.08;
+
+                if up_held || down_held {
+                    *repeat_timer += dt;
+                    if up_pressed || down_pressed {
+                        *repeat_timer = 0.0;
+                    }
+                    if *repeat_timer >= REPEAT_DELAY {
+                        let ticks = ((*repeat_timer - REPEAT_DELAY) / REPEAT_RATE) as usize;
+                        let prev = ((*repeat_timer - REPEAT_DELAY - dt.max(0.0)) / REPEAT_RATE) as usize;
+                        if ticks > prev {
+                            if up_held {
+                                move_up = true;
+                            }
+                            if down_held {
+                                move_down = true;
+                            }
+                        }
+                    }
+                } else {
+                    *repeat_timer = 0.0;
+                }
+
+                let visible_count = ((selector_bottom() - selector_top()) / ITEM_H) as usize;
+
+                if !roms.is_empty() {
+                    if move_up && *selected > 0 {
+                        *selected -= 1;
+                    }
+                    if move_down && *selected + 1 < roms.len() {
+                        *selected += 1;
+                    }
+
+                    if *selected < *scroll_offset {
+                        *scroll_offset = *selected;
+                    }
+                    if *selected >= *scroll_offset + visible_count {
+                        *scroll_offset = *selected + 1 - visible_count;
+                    }
+                }
+
+                if (rl.is_key_pressed(KeyboardKey::KEY_ENTER) || rl.is_key_pressed(KeyboardKey::KEY_J))
+                    && !roms.is_empty()
+                {
+                    self.rom_path = Some(roms[*selected].clone());
+                    Some(EmulatorState::Emulation)
+                } else {
+                    None
+                }
+            }
+            EmulatorState::Emulation => {
+                if let Some(gb) = &mut self.gb {
+                    // gb.run(&mut controller)?;
+                }
+                if let Some(game_path) = &self.rom_path {
+                    let save_path = save_path_from_rom(game_path.to_str().unwrap_or_default());
+                    self.save_path = Some(save_path.clone());
+
+                    let game_data = fs::read(game_path).map_err(|e| {
+                        io::Error::new(
+                            io::ErrorKind::NotFound,
+                            format!("Failed to read game ROM at {game_path:?}: {e}"),
+                        )
+                    })?;
+
+                    // attempt to read the save file, if cartridge doesn't support saves it will discard it
+                    let save = match fs::read(&save_path) {
+                        Ok(data) => Some(data),
+                        Err(e) if e.kind() == io::ErrorKind::NotFound => None,
+                        Err(e) => {
+                            return Err(Box::new(io::Error::other(format!(
+                                "Failed to read save file at {:?}: {e}",
+                                self.save_path
+                            ))))
+                        }
+                    };
+
+                    let game = Cartridge::new(&game_data, save).map_err(|e| {
+                        io::Error::new(
+                            io::ErrorKind::InvalidData,
+                            format!("Failed to create cartridge from ROM at {game_path:?}: {e}"),
+                        )
+                    })?;
+
+                    self.gb = Some(Dmg::new(game, None));
+                }
+
+                None
+            }
+            EmulatorState::GameMenu => None,
+            EmulatorState::BootScreen { timer } => {
+                *timer += dt;
+
+                if *timer >= 2.0 {
+                    Some(EmulatorState::SelectionMenu {
+                        roms: fs::read_dir(ROMS_DIR)?
+                            .filter_map(|e| e.ok())
+                            .filter(|e| {
+                                e.path().is_file()
+                                    && e.path().extension().is_some_and(|x| x == "gb" || x == "gbc")
+                            })
+                            .map(|e| e.path())
+                            .collect(),
+                        selected: 0,
+                        scroll_offset: 0,
+                        repeat_timer: 0.0,
+                    })
+                } else {
+                    None
+                }
+            }
+            EmulatorState::SettingsMenu => None,
+        };
+
+        if let Some(state) = next_state {
+            self.state = state;
+        }
+
+        Ok(())
+    }
+
+    pub fn draw(&mut self) {
+        self.rl.draw(&self.thread, |mut d| {
+            d.clear_background(crate::BACKGROUND);
+
+            match &self.state {
+                EmulatorState::SelectionMenu {
+                    roms,
+                    selected,
+                    scroll_offset,
+                    ..
+                } => {
+                    // draw selection menu
+                    draw_header(&mut d, roms.len());
+                    draw_selector(&mut d, roms, *selected, *scroll_offset);
+                }
+                EmulatorState::Emulation => {}
+                EmulatorState::GameMenu => {}
+                EmulatorState::BootScreen { .. } => {}
+                EmulatorState::SettingsMenu => {}
+            }
+
+            if let Some(hint) = self.state.get_hint() {
+                draw_footer(&mut d, hint);
+            }
+        });
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -64,91 +271,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build();
     rl.set_target_fps(60);
 
-    let mut roms: Vec<PathBuf> = fs::read_dir(ROMS_DIR)?
-        .filter_map(|e| e.ok())
-        .filter(|e| e.path().is_file() && e.path().extension().is_some_and(|x| x == "gb" || x == "gbc"))
-        .map(|e| e.path())
-        .collect();
-    roms.sort();
+    let mut app = EmulatorApp::new(rl, thread);
 
-    let mut selected: usize = 0;
-    let mut scroll_offset: usize = 0;
-
-    let visible_count = ((selector_bottom() - selector_top()) / ITEM_H) as usize;
-
-    let mut chosen: Option<PathBuf> = None;
-
-    let mut repeat_timer: f32 = 0.0;
-    const REPEAT_DELAY: f32 = 0.3;
-    const REPEAT_RATE: f32 = 0.08;
-
-    while !rl.window_should_close() && chosen.is_none() {
-        let dt = rl.get_frame_time();
-
-        let up_held = rl.is_key_down(KeyboardKey::KEY_W) || rl.is_key_down(KeyboardKey::KEY_UP);
-        let down_held = rl.is_key_down(KeyboardKey::KEY_S) || rl.is_key_down(KeyboardKey::KEY_DOWN);
-
-        let up_pressed = rl.is_key_pressed(KeyboardKey::KEY_W) || rl.is_key_pressed(KeyboardKey::KEY_UP);
-        let down_pressed = rl.is_key_pressed(KeyboardKey::KEY_S) || rl.is_key_pressed(KeyboardKey::KEY_DOWN);
-
-        let mut move_up = up_pressed;
-        let mut move_down = down_pressed;
-
-        if up_held || down_held {
-            repeat_timer += dt;
-            if up_pressed || down_pressed {
-                repeat_timer = 0.0;
-            }
-            if repeat_timer >= REPEAT_DELAY {
-                let ticks = ((repeat_timer - REPEAT_DELAY) / REPEAT_RATE) as usize;
-                let prev = ((repeat_timer - REPEAT_DELAY - dt.max(0.0)) / REPEAT_RATE) as usize;
-                if ticks > prev {
-                    if up_held {
-                        move_up = true;
-                    }
-                    if down_held {
-                        move_down = true;
-                    }
-                }
-            }
-        } else {
-            repeat_timer = 0.0;
-        }
-
-        if !roms.is_empty() {
-            if move_up && selected > 0 {
-                selected -= 1;
-            }
-            if move_down && selected + 1 < roms.len() {
-                selected += 1;
-            }
-
-            if selected < scroll_offset {
-                scroll_offset = selected;
-            }
-            if selected >= scroll_offset + visible_count {
-                scroll_offset = selected + 1 - visible_count;
-            }
-        }
-
-        if (rl.is_key_pressed(KeyboardKey::KEY_ENTER) || rl.is_key_pressed(KeyboardKey::KEY_J))
-            && !roms.is_empty()
-        {
-            chosen = Some(roms[selected].clone());
-        }
-
-        // draw selection menu
-        rl.draw(&thread, |mut d| {
-            d.clear_background(BACKGROUND);
-
-            draw_header(&mut d, roms.len());
-            draw_selector(&mut d, &roms, selected, scroll_offset);
-            draw_footer(&mut d);
-        });
-    }
-
-    if let Some(rom) = chosen {
-        println!("{}", rom.display());
+    while !app.rl.window_should_close() {
+        app.update()?;
+        app.draw();
     }
 
     Ok(())
@@ -160,7 +287,6 @@ fn selector_bottom() -> i32 { SCREEN_HEIGHT - PADDING_Y - FOOTER_H - SECTION_PAD
 /// Draws the header with the title and rom count
 fn draw_header(d: &mut RaylibDrawHandle, rom_count: usize) {
     let y = PADDING_Y + (HEADER_H - FONT_SIZE) / 2;
-
     d.draw_text("GBEED", PADDING_X, y, FONT_SIZE, FOREGROUND);
 
     let count_str = format!("{} roms", rom_count);
@@ -233,11 +359,10 @@ fn draw_selector(d: &mut RaylibDrawHandle, roms: &[PathBuf], selected: usize, sc
 }
 
 /// Draws the selection menu footer with control hints
-fn draw_footer(d: &mut RaylibDrawHandle) {
+fn draw_footer(d: &mut RaylibDrawHandle, hint: &str) {
     let sep_y = SCREEN_HEIGHT - PADDING_Y - FOOTER_H;
     d.draw_line(0, sep_y, SCREEN_WIDTH, sep_y, SECONDARY);
 
-    let hint = "w/s move  enter select";
     let hint_w = d.measure_text(hint, FONT_SIZE - 1);
     let y = sep_y + (FOOTER_H - (FONT_SIZE - 1)) / 2;
     d.draw_text(hint, (SCREEN_WIDTH - hint_w) / 2, y, FONT_SIZE - 1, PRIMARY);
@@ -248,5 +373,13 @@ fn truncate_name(name: &str, max_chars: usize) -> String {
         name.to_string()
     } else {
         format!("{}...", &name[..max_chars.saturating_sub(3)])
+    }
+}
+
+fn save_path_from_rom(rom_path: &str) -> PathBuf {
+    let path = Path::new(rom_path);
+    match path.extension().and_then(|e| e.to_str()) {
+        Some("gb" | "gbc") => path.with_extension("sav"),
+        _ => path.with_added_extension("sav"),
     }
 }
