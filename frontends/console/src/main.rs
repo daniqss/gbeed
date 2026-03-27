@@ -8,6 +8,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::controller::ConsoleController;
+
 const ROMS_DIR: &str = "/home/daniqss/roms";
 const _SAVE_DIR: &str = "/home/daniqss/saves";
 
@@ -66,10 +68,7 @@ struct EmulatorApp {
     gb: Option<Dmg>,
     rom_path: Option<PathBuf>,
     save_path: Option<PathBuf>,
-
-    rl: RaylibHandle,
-    thread: RaylibThread,
-    screen: Texture,
+    controller: ConsoleController,
 }
 
 impl EmulatorApp {
@@ -87,14 +86,12 @@ impl EmulatorApp {
             rom_path: None,
             save_path: None,
 
-            screen,
-            rl,
-            thread,
+            controller: ConsoleController { rl, thread, screen },
         }
     }
 
     pub fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let rl = &mut self.rl;
+        let rl = &mut self.controller.rl;
         let dt = rl.get_frame_time();
 
         let next_state = match &mut self.state {
@@ -167,9 +164,22 @@ impl EmulatorApp {
             }
             EmulatorState::Emulation => {
                 if let Some(gb) = &mut self.gb {
-                    // gb.run(&mut controller)?;
-                }
-                if let Some(game_path) = &self.rom_path {
+                    gb.run(&mut self.controller)?;
+                    pub fn read_key_input(rl: &RaylibHandle) -> ButtonStates {
+                        ButtonStates {
+                            up: rl.is_key_down(KeyboardKey::KEY_UP) || rl.is_key_down(KeyboardKey::KEY_W),
+                            down: rl.is_key_down(KeyboardKey::KEY_DOWN) || rl.is_key_down(KeyboardKey::KEY_S),
+                            left: rl.is_key_down(KeyboardKey::KEY_LEFT) || rl.is_key_down(KeyboardKey::KEY_A),
+                            right: rl.is_key_down(KeyboardKey::KEY_RIGHT)
+                                || rl.is_key_down(KeyboardKey::KEY_D),
+                            a: rl.is_key_down(KeyboardKey::KEY_Z) || rl.is_key_down(KeyboardKey::KEY_J),
+                            b: rl.is_key_down(KeyboardKey::KEY_X) || rl.is_key_down(KeyboardKey::KEY_K),
+                            start: rl.is_key_down(KeyboardKey::KEY_L),
+                            select: rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                                || rl.is_key_down(KeyboardKey::KEY_SEMICOLON),
+                        }
+                    }
+                } else if let Some(game_path) = &self.rom_path {
                     let save_path = save_path_from_rom(game_path.to_str().unwrap_or_default());
                     self.save_path = Some(save_path.clone());
 
@@ -237,8 +247,8 @@ impl EmulatorApp {
     }
 
     pub fn draw(&mut self) {
-        self.rl.draw(&self.thread, |mut d| {
-            d.clear_background(crate::BACKGROUND);
+        self.controller.rl.draw(&self.controller.thread, |mut d| {
+            d.clear_background(BACKGROUND);
 
             match &self.state {
                 EmulatorState::SelectionMenu {
@@ -251,7 +261,16 @@ impl EmulatorApp {
                     draw_header(&mut d, roms.len());
                     draw_selector(&mut d, roms, *selected, *scroll_offset);
                 }
-                EmulatorState::Emulation => {}
+                EmulatorState::Emulation => {
+                    d.draw_texture_pro(
+                        &self.controller.screen.texture,
+                        Rectangle::new(0.0, 0.0, DMG_SCREEN_WIDTH as f32, DMG_SCREEN_HEIGHT as f32),
+                        Rectangle::new(0.0, 0.0, SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32),
+                        Vector2::new(0.0, 0.0),
+                        0.0,
+                        Color::WHITE,
+                    );
+                }
                 EmulatorState::GameMenu => {}
                 EmulatorState::BootScreen { .. } => {}
                 EmulatorState::SettingsMenu => {}
@@ -273,7 +292,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut app = EmulatorApp::new(rl, thread);
 
-    while !app.rl.window_should_close() {
+    while !app.controller.rl.window_should_close() {
         app.update()?;
         app.draw();
     }

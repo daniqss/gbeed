@@ -1,7 +1,6 @@
 use gbeed_core::{prelude::DMG_SCREEN_WIDTH, Controller, Renderer, SerialListener};
+use gbeed_raylib_common::texture::Texture;
 use raylib::prelude::*;
-
-use crate::EmulatorApp;
 
 pub const GB_PALETTE: [Color; 4] = [
     Color {
@@ -30,7 +29,13 @@ pub const GB_PALETTE: [Color; 4] = [
     },
 ];
 
-impl Renderer for EmulatorApp {
+pub struct ConsoleController {
+    pub rl: RaylibHandle,
+    pub thread: RaylibThread,
+    pub screen: Texture,
+}
+
+impl Renderer for ConsoleController {
     fn read_pixel(&self, x: usize, y: usize) -> u32 {
         let index = (y * DMG_SCREEN_WIDTH + x) * 3;
 
@@ -54,17 +59,13 @@ impl Renderer for EmulatorApp {
         ((color.r as u32) << 16) | ((color.g as u32) << 8) | (color.b as u32)
     }
 
-    fn draw_screen(&mut self) {
-        self.rl.draw(&self.thread, |mut d| {
-            d.draw_texture(&self.screen.texture, 0, 0, crate::BACKGROUND);
-        });
-    }
+    fn draw_screen(&mut self) { self.screen.update(); }
 }
 
-impl SerialListener for EmulatorApp {
+impl SerialListener for ConsoleController {
     fn on_transfer(&mut self, data: u8) {
         println!("through serial port -> {data:04X}");
     }
 }
 
-impl Controller for EmulatorApp {}
+impl Controller for ConsoleController {}
