@@ -2,10 +2,9 @@ mod colors;
 
 use gbeed_core::prelude::*;
 use gbeed_core::Renderer;
-use gbeed_raylib_common::texture::Texture;
+use gbeed_raylib_common::{InputState, Texture};
 use raylib::prelude::*;
 
-use crate::input::ButtonStates;
 use colors::GB_PALETTE;
 
 #[allow(unused_imports)]
@@ -46,7 +45,7 @@ pub struct RaylibRenderer {
     pub bg_map_texture: Texture,
     pub tile_textures: [Texture; 3],
 
-    pub buttons: ButtonStates,
+    pub buttons: InputState,
     pub game_name: String,
     pub game_region: String,
     pub fps_mode: FpsMode,
@@ -76,7 +75,7 @@ impl RaylibRenderer {
             screen_texture,
             bg_map_texture,
             tile_textures,
-            buttons: crate::input::ButtonStates::default(),
+            buttons: InputState::default(),
             game_name: "Unknown".into(),
             game_region: "Unknown".into(),
             fps_mode: FpsMode::Target60,

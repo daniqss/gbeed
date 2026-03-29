@@ -1,7 +1,6 @@
 use gbeed_core::prelude::*;
 
 mod controller;
-mod input;
 #[cfg(target_arch = "wasm32")]
 mod web;
 
@@ -157,7 +156,7 @@ impl EmulatorApp {
         }
 
         if let Some(ref mut gb) = self.gb {
-            input::update(&mut self.controller.renderer, &mut gb.joypad);
+            // input::update(&mut self.controller.renderer, &mut gb.joypad);
 
             gb.run(&mut self.controller)?;
 
