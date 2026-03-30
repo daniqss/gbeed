@@ -97,53 +97,53 @@ impl CartridgeHeader {
                 | (raw_rom[GLOBAL_CHECKSUM_END as usize] as u16),
         })
     }
+
+    pub fn to_string_array(&self) -> Vec<String> {
+        vec![
+            format!(
+                "{} -> {}",
+                match self.is_pre_sgb {
+                    true => "Old license",
+                    false => "New license",
+                },
+                match &self.license {
+                    Some(l) => l,
+                    None => "None",
+                }
+            ),
+            format!("Supports CGB -> {:?}", self.supports_cgb),
+            format!(
+                "{}upports Super Gameboy",
+                match self.supports_sgb {
+                    true => "S",
+                    false => "Not s",
+                }
+            ),
+            format!("Cartridge type -> {:#?}", self.cartridge_type),
+            format!(
+                "ROM Size -> {} KB ({} banks)",
+                self.rom_size.get_size() / 1024,
+                self.rom_size.get_banks_count()
+            ),
+            format!(
+                "External RAM Size -> {} KB {}",
+                self.ram_size.get_size() / 1024,
+                match self.ram_size.get_banks_count() {
+                    Some(count) => format!("({} banks)", count),
+                    None => "No RAM".to_string(),
+                }
+            ),
+            format!("Destination code -> {:?}", self.destination),
+            format!("Game version -> {}", self.game_version),
+            format!("Header checksum -> {:#04X}", self.header_checksum),
+            format!("Global checksum -> {:#06X}", self.global_checksum),
+        ]
+    }
 }
 
 impl std::fmt::Display for CartridgeHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}", self.title.replace('\0', ""))?;
-        writeln!(
-            f,
-            "{} -> {}",
-            match self.is_pre_sgb {
-                true => "Old license",
-                false => "New license",
-            },
-            match &self.license {
-                Some(l) => l,
-                None => "None",
-            }
-        )?;
-        writeln!(f, "Supports CGB -> {:?}", self.supports_cgb)?;
-        writeln!(
-            f,
-            "{}upports Super Gameboy",
-            match self.supports_sgb {
-                true => "S",
-                false => "Not s",
-            }
-        )?;
-        writeln!(f, "Cartridge type -> {:#?}", self.cartridge_type)?;
-        writeln!(
-            f,
-            "ROM Size -> {} KB ({} banks)",
-            self.rom_size.get_size() / 1024,
-            self.rom_size.get_banks_count()
-        )?;
-        writeln!(
-            f,
-            "External RAM Size -> {} KB {}",
-            self.ram_size.get_size() / 1024,
-            match self.ram_size.get_banks_count() {
-                Some(count) => format!("({} banks)", count),
-                None => "No RAM".to_string(),
-            }
-        )?;
-        writeln!(f, "Destination code -> {:?}", self.destination)?;
-        writeln!(f, "Game version -> {}", self.game_version)?;
-        writeln!(f, "Header checksum -> {:#04X}", self.header_checksum)?;
-        writeln!(f, "Global checksum -> {:#06X}", self.global_checksum)?;
-        Ok(())
+        write!(f, "{}", self.to_string_array().join("\n"))
     }
 }
 

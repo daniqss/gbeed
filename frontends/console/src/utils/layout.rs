@@ -3,11 +3,13 @@ use std::path::PathBuf;
 use gbeed_raylib_common::{BACKGROUND, FOREGROUND, PRIMARY, SECONDARY};
 use raylib::prelude::*;
 
+use crate::{scenes::EmulatorState, utils};
+
 pub const SCREEN_WIDTH: i32 = 240;
 pub const SCREEN_HEIGHT: i32 = 240;
 
-const PADDING_X: i32 = 5;
-const PADDING_Y: i32 = 10;
+pub const PADDING_X: i32 = 5;
+pub const PADDING_Y: i32 = 10;
 
 const HEADER_H: i32 = 20;
 const FOOTER_H: i32 = 20;
@@ -22,20 +24,39 @@ const FONT_SIZE: i32 = 10;
 pub fn selector_top() -> i32 { PADDING_Y + HEADER_H + SECTION_PAD }
 pub fn selector_bottom() -> i32 { SCREEN_HEIGHT - PADDING_Y - FOOTER_H - SECTION_PAD }
 
-/// Draws the header with the title and rom count
-pub fn draw_header(d: &mut RaylibDrawHandle, rom_count: usize) {
-    let y = PADDING_Y + (HEADER_H - FONT_SIZE) / 2;
-    d.draw_text("GBEED", PADDING_X, y, FONT_SIZE, FOREGROUND);
+/// Draws the header with the tabs
+pub fn draw_header(d: &mut RaylibDrawHandle, current_state: &EmulatorState) {
+    let (sel_active, game_active, set_active) = match current_state {
+        EmulatorState::SelectionMenu(_) => (true, false, false),
+        EmulatorState::GameMenu(_) => (false, true, false),
+        EmulatorState::SettingsMenu(_) => (false, false, true),
+        EmulatorState::Emulation(_) => return,
+    };
 
-    let count_str = format!("{} roms", rom_count);
-    let count_w = d.measure_text(&count_str, FONT_SIZE);
-    d.draw_text(
-        &count_str,
-        SCREEN_WIDTH - PADDING_X - count_w,
-        y,
-        FONT_SIZE,
-        FOREGROUND,
-    );
+    let tab_style = |active: bool| {
+        if active {
+            (FONT_SIZE + 2, FOREGROUND)
+        } else {
+            (FONT_SIZE, PRIMARY)
+        }
+    };
+
+    let (sel_size, sel_color) = tab_style(sel_active);
+    let (game_size, game_color) = tab_style(game_active);
+    let (set_size, set_color) = tab_style(set_active);
+
+    let y = PADDING_Y + (HEADER_H - FONT_SIZE) / 2;
+
+    let sel_text = "Selection";
+    let game_text = "Game";
+    let set_text = "Settings";
+
+    let game_w = d.measure_text(game_text, game_size);
+    let set_w = d.measure_text(set_text, set_size);
+
+    d.draw_text(sel_text, PADDING_X, y, sel_size, sel_color);
+    d.draw_text(game_text, (SCREEN_WIDTH - game_w) / 2, y, game_size, game_color);
+    d.draw_text(set_text, SCREEN_WIDTH - PADDING_X - set_w, y, set_size, set_color);
 
     d.draw_line(
         PADDING_X,
@@ -83,7 +104,7 @@ pub fn draw_selector(d: &mut RaylibDrawHandle, roms: &[PathBuf], selected: usize
             .file_name()
             .and_then(|s| s.to_str())
             .unwrap_or("MissingNo");
-        let display = super::truncate_name(name, max_chars);
+        let display = utils::truncate_name(name, max_chars);
 
         if idx == selected {
             d.draw_rectangle(0, y, SCROLLBAR_X - 2, ITEM_H, FOREGROUND);
@@ -97,7 +118,15 @@ pub fn draw_selector(d: &mut RaylibDrawHandle, roms: &[PathBuf], selected: usize
 }
 
 /// Draws the selection menu footer with control hints
-pub fn draw_footer(d: &mut RaylibDrawHandle, hint: &str) {
+pub fn draw_footer(d: &mut RaylibDrawHandle, state: &EmulatorState) {
+    // TODO: real hints
+    let hint = match state {
+        EmulatorState::SelectionMenu(_) => "w/s move  enter select",
+        EmulatorState::GameMenu(_) => "r resume  s save  l load  q quit",
+        EmulatorState::SettingsMenu(_) => "s save settings  q back",
+        EmulatorState::Emulation(_) => return,
+    };
+
     let sep_y = SCREEN_HEIGHT - PADDING_Y - FOOTER_H;
     d.draw_line(0, sep_y, SCREEN_WIDTH, sep_y, SECONDARY);
 

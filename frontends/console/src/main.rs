@@ -8,10 +8,10 @@ use raylib::prelude::*;
 use std::path::PathBuf;
 
 use crate::controller::ConsoleController;
-use crate::scenes::{selection_menu::SelectionMenuState, EmulatorState};
+use crate::scenes::{EmulatorState, SelectionMenuState};
 use crate::utils::layout::*;
 
-const ROMS_DIR: &str = "/home/daniqss/roms";
+pub const ROMS_DIR: &str = "/home/daniqss/roms";
 const _SAVE_DIR: &str = "/home/daniqss/saves";
 
 struct EmulatorApp {
@@ -46,17 +46,16 @@ impl EmulatorApp {
         let dt = rl.get_frame_time();
 
         let next_state = match &mut self.state {
-            EmulatorState::SelectionMenu(state) => state.update(rl, dt, &mut self.rom_path),
-            EmulatorState::Emulation(state) => {
-                state.update(
-                    &mut self.gb,
-                    &mut self.rom_path,
-                    &mut self.save_path,
-                    &mut self.controller,
-                )?;
-                None
+            EmulatorState::SelectionMenu(state) => {
+                state.update(rl, dt, &mut self.rom_path, &mut self.gb, &mut self.save_path)?
             }
-            EmulatorState::GameMenu(state) => state.update(rl),
+            EmulatorState::Emulation(state) => state.update(
+                &mut self.gb,
+                &mut self.rom_path,
+                &mut self.save_path,
+                &mut self.controller,
+            )?,
+            EmulatorState::GameMenu(state) => state.update(rl, dt, &self.gb),
             EmulatorState::SettingsMenu(state) => state.update(rl),
         };
 
@@ -71,17 +70,16 @@ impl EmulatorApp {
         let ConsoleController { rl, thread, screen } = &mut self.controller;
         rl.draw(thread, |mut d| {
             d.clear_background(BACKGROUND);
+            draw_header(&mut d, &self.state);
 
             match &self.state {
                 EmulatorState::SelectionMenu(state) => state.draw(&mut d),
                 EmulatorState::Emulation(state) => state.draw(&mut d, screen),
-                EmulatorState::GameMenu(state) => state.draw(&mut d),
+                EmulatorState::GameMenu(state) => state.draw(&mut d, screen, &self.gb, &self.rom_path),
                 EmulatorState::SettingsMenu(state) => state.draw(&mut d),
             }
 
-            if let Some(hint) = self.state.get_hint() {
-                draw_footer(&mut d, hint);
-            }
+            draw_footer(&mut d, &self.state);
         });
     }
 }
