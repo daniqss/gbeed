@@ -3,7 +3,7 @@ mod scenes;
 mod utils;
 
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{Texture, BACKGROUND};
+use gbeed_raylib_common::{Palette, Texture, BACKGROUND};
 use raylib::prelude::*;
 use std::path::PathBuf;
 
@@ -37,18 +37,26 @@ impl EmulatorApp {
             rom_path: None,
             save_path: None,
 
-            controller: ConsoleController { rl, thread, screen },
+            controller: ConsoleController {
+                rl,
+                thread,
+                screen,
+                palette: Palette::default(),
+            },
         }
     }
 
     pub fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let rl = &mut self.controller.rl;
-        let dt = rl.get_frame_time();
+        let dt = self.controller.rl.get_frame_time();
 
         let next_state = match &mut self.state {
-            EmulatorState::SelectionMenu(state) => {
-                state.update(rl, dt, &mut self.rom_path, &mut self.gb, &mut self.save_path)?
-            }
+            EmulatorState::SelectionMenu(state) => state.update(
+                &self.controller.rl,
+                dt,
+                &mut self.rom_path,
+                &mut self.gb,
+                &mut self.save_path,
+            )?,
             EmulatorState::Emulation(state) => state.update(
                 dt,
                 &mut self.gb,
@@ -56,8 +64,8 @@ impl EmulatorApp {
                 &mut self.save_path,
                 &mut self.controller,
             )?,
-            EmulatorState::GameMenu(state) => state.update(rl, dt, &self.gb),
-            EmulatorState::SettingsMenu(state) => state.update(rl, dt),
+            EmulatorState::GameMenu(state) => state.update(&self.controller.rl, dt, &self.gb),
+            EmulatorState::SettingsMenu(state) => state.update(dt, &mut self.controller),
         };
 
         if let Some(state) = next_state {
@@ -68,7 +76,11 @@ impl EmulatorApp {
     }
 
     pub fn draw(&mut self) {
-        let ConsoleController { rl, thread, screen } = &mut self.controller;
+        let palette = self.controller.palette;
+        let ConsoleController {
+            rl, thread, screen, ..
+        } = &mut self.controller;
+
         rl.draw(thread, |mut d| {
             d.clear_background(BACKGROUND);
 
@@ -76,7 +88,7 @@ impl EmulatorApp {
                 EmulatorState::SelectionMenu(state) => state.draw(&mut d),
                 EmulatorState::Emulation(state) => state.draw(&mut d, screen),
                 EmulatorState::GameMenu(state) => state.draw(&mut d, screen, &self.gb, &self.rom_path),
-                EmulatorState::SettingsMenu(state) => state.draw(&mut d),
+                EmulatorState::SettingsMenu(state) => state.draw(&mut d, palette),
             }
 
             draw_header(&mut d, &self.state);

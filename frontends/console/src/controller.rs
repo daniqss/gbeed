@@ -1,11 +1,12 @@
 use gbeed_core::{prelude::DMG_SCREEN_WIDTH, Controller, Renderer, SerialListener};
-use gbeed_raylib_common::{Texture, DMG_PALETTE};
+use gbeed_raylib_common::{Palette, Texture};
 use raylib::prelude::*;
 
 pub struct ConsoleController {
     pub rl: RaylibHandle,
     pub thread: RaylibThread,
     pub screen: Texture,
+    pub palette: Palette,
 }
 
 impl Renderer for ConsoleController {
@@ -27,7 +28,7 @@ impl Renderer for ConsoleController {
 
     fn get_color(&self, palette: u8, color_id: u8) -> u32 {
         let shade = (palette >> (color_id * 2)) & 0x03;
-        let color = DMG_PALETTE[shade as usize];
+        let color = self.palette.colors()[shade as usize];
 
         ((color.r as u32) << 16) | ((color.g as u32) << 8) | (color.b as u32)
     }
