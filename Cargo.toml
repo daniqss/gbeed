@@ -3,4 +3,8 @@ resolver = "2"
 members = [
     "core",
     "frontends/debugger",
+    "frontends/console",
+    "frontends/raylib_common",
 ]
+
+default-members = ["frontends/console"]

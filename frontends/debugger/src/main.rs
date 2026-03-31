@@ -1,7 +1,6 @@
 use gbeed_core::prelude::*;
 
 mod controller;
-mod input;
 #[cfg(target_arch = "wasm32")]
 mod web;
 
@@ -17,7 +16,7 @@ use web::{emscripten_set_main_loop_arg, local_storage, wasm_main_loop};
 #[cfg(target_arch = "wasm32")]
 pub use web::{save_game_wasm, APP_PTR};
 
-fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
     let mut game_path: Option<String> = None;
     let mut boot_path: Option<String> = None;
@@ -157,7 +156,7 @@ impl EmulatorApp {
         }
 
         if let Some(ref mut gb) = self.gb {
-            input::update(&mut self.controller.renderer, &mut gb.joypad);
+            // input::update(&mut self.controller.renderer, &mut gb.joypad);
 
             gb.run(&mut self.controller)?;
 

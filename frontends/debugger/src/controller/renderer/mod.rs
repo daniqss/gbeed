@@ -1,17 +1,14 @@
 mod colors;
-mod texture;
 
 use gbeed_core::prelude::*;
 use gbeed_core::Renderer;
+use gbeed_raylib_common::{InputState, Texture};
 use raylib::prelude::*;
 
-use crate::input::ButtonStates;
 use colors::GB_PALETTE;
-use texture::Texture;
 
 #[allow(unused_imports)]
 pub use colors::{BACKGROUND, FOREGROUND, PRIMARY, SECONDARY};
-pub use texture::{update_bg_map, update_tiles};
 
 pub const SCREEN_SCALE: i32 = 4;
 pub const SCALED_SCREEN_WIDTH: i32 = DMG_SCREEN_WIDTH as i32 * SCREEN_SCALE;
@@ -48,7 +45,7 @@ pub struct RaylibRenderer {
     pub bg_map_texture: Texture,
     pub tile_textures: [Texture; 3],
 
-    pub buttons: ButtonStates,
+    pub buttons: InputState,
     pub game_name: String,
     pub game_region: String,
     pub fps_mode: FpsMode,
@@ -78,7 +75,7 @@ impl RaylibRenderer {
             screen_texture,
             bg_map_texture,
             tile_textures,
-            buttons: crate::input::ButtonStates::default(),
+            buttons: InputState::default(),
             game_name: "Unknown".into(),
             game_region: "Unknown".into(),
             fps_mode: FpsMode::Target60,
@@ -120,17 +117,17 @@ impl Renderer for RaylibRenderer {
     fn read_pixel(&self, x: usize, y: usize) -> u32 {
         let index = (y * DMG_SCREEN_WIDTH + x) * 3;
 
-        ((self.screen_texture.pixels[index] as u32) << 16)
-            | ((self.screen_texture.pixels[index + 1] as u32) << 8)
-            | (self.screen_texture.pixels[index + 2] as u32)
+        ((self.screen_texture[index] as u32) << 16)
+            | ((self.screen_texture[index + 1] as u32) << 8)
+            | (self.screen_texture[index + 2] as u32)
     }
 
     fn write_pixel(&mut self, x: usize, y: usize, color: u32) {
         let index = (y * DMG_SCREEN_WIDTH + x) * 3;
 
-        self.screen_texture.pixels[index] = ((color >> 16) & 0xFF) as u8;
-        self.screen_texture.pixels[index + 1] = ((color >> 8) & 0xFF) as u8;
-        self.screen_texture.pixels[index + 2] = (color & 0xFF) as u8;
+        self.screen_texture[index] = ((color >> 16) & 0xFF) as u8;
+        self.screen_texture[index + 1] = ((color >> 8) & 0xFF) as u8;
+        self.screen_texture[index + 2] = (color & 0xFF) as u8;
     }
 
     fn get_color(&self, palette: u8, color_id: u8) -> u32 {
@@ -658,4 +655,82 @@ fn draw_small_btn(
         foreground_color,
     );
     draw.draw_text(key, x, y + height + 3, 7, colors::SECONDARY);
+}
+
+pub fn update_bg_map(
+    texture: &mut Texture,
+    map_data: &[u8],
+    tile_data: &[u8],
+    is_mode_8000: bool,
+    palette: u8,
+) {
+    let stride = 256_usize;
+
+    for tile_y in 0..32_usize {
+        for tile_x in 0..32_usize {
+            let tile_number = map_data[tile_y * 32 + tile_x];
+
+            let tile_base = if is_mode_8000 {
+                (tile_number as usize) * 16
+            } else {
+                let signed_tile_number = tile_number as i8 as i32;
+                (0x1000_i32 + signed_tile_number * 16) as usize
+            };
+
+            let pixel_x_base = tile_x * 8;
+            let pixel_y_base = tile_y * 8;
+
+            for row in 0..8_usize {
+                let low_byte = tile_data[tile_base + row * 2];
+                let high_byte = tile_data[tile_base + row * 2 + 1];
+
+                for column in 0..8_usize {
+                    let bit_index = 7 - column;
+                    let color_id = (((high_byte >> bit_index) & 1) << 1) | ((low_byte >> bit_index) & 1);
+
+                    let shade = (palette >> (color_id * 2)) & 0x03;
+                    let color = colors::GB_PALETTE[shade as usize];
+                    let index = ((pixel_y_base + row) * stride + (pixel_x_base + column)) * 3;
+
+                    texture[index] = color.r;
+                    texture[index + 1] = color.g;
+                    texture[index + 2] = color.b;
+                }
+            }
+        }
+    }
+
+    texture.update();
+}
+
+// decodes a 2bpp vram block into the tile texture (region 0/$8000, 1/$8800, 2/$9000)
+pub fn update_tiles(texture: &mut Texture, data: &[u8]) {
+    let stride = TILE_TEXTURE_WIDTH as usize;
+
+    for tile_index in 0..128_usize {
+        let tile_base_x = (tile_index % TILES_PER_ROW as usize) * TILE_PIXEL_SIZE as usize;
+        let tile_base_y = (tile_index / TILES_PER_ROW as usize) * TILE_PIXEL_SIZE as usize;
+        let data_base = tile_index * 16;
+
+        for row in 0..8_usize {
+            let low_byte = data[data_base + row * 2];
+            let high_byte = data[data_base + row * 2 + 1];
+
+            for column in 0..8_usize {
+                let bit_index = 7 - column;
+                let color_id = (((high_byte >> bit_index) & 1) << 1) | ((low_byte >> bit_index) & 1);
+
+                let color = colors::GB_PALETTE[color_id as usize];
+                let pixel_x = tile_base_x + column;
+                let pixel_y = tile_base_y + row;
+                let index = (pixel_y * stride + pixel_x) * 3;
+
+                texture[index] = color.r;
+                texture[index + 1] = color.g;
+                texture[index + 2] = color.b;
+            }
+        }
+    }
+
+    texture.update();
 }

@@ -1,10 +1,11 @@
 [package]
-name = "gbeed-debugger"
+name = "gbeed-console"
 version = "0.1.0"
 edition = "2021"
+default-run = "gbeed"
 
 [[bin]]
-name = "gbeed-debugger"
+name = "gbeed"
 path = "src/main.rs"
 
 [dependencies]
