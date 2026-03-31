@@ -15,7 +15,7 @@ pub struct EmulationState {
 impl EmulationState {
     pub fn new() -> Self {
         Self {
-            input: InputManager::with_debounce(0.13),
+            input: InputManager::with_debounce(0.08),
         }
     }
 

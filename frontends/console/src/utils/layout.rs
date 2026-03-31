@@ -11,9 +11,13 @@ pub const SCREEN_HEIGHT: i32 = 240;
 pub const PADDING_X: i32 = 5;
 pub const PADDING_Y: i32 = 10;
 
-const HEADER_H: i32 = 20;
-const FOOTER_H: i32 = 20;
-const SECTION_PAD: i32 = 6;
+pub const HEADER_H: i32 = 20;
+pub const FOOTER_H: i32 = 20;
+pub const SECTION_PAD: i32 = 6;
+
+pub const CONTENT_TOP: i32 = PADDING_Y + HEADER_H;
+pub const CONTENT_BOTTOM: i32 = SCREEN_HEIGHT - PADDING_Y - FOOTER_H;
+pub const CONTENT_HEIGHT: i32 = CONTENT_BOTTOM - CONTENT_TOP;
 
 const SCROLLBAR_W: i32 = 4;
 const SCROLLBAR_X: i32 = SCREEN_WIDTH - PADDING_X - SCROLLBAR_W;
@@ -21,8 +25,8 @@ const SCROLLBAR_X: i32 = SCREEN_WIDTH - PADDING_X - SCROLLBAR_W;
 pub const ITEM_H: i32 = 14;
 const FONT_SIZE: i32 = 10;
 
-pub fn selector_top() -> i32 { PADDING_Y + HEADER_H + SECTION_PAD }
-pub fn selector_bottom() -> i32 { SCREEN_HEIGHT - PADDING_Y - FOOTER_H - SECTION_PAD }
+pub fn selector_top() -> i32 { CONTENT_TOP + SECTION_PAD }
+pub fn selector_bottom() -> i32 { CONTENT_BOTTOM - SECTION_PAD }
 
 /// Draws the header with the tabs
 pub fn draw_header(d: &mut RaylibDrawHandle, current_state: &EmulatorState) {
@@ -40,6 +44,8 @@ pub fn draw_header(d: &mut RaylibDrawHandle, current_state: &EmulatorState) {
             (FONT_SIZE, PRIMARY)
         }
     };
+
+    d.draw_rectangle(0, 0, SCREEN_WIDTH, CONTENT_TOP, BACKGROUND);
 
     let (sel_size, sel_color) = tab_style(sel_active);
     let (game_size, game_color) = tab_style(game_active);
@@ -127,7 +133,9 @@ pub fn draw_footer(d: &mut RaylibDrawHandle, state: &EmulatorState) {
         EmulatorState::Emulation(_) => return,
     };
 
-    let sep_y = SCREEN_HEIGHT - PADDING_Y - FOOTER_H;
+    d.draw_rectangle(0, CONTENT_BOTTOM, SCREEN_WIDTH, SCREEN_HEIGHT - CONTENT_BOTTOM, BACKGROUND);
+
+    let sep_y = CONTENT_BOTTOM;
     d.draw_line(0, sep_y, SCREEN_WIDTH, sep_y, SECONDARY);
 
     let hint_w = d.measure_text(hint, FONT_SIZE - 1);

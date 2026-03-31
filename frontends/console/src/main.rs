@@ -71,7 +71,6 @@ impl EmulatorApp {
         let ConsoleController { rl, thread, screen } = &mut self.controller;
         rl.draw(thread, |mut d| {
             d.clear_background(BACKGROUND);
-            draw_header(&mut d, &self.state);
 
             match &self.state {
                 EmulatorState::SelectionMenu(state) => state.draw(&mut d),
@@ -80,6 +79,7 @@ impl EmulatorApp {
                 EmulatorState::SettingsMenu(state) => state.draw(&mut d),
             }
 
+            draw_header(&mut d, &self.state);
             draw_footer(&mut d, &self.state);
         });
     }
