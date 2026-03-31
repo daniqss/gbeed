@@ -90,6 +90,22 @@ impl Palette {
             Palette::Pink => "Pink",
         }
     }
+
+    pub fn foreground(&self) -> Color {
+        self.colors()[0]
+    }
+
+    pub fn primary(&self) -> Color {
+        self.colors()[1]
+    }
+
+    pub fn secondary(&self) -> Color {
+        self.colors()[2]
+    }
+
+    pub fn background(&self) -> Color {
+        self.colors()[3]
+    }
 }
 
 // dmg greenish palette

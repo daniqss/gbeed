@@ -1,11 +1,11 @@
-use gbeed_core::prelude::Dmg;
-use gbeed_raylib_common::InputManager;
+use gbeed_core::Dmg;
+use gbeed_raylib_common::{InputManager, Palette};
 use raylib::prelude::*;
 use std::path::PathBuf;
 
 use crate::{
-    scenes::{EmulationState, EmulatorState, GameMenuState},
-    utils::{layout::*, load_cartridge},
+    scenes::{EmulationState, EmulatorState, GameMenuState, SettingsMenuState},
+    utils::{layout::*, load_cartridge, truncate_name},
 };
 
 pub struct SelectionMenuState {
@@ -74,7 +74,7 @@ impl SelectionMenuState {
         let move_up = self.input.is_repeated_up(dt);
         let move_down = self.input.is_repeated_down(dt);
 
-        let visible_count = ((selector_bottom() - selector_top()) / ITEM_H) as usize;
+        let visible_count = ((VISIBLE_TOP - VISIBLE_BOTTOM) / ITEM_H) as usize;
 
         if !self.roms.is_empty() {
             if move_up && self.selected > 0 {
@@ -109,12 +109,40 @@ impl SelectionMenuState {
         if self.input.is_pressed_right() && !self.confirming_new_game {
             return Ok(Some(EmulatorState::GameMenu(GameMenuState::new())));
         }
+        if self.input.is_repeated_left(dt) {
+            return Ok(Some(EmulatorState::SettingsMenu(SettingsMenuState::new())));
+        }
 
         Ok(None)
     }
 
-    pub fn draw(&self, d: &mut RaylibDrawHandle) {
-        draw_selector(d, &self.roms, self.selected, self.scroll_offset);
+    pub fn draw(&self, d: &mut RaylibDrawHandle, palette: Palette) {
+        if self.roms.is_empty() {
+            d.draw_text(
+                "no roms found",
+                PADDING_X,
+                VISIBLE_TOP + SECTION_PAD,
+                FONT_SIZE,
+                palette.primary(),
+            );
+            return;
+        }
+
+        let text_area_w = SCROLLBAR_X - PADDING_X - 4;
+        let max_chars = (text_area_w / (FONT_SIZE / 2).max(1)) as usize;
+
+        let names: Vec<String> = self
+            .roms
+            .iter()
+            .map(|path| {
+                let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("MissingNo");
+                truncate_name(name, max_chars)
+            })
+            .collect();
+
+        let items: Vec<(&str, &str)> = names.iter().map(|n| (n.as_str(), "")).collect();
+
+        draw_menu_list(d, &items, self.selected, self.scroll_offset, palette);
 
         if self.confirming_new_game {
             d.draw_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Color::new(0, 0, 0, 180));
@@ -134,9 +162,9 @@ impl SelectionMenuState {
                 .enumerate()
                 .for_each(|(i, (text, text_width))| {
                     let color = match i {
-                        0 => gbeed_raylib_common::FOREGROUND,
-                        3 => gbeed_raylib_common::SECONDARY,
-                        _ => gbeed_raylib_common::PRIMARY,
+                        0 => palette.foreground(),
+                        3 => palette.secondary(),
+                        _ => palette.primary(),
                     };
                     d.draw_text(
                         text,

@@ -3,7 +3,7 @@ mod scenes;
 mod utils;
 
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{Palette, Texture, BACKGROUND};
+use gbeed_raylib_common::{Palette, Texture};
 use raylib::prelude::*;
 use std::path::PathBuf;
 
@@ -82,17 +82,19 @@ impl EmulatorApp {
         } = &mut self.controller;
 
         rl.draw(thread, |mut d| {
-            d.clear_background(BACKGROUND);
+            d.clear_background(palette.background());
 
             match &self.state {
-                EmulatorState::SelectionMenu(state) => state.draw(&mut d),
+                EmulatorState::SelectionMenu(state) => state.draw(&mut d, palette),
                 EmulatorState::Emulation(state) => state.draw(&mut d, screen),
-                EmulatorState::GameMenu(state) => state.draw(&mut d, screen, &self.gb, &self.rom_path),
+                EmulatorState::GameMenu(state) => {
+                    state.draw(&mut d, screen, &self.gb, &self.rom_path, palette)
+                }
                 EmulatorState::SettingsMenu(state) => state.draw(&mut d, palette),
             }
 
-            draw_header(&mut d, &self.state);
-            draw_footer(&mut d, &self.state);
+            draw_header(&mut d, &self.state, palette);
+            draw_footer(&mut d, &self.state, palette);
         });
     }
 }

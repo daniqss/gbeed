@@ -2,7 +2,7 @@ use crate::scenes::{EmulationState, EmulatorState, SelectionMenuState, SettingsM
 use crate::utils::layout::*;
 use crate::ROMS_DIR;
 use gbeed_core::prelude::{Dmg, DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH};
-use gbeed_raylib_common::InputManager;
+use gbeed_raylib_common::{InputManager, Palette};
 use raylib::prelude::*;
 use std::path::PathBuf;
 
@@ -26,11 +26,11 @@ impl GameMenuState {
             return Some(EmulatorState::Emulation(EmulationState::new()));
         }
 
-        if self.input.is_pressed_left() {
+        if self.input.is_repeated_left(dt) {
             return Some(EmulatorState::SelectionMenu(SelectionMenuState::new(ROMS_DIR)));
         }
 
-        if self.input.is_pressed_right() {
+        if self.input.is_repeated_right(dt) {
             return Some(EmulatorState::SettingsMenu(SettingsMenuState::new()));
         }
 
@@ -43,9 +43,10 @@ impl GameMenuState {
         screen: &gbeed_raylib_common::Texture,
         gb: &Option<Dmg>,
         rom_path: &Option<PathBuf>,
+        palette: Palette,
     ) {
         let info_x = PADDING_X + 10;
-        let info_y = selector_top() + 10;
+        let info_y = VISIBLE_TOP + 10;
 
         let Some(gb) = gb else {
             let text = "No ROM loaded";
@@ -55,7 +56,7 @@ impl GameMenuState {
                 (SCREEN_WIDTH - text_w) / 2,
                 SCREEN_HEIGHT / 2,
                 14,
-                gbeed_raylib_common::PRIMARY,
+                palette.primary(),
             );
             return;
         };
@@ -87,12 +88,12 @@ impl GameMenuState {
             info_x,
             info_y,
             14,
-            gbeed_raylib_common::FOREGROUND,
+            palette.foreground(),
         );
 
         let mut y_offset = info_y + 20;
         for line in header_info {
-            d.draw_text(&line, info_x, y_offset, 10, gbeed_raylib_common::PRIMARY);
+            d.draw_text(&line, info_x, y_offset, 10, palette.primary());
             y_offset += 14;
         }
     }
