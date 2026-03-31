@@ -2,55 +2,36 @@ use crate::scenes::{EmulationState, EmulatorState, SelectionMenuState, SettingsM
 use crate::utils::layout::*;
 use crate::ROMS_DIR;
 use gbeed_core::prelude::{Dmg, DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH};
-use gbeed_raylib_common::{InputKeyTriggers, InputState, ToInputState};
+use gbeed_raylib_common::InputManager;
 use raylib::prelude::*;
 use std::path::PathBuf;
 
 pub struct GameMenuState {
-    pub key_triggers: InputKeyTriggers,
-    pub last_input: InputState,
-    pub debounce_timer: f32,
-}
-
-impl Default for GameMenuState {
-    fn default() -> Self {
-        Self {
-            key_triggers: InputKeyTriggers::default(),
-            last_input: InputState::default(),
-            debounce_timer: 0.13,
-        }
-    }
+    pub input: InputManager,
 }
 
 impl GameMenuState {
+    pub fn new() -> Self {
+        Self {
+            input: InputManager::with_debounce(0.13),
+        }
+    }
+
     pub fn update(&mut self, rl: &RaylibHandle, dt: f32, gb: &Option<Dmg>) -> Option<EmulatorState> {
-        if self.debounce_timer > 0.0 {
-            self.debounce_timer -= dt;
-            return None;
+        self.input.update(rl, dt);
+
+        if (self.input.is_pressed_a() || self.input.is_pressed_start() || self.input.is_pressed_select())
+            && gb.is_some()
+        {
+            return Some(EmulatorState::Emulation(EmulationState::new()));
         }
 
-        let input = self.key_triggers.to_input(rl);
-
-        let a_pressed = input.a && !self.last_input.a;
-        let start_pressed = input.start && !self.last_input.start;
-        let select_pressed = input.select && !self.last_input.select;
-        let left_pressed = input.left && !self.last_input.left;
-        let right_pressed = input.right && !self.last_input.right;
-
-        self.last_input = input;
-
-        if (a_pressed || start_pressed || select_pressed) && gb.is_some() {
-            return Some(EmulatorState::Emulation(EmulationState {
-                key_triggers: InputKeyTriggers::default(),
-            }));
-        }
-
-        if left_pressed {
+        if self.input.is_pressed_left() {
             return Some(EmulatorState::SelectionMenu(SelectionMenuState::new(ROMS_DIR)));
         }
 
-        if right_pressed {
-            return Some(EmulatorState::SettingsMenu(SettingsMenuState::default()));
+        if self.input.is_pressed_right() {
+            return Some(EmulatorState::SettingsMenu(SettingsMenuState::new()));
         }
 
         None

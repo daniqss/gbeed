@@ -50,13 +50,14 @@ impl EmulatorApp {
                 state.update(rl, dt, &mut self.rom_path, &mut self.gb, &mut self.save_path)?
             }
             EmulatorState::Emulation(state) => state.update(
+                dt,
                 &mut self.gb,
                 &mut self.rom_path,
                 &mut self.save_path,
                 &mut self.controller,
             )?,
             EmulatorState::GameMenu(state) => state.update(rl, dt, &self.gb),
-            EmulatorState::SettingsMenu(state) => state.update(rl),
+            EmulatorState::SettingsMenu(state) => state.update(rl, dt),
         };
 
         if let Some(state) = next_state {

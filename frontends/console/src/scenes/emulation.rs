@@ -4,17 +4,24 @@ use crate::scenes::GameMenuState;
 use crate::utils::layout::*;
 use crate::utils::save_cartridge;
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{InputKeyTriggers, ToInputState};
+use gbeed_raylib_common::InputManager;
 use raylib::prelude::*;
 use std::path::PathBuf;
 
 pub struct EmulationState {
-    pub key_triggers: InputKeyTriggers,
+    pub input: InputManager,
 }
 
 impl EmulationState {
+    pub fn new() -> Self {
+        Self {
+            input: InputManager::with_debounce(0.13),
+        }
+    }
+
     pub fn update(
         &mut self,
+        dt: f32,
         gb: &mut Option<Dmg>,
         _rom_path: &mut Option<PathBuf>,
         save_path: &mut Option<PathBuf>,
@@ -24,14 +31,14 @@ impl EmulationState {
             return Ok(None);
         };
 
-        let input = self.key_triggers.to_input(&controller.rl);
+        self.input.update(&controller.rl, dt);
 
-        if input.escape {
+        if self.input.is_pressed_escape() {
             save_cartridge(gb, save_path)?;
-            return Ok(Some(EmulatorState::GameMenu(GameMenuState::default())));
+            return Ok(Some(EmulatorState::GameMenu(GameMenuState::new())));
         }
 
-        input.apply(&mut gb.joypad);
+        self.input.state().apply(&mut gb.joypad);
 
         gb.run(controller)?;
         Ok(None)

@@ -1,21 +1,23 @@
 use crate::scenes::{EmulatorState, GameMenuState};
-use gbeed_raylib_common::{InputKeyTriggers, InputState, ToInputState};
+use gbeed_raylib_common::InputManager;
 use raylib::prelude::*;
 
-#[derive(Default)]
 pub struct SettingsMenuState {
-    pub key_triggers: InputKeyTriggers,
-    pub last_input: InputState,
+    pub input: InputManager,
 }
 
 impl SettingsMenuState {
-    pub fn update(&mut self, rl: &RaylibHandle) -> Option<EmulatorState> {
-        let input = self.key_triggers.to_input(rl);
-        let left_pressed = input.left && !self.last_input.left;
-        self.last_input = input;
+    pub fn new() -> Self {
+        Self {
+            input: InputManager::with_debounce(0.13),
+        }
+    }
 
-        if left_pressed {
-            return Some(EmulatorState::GameMenu(GameMenuState::default()));
+    pub fn update(&mut self, rl: &RaylibHandle, dt: f32) -> Option<EmulatorState> {
+        self.input.update(rl, dt);
+        
+        if self.input.is_pressed_left() {
+            return Some(EmulatorState::GameMenu(GameMenuState::new()));
         }
 
         None

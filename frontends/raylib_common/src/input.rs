@@ -60,7 +60,7 @@ impl ToInputState for InputKeyTriggers {
             b: self.b.iter().any(|k| rl.is_key_down(*k)),
             start: self.start.iter().any(|k| rl.is_key_down(*k)),
             select: self.select.iter().any(|k| rl.is_key_down(*k)),
-            escape: self.escape.iter().any(|k| rl.is_key_pressed(*k)),
+            escape: self.escape.iter().any(|k| rl.is_key_down(*k)),
             speed_up: self.speed_up.iter().any(|k| rl.is_key_down(*k)),
         }
     }
@@ -151,5 +151,99 @@ impl InputState {
         joypad.button_down(JoypadButton::B, self.b);
         joypad.button_down(JoypadButton::Start, self.start);
         joypad.button_down(JoypadButton::Select, self.select);
+    }
+}
+
+pub struct InputManager {
+    pub triggers: InputKeyTriggers,
+    pub current: InputState,
+    pub previous: InputState,
+    pub repeat_timer: f32,
+    pub debounce_timer: f32,
+}
+
+impl Default for InputManager {
+    fn default() -> Self { Self::new() }
+}
+
+impl InputManager {
+    pub fn new() -> Self {
+        Self {
+            triggers: InputKeyTriggers::default(),
+            current: InputState::default(),
+            previous: InputState::default(),
+            repeat_timer: 0.0,
+            debounce_timer: 0.0,
+        }
+    }
+
+    pub fn with_debounce(debounce_time: f32) -> Self {
+        let mut manager = Self::new();
+        manager.debounce_timer = debounce_time;
+        manager
+    }
+
+    pub fn update(&mut self, rl: &RaylibHandle, dt: f32) {
+        if self.debounce_timer > 0.0 {
+            self.debounce_timer -= dt;
+            self.current = self.triggers.to_input(rl);
+            self.previous = self.current;
+            return;
+        }
+
+        self.previous = self.current;
+        self.current = self.triggers.to_input(rl);
+
+        let dirs_held = self.current.up || self.current.down || self.current.left || self.current.right;
+        let dirs_pressed = self.is_pressed_up()
+            || self.is_pressed_down()
+            || self.is_pressed_left()
+            || self.is_pressed_right();
+
+        if dirs_held {
+            self.repeat_timer += dt;
+            if dirs_pressed {
+                self.repeat_timer = 0.0;
+            }
+        } else {
+            self.repeat_timer = 0.0;
+        }
+    }
+
+    pub fn state(&self) -> InputState { self.current }
+
+    pub fn is_pressed_up(&self) -> bool { self.current.up && !self.previous.up }
+    pub fn is_pressed_down(&self) -> bool { self.current.down && !self.previous.down }
+    pub fn is_pressed_left(&self) -> bool { self.current.left && !self.previous.left }
+    pub fn is_pressed_right(&self) -> bool { self.current.right && !self.previous.right }
+    pub fn is_pressed_a(&self) -> bool { self.current.a && !self.previous.a }
+    pub fn is_pressed_b(&self) -> bool { self.current.b && !self.previous.b }
+    pub fn is_pressed_start(&self) -> bool { self.current.start && !self.previous.start }
+    pub fn is_pressed_select(&self) -> bool { self.current.select && !self.previous.select }
+    pub fn is_pressed_escape(&self) -> bool { self.current.escape && !self.previous.escape }
+
+    pub fn is_repeated_up(&self, dt: f32) -> bool {
+        self.is_pressed_up() || (self.current.up && self.check_repeat(dt))
+    }
+    pub fn is_repeated_down(&self, dt: f32) -> bool {
+        self.is_pressed_down() || (self.current.down && self.check_repeat(dt))
+    }
+    pub fn is_repeated_left(&self, dt: f32) -> bool {
+        self.is_pressed_left() || (self.current.left && self.check_repeat(dt))
+    }
+    pub fn is_repeated_right(&self, dt: f32) -> bool {
+        self.is_pressed_right() || (self.current.right && self.check_repeat(dt))
+    }
+
+    fn check_repeat(&self, dt: f32) -> bool {
+        const REPEAT_DELAY: f32 = 0.3;
+        const REPEAT_RATE: f32 = 0.08;
+        if self.repeat_timer >= REPEAT_DELAY {
+            let ticks = ((self.repeat_timer - REPEAT_DELAY) / REPEAT_RATE) as usize;
+            let prev = ((self.repeat_timer - REPEAT_DELAY - dt.max(0.0)) / REPEAT_RATE) as usize;
+            ticks > prev
+        } else {
+            false
+        }
     }
 }

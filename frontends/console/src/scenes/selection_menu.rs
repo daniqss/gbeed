@@ -1,5 +1,5 @@
 use gbeed_core::prelude::Dmg;
-use gbeed_raylib_common::{InputKeyTriggers, InputState, ToInputState};
+use gbeed_raylib_common::InputManager;
 use raylib::prelude::*;
 use std::path::PathBuf;
 
@@ -12,11 +12,8 @@ pub struct SelectionMenuState {
     pub roms: Vec<PathBuf>,
     pub selected: usize,
     pub scroll_offset: usize,
-    pub repeat_timer: f32,
-    pub debounce_timer: f32,
-    pub triggers: InputKeyTriggers,
+    pub input: InputManager,
     pub confirming_new_game: bool,
-    last_input: InputState,
 }
 
 impl SelectionMenuState {
@@ -44,11 +41,8 @@ impl SelectionMenuState {
             roms,
             selected: 0,
             scroll_offset: 0,
-            repeat_timer: 0.0,
-            debounce_timer: 0.13,
-            triggers: InputKeyTriggers::default(),
+            input: InputManager::with_debounce(0.13),
             confirming_new_game: false,
-            last_input: InputState::default(),
         }
     }
 
@@ -60,69 +54,25 @@ impl SelectionMenuState {
         gb: &mut Option<Dmg>,
         save_path: &mut Option<PathBuf>,
     ) -> Result<Option<EmulatorState>, Box<dyn std::error::Error>> {
-        if self.debounce_timer > 0.0 {
-            self.debounce_timer -= dt;
-            return Ok(None);
-        }
-
-        let input = self.triggers.to_input(rl);
-
-        let a_pressed = input.a && !self.last_input.a;
-        let right_pressed = input.right && !self.last_input.right;
+        self.input.update(rl, dt);
 
         if self.confirming_new_game {
-            let b_pressed = input.b && !self.last_input.b;
-            let start_pressed = input.start && !self.last_input.start;
-
-            self.last_input = input;
-
-            if a_pressed || start_pressed {
+            if self.input.is_pressed_a() || self.input.is_pressed_start() {
                 self.confirming_new_game = false;
                 let path = self.roms[self.selected].clone();
                 let cartridge = load_cartridge(&path, save_path)?;
                 *rom_path = Some(path);
                 *gb = Some(Dmg::new(cartridge, None));
 
-                return Ok(Some(EmulatorState::Emulation(EmulationState {
-                    key_triggers: InputKeyTriggers::default(),
-                })));
-            } else if b_pressed {
+                return Ok(Some(EmulatorState::Emulation(EmulationState::new())));
+            } else if self.input.is_pressed_b() {
                 self.confirming_new_game = false;
             }
             return Ok(None);
         }
 
-        let up_held = input.up;
-        let down_held = input.down;
-        let up_pressed = input.up && !self.last_input.up;
-        let down_pressed = input.down && !self.last_input.down;
-
-        let mut move_up = up_pressed;
-        let mut move_down = down_pressed;
-
-        const REPEAT_DELAY: f32 = 0.3;
-        const REPEAT_RATE: f32 = 0.08;
-
-        if up_held || down_held {
-            self.repeat_timer += dt;
-            if up_pressed || down_pressed {
-                self.repeat_timer = 0.0;
-            }
-            if self.repeat_timer >= REPEAT_DELAY {
-                let ticks = ((self.repeat_timer - REPEAT_DELAY) / REPEAT_RATE) as usize;
-                let prev = ((self.repeat_timer - REPEAT_DELAY - dt.max(0.0)) / REPEAT_RATE) as usize;
-                if ticks > prev {
-                    if up_held {
-                        move_up = true;
-                    }
-                    if down_held {
-                        move_down = true;
-                    }
-                }
-            }
-        } else {
-            self.repeat_timer = 0.0;
-        }
+        let move_up = self.input.is_repeated_up(dt);
+        let move_down = self.input.is_repeated_down(dt);
 
         let visible_count = ((selector_bottom() - selector_top()) / ITEM_H) as usize;
 
@@ -142,9 +92,7 @@ impl SelectionMenuState {
             }
         }
 
-        self.last_input = input;
-
-        if a_pressed && !self.roms.is_empty() {
+        if self.input.is_pressed_a() && !self.roms.is_empty() {
             if gb.is_some() {
                 self.confirming_new_game = true;
                 return Ok(None);
@@ -155,13 +103,11 @@ impl SelectionMenuState {
             *rom_path = Some(path);
             *gb = Some(Dmg::new(cartridge, None));
 
-            return Ok(Some(EmulatorState::Emulation(EmulationState {
-                key_triggers: InputKeyTriggers::default(),
-            })));
+            return Ok(Some(EmulatorState::Emulation(EmulationState::new())));
         }
 
-        if right_pressed && !self.confirming_new_game {
-            return Ok(Some(EmulatorState::GameMenu(GameMenuState::default())));
+        if self.input.is_pressed_right() && !self.confirming_new_game {
+            return Ok(Some(EmulatorState::GameMenu(GameMenuState::new())));
         }
 
         Ok(None)
