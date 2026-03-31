@@ -6,6 +6,7 @@ pub enum Palette {
     DmgClassic,
     GrayScale,
     Red,
+    Turquoise,
     Blue,
     Green,
     Yellow,
@@ -14,10 +15,11 @@ pub enum Palette {
 }
 
 impl Palette {
-    pub const ALL: [Palette; 8] = [
+    pub const ALL: [Palette; 9] = [
         Palette::DmgClassic,
         Palette::GrayScale,
         Palette::Red,
+        Palette::Turquoise,
         Palette::Blue,
         Palette::Green,
         Palette::Yellow,
@@ -40,40 +42,50 @@ impl Palette {
                 Color::new(0, 0, 0, 255),
             ],
             Palette::Red => [
-                Color::new(255, 204, 204, 255),
-                Color::new(255, 136, 136, 255),
-                Color::new(204, 68, 68, 255),
-                Color::new(136, 0, 0, 255),
+                Color::new(204, 0, 1, 255),
+                Color::new(143, 0, 1, 255),
+                Color::new(82, 0, 0, 255),
+                Color::new(20, 0, 0, 255),
+            ],
+            Palette::Turquoise => [
+                Color::new(3, 192, 198, 255),
+                Color::new(2, 134, 139, 255),
+                Color::new(1, 77, 79, 255),
+                Color::new(0, 19, 20, 255),
             ],
             Palette::Blue => [
-                Color::new(204, 204, 255, 255),
-                Color::new(136, 136, 255, 255),
-                Color::new(68, 68, 204, 255),
-                Color::new(0, 0, 136, 255),
+                Color::new(0, 0, 254, 255),
+                Color::new(0, 0, 178, 255),
+                Color::new(0, 0, 102, 255),
+                Color::new(0, 0, 25, 255),
             ],
+
             Palette::Green => [
-                Color::new(204, 255, 204, 255),
-                Color::new(136, 255, 136, 255),
-                Color::new(68, 204, 68, 255),
-                Color::new(0, 136, 0, 255),
+                Color::new(1, 204, 0, 255),
+                Color::new(1, 143, 0, 255),
+                Color::new(0, 82, 0, 255),
+                Color::new(0, 20, 0, 255),
             ],
+
             Palette::Yellow => [
-                Color::new(255, 255, 204, 255),
-                Color::new(255, 255, 136, 255),
-                Color::new(204, 204, 68, 255),
-                Color::new(136, 136, 0, 255),
+                Color::new(255, 255, 1, 255),
+                Color::new(178, 178, 1, 255),
+                Color::new(102, 102, 0, 255),
+                Color::new(25, 25, 0, 255),
             ],
+
             Palette::Purple => [
-                Color::new(255, 204, 255, 255),
-                Color::new(255, 136, 255, 255),
-                Color::new(204, 68, 204, 255),
-                Color::new(136, 0, 136, 255),
+                Color::new(118, 44, 167, 255),
+                Color::new(83, 31, 117, 255),
+                Color::new(47, 18, 67, 255),
+                Color::new(12, 4, 17, 255),
             ],
+
             Palette::Pink => [
-                Color::new(255, 204, 229, 255),
-                Color::new(255, 153, 204, 255),
-                Color::new(204, 102, 153, 255),
-                Color::new(153, 51, 102, 255),
+                Color::new(254, 152, 191, 255),
+                Color::new(178, 106, 134, 255),
+                Color::new(102, 61, 76, 255),
+                Color::new(25, 15, 19, 255),
             ],
         }
     }
@@ -83,6 +95,7 @@ impl Palette {
             Palette::DmgClassic => "DmgClassic",
             Palette::GrayScale => "GrayScale",
             Palette::Red => "Red",
+            Palette::Turquoise => "Turquoise",
             Palette::Blue => "Blue",
             Palette::Green => "Green",
             Palette::Yellow => "Yellow",
@@ -91,32 +104,8 @@ impl Palette {
         }
     }
 
-    pub fn foreground(&self) -> Color {
-        self.colors()[0]
-    }
-
-    pub fn primary(&self) -> Color {
-        self.colors()[1]
-    }
-
-    pub fn secondary(&self) -> Color {
-        self.colors()[2]
-    }
-
-    pub fn background(&self) -> Color {
-        self.colors()[3]
-    }
+    pub fn foreground(&self) -> Color { self.colors()[0] }
+    pub fn primary(&self) -> Color { self.colors()[1] }
+    pub fn secondary(&self) -> Color { self.colors()[2] }
+    pub fn background(&self) -> Color { self.colors()[3] }
 }
-
-// dmg greenish palette
-pub const DMG_PALETTE: [Color; 4] = [
-    Color::new(196, 207, 161, 255),
-    Color::new(139, 149, 109, 255),
-    Color::new(77, 83, 60, 255),
-    Color::new(31, 31, 31, 255),
-];
-
-pub const FOREGROUND: Color = DMG_PALETTE[0];
-pub const PRIMARY: Color = DMG_PALETTE[1];
-pub const SECONDARY: Color = DMG_PALETTE[2];
-pub const BACKGROUND: Color = DMG_PALETTE[3];
