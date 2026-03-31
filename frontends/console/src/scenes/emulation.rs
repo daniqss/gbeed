@@ -2,7 +2,7 @@ use crate::controller::ConsoleController;
 use crate::scenes::EmulatorState;
 use crate::scenes::GameMenuState;
 use crate::utils::layout::*;
-use crate::utils::save_cartridge;
+use crate::utils::roms::save_cartridge;
 use gbeed_core::prelude::*;
 use gbeed_raylib_common::InputManager;
 use raylib::prelude::*;

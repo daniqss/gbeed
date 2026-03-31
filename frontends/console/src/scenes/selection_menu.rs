@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use crate::{
     scenes::{EmulationState, EmulatorState, GameMenuState, SettingsMenuState},
-    utils::{layout::*, load_cartridge, truncate_name},
+    utils::{layout::*, roms, truncate_name},
 };
 
 pub struct SelectionMenuState {
@@ -17,28 +17,9 @@ pub struct SelectionMenuState {
 }
 
 impl SelectionMenuState {
-    pub fn new(roms_dir: &str) -> Self {
-        let mut roms: Vec<PathBuf> = std::fs::read_dir(roms_dir)
-            .map(|entries| {
-                entries
-                    .filter_map(Result::ok)
-                    .map(|entry| entry.path())
-                    .filter(|path| {
-                        path.is_file()
-                            && path
-                                .extension()
-                                .and_then(|ext| ext.to_str())
-                                .map(|ext| ext.eq_ignore_ascii_case("gb") || ext.eq_ignore_ascii_case("gbc"))
-                                .unwrap_or(false)
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
-
-        roms.sort();
-
+    pub fn new() -> Self {
         Self {
-            roms,
+            roms: roms::find_roms(),
             selected: 0,
             scroll_offset: 0,
             input: InputManager::with_debounce(0.08),
@@ -60,7 +41,7 @@ impl SelectionMenuState {
             if self.input.is_pressed_a() || self.input.is_pressed_start() {
                 self.confirming_new_game = false;
                 let path = self.roms[self.selected].clone();
-                let cartridge = load_cartridge(&path, save_path)?;
+                let cartridge = roms::load_cartridge(&path, save_path)?;
                 *rom_path = Some(path);
                 *gb = Some(Dmg::new(cartridge, None));
 
@@ -99,7 +80,7 @@ impl SelectionMenuState {
             }
 
             let path = self.roms[self.selected].clone();
-            let cartridge = load_cartridge(&path, save_path)?;
+            let cartridge = roms::load_cartridge(&path, save_path)?;
             *rom_path = Some(path);
             *gb = Some(Dmg::new(cartridge, None));
 

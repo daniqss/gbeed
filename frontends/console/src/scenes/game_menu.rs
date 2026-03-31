@@ -1,6 +1,5 @@
 use crate::scenes::{EmulationState, EmulatorState, SelectionMenuState, SettingsMenuState};
 use crate::utils::layout::*;
-use crate::ROMS_DIR;
 use gbeed_core::prelude::{Dmg, DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH};
 use gbeed_raylib_common::{InputManager, Palette};
 use raylib::prelude::*;
@@ -27,7 +26,7 @@ impl GameMenuState {
         }
 
         if self.input.is_repeated_left(dt) {
-            return Some(EmulatorState::SelectionMenu(SelectionMenuState::new(ROMS_DIR)));
+            return Some(EmulatorState::SelectionMenu(SelectionMenuState::new()));
         }
 
         if self.input.is_repeated_right(dt) {

@@ -1,7 +1,6 @@
 use crate::controller::ConsoleController;
 use crate::scenes::{EmulatorState, GameMenuState, SelectionMenuState};
 use crate::utils::layout::{self, *};
-use crate::ROMS_DIR;
 use gbeed_raylib_common::{InputManager, Palette};
 use raylib::prelude::*;
 
@@ -65,7 +64,7 @@ impl SettingsMenuState {
         }
 
         if self.input.is_repeated_right(dt) {
-            return Some(EmulatorState::SelectionMenu(SelectionMenuState::new(ROMS_DIR)));
+            return Some(EmulatorState::SelectionMenu(SelectionMenuState::new()));
         }
 
         let current_option = SettingsOption::ALL[self.selected];

@@ -9,10 +9,7 @@ use std::path::PathBuf;
 
 use crate::controller::ConsoleController;
 use crate::scenes::{EmulatorState, SelectionMenuState};
-use crate::utils::layout::*;
-
-pub const ROMS_DIR: &str = "/home/daniqss/roms";
-const _SAVE_DIR: &str = "/home/daniqss/saves";
+use crate::utils::layout::{draw_footer, draw_header, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 struct EmulatorApp {
     state: EmulatorState,
@@ -32,7 +29,7 @@ impl EmulatorApp {
         );
 
         Self {
-            state: EmulatorState::SelectionMenu(SelectionMenuState::new(ROMS_DIR)),
+            state: EmulatorState::SelectionMenu(SelectionMenuState::new()),
             gb: None,
             rom_path: None,
             save_path: None,
