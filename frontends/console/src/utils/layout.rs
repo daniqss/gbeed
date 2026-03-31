@@ -141,11 +141,10 @@ pub fn draw_menu_list(
 
 /// Draws the selection menu footer with control hints
 pub fn draw_footer(d: &mut RaylibDrawHandle, state: &EmulatorState, palette: Palette) {
-    // TODO: real hints
     let hint = match state {
-        EmulatorState::SelectionMenu(_) => "w/s move  enter select",
-        EmulatorState::GameMenu(_) => "r resume  s save  l load  q quit",
-        EmulatorState::SettingsMenu(_) => "s save settings  q back",
+        EmulatorState::SelectionMenu(_) => "w/s to navigate roms and a to select",
+        EmulatorState::GameMenu(_) => "a to enter back the game",
+        EmulatorState::SettingsMenu(_) => "w/s to navigate and a/b to change values",
         EmulatorState::Emulation(_) => return,
     };
 

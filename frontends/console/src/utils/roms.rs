@@ -31,7 +31,7 @@ pub fn saves_dir() -> PathBuf {
 }
 pub fn find_roms() -> Vec<PathBuf> {
     let dir = roms_dir();
-    println!("Looking for ROMs in {:?}", dir);
+
     let mut roms: Vec<PathBuf> = fs::read_dir(&dir)
         .map(|entries| {
             entries
