@@ -2,6 +2,7 @@
 name = "gbeed-console"
 version = "0.1.0"
 edition = "2021"
+default-run = "gbeed"
 
 [[bin]]
 name = "gbeed"

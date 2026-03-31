@@ -6,3 +6,5 @@ members = [
     "frontends/console",
     "frontends/raylib_common",
 ]
+
+default-members = ["frontends/console"]
