@@ -15,15 +15,15 @@ test *ARGS:
 web-build:
     cargo build --target wasm32-unknown-emscripten -p gbeed-debugger --release
     mkdir -p dist
-    cp target/wasm32-unknown-emscripten/release/gbeed.wasm dist/
-    cp target/wasm32-unknown-emscripten/release/gbeed.js dist/
+    cp target/wasm32-unknown-emscripten/release/gbeed_debugger.wasm dist/
+    cp target/wasm32-unknown-emscripten/release/gbeed_debugger.js dist/
     cp -r frontends/debugger/static/* dist/
 
 web-run:
     cargo build --target wasm32-unknown-emscripten -p gbeed-debugger
     mkdir -p dist
-    cp target/wasm32-unknown-emscripten/debug/gbeed.wasm dist/
-    cp target/wasm32-unknown-emscripten/debug/gbeed.js dist/
+    cp target/wasm32-unknown-emscripten/debug/gbeed_debugger.wasm dist/
+    cp target/wasm32-unknown-emscripten/debug/gbeed_debugger.js dist/
     cp -r frontends/debugger/static/* dist/
     python3 -m http.server 8080 --directory dist --bind 0.0.0.0
 

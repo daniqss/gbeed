@@ -28,7 +28,7 @@ pub struct SettingsMenuState {
 impl SettingsMenuState {
     pub fn new() -> Self {
         Self {
-            input: InputManager::with_debounce(0.13),
+            input: InputManager::default(),
             selected: 0,
             scroll_offset: 0,
         }

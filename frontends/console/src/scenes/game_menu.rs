@@ -12,7 +12,7 @@ pub struct GameMenuState {
 impl GameMenuState {
     pub fn new() -> Self {
         Self {
-            input: InputManager::with_debounce(0.08),
+            input: InputManager::default(),
         }
     }
 
