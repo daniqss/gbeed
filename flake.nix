@@ -36,6 +36,7 @@
         clang
 
         rustToolchain
+        cargo-flamegraph
       ];
     in {
       # shell for x11 environments

@@ -1,17 +1,40 @@
 FROM arm32v6/alpine:latest
 
-# dependencies for building the project
 RUN apk add git cargo build-base cmake clang-dev pkgconf alsa-lib-dev libdrm-dev mesa-dev
 
 WORKDIR /app
 
-COPY . .
+# copy only the files needed to compile deps, to take advantage of Docker cache and avoid recompiling deps
+COPY Cargo.toml Cargo.lock ./
+COPY core/Cargo.toml core/Cargo.toml
+COPY frontends/console/Cargo.toml frontends/console/Cargo.toml
+COPY frontends/debugger/Cargo.toml frontends/debugger/Cargo.toml
+COPY frontends/raylib_common/Cargo.toml frontends/raylib_common/Cargo.toml
+COPY frontends/console/build.rs frontends/console/build.rs
 
-# raylib-sys build.rs links against libGLdispatch, although it is not actually used
+# Dummies crate entries to compile deps
+RUN mkdir -p core/src && echo "" > core/src/lib.rs
+RUN mkdir -p frontends/console/src && echo "fn main() {}" > frontends/console/src/main.rs
+RUN mkdir -p frontends/debugger/src && echo "fn main() {}" > frontends/debugger/src/main.rs
+RUN mkdir -p frontends/raylib_common/src && echo "" > frontends/raylib_common/src/lib.rs
+
+# dummy libGLdispatch.so to link against, since raylib-sys needs it to compile, but it's not available on alpine
 RUN touch im-libglvnd-fr-fr.c
 RUN cc -shared -o /tmp/libGLdispatch.so im-libglvnd-fr-fr.c
 
 ENV LIBCLANG_PATH=/usr/lib
-ENV RUSTFLAGS="-L /tmp"
+ENV RUSTFLAGS="-L /tmp -C target-cpu=arm1176jzf-s -C target-feature=+vfp2"
+
+# compile dependencies
+RUN cargo build --release --features "raylib/drm raylib/opengl_es_20" || true
+
+COPY core/src core/src
+COPY frontends frontends
+
+# touch the entry points to force recompilation
+RUN touch core/src/lib.rs
+RUN touch frontends/console/src/main.rs
+RUN touch frontends/debugger/src/main.rs
+RUN touch frontends/raylib_common/src/lib.rs
 
 RUN cargo build --release --features "raylib/drm raylib/opengl_es_20"

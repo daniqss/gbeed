@@ -92,6 +92,7 @@ impl EmulatorApp {
 
             draw_header(&mut d, &self.state, palette);
             draw_footer(&mut d, &self.state, palette);
+            d.draw_fps(215, 220);
         });
     }
 }
