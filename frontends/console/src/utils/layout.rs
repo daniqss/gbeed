@@ -31,7 +31,7 @@ pub fn draw_header(d: &mut RaylibDrawHandle, current_state: &EmulatorState, pale
         EmulatorState::SelectionMenu(_) => (true, false, false),
         EmulatorState::GameMenu(_) => (false, true, false),
         EmulatorState::SettingsMenu(_) => (false, false, true),
-        EmulatorState::Emulation(_) => return,
+        EmulatorState::Emulation(_) | EmulatorState::Exit => return,
     };
 
     let tab_style = |active: bool| {
@@ -145,7 +145,7 @@ pub fn draw_footer(d: &mut RaylibDrawHandle, state: &EmulatorState, palette: Pal
         EmulatorState::SelectionMenu(_) => "w/s to navigate roms and a to select",
         EmulatorState::GameMenu(_) => "a to enter back the game",
         EmulatorState::SettingsMenu(_) => "w/s to navigate and a/b to change values",
-        EmulatorState::Emulation(_) => return,
+        EmulatorState::Emulation(_) | EmulatorState::Exit => return,
     };
 
     d.draw_rectangle(

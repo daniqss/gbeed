@@ -17,9 +17,9 @@ panic = "abort"
 strip = true
 overflow-checks = false
 
-[profile.profiling]
+[profile.bench]
 inherits = "release"
-debug = "line-tables-only"
+debug = true
 lto = "thin"
 codegen-units = 1
-strip = "none"
+strip = false

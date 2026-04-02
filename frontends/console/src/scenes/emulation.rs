@@ -8,6 +8,7 @@ use gbeed_raylib_common::InputManager;
 use raylib::prelude::*;
 use std::path::PathBuf;
 
+#[derive(Debug)]
 pub struct EmulationState {
     pub input: InputManager,
 }

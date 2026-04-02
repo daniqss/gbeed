@@ -8,6 +8,7 @@ use crate::{
     utils::{layout::*, roms, truncate_name},
 };
 
+#[derive(Debug)]
 pub struct SelectionMenuState {
     pub roms: Vec<PathBuf>,
     pub selected: usize,

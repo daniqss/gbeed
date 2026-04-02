@@ -37,6 +37,7 @@
 
         rustToolchain
         cargo-flamegraph
+        perf
       ];
     in {
       # shell for x11 environments

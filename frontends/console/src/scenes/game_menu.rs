@@ -5,6 +5,7 @@ use gbeed_raylib_common::{InputManager, Palette};
 use raylib::prelude::*;
 use std::path::PathBuf;
 
+#[derive(Debug)]
 pub struct GameMenuState {
     pub input: InputManager,
 }

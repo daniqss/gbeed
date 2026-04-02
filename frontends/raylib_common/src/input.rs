@@ -1,7 +1,7 @@
 use gbeed_core::{Joypad, JoypadButton};
 use raylib::prelude::*;
 
-#[derive(Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct InputState {
     pub up: bool,
     pub down: bool,
@@ -19,6 +19,7 @@ pub trait ToInputState {
     fn to_input(&self, rl: &RaylibHandle) -> InputState;
 }
 
+#[derive(Debug)]
 pub struct InputKeyTriggers {
     up: [KeyboardKey; 2],
     down: [KeyboardKey; 2],
@@ -154,6 +155,7 @@ impl InputState {
     }
 }
 
+#[derive(Debug)]
 pub struct InputManager {
     pub triggers: InputKeyTriggers,
     pub current: InputState,

@@ -7,18 +7,21 @@ use raylib::prelude::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SettingsOption {
     ColorPalette,
+    Exit,
 }
 
 impl SettingsOption {
-    pub const ALL: [SettingsOption; 1] = [SettingsOption::ColorPalette];
+    pub const ALL: [SettingsOption; 2] = [SettingsOption::ColorPalette, SettingsOption::Exit];
 
     pub fn name(&self) -> &str {
         match self {
-            SettingsOption::ColorPalette => "COLOR PALETTE",
+            SettingsOption::ColorPalette => "Color Palette",
+            SettingsOption::Exit => "Exit",
         }
     }
 }
 
+#[derive(Debug)]
 pub struct SettingsMenuState {
     pub input: InputManager,
     pub selected: usize,
@@ -86,6 +89,11 @@ impl SettingsMenuState {
                         Palette::ALL[if idx == 0 { Palette::ALL.len() - 1 } else { idx - 1 }];
                 }
             }
+            SettingsOption::Exit => {
+                if self.input.is_pressed_a() {
+                    return Some(EmulatorState::Exit);
+                }
+            }
         }
 
         None
@@ -97,6 +105,7 @@ impl SettingsMenuState {
             .map(|opt| {
                 let value: &str = match opt {
                     SettingsOption::ColorPalette => palette.name(),
+                    SettingsOption::Exit => "",
                 };
                 (opt.name(), value)
             })

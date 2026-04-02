@@ -12,6 +12,9 @@ check *ARGS:
 test *ARGS:
     cargo test --features "${DISPLAY_FEATURES}" {{ARGS}}
 
+flamegraph *ARGS:
+    cargo flamegraph --profile bench --features "${DISPLAY_FEATURES}" -p gbeed-console {{ARGS}}
+
 web-build:
     cargo build --target wasm32-unknown-emscripten -p gbeed-debugger --release
     mkdir -p dist

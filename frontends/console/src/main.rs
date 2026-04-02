@@ -6,6 +6,7 @@ use gbeed_core::prelude::*;
 use gbeed_raylib_common::{Palette, Texture};
 use raylib::prelude::*;
 use std::path::PathBuf;
+use std::process::exit;
 
 use crate::controller::ConsoleController;
 use crate::scenes::{EmulatorState, SelectionMenuState};
@@ -43,6 +44,11 @@ impl EmulatorApp {
         }
     }
 
+    #[inline(always)]
+    pub fn should_close(&self) -> bool {
+        self.controller.rl.window_should_close() || matches!(self.state, EmulatorState::Exit)
+    }
+
     pub fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let dt = self.controller.rl.get_frame_time();
 
@@ -63,6 +69,9 @@ impl EmulatorApp {
             )?,
             EmulatorState::GameMenu(state) => state.update(&self.controller.rl, dt, &self.gb),
             EmulatorState::SettingsMenu(state) => state.update(dt, &mut self.controller),
+
+            // emulator should have already been closed at this point
+            EmulatorState::Exit => unreachable!(),
         };
 
         if let Some(state) = next_state {
@@ -88,6 +97,8 @@ impl EmulatorApp {
                     state.draw(&mut d, screen, &self.gb, &self.rom_path, palette)
                 }
                 EmulatorState::SettingsMenu(state) => state.draw(&mut d, palette),
+
+                EmulatorState::Exit => return,
             }
 
             draw_header(&mut d, &self.state, palette);
@@ -103,13 +114,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .title("gbeed")
         .build();
     rl.set_target_fps(60);
+    rl.set_exit_key(None);
 
     let mut app = EmulatorApp::new(rl, thread);
 
-    while !app.controller.rl.window_should_close() {
+    while !app.should_close() {
         app.update()?;
         app.draw();
     }
 
-    Ok(())
+    exit(0)
 }
