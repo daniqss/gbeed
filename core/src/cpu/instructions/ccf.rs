@@ -6,12 +6,13 @@ use crate::{
     prelude::*,
 };
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Ccf {
     carry: bool,
 }
 
 impl Ccf {
-    pub fn new(carry: bool) -> Box<Self> { Box::new(Self { carry }) }
+    pub fn new(carry: bool) -> InstructionBox { InstructionBox::new(Self { carry }) }
 }
 
 impl Instruction for Ccf {

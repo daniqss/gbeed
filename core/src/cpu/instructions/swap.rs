@@ -16,12 +16,13 @@ fn swap_u8_flags(result: u8) -> Flags {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SwapR8 {
     dst: R8,
 }
 
 impl SwapR8 {
-    pub fn new(dst: R8) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R8) -> InstructionBox { InstructionBox::new(Self { dst }) }
 }
 
 impl Instruction for SwapR8 {
@@ -36,9 +37,10 @@ impl Instruction for SwapR8 {
     fn disassembly(&self) -> String { format!("swap {}", self.dst) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SwapPointedByHL;
 impl SwapPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 impl Instruction for SwapPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

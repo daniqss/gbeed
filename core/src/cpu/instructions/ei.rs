@@ -9,10 +9,11 @@ use crate::{
 /// enable interrupts
 /// actually ime should be set AFTER the next instruction is executed
 /// but let's hope it works nevertheless
-pub struct Ei {}
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Ei;
 
 impl Ei {
-    pub fn new() -> Box<Self> { Box::new(Self {}) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for Ei {

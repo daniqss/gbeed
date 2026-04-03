@@ -7,10 +7,11 @@ use crate::{
 };
 
 /// Decimal Adjust Accumulator. Meant to be used after an arithmetic operation whose input where in binary coded decimal.
-pub struct Daa {}
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Daa;
 
 impl Daa {
-    pub fn new() -> Box<Self> { Box::new(Self {}) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for Daa {

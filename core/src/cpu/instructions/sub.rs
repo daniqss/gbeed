@@ -22,11 +22,12 @@ fn sub_flags(result: u8, old_a: u8, subtrahend: u8) -> Flags {
 
 /// Subtraction instruction
 /// Subtracts the value of the wanted register from register A
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SubR8 {
     src: R8,
 }
 impl SubR8 {
-    pub fn new(src: R8) -> Box<Self> { Box::new(Self { src }) }
+    pub fn new(src: R8) -> InstructionBox { InstructionBox::new(Self { src }) }
 }
 impl Instruction for SubR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -44,9 +45,10 @@ impl Instruction for SubR8 {
 
 /// Subtraction instruction
 /// Subtracts the value pointed by HL from register A
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SubPointedByHL;
 impl SubPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self {}) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self {}) }
 }
 impl Instruction for SubPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -64,11 +66,12 @@ impl Instruction for SubPointedByHL {
 
 /// Subtraction instruction
 /// Subtracts the value of the immediate 8 bit value from register A
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SubImm8 {
     val: u8,
 }
 impl SubImm8 {
-    pub fn new(val: u8) -> Box<Self> { Box::new(Self { val }) }
+    pub fn new(val: u8) -> InstructionBox { InstructionBox::new(Self { val }) }
 }
 impl Instruction for SubImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

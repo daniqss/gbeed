@@ -10,10 +10,11 @@ use crate::{
 /// In GBC is used for speed switching
 /// Because GBC support is not currently planned (at least now) we will just implement a Nop
 /// This should be checked when lcd is implemented
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Stop;
 
 impl Stop {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for Stop {

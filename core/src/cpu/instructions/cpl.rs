@@ -8,10 +8,11 @@ use crate::{
 
 /// Bitwise NOT, ComPLement accumulator.
 /// Only operates on register A
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Cpl;
 
 impl Cpl {
-    pub fn new() -> Box<Self> { Box::new(Self {}) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self {}) }
 }
 
 impl Instruction for Cpl {

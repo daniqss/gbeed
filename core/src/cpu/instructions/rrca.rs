@@ -24,10 +24,11 @@ fn rrca(value: u8) -> u8 { (value >> 1) | ((value & 1) << 7) }
 /// ┌─╂→ b7 → ... → b0 ─╂─┬─╂→   C    ┃
 /// │ ┗━━━━━━━━━━━━━━━━━┛ │ ┗━━━━━━━━━┛
 /// └─────────────────────┘
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Rrca;
 
 impl Rrca {
-    pub fn new() -> Box<Self> { Box::new(Self {}) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self {}) }
 }
 
 impl Instruction for Rrca {

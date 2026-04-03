@@ -24,10 +24,11 @@ fn rlca(value: u8) -> u8 { value.rotate_left(1) }
 /// ┃    C   ←╂─┬─╂─ b7 ← ... ← b0  ←╂─┐
 /// ┗━━━━━━━━━┛ │ ┗━━━━━━━━━━━━━━━━━━┛ │
 ///             └──────────────────────┘
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Rlca;
 
 impl Rlca {
-    pub fn new() -> Box<Self> { Box::new(Self {}) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self {}) }
 }
 
 impl Instruction for Rlca {

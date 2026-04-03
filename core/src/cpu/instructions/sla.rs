@@ -12,11 +12,12 @@ use crate::{
 /// ┏━ Flags ━┓ ┏━━━━━━━ r8 | [hl] ━━━━━━┓
 /// ┃    C   ←╂─╂─   b7  ←  ...  ←  b0  ←╂─ 0
 /// ┗━━━━━━━━━┛ ┗━━━━━━━━━━━━━━━━━━━━━━━━┛
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SlaR8 {
     dst: R8,
 }
 impl SlaR8 {
-    pub fn new(dst: R8) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R8) -> InstructionBox { InstructionBox::new(Self { dst }) }
 }
 impl Instruction for SlaR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -36,9 +37,10 @@ impl Instruction for SlaR8 {
     fn disassembly(&self) -> String { format!("sla {}", self.dst) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SlaPointedByHL;
 impl SlaPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 impl Instruction for SlaPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

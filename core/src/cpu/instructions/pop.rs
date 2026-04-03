@@ -28,12 +28,13 @@ fn flags_pop(dst: R16, src: u16) -> Flags {
 /// ld a, [sp]
 /// inc sp
 /// ``````
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Pop {
     dst: R16,
 }
 
 impl Pop {
-    pub fn new(dst: R16) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R16) -> InstructionBox { InstructionBox::new(Self { dst }) }
 }
 impl Instruction for Pop {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

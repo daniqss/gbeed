@@ -12,12 +12,13 @@ use crate::{
 /// so the used addresses are between 0xFF00 and 0xFFFF
 ///
 /// copy the src value in register A to the byte at 16 bits immediate address (that must be between 0xFF00 and 0xFFFF)
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdhImm8A {
     pub addr_offset: u8,
 }
 
 impl LdhImm8A {
-    pub fn new(addr_offset: u8) -> Box<Self> { Box::new(Self { addr_offset }) }
+    pub fn new(addr_offset: u8) -> InstructionBox { InstructionBox::new(Self { addr_offset }) }
 }
 
 impl Instruction for LdhImm8A {
@@ -39,10 +40,11 @@ impl Instruction for LdhImm8A {
 /// so the used addresses are between 0xFF00 and 0xFFFF
 ///
 /// copy the src value in register A to the byte at address 0xFF00 + value in register C
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdhCA;
 
 impl LdhCA {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdhCA {
@@ -62,12 +64,13 @@ impl Instruction for LdhCA {
 /// so the used addresses are between 0xFF00 and 0xFFFF
 ///
 /// copy the src byte addressed by 16 bits immediate (that must be between 0xFF00 and 0xFFFF) into dst register A
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdhAImm8 {
     pub addr_offset: u8,
 }
 
 impl LdhAImm8 {
-    pub fn new(addr_offset: u8) -> Box<Self> { Box::new(Self { addr_offset }) }
+    pub fn new(addr_offset: u8) -> InstructionBox { InstructionBox::new(Self { addr_offset }) }
 }
 
 impl Instruction for LdhAImm8 {
@@ -89,10 +92,11 @@ impl Instruction for LdhAImm8 {
 /// so the used addresses are between 0xFF00 and 0xFFFF
 ///
 /// copy the src byte addressed by 0xFF00 + C into dst register A
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdhAC;
 
 impl LdhAC {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdhAC {

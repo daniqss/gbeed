@@ -30,11 +30,12 @@ fn add_u8_flags(result: u8, old_a: u8) -> Flags {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AddAR8 {
     src: R8,
 }
 impl AddAR8 {
-    pub fn new(src: R8) -> Box<Self> { Box::new(Self { src }) }
+    pub fn new(src: R8) -> InstructionBox { InstructionBox::new(Self { src }) }
 }
 impl Instruction for AddAR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -46,9 +47,10 @@ impl Instruction for AddAR8 {
     fn disassembly(&self) -> String { format!("add a,{}", self.src) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AddAPointedByHL;
 impl AddAPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 impl Instruction for AddAPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -60,11 +62,12 @@ impl Instruction for AddAPointedByHL {
     fn disassembly(&self) -> String { "add a,[hl]".to_string() }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AddImm8 {
     val: u8,
 }
 impl AddImm8 {
-    pub fn new(val: u8) -> Box<Self> { Box::new(Self { val }) }
+    pub fn new(val: u8) -> InstructionBox { InstructionBox::new(Self { val }) }
 }
 impl Instruction for AddImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -76,11 +79,12 @@ impl Instruction for AddImm8 {
     fn disassembly(&self) -> String { format!("add a,${:02X}", self.val) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AddR16 {
     src: R16,
 }
 impl AddR16 {
-    pub fn new(src: R16) -> Box<Self> { Box::new(Self { src }) }
+    pub fn new(src: R16) -> InstructionBox { InstructionBox::new(Self { src }) }
 }
 impl Instruction for AddR16 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -100,9 +104,10 @@ impl Instruction for AddR16 {
     fn disassembly(&self) -> String { format!("add hl,{}", self.src) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AddHLSP;
 impl AddHLSP {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 impl Instruction for AddHLSP {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -122,11 +127,12 @@ impl Instruction for AddHLSP {
     fn disassembly(&self) -> String { "add hl,sp".to_string() }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AddSPImm8 {
     val: i8,
 }
 impl AddSPImm8 {
-    pub fn new(val: i8) -> Box<Self> { Box::new(Self { val }) }
+    pub fn new(val: i8) -> InstructionBox { InstructionBox::new(Self { val }) }
 }
 impl Instruction for AddSPImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

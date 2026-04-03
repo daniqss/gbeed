@@ -18,11 +18,12 @@ fn dec_u8_flags(old: u8, result: u8) -> Flags {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct DecR8 {
     dst: R8,
 }
 impl DecR8 {
-    pub fn new(dst: R8) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R8) -> InstructionBox { InstructionBox::new(Self { dst }) }
 }
 
 impl Instruction for DecR8 {
@@ -37,9 +38,10 @@ impl Instruction for DecR8 {
     fn disassembly(&self) -> String { format!("dec {}", self.dst) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct DecPointedByHL;
 impl DecPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for DecPointedByHL {
@@ -54,11 +56,12 @@ impl Instruction for DecPointedByHL {
     fn disassembly(&self) -> String { "dec [hl]".to_string() }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct DecR16 {
     dst: R16,
 }
 impl DecR16 {
-    pub fn new(dst: R16) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R16) -> InstructionBox { InstructionBox::new(Self { dst }) }
 }
 
 impl Instruction for DecR16 {
@@ -73,10 +76,11 @@ impl Instruction for DecR16 {
     fn disassembly(&self) -> String { format!("dec {}", self.dst) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct DecStackPointer;
 
 impl DecStackPointer {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for DecStackPointer {

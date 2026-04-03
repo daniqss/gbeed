@@ -8,12 +8,13 @@ use crate::{
 };
 
 /// Sets bit u3 in register r8 to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SetR8 {
     bit: u8,
     dst: R8,
 }
 impl SetR8 {
-    pub fn new(bit: u8, dst: R8) -> Box<Self> { Box::new(Self { bit, dst }) }
+    pub fn new(bit: u8, dst: R8) -> InstructionBox { InstructionBox::new(Self { bit, dst }) }
 }
 impl Instruction for SetR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -27,11 +28,12 @@ impl Instruction for SetR8 {
     fn disassembly(&self) -> String { format!("set {}, {}", self.bit, self.dst) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SetPointedByHL {
     bit: u8,
 }
 impl SetPointedByHL {
-    pub fn new(bit: u8) -> Box<Self> { Box::new(Self { bit }) }
+    pub fn new(bit: u8) -> InstructionBox { InstructionBox::new(Self { bit }) }
 }
 impl Instruction for SetPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

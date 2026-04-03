@@ -7,10 +7,11 @@ use crate::{
 };
 
 /// return from subroutine and enable interrupts
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Reti {}
 
 impl Reti {
-    pub fn new() -> Box<Self> { Box::new(Self {}) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self {}) }
 }
 
 impl Instruction for Reti {

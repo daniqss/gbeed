@@ -21,13 +21,14 @@ fn bit_flags(test_bit: u8) -> Flags {
 fn test_bit(value: u8, bit: u8) -> u8 { value & (1 << bit) }
 
 // /// Test bit u3 for a 8 bit register
+#[derive(Debug, Default, Clone, Copy)]
 pub struct BitR8 {
     target: R8,
     bit: u8,
 }
 
 impl BitR8 {
-    pub fn new(bit: u8, target: R8) -> Box<Self> { Box::new(Self { bit, target }) }
+    pub fn new(bit: u8, target: R8) -> InstructionBox { InstructionBox::new(Self { bit, target }) }
 }
 impl Instruction for BitR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -41,11 +42,12 @@ impl Instruction for BitR8 {
 }
 
 /// Test bit u3 for the value pointed by HL
+#[derive(Debug, Default, Clone, Copy)]
 pub struct BitPointedByHL {
     bit: u8,
 }
 impl BitPointedByHL {
-    pub fn new(bit: u8) -> Box<Self> { Box::new(Self { bit }) }
+    pub fn new(bit: u8) -> InstructionBox { InstructionBox::new(Self { bit }) }
 }
 impl Instruction for BitPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

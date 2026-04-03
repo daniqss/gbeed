@@ -25,11 +25,12 @@ fn rl(value: u8, carry: bool) -> u8 { (value << 1) | if carry { 1 } else { 0 } }
 /// ┌─╂─   C   ←╂─╂─  b7  ←   ...  ←  b0  ←╂─┐
 /// │ ┗━━━━━━━━━┛ ┗━━━━━━━━━━━━━━━━━━━━━━━━┛ │
 /// └────────────────────────────────────────┘
+#[derive(Debug, Default, Clone, Copy)]
 pub struct RlR8 {
     dst: R8,
 }
 impl RlR8 {
-    pub fn new(dst: R8) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R8) -> InstructionBox { InstructionBox::new(Self { dst }) }
 }
 impl Instruction for RlR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -44,9 +45,10 @@ impl Instruction for RlR8 {
     fn disassembly(&self) -> String { format!("rl {}", self.dst) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct RlPointedByHL;
 impl RlPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 impl Instruction for RlPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

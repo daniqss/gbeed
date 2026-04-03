@@ -9,13 +9,14 @@ use crate::{
 
 /// LD r8, r8
 /// Load value from src register into dst register
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdR8R8 {
     pub dst: R8,
     pub src: R8,
 }
 
 impl LdR8R8 {
-    pub fn new(dst: R8, src: R8) -> Box<Self> { Box::new(Self { dst, src }) }
+    pub fn new(dst: R8, src: R8) -> InstructionBox { InstructionBox::new(Self { dst, src }) }
 }
 
 impl Instruction for LdR8R8 {
@@ -31,13 +32,14 @@ impl Instruction for LdR8R8 {
 
 /// LD r8, n8
 /// Load immediate 8-bit value into dst register
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdR8Imm8 {
     pub dst: R8,
     pub val: u8,
 }
 
 impl LdR8Imm8 {
-    pub fn new(dst: R8, val: u8) -> Box<Self> { Box::new(Self { dst, val }) }
+    pub fn new(dst: R8, val: u8) -> InstructionBox { InstructionBox::new(Self { dst, val }) }
 }
 
 impl Instruction for LdR8Imm8 {
@@ -52,13 +54,14 @@ impl Instruction for LdR8Imm8 {
 
 /// LD r16, n16
 /// Load immediate 16-bit value into dst register
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdR16Imm16 {
     pub dst: R16,
     pub val: u16,
 }
 
 impl LdR16Imm16 {
-    pub fn new(dst: R16, val: u16) -> Box<Self> { Box::new(Self { dst, val }) }
+    pub fn new(dst: R16, val: u16) -> InstructionBox { InstructionBox::new(Self { dst, val }) }
 }
 
 impl Instruction for LdR16Imm16 {
@@ -73,12 +76,13 @@ impl Instruction for LdR16Imm16 {
 
 /// LD SP, n16
 /// Load immediate 16-bit value into Stack Pointer
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdSPImm16 {
     pub val: u16,
 }
 
 impl LdSPImm16 {
-    pub fn new(val: u16) -> Box<Self> { Box::new(Self { val }) }
+    pub fn new(val: u16) -> InstructionBox { InstructionBox::new(Self { val }) }
 }
 
 impl Instruction for LdSPImm16 {
@@ -93,12 +97,13 @@ impl Instruction for LdSPImm16 {
 
 /// LD [HL], r8
 /// Load value from src register into byte pointed by HL
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdPointedByHLR8 {
     pub src: R8,
 }
 
 impl LdPointedByHLR8 {
-    pub fn new(src: R8) -> Box<Self> { Box::new(Self { src }) }
+    pub fn new(src: R8) -> InstructionBox { InstructionBox::new(Self { src }) }
 }
 
 impl Instruction for LdPointedByHLR8 {
@@ -114,12 +119,13 @@ impl Instruction for LdPointedByHLR8 {
 
 /// LD [HL], n8
 /// Load immediate 8-bit value into byte pointed by HL
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdPointedByHLImm8 {
     pub val: u8,
 }
 
 impl LdPointedByHLImm8 {
-    pub fn new(val: u8) -> Box<Self> { Box::new(Self { val }) }
+    pub fn new(val: u8) -> InstructionBox { InstructionBox::new(Self { val }) }
 }
 
 impl Instruction for LdPointedByHLImm8 {
@@ -134,12 +140,13 @@ impl Instruction for LdPointedByHLImm8 {
 
 /// LD r8, [HL]
 /// Load value from byte pointed by HL into dst register
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdR8PointedByHL {
     pub dst: R8,
 }
 
 impl LdR8PointedByHL {
-    pub fn new(dst: R8) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R8) -> InstructionBox { InstructionBox::new(Self { dst }) }
 }
 
 impl Instruction for LdR8PointedByHL {
@@ -155,12 +162,13 @@ impl Instruction for LdR8PointedByHL {
 
 /// LD [r16], A
 /// Load value from A into byte pointed by BC or DE
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdPointedByR16A {
     pub dst: R16,
 }
 
 impl LdPointedByR16A {
-    pub fn new(dst: R16) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R16) -> InstructionBox { InstructionBox::new(Self { dst }) }
 }
 
 impl Instruction for LdPointedByR16A {
@@ -176,12 +184,13 @@ impl Instruction for LdPointedByR16A {
 
 /// LD [nn], A
 /// Load value from A into byte pointed by immediate 16-bit address
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdPointedByImm16A {
     pub addr: u16,
 }
 
 impl LdPointedByImm16A {
-    pub fn new(addr: u16) -> Box<Self> { Box::new(Self { addr }) }
+    pub fn new(addr: u16) -> InstructionBox { InstructionBox::new(Self { addr }) }
 }
 
 impl Instruction for LdPointedByImm16A {
@@ -196,12 +205,13 @@ impl Instruction for LdPointedByImm16A {
 
 /// LD A, [r16]
 /// Load value from byte pointed by BC or DE into A
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdAPointedByR16 {
     pub src: R16,
 }
 
 impl LdAPointedByR16 {
-    pub fn new(src: R16) -> Box<Self> { Box::new(Self { src }) }
+    pub fn new(src: R16) -> InstructionBox { InstructionBox::new(Self { src }) }
 }
 
 impl Instruction for LdAPointedByR16 {
@@ -217,12 +227,13 @@ impl Instruction for LdAPointedByR16 {
 
 /// LD A, [nn]
 /// Load value from byte pointed by immediate 16-bit address into A
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdAPointedByImm16 {
     pub addr: u16,
 }
 
 impl LdAPointedByImm16 {
-    pub fn new(addr: u16) -> Box<Self> { Box::new(Self { addr }) }
+    pub fn new(addr: u16) -> InstructionBox { InstructionBox::new(Self { addr }) }
 }
 
 impl Instruction for LdAPointedByImm16 {
@@ -237,10 +248,11 @@ impl Instruction for LdAPointedByImm16 {
 
 /// LD [HL+], A
 /// Load A into byte pointed by HL, then increment HL
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdPointedByHLIncA;
 
 impl LdPointedByHLIncA {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdPointedByHLIncA {
@@ -257,10 +269,11 @@ impl Instruction for LdPointedByHLIncA {
 
 /// LD [HL-], A
 /// Load A into byte pointed by HL, then decrement HL
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdPointedByHLDecA;
 
 impl LdPointedByHLDecA {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdPointedByHLDecA {
@@ -277,10 +290,11 @@ impl Instruction for LdPointedByHLDecA {
 
 /// LD A, [HL+]
 /// Load byte pointed by HL into A, then increment HL
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdAPointedByHLInc;
 
 impl LdAPointedByHLInc {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdAPointedByHLInc {
@@ -297,10 +311,11 @@ impl Instruction for LdAPointedByHLInc {
 
 /// LD A, [HL-]
 /// Load byte pointed by HL into A, then decrement HL
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdAPointedByHLDec;
 
 impl LdAPointedByHLDec {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdAPointedByHLDec {
@@ -317,12 +332,13 @@ impl Instruction for LdAPointedByHLDec {
 
 /// LD [nn], SP
 /// Load SP into 16-bit address nn (little endian)
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdImm16SP {
     pub addr: u16,
 }
 
 impl LdImm16SP {
-    pub fn new(addr: u16) -> Box<Self> { Box::new(Self { addr }) }
+    pub fn new(addr: u16) -> InstructionBox { InstructionBox::new(Self { addr }) }
 }
 
 impl Instruction for LdImm16SP {
@@ -337,12 +353,13 @@ impl Instruction for LdImm16SP {
 
 /// LD HL, SP+e8
 /// Add signed 8-bit immediate to SP and store in HL
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdHLSPPlusImm8 {
     pub e8: i8,
 }
 
 impl LdHLSPPlusImm8 {
-    pub fn new(e8: i8) -> Box<Self> { Box::new(Self { e8 }) }
+    pub fn new(e8: i8) -> InstructionBox { InstructionBox::new(Self { e8 }) }
 }
 
 impl Instruction for LdHLSPPlusImm8 {
@@ -367,10 +384,11 @@ impl Instruction for LdHLSPPlusImm8 {
 
 /// LD SP, HL
 /// Load HL into SP
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LdSPHL;
 
 impl LdSPHL {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdSPHL {

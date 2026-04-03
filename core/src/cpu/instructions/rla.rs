@@ -24,12 +24,13 @@ fn rla(value: u8, carry: bool) -> u8 { (value << 1) | if carry { 1 } else { 0 } 
 /// ┌─╂─   C   ←╂─╂─  b7 ← ... ← b0 ←╂─┐
 /// │ ┗━━━━━━━━━┛ ┗━━━━━━━━━━━━━━━━━━┛ │
 /// └──────────────────────────────────┘
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Rla {
     carry: bool,
 }
 
 impl Rla {
-    pub fn new(carry: bool) -> Box<Self> { Box::new(Self { carry }) }
+    pub fn new(carry: bool) -> InstructionBox { InstructionBox::new(Self { carry }) }
 }
 
 impl Instruction for Rla {

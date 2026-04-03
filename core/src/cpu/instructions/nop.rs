@@ -7,10 +7,11 @@ use crate::{
 };
 
 /// No OPeration
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Nop;
 
 impl Nop {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for Nop {

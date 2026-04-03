@@ -6,11 +6,11 @@ use crate::{
     prelude::*,
 };
 
-/// TODO: This should be implemented with interruptions management
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Halt;
 
 impl Halt {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for Halt {

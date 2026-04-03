@@ -6,13 +6,14 @@ use crate::{
     prelude::*,
 };
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct JpToImm16 {
     pub jc: JumpCondition,
     pub addr: u16,
 }
 
 impl JpToImm16 {
-    pub fn new(jc: JumpCondition, addr: u16) -> Box<Self> { Box::new(Self { jc, addr }) }
+    pub fn new(jc: JumpCondition, addr: u16) -> InstructionBox { InstructionBox::new(Self { jc, addr }) }
 }
 
 impl Instruction for JpToImm16 {
@@ -29,12 +30,13 @@ impl Instruction for JpToImm16 {
     fn disassembly(&self) -> String { format!("jp {}${:04X}", self.jc, self.addr) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct JpToHL {
     pub addr: u16,
 }
 
 impl JpToHL {
-    pub fn new(addr: u16) -> Box<Self> { Box::new(Self { addr }) }
+    pub fn new(addr: u16) -> InstructionBox { InstructionBox::new(Self { addr }) }
 }
 
 impl Instruction for JpToHL {

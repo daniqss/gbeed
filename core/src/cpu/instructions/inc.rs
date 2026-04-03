@@ -17,11 +17,12 @@ fn inc_u8_flags(old: u8, result: u8) -> Flags {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct IncR8 {
     dst: R8,
 }
 impl IncR8 {
-    pub fn new(dst: R8) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R8) -> InstructionBox { InstructionBox::new(Self { dst }) }
 }
 
 impl Instruction for IncR8 {
@@ -36,9 +37,10 @@ impl Instruction for IncR8 {
     fn disassembly(&self) -> String { format!("inc {}", self.dst) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct IncPointedByHL;
 impl IncPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for IncPointedByHL {
@@ -53,11 +55,12 @@ impl Instruction for IncPointedByHL {
     fn disassembly(&self) -> String { "inc [hl]".to_string() }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct IncR16 {
     dst: R16,
 }
 impl IncR16 {
-    pub fn new(dst: R16) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R16) -> InstructionBox { InstructionBox::new(Self { dst }) }
 }
 
 impl Instruction for IncR16 {
@@ -72,9 +75,10 @@ impl Instruction for IncR16 {
     fn disassembly(&self) -> String { format!("inc {}", self.dst) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct IncStackPointer;
 impl IncStackPointer {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for IncStackPointer {
