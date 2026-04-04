@@ -1,4 +1,4 @@
-use crate::{Ppu, prelude::*};
+use crate::prelude::*;
 
 const PRIORITY: u8 = 0x80;
 const YFLIP: u8 = 0x40;
@@ -20,20 +20,20 @@ pub struct Sprite {
 
 impl Sprite {
     // TODO: copy from ppu.oam directly, even direct cast
-    pub fn from_oam(ppu: &Ppu, index: u16) -> Self {
+    pub fn from_oam(sprite_data: &[u8]) -> Self {
         Self {
-            ypos: ppu.read(index).wrapping_sub(16),
-            xpos: ppu.read(index + 1).wrapping_sub(8),
-            tile_index: ppu.read(index + 2),
-            flags: ppu.read(index + 3),
+            ypos: sprite_data[0].wrapping_sub(16),
+            xpos: sprite_data[1].wrapping_sub(8),
+            tile_index: sprite_data[2],
+            flags: sprite_data[3],
         }
     }
 
-    pub fn _to_oam(&self, ppu: &mut Ppu, index: u16) {
-        ppu.write(index, self.ypos);
-        ppu.write(index + 1, self.xpos);
-        ppu.write(index + 2, self.tile_index);
-        ppu.write(index + 3, self.flags);
+    pub fn _to_oam(&self, sprite_data: &mut [u8]) {
+        sprite_data[0] = self.ypos.wrapping_add(16);
+        sprite_data[1] = self.xpos.wrapping_add(8);
+        sprite_data[2] = self.tile_index;
+        sprite_data[3] = self.flags;
     }
 
     bit_accessors! {
