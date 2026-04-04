@@ -19,7 +19,7 @@ pub struct Sprite {
 }
 
 impl Sprite {
-    // we should probably implement slices for mmu to have better access
+    // TODO: copy from ppu.oam directly, even direct cast
     pub fn from_oam(ppu: &Ppu, index: u16) -> Self {
         Self {
             ypos: ppu.read(index).wrapping_sub(16),

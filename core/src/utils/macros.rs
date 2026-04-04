@@ -20,13 +20,13 @@ macro_rules! bit_accessors {
     ) => {
         paste::paste! {
             $(
-                #[inline]
+                #[inline(always)]
                 #[allow(dead_code)]
                 pub fn [<$bit:lower>](&self) -> bool {
                     (self.$target & $bit) != 0
                 }
 
-                #[inline]
+                #[inline(always)]
                 #[allow(dead_code)]
                 pub fn [<set_ $bit:lower>](&mut self, value: bool) {
                     if value {
