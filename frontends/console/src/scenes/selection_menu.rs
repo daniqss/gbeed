@@ -23,7 +23,7 @@ impl SelectionMenuState {
             roms: roms::find_roms(),
             selected: 0,
             scroll_offset: 0,
-            input: InputManager::with_debounce(0.08),
+            input: InputManager::default(),
             confirming_new_game: false,
         }
     }

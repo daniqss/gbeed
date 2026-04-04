@@ -21,16 +21,16 @@ pub trait ToInputState {
 
 #[derive(Debug)]
 pub struct InputKeyTriggers {
-    up: [KeyboardKey; 2],
-    down: [KeyboardKey; 2],
-    left: [KeyboardKey; 2],
-    right: [KeyboardKey; 2],
-    a: [KeyboardKey; 2],
-    b: [KeyboardKey; 2],
-    start: [KeyboardKey; 2],
-    select: [KeyboardKey; 2],
-    escape: [KeyboardKey; 2],
-    speed_up: [KeyboardKey; 2],
+    pub up: [KeyboardKey; 2],
+    pub down: [KeyboardKey; 2],
+    pub left: [KeyboardKey; 2],
+    pub right: [KeyboardKey; 2],
+    pub a: [KeyboardKey; 2],
+    pub b: [KeyboardKey; 2],
+    pub start: [KeyboardKey; 2],
+    pub select: [KeyboardKey; 2],
+    pub escape: [KeyboardKey; 2],
+    pub speed_up: [KeyboardKey; 2],
 }
 
 impl Default for InputKeyTriggers {
@@ -67,64 +67,69 @@ impl ToInputState for InputKeyTriggers {
     }
 }
 
+#[derive(Default, Copy, Clone)]
 pub struct MouseButtonArea {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
 }
 
 impl MouseButtonArea {
     pub fn new(x: i32, y: i32, width: i32, height: i32) -> Self { Self { x, y, width, height } }
 
-    pub fn is_mouse_over(&self, mouse_pos: Vector2) -> bool {
-        (mouse_pos.x as i32) >= self.x
-            && (mouse_pos.x as i32) < self.x + self.width
-            && (mouse_pos.y as i32) >= self.y
-            && (mouse_pos.y as i32) < self.y + self.height
+    #[inline]
+    pub fn contains(&self, mouse: Vector2) -> bool {
+        let (mx, my) = (mouse.x as i32, mouse.y as i32);
+        mx >= self.x && mx < self.x + self.width && my >= self.y && my < self.y + self.height
     }
+
+    // press??
 }
 
+#[derive(Default, Clone)]
 pub struct InputMouseTriggers {
-    up: MouseButtonArea,
-    down: MouseButtonArea,
-    left: MouseButtonArea,
-    right: MouseButtonArea,
-    a: MouseButtonArea,
-    b: MouseButtonArea,
-    start: MouseButtonArea,
-    select: MouseButtonArea,
-    escape: Option<MouseButtonArea>,
-    speed_up: Option<MouseButtonArea>,
+    pub up: MouseButtonArea,
+    pub down: MouseButtonArea,
+    pub left: MouseButtonArea,
+    pub right: MouseButtonArea,
+    pub a: MouseButtonArea,
+    pub b: MouseButtonArea,
+    pub start: MouseButtonArea,
+    pub select: MouseButtonArea,
+    pub escape: Option<MouseButtonArea>,
+    pub speed_up: Option<MouseButtonArea>,
 }
 
 impl ToInputState for InputMouseTriggers {
     fn to_input(&self, rl: &RaylibHandle) -> InputState {
         let mouse_pos = rl.get_mouse_position();
+        let mouse_down = rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT);
 
         InputState {
-            up: self.up.is_mouse_over(mouse_pos),
-            down: self.down.is_mouse_over(mouse_pos),
-            left: self.left.is_mouse_over(mouse_pos),
-            right: self.right.is_mouse_over(mouse_pos),
-            a: self.a.is_mouse_over(mouse_pos),
-            b: self.b.is_mouse_over(mouse_pos),
-            start: self.start.is_mouse_over(mouse_pos),
-            select: self.select.is_mouse_over(mouse_pos),
-            escape: self
-                .escape
-                .as_ref()
-                .is_some_and(|area| area.is_mouse_over(mouse_pos)),
-            speed_up: self
-                .speed_up
-                .as_ref()
-                .is_some_and(|area| area.is_mouse_over(mouse_pos)),
+            up: mouse_down && self.up.contains(mouse_pos),
+            down: mouse_down && self.down.contains(mouse_pos),
+            left: mouse_down && self.left.contains(mouse_pos),
+            right: mouse_down && self.right.contains(mouse_pos),
+            a: mouse_down && self.a.contains(mouse_pos),
+            b: mouse_down && self.b.contains(mouse_pos),
+            start: mouse_down && self.start.contains(mouse_pos),
+            select: mouse_down && self.select.contains(mouse_pos),
+            escape: mouse_down && self.escape.as_ref().is_some_and(|area| area.contains(mouse_pos)),
+            speed_up: mouse_down
+                && self
+                    .speed_up
+                    .as_ref()
+                    .is_some_and(|area| area.contains(mouse_pos)),
         }
     }
 }
 
+// sneak peek of future GPIO support
+pub struct _InputGpioTriggers {}
+
 impl InputState {
-    pub fn merge(rl: &RaylibHandle, states: &[impl ToInputState]) -> InputState {
+    pub fn merge(rl: &RaylibHandle, states: &[&dyn ToInputState]) -> InputState {
         states.iter().fold(InputState::default(), |mut acc, state| {
             let to_state = &state.to_input(rl);
 
@@ -157,7 +162,9 @@ impl InputState {
 
 #[derive(Debug)]
 pub struct InputManager {
-    pub triggers: InputKeyTriggers,
+    pub key_triggers: InputKeyTriggers,
+    pub mouse_triggers: Option<InputMouseTriggers>,
+    pub gpio_triggers: Option<_InputGpioTriggers>,
     pub current: InputState,
     pub previous: InputState,
     pub repeat_timer: f32,
@@ -165,36 +172,37 @@ pub struct InputManager {
 }
 
 impl Default for InputManager {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self { Self::new(0.08, None, None, None) }
 }
 
 impl InputManager {
-    pub fn new() -> Self {
+    pub fn new(
+        debounce: f32,
+        key_triggers: Option<InputKeyTriggers>,
+        mouse_triggers: Option<InputMouseTriggers>,
+        gpio_triggers: Option<_InputGpioTriggers>,
+    ) -> Self {
         Self {
-            triggers: InputKeyTriggers::default(),
+            key_triggers: key_triggers.unwrap_or_default(),
+            mouse_triggers,
+            gpio_triggers,
             current: InputState::default(),
             previous: InputState::default(),
             repeat_timer: 0.0,
-            debounce_timer: 0.0,
+            debounce_timer: debounce,
         }
-    }
-
-    pub fn with_debounce(debounce_time: f32) -> Self {
-        let mut manager = Self::new();
-        manager.debounce_timer = debounce_time;
-        manager
     }
 
     pub fn update(&mut self, rl: &RaylibHandle, dt: f32) {
         if self.debounce_timer > 0.0 {
             self.debounce_timer -= dt;
-            self.current = self.triggers.to_input(rl);
+            self.current = self.get_input(rl);
             self.previous = self.current;
             return;
         }
 
         self.previous = self.current;
-        self.current = self.triggers.to_input(rl);
+        self.current = self.get_input(rl);
 
         let dirs_held = self.current.up || self.current.down || self.current.left || self.current.right;
         let dirs_pressed = self.is_pressed_up()
@@ -212,6 +220,24 @@ impl InputManager {
         }
     }
 
+    fn get_input(&self, rl: &RaylibHandle) -> InputState {
+        let mut current = self.key_triggers.to_input(rl);
+        if let Some(mouse) = &self.mouse_triggers {
+            let mouse_state = mouse.to_input(rl);
+            current.up |= mouse_state.up;
+            current.down |= mouse_state.down;
+            current.left |= mouse_state.left;
+            current.right |= mouse_state.right;
+            current.a |= mouse_state.a;
+            current.b |= mouse_state.b;
+            current.start |= mouse_state.start;
+            current.select |= mouse_state.select;
+            current.escape |= mouse_state.escape;
+            current.speed_up |= mouse_state.speed_up;
+        }
+        current
+    }
+
     pub fn state(&self) -> InputState { self.current }
 
     pub fn is_pressed_up(&self) -> bool { self.current.up && !self.previous.up }
@@ -223,6 +249,7 @@ impl InputManager {
     pub fn is_pressed_start(&self) -> bool { self.current.start && !self.previous.start }
     pub fn is_pressed_select(&self) -> bool { self.current.select && !self.previous.select }
     pub fn is_pressed_escape(&self) -> bool { self.current.escape && !self.previous.escape }
+    pub fn is_pressed_speed_up(&self) -> bool { self.current.speed_up && !self.previous.speed_up }
 
     pub fn is_repeated_up(&self, dt: f32) -> bool {
         self.is_pressed_up() || (self.current.up && self.check_repeat(dt))

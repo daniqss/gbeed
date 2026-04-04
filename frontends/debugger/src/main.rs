@@ -1,4 +1,5 @@
 use gbeed_core::prelude::*;
+use gbeed_raylib_common::{InputManager, InputMouseTriggers, MouseButtonArea};
 
 mod controller;
 #[cfg(target_arch = "wasm32")]
@@ -46,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let (mut rl, thread) = raylib::init().size(1920, 1080).title("gbeed").resizable().build();
-    rl.set_target_fps(120);
+    rl.set_target_fps(60);
 
     let mut app = EmulatorApp::new(rl, thread, boot_path);
 
@@ -58,9 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        while !app.controller.renderer.rl.window_should_close()
-            && !app.controller.renderer.rl.is_key_down(KeyboardKey::KEY_ESCAPE)
-        {
+        while !app.controller.renderer.rl.window_should_close() && !app.input.state().escape {
             app.update()?;
         }
 
@@ -90,17 +89,59 @@ pub struct EmulatorApp {
     controller: RaylibController,
     save_path: Option<PathBuf>,
     boot_rom: Option<Vec<u8>>,
+    input: InputManager,
 }
 
 impl EmulatorApp {
     fn new(rl: RaylibHandle, thread: RaylibThread, boot_path: Option<String>) -> Self {
         let boot_rom = boot_path.and_then(|path| fs::read(path).ok());
         let controller = RaylibController::new(rl, thread);
+
+        let game_x = renderer::PANEL_PADDING;
+        let game_y = renderer::PANEL_PADDING + renderer::HEADER_HEIGHT;
+        let screen_center_x = game_x + renderer::SCALED_SCREEN_WIDTH / 2;
+        let controls_y = game_y + renderer::SCALED_SCREEN_HEIGHT + renderer::PANEL_PADDING * 2;
+
+        let dpad_x = screen_center_x - 160;
+        let dpad_y = controls_y + 50;
+        let dpad_arm = 28;
+
+        let start_select_center_x = screen_center_x;
+        let start_select_width = 60;
+        let start_select_gap = 18;
+        let start_select_total = start_select_width * 2 + start_select_gap;
+        let start_select_x = start_select_center_x - start_select_total / 2;
+        let start_select_y = dpad_y - 10;
+
+        let action_buttons_x = screen_center_x + 160;
+        let action_buttons_y = controls_y + 24;
+
+        let mouse_triggers = InputMouseTriggers {
+            up: MouseButtonArea::new(dpad_x - 17, dpad_y - dpad_arm - 17, 34, 34),
+            down: MouseButtonArea::new(dpad_x - 17, dpad_y + dpad_arm - 17, 34, 34),
+            left: MouseButtonArea::new(dpad_x - dpad_arm - 17, dpad_y - 17, 34, 34),
+            right: MouseButtonArea::new(dpad_x + dpad_arm - 17, dpad_y - 17, 34, 34),
+            select: MouseButtonArea::new(start_select_x, start_select_y, 60, 20),
+            start: MouseButtonArea::new(start_select_x + 60 + 18, start_select_y, 60, 20),
+            a: MouseButtonArea::new(action_buttons_x - 18 + 24, action_buttons_y, 36, 36),
+            b: MouseButtonArea::new(action_buttons_x - 18 - 24, action_buttons_y + 44, 36, 36),
+            speed_up: Some(MouseButtonArea::new(
+                screen_center_x - 118 / 2,
+                controls_y - 20,
+                118,
+                26,
+            )),
+            ..Default::default()
+        };
+
+        let input = InputManager::new(0.1, None, Some(mouse_triggers), None);
+
         Self {
             gb: None,
             controller,
             save_path: None,
             boot_rom,
+            input,
         }
     }
 
@@ -155,8 +196,16 @@ impl EmulatorApp {
             }
         }
 
+        let dt = self.controller.renderer.rl.get_frame_time();
+        self.input.update(&self.controller.renderer.rl, dt);
+        self.controller.renderer.buttons = self.input.state();
+
+        if self.input.is_pressed_speed_up() {
+            self.controller.renderer.cycle_fps();
+        }
+
         if let Some(ref mut gb) = self.gb {
-            // input::update(&mut self.controller.renderer, &mut gb.joypad);
+            self.input.state().apply(&mut gb.joypad);
 
             gb.run(&mut self.controller)?;
 
