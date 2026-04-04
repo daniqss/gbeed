@@ -67,7 +67,7 @@ impl ToInputState for InputKeyTriggers {
     }
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct MouseButtonArea {
     pub x: i32,
     pub y: i32,
@@ -87,7 +87,7 @@ impl MouseButtonArea {
     // press??
 }
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct InputMouseTriggers {
     pub up: MouseButtonArea,
     pub down: MouseButtonArea,
@@ -126,6 +126,7 @@ impl ToInputState for InputMouseTriggers {
 }
 
 // sneak peek of future GPIO support
+#[derive(Debug, Default, Copy, Clone)]
 pub struct _InputGpioTriggers {}
 
 impl InputState {

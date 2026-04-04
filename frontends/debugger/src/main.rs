@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         i += 1;
     }
 
-    let (mut rl, thread) = raylib::init().size(1920, 1080).title("gbeed").resizable().build();
+    let (mut rl, thread) = raylib::init().size(1280, 720).title("gbeed").build();
     rl.set_target_fps(60);
 
     let mut app = EmulatorApp::new(rl, thread, boot_path);
