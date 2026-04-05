@@ -18,10 +18,10 @@ mem_range!(LATCH_CLOCK_DATA, 0x6000, 0x7FFF);
 
 #[derive(Debug, Default)]
 pub struct Mbc3 {
-    rom: Vec<u8>,
+    rom: Box<[u8]>,
     rom_size: RomSize,
     rom_selected_bank: u8,
-    ram: Option<Vec<u8>>,
+    ram: Option<Box<[u8]>>,
     ram_enabled: bool,
     ram_size: RamSize,
     ram_selected_bank: u8,
@@ -38,8 +38,8 @@ impl MemoryBankController for Mbc3 {
         features: &CartridgeFeatures,
         header: &CartridgeHeader,
     ) -> CartridgeResult<Self> {
-        let rom = if raw_rom.len() == header.rom_size.get_size() as usize {
-            raw_rom.to_vec()
+        let rom: Box<[u8]> = if raw_rom.len() == header.rom_size.get_size() as usize {
+            raw_rom.to_vec().into_boxed_slice()
         } else {
             return Err(CartridgeError::InvalidRomSize(
                 Some(header.rom_size),
@@ -47,10 +47,11 @@ impl MemoryBankController for Mbc3 {
             ));
         };
 
-        let ram = features.has_ram.then(|| {
+        let ram: Option<Box<[u8]>> = features.has_ram.then(|| {
             let ram_size = header.ram_size.get_size() as usize;
             save.filter(|s| features.has_battery && s.len() == ram_size)
                 .unwrap_or_else(|| vec![0; ram_size])
+                .into_boxed_slice()
         });
 
         let timer = if features.has_timer {

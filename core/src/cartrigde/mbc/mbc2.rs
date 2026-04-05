@@ -8,13 +8,15 @@ use crate::{
 
 use super::MemoryBankController;
 
+const MBC2_RAM_SIZE: usize = 512;
+
 #[derive(Debug)]
 pub struct Mbc2 {
     rom: Vec<u8>,
     rom_size: RomSize,
     rom_selected_bank: u8,
 
-    ram: [u8; 512],
+    ram: Box<[u8; MBC2_RAM_SIZE]>,
     ram_enabled: bool,
 }
 
@@ -24,7 +26,7 @@ impl Default for Mbc2 {
             rom: Vec::new(),
             rom_size: RomSize::Rom512KB,
             rom_selected_bank: 1,
-            ram: [0; 512],
+            ram: Box::new([0; MBC2_RAM_SIZE]),
             ram_enabled: false,
         }
     }
@@ -51,7 +53,7 @@ impl MemoryBankController for Mbc2 {
             rom_size: header.rom_size,
 
             rom_selected_bank: 1,
-            ram: [0; 512],
+            ram: Box::new([0; MBC2_RAM_SIZE]),
             ram_enabled: false,
         })
     }
@@ -106,7 +108,7 @@ impl MemoryBankController for Mbc2 {
         self.ram[offset] = value & 0x0F;
     }
 
-    fn get_ram(&self) -> Option<&[u8]> { Some(&self.ram) }
+    fn get_ram(&self) -> Option<&[u8]> { Some(self.ram.as_slice()) }
     fn swap_boot_rom(&mut self, boot_rom: &mut [u8]) {
         let rom_slice = &mut self.rom[BOOT_ROM_START as usize..=BOOT_ROM_END as usize];
         let boot_rom_slice = &mut boot_rom[..=(BOOT_ROM_END - BOOT_ROM_START) as usize];

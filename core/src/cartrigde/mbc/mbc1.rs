@@ -27,13 +27,13 @@ pub struct Mbc1 {
     mode: BankingMode,
     is_multicart: bool,
 
-    rom: Vec<u8>,
+    rom: Box<[u8]>,
     rom_size: RomSize,
     primary_bank: u8,
     secondary_bank: u8,
 
     ram_enabled: bool,
-    ram: Option<Vec<u8>>,
+    ram: Option<Box<[u8]>>,
     ram_size: RamSize,
 }
 
@@ -77,8 +77,8 @@ impl MemoryBankController for Mbc1 {
 
         let is_multicart = check_mbc1m_multicart(raw_rom, header);
 
-        let rom = if raw_rom.len() == header.rom_size.get_size() as usize {
-            raw_rom.to_vec()
+        let rom: Box<[u8]> = if raw_rom.len() == header.rom_size.get_size() as usize {
+            raw_rom.to_vec().into_boxed_slice()
         } else {
             return Err(CartridgeError::InvalidRomSize(
                 Some(header.rom_size),
@@ -86,10 +86,11 @@ impl MemoryBankController for Mbc1 {
             ));
         };
 
-        let ram = features.has_ram.then(|| {
+        let ram: Option<Box<[u8]>> = features.has_ram.then(|| {
             let ram_size = header.ram_size.get_size() as usize;
             save.filter(|s| features.has_battery && s.len() == ram_size)
                 .unwrap_or_else(|| vec![0; ram_size])
+                .into_boxed_slice()
         });
 
         Ok(Self {
