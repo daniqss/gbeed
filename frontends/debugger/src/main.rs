@@ -1,5 +1,5 @@
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{InputManager, InputMouseTriggers, MouseButtonArea};
+use gbeed_raylib_common::input::{InputManager, InputMouseTriggers, MouseButtonArea};
 
 mod controller;
 #[cfg(target_arch = "wasm32")]

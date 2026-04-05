@@ -393,11 +393,7 @@ impl Ppu {
             let color_id = (high_pixel << 1) | low_pixel;
 
             self.bg_cache[pixel] = color_id;
-            renderer.write_pixel(
-                pixel,
-                current_line as usize,
-                renderer.get_color(self.bg_palette, color_id),
-            );
+            renderer.write_pixel(pixel, current_line as usize, self.bg_palette, color_id);
 
             if bit_index == 0 {
                 bit_index = 7;
@@ -467,11 +463,7 @@ impl Ppu {
             let color_id = (high_pixel << 1) | low_pixel;
 
             self.bg_cache[pixel] = color_id;
-            renderer.write_pixel(
-                pixel,
-                current_line as usize,
-                renderer.get_color(self.bg_palette, color_id),
-            );
+            renderer.write_pixel(pixel, current_line as usize, self.bg_palette, color_id);
 
             if bit_index == 0 {
                 bit_index = 7;
@@ -583,7 +575,7 @@ impl Ppu {
                 }
 
                 pixel_owner[sx] = Some(sprite.xpos);
-                renderer.write_pixel(sx, current_line as usize, renderer.get_color(palette, color_id));
+                renderer.write_pixel(sx, current_line as usize, palette, color_id);
             }
 
             drawn_sprites += 1;

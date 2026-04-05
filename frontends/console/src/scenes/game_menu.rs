@@ -1,7 +1,7 @@
 use crate::scenes::{EmulationState, EmulatorState, SelectionMenuState, SettingsMenuState};
 use crate::utils::layout::*;
 use gbeed_core::prelude::{Dmg, DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH};
-use gbeed_raylib_common::{InputManager, Palette};
+use gbeed_raylib_common::{color, input::InputManager};
 use raylib::prelude::*;
 use std::path::PathBuf;
 
@@ -43,7 +43,7 @@ impl GameMenuState {
         screen: &gbeed_raylib_common::Texture,
         gb: &Option<Dmg>,
         rom_path: &Option<PathBuf>,
-        palette: Palette,
+        palette_color: &color::PaletteColor,
     ) {
         let info_x = PADDING_X + 10;
         let info_y = VISIBLE_TOP + 10;
@@ -56,7 +56,7 @@ impl GameMenuState {
                 (SCREEN_WIDTH - text_w) / 2,
                 SCREEN_HEIGHT / 2,
                 14,
-                palette.primary(),
+                color::primary(palette_color),
             );
             return;
         };
@@ -88,12 +88,12 @@ impl GameMenuState {
             info_x,
             info_y,
             14,
-            palette.foreground(),
+            color::primary(palette_color),
         );
 
         let mut y_offset = info_y + 20;
         for line in header_info {
-            d.draw_text(&line, info_x, y_offset, 10, palette.primary());
+            d.draw_text(&line, info_x, y_offset, 10, color::primary(palette_color));
             y_offset += 14;
         }
     }

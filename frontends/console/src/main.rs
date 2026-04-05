@@ -3,7 +3,7 @@ mod scenes;
 mod utils;
 
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{Palette, Texture};
+use gbeed_raylib_common::{color, Texture};
 use raylib::prelude::*;
 use std::path::PathBuf;
 use std::process::exit;
@@ -29,6 +29,8 @@ impl EmulatorApp {
             DMG_SCREEN_HEIGHT as i32,
         );
 
+        let palette = color::Palette::default();
+
         Self {
             state: EmulatorState::SelectionMenu(SelectionMenuState::new()),
             gb: None,
@@ -39,7 +41,8 @@ impl EmulatorApp {
                 rl,
                 thread,
                 screen,
-                palette: Palette::default(),
+                palette,
+                palette_color: palette.get_palette_color(),
             },
         }
     }
@@ -82,27 +85,31 @@ impl EmulatorApp {
     }
 
     pub fn draw(&mut self) {
-        let palette = self.controller.palette;
         let ConsoleController {
-            rl, thread, screen, ..
+            rl,
+            thread,
+            screen,
+            palette,
+            palette_color,
+            ..
         } = &mut self.controller;
 
         rl.draw(thread, |mut d| {
-            d.clear_background(palette.background());
+            d.clear_background(color::background(palette_color));
 
             match &self.state {
-                EmulatorState::SelectionMenu(state) => state.draw(&mut d, palette),
+                EmulatorState::SelectionMenu(state) => state.draw(&mut d, palette_color),
                 EmulatorState::Emulation(state) => state.draw(&mut d, screen),
                 EmulatorState::GameMenu(state) => {
-                    state.draw(&mut d, screen, &self.gb, &self.rom_path, palette)
+                    state.draw(&mut d, screen, &self.gb, &self.rom_path, palette_color)
                 }
-                EmulatorState::SettingsMenu(state) => state.draw(&mut d, palette),
+                EmulatorState::SettingsMenu(state) => state.draw(&mut d, palette, palette_color),
 
                 EmulatorState::Exit => return,
             }
 
-            draw_header(&mut d, &self.state, palette);
-            draw_footer(&mut d, &self.state, palette);
+            draw_header(&mut d, &self.state, palette_color);
+            draw_footer(&mut d, &self.state, palette_color);
             d.draw_fps(215, 220);
             // if let Some(gb) = &mut self.gb {
             //     d.draw_text(

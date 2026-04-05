@@ -1,7 +1,7 @@
 use crate::controller::ConsoleController;
 use crate::scenes::{EmulatorState, GameMenuState, SelectionMenuState};
 use crate::utils::layout::{self, *};
-use gbeed_raylib_common::{InputManager, Palette};
+use gbeed_raylib_common::{color, input::InputManager};
 use raylib::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,22 +71,14 @@ impl SettingsMenuState {
         }
 
         let current_option = SettingsOption::ALL[self.selected];
+
         match current_option {
             SettingsOption::ColorPalette => {
                 if self.input.is_pressed_a() {
-                    let idx = Palette::ALL
-                        .iter()
-                        .position(|&p| p == controller.palette)
-                        .unwrap_or(0);
-                    controller.palette = Palette::ALL[(idx + 1) % Palette::ALL.len()];
+                    controller.palette = controller.palette.next();
                 }
                 if self.input.is_pressed_b() {
-                    let idx = Palette::ALL
-                        .iter()
-                        .position(|&p| p == controller.palette)
-                        .unwrap_or(0);
-                    controller.palette =
-                        Palette::ALL[if idx == 0 { Palette::ALL.len() - 1 } else { idx - 1 }];
+                    controller.palette = controller.palette.prev();
                 }
             }
             SettingsOption::Exit => {
@@ -96,10 +88,17 @@ impl SettingsMenuState {
             }
         }
 
+        controller.palette_color = controller.palette.get_palette_color();
+
         None
     }
 
-    pub fn draw(&self, d: &mut RaylibDrawHandle, palette: Palette) {
+    pub fn draw(
+        &self,
+        d: &mut RaylibDrawHandle,
+        palette: &color::Palette,
+        palette_color: &color::PaletteColor,
+    ) {
         let items: Vec<(&str, &str)> = SettingsOption::ALL
             .iter()
             .map(|opt| {
@@ -111,6 +110,6 @@ impl SettingsMenuState {
             })
             .collect();
 
-        layout::draw_menu_list(d, &items, self.selected, self.scroll_offset, palette);
+        layout::draw_menu_list(d, &items, self.selected, self.scroll_offset, palette_color);
     }
 }

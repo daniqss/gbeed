@@ -1,5 +1,5 @@
 use gbeed_core::Dmg;
-use gbeed_raylib_common::{InputManager, Palette};
+use gbeed_raylib_common::{color, input::InputManager};
 use raylib::prelude::*;
 use std::path::PathBuf;
 
@@ -98,14 +98,14 @@ impl SelectionMenuState {
         Ok(None)
     }
 
-    pub fn draw(&self, d: &mut RaylibDrawHandle, palette: Palette) {
+    pub fn draw(&self, d: &mut RaylibDrawHandle, palette_color: &color::PaletteColor) {
         if self.roms.is_empty() {
             d.draw_text(
                 "no roms found",
                 PADDING_X,
                 VISIBLE_TOP + SECTION_PAD,
                 FONT_SIZE,
-                palette.primary(),
+                color::primary(palette_color),
             );
             return;
         }
@@ -124,7 +124,7 @@ impl SelectionMenuState {
 
         let items: Vec<(&str, &str)> = names.iter().map(|n| (n.as_str(), "")).collect();
 
-        draw_menu_list(d, &items, self.selected, self.scroll_offset, palette);
+        draw_menu_list(d, &items, self.selected, self.scroll_offset, palette_color);
 
         if self.confirming_new_game {
             d.draw_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Color::new(0, 0, 0, 180));
@@ -144,9 +144,9 @@ impl SelectionMenuState {
                 .enumerate()
                 .for_each(|(i, (text, text_width))| {
                     let color = match i {
-                        0 => palette.foreground(),
-                        3 => palette.secondary(),
-                        _ => palette.primary(),
+                        0 => color::foreground(palette_color),
+                        3 => color::secondary(palette_color),
+                        _ => color::primary(palette_color),
                     };
                     d.draw_text(
                         text,

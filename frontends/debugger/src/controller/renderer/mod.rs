@@ -2,7 +2,7 @@ mod colors;
 
 use gbeed_core::prelude::*;
 use gbeed_core::Renderer;
-use gbeed_raylib_common::{InputState, Texture};
+use gbeed_raylib_common::{input, Texture};
 use raylib::prelude::*;
 
 use colors::GB_PALETTE;
@@ -45,7 +45,7 @@ pub struct RaylibRenderer {
     pub bg_map_texture: Texture,
     pub tile_textures: [Texture; 3],
 
-    pub buttons: InputState,
+    pub buttons: input::InputState,
     pub game_name: String,
     pub game_region: String,
     pub fps_mode: FpsMode,
@@ -75,7 +75,7 @@ impl RaylibRenderer {
             screen_texture,
             bg_map_texture,
             tile_textures,
-            buttons: InputState::default(),
+            buttons: input::InputState::default(),
             game_name: "Unknown".into(),
             game_region: "Unknown".into(),
             fps_mode: FpsMode::Target60,
@@ -122,19 +122,14 @@ impl Renderer for RaylibRenderer {
             | (self.screen_texture[index + 2] as u32)
     }
 
-    fn write_pixel(&mut self, x: usize, y: usize, color: u32) {
+    fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
         let index = (y * DMG_SCREEN_WIDTH + x) * 3;
-
-        self.screen_texture[index] = ((color >> 16) & 0xFF) as u8;
-        self.screen_texture[index + 1] = ((color >> 8) & 0xFF) as u8;
-        self.screen_texture[index + 2] = (color & 0xFF) as u8;
-    }
-
-    fn get_color(&self, palette: u8, color_id: u8) -> u32 {
         let shade = (palette >> (color_id * 2)) & 0x03;
         let color = GB_PALETTE[shade as usize];
 
-        ((color.r as u32) << 16) | ((color.g as u32) << 8) | (color.b as u32)
+        self.screen_texture[index] = color.r;
+        self.screen_texture[index + 1] = color.g;
+        self.screen_texture[index + 2] = color.b;
     }
 
     fn draw_screen(&mut self) {
