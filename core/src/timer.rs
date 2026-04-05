@@ -38,35 +38,55 @@ impl Timer {
     }
 
     pub fn step(&mut self, cycles: usize, interrupt: &mut Interrupt) {
-        for _ in 0..cycles {
-            if self.overflow_pending {
-                self.overflow_delay -= 1;
-                if self.overflow_delay <= 0 {
-                    self.tima = self.tma;
-                    interrupt.set_timer_interrupt(true);
-                    self.overflow_pending = false;
-                }
-            }
-
-            self.internal_counter = self.internal_counter.wrapping_add(1);
-
-            if self.is_timer_enabled() {
-                let current_bit = self.get_selected_bit();
-                if self.previous_bit && !current_bit {
-                    self.increment_tima();
-                }
-                self.previous_bit = current_bit;
+        if self.overflow_pending {
+            self.overflow_delay -= cycles as i32;
+            if self.overflow_delay <= 0 {
+                self.tima = self.tma;
+                interrupt.set_timer_interrupt(true);
+                self.overflow_pending = false;
             }
         }
+
+        let prev_counter = self.internal_counter;
+        self.internal_counter = self.internal_counter.wrapping_add(cycles as u16);
+
+        if !self.is_timer_enabled() {
+            return;
+        }
+
+        let bit_pos = CLOCK_BITS[(self.tac & INPUT_CLOCK_SELECT_MASK) as usize];
+
+        let shift = bit_pos + 1;
+        let start = prev_counter as u32;
+        let end = start + cycles as u32;
+
+        let edges = (end >> shift) - (start >> shift);
+
+        if edges > 0 {
+            let mut new_tima = self.tima as u32 + edges;
+
+            if new_tima > 0xFF {
+                self.overflow_pending = true;
+                self.overflow_delay = 4;
+                new_tima &= 0xFF;
+            }
+
+            self.tima = new_tima as u8;
+        }
+
+        self.previous_bit = ((self.internal_counter >> bit_pos) & 1) != 0;
     }
 
+    #[inline(always)]
     fn is_timer_enabled(&self) -> bool { (self.tac & TIMER_ENABLE_MASK) != 0 }
 
+    #[inline(always)]
     fn get_selected_bit(&self) -> bool {
         let bit_pos = CLOCK_BITS[(self.tac & INPUT_CLOCK_SELECT_MASK) as usize];
         ((self.internal_counter >> bit_pos) & 1) != 0
     }
 
+    #[inline(always)]
     fn increment_tima(&mut self) {
         self.tima = self.tima.wrapping_add(1);
         if self.tima == 0 {
