@@ -104,6 +104,17 @@ impl EmulatorApp {
             draw_header(&mut d, &self.state, palette);
             draw_footer(&mut d, &self.state, palette);
             d.draw_fps(215, 220);
+            // if let Some(gb) = &mut self.gb {
+            //     d.draw_text(
+            //         &format!("{}", gb.ppu.sprites_this_frame),
+            //         205,
+            //         200,
+            //         16,
+            //         Color::GREENYELLOW,
+            //     );
+
+            //     gb.ppu.sprites_this_frame = 0;
+            // }
         });
     }
 }
@@ -113,7 +124,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .size(SCREEN_WIDTH, SCREEN_HEIGHT)
         .title("gbeed")
         .build();
-    rl.set_target_fps(60);
+    // rl.set_target_fps(60);
     rl.set_exit_key(None);
 
     let mut app = EmulatorApp::new(rl, thread);

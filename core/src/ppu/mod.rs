@@ -94,6 +94,10 @@ pub struct Ppu {
     pub vram: [u8; VRAM_SIZE as usize],
     pub oam_ram: [u8; OAM_SIZE as usize],
 
+    /// Useful to avoid checking framebuffer with color conversion
+    bg_cache: [u8; DMG_SCREEN_WIDTH],
+    pub sprites_this_frame: usize,
+
     lcd_control: u8,
     lcd_status: u8,
     scroll_y: u8,
@@ -146,6 +150,9 @@ impl Ppu {
 
             vram: [0; VRAM_SIZE as usize],
             oam_ram: [0; OAM_SIZE as usize],
+            bg_cache: [0; DMG_SCREEN_WIDTH],
+
+            sprites_this_frame: 0,
 
             lcd_control: 0x91,
             lcd_status: 0x82,
@@ -337,7 +344,7 @@ impl Ppu {
 
         // draw sprites
         if self.obj_enable() {
-            self.draw_sprites(renderer)
+            self.sprites_this_frame += self.draw_sprites(renderer)
         };
     }
 
@@ -385,6 +392,7 @@ impl Ppu {
             let high_pixel = (second_byte >> bit_index) & 1;
             let color_id = (high_pixel << 1) | low_pixel;
 
+            self.bg_cache[pixel] = color_id;
             renderer.write_pixel(
                 pixel,
                 current_line as usize,
@@ -458,6 +466,7 @@ impl Ppu {
             let high_pixel = (second_byte >> bit_index) & 1;
             let color_id = (high_pixel << 1) | low_pixel;
 
+            self.bg_cache[pixel] = color_id;
             renderer.write_pixel(
                 pixel,
                 current_line as usize,
@@ -486,16 +495,13 @@ impl Ppu {
         self.window_line_counter = self.window_line_counter.wrapping_add(1);
     }
 
-    fn draw_sprites<R: Renderer>(&mut self, renderer: &mut R) {
+    fn draw_sprites<R: Renderer>(&mut self, renderer: &mut R) -> usize {
         let current_line = self.ly;
         let sprite_height = if self.obj_size() { 16 } else { 8 };
         let mut drawn_sprites = 0u8;
 
         // track which sprite owns each pixel in the current line
         let mut pixel_owner: [Option<u8>; DMG_SCREEN_WIDTH] = [None; DMG_SCREEN_WIDTH];
-
-        // cache background color of the current line to resolve sprite priority in one step
-        let bg_color_0 = renderer.get_color(self.bg_palette, 0);
 
         for sprites_count in 0..MAX_SPRITES_IN_OAM {
             if drawn_sprites >= MAX_SPRITES_PER_LINE {
@@ -571,8 +577,8 @@ impl Ppu {
                     continue;
                 }
 
-                // sprite under background
-                if sprite.priority() && renderer.read_pixel(sx, current_line as usize) != bg_color_0 {
+                // sprite under background, using cache
+                if sprite.priority() && self.bg_cache[sx] != 0 {
                     continue;
                 }
 
@@ -582,6 +588,8 @@ impl Ppu {
 
             drawn_sprites += 1;
         }
+
+        drawn_sprites as usize
     }
 
     /// Writing to DMA register will copy from ROM or RAM to OAM memory

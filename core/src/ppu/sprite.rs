@@ -19,7 +19,6 @@ pub struct Sprite {
 }
 
 impl Sprite {
-    // TODO: copy from ppu.oam directly, even direct cast
     pub fn from_oam(sprite_data: &[u8]) -> Self {
         Self {
             ypos: sprite_data[0].wrapping_sub(16),
