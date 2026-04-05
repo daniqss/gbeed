@@ -35,6 +35,17 @@ pub extern "C" fn save_game_wasm() {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub unsafe extern "C" fn load_rom_from_js(path_ptr: *const std::ffi::c_char) {
+    let path = std::ffi::CStr::from_ptr(path_ptr).to_str().unwrap_or("");
+    if let Some(app) = APP_PTR.as_mut() {
+        if let Err(e) = app.load_rom(path) {
+            eprintln!("Failed to load ROM from JS: {e}");
+        }
+    }
+}
+
 pub mod local_storage {
     use super::*;
 

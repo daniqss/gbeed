@@ -13,9 +13,9 @@ use std::{
 
 use controller::{renderer, RaylibController};
 #[cfg(target_arch = "wasm32")]
-use web::{emscripten_set_main_loop_arg, local_storage, wasm_main_loop};
-#[cfg(target_arch = "wasm32")]
-pub use web::{save_game_wasm, APP_PTR};
+use web::{
+    emscripten_set_main_loop_arg, load_rom_from_js, local_storage, save_game_wasm, wasm_main_loop, APP_PTR,
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         i += 1;
     }
 
-    let (mut rl, thread) = raylib::init().size(1920, 1080).title("gbeed").build();
+    let (mut rl, thread) = raylib::init().size(1920, 1080).title("gbeed").resizable().build();
     rl.set_target_fps(60);
 
     let mut app = EmulatorApp::new(rl, thread, boot_path);
@@ -71,6 +71,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Force the linker to keep save_game_wasm
     #[cfg(target_arch = "wasm32")]
     let _ = save_game_wasm as *const ();
+    #[cfg(target_arch = "wasm32")]
+    let _ = load_rom_from_js as *const ();
 
     // set up the wasm main loop
     #[cfg(target_arch = "wasm32")]

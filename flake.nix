@@ -138,7 +138,15 @@
           RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
           LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
 
-          EMCC_CFLAGS = "-O3 -sUSE_GLFW=3 -sASSERTIONS=1 -sWASM=1 -sASYNCIFY -sGL_ENABLE_GET_PROC_ADDRESS=1";
+          EMCC_CFLAGS = pkgs.lib.concatStringsSep " " [
+            "-O3"
+            "-sUSE_GLFW=3"
+            "-sASSERTIONS=1"
+            "-sWASM=1"
+            "-sASYNCIFY"
+            "-sGL_ENABLE_GET_PROC_ADDRESS=1"
+            "-sEXPORTED_RUNTIME_METHODS=FS,HEAPU8,ccall,cwrap"
+          ];
         };
       };
 
