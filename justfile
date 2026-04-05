@@ -16,7 +16,7 @@ flamegraph *ARGS:
     cargo flamegraph --profile bench --features "${DISPLAY_FEATURES}" -p gbeed-console {{ARGS}}
 
 web-build:
-    cargo build --target wasm32-unknown-emscripten -p gbeed-debugger --release
+    RUSTFLAGS="-C panic=unwind" cargo build --target wasm32-unknown-emscripten -p gbeed-debugger --release
     mkdir -p dist
     cp target/wasm32-unknown-emscripten/release/gbeed_debugger.wasm dist/
     cp target/wasm32-unknown-emscripten/release/gbeed-debugger.js dist/
