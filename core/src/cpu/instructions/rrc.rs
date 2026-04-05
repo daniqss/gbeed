@@ -25,12 +25,13 @@ fn rrc(value: u8) -> u8 { (value >> 1) | ((value & 1) << 7) }
 /// ┌─╂→  b7  →  ...  →  b0   ─╂─╂→   C   ─╂─┐
 /// │ ┗━━━━━━━━━━━━━━━━━━━━━━━━┛ ┗━━━━━━━━━┛ │
 /// └────────────────────────────────────────┘
+#[derive(Debug, Default, Clone, Copy)]
 pub struct RrcR8 {
     dst: R8,
 }
 
 impl RrcR8 {
-    pub fn new(dst: R8) -> Box<Self> { Box::new(Self { dst }) }
+    pub fn new(dst: R8) -> InstructionBox { InstructionBox::new(Self { dst }) }
 }
 
 impl Instruction for RrcR8 {
@@ -47,10 +48,11 @@ impl Instruction for RrcR8 {
     fn disassembly(&self) -> String { format!("rrc {}", self.dst) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct RrcPointedByHL;
 
 impl RrcPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self {}) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self {}) }
 }
 
 impl Instruction for RrcPointedByHL {

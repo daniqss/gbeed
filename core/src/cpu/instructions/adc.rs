@@ -28,11 +28,12 @@ fn adc(gb: &mut Dmg, val: u8) -> Flags {
 
 /// Add with carry instruction
 /// Adds the value of the wanted register plus the carry flag to register A
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AdcR8 {
     src: R8,
 }
 impl AdcR8 {
-    pub fn new(src: R8) -> Box<Self> { Box::new(Self { src }) }
+    pub fn new(src: R8) -> InstructionBox { InstructionBox::new(Self { src }) }
 }
 impl Instruction for AdcR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -46,9 +47,10 @@ impl Instruction for AdcR8 {
 
 /// Add with carry instruction
 /// Adds the value pointed by HL plus the carry flag to register A
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AdcPointedByHL;
 impl AdcPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 impl Instruction for AdcPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -62,11 +64,12 @@ impl Instruction for AdcPointedByHL {
 
 /// Add with carry instruction
 /// Adds the value of the immediate 8 bit value plus the carry flag to register A
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AdcImm8 {
     val: u8,
 }
 impl AdcImm8 {
-    pub fn new(val: u8) -> Box<Self> { Box::new(Self { val }) }
+    pub fn new(val: u8) -> InstructionBox { InstructionBox::new(Self { val }) }
 }
 impl Instruction for AdcImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

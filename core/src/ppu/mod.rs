@@ -45,9 +45,13 @@ const FINISH_VBLANK_DOTS: usize = DOTS_PER_SCANLINE;
 
 const DEFAULT_WINDOW_BASE_ADDR: u16 = 0x9800;
 const COND_WINDOW_BASE_ADDR: u16 = 0x9C00;
+const DEFAULT_WINDOW_VRAM_ADDR: u16 = DEFAULT_WINDOW_BASE_ADDR - VRAM_START;
+const COND_WINDOW_VRAM_ADDR: u16 = COND_WINDOW_BASE_ADDR - VRAM_START;
 
 const UNSIGNED_BASE_ADDR: u16 = 0x8000;
 const SIGNED_BASE_ADDR: u16 = 0x9000;
+const UNSIGNED_VRAM_ADDR: u16 = UNSIGNED_BASE_ADDR - VRAM_START;
+const SIGNED_VRAM_ADDR: u16 = SIGNED_BASE_ADDR - VRAM_START;
 
 mem_range!(BLOCK0, 0x0, 0x800);
 mem_range!(BLOCK1, 0x800, 0x1000);
@@ -89,6 +93,10 @@ pub struct Ppu {
 
     pub vram: [u8; VRAM_SIZE as usize],
     pub oam_ram: [u8; OAM_SIZE as usize],
+
+    /// Useful to avoid checking framebuffer with color conversion
+    bg_cache: [u8; DMG_SCREEN_WIDTH],
+    pub sprites_this_frame: usize,
 
     lcd_control: u8,
     lcd_status: u8,
@@ -142,6 +150,9 @@ impl Ppu {
 
             vram: [0; VRAM_SIZE as usize],
             oam_ram: [0; OAM_SIZE as usize],
+            bg_cache: [0; DMG_SCREEN_WIDTH],
+
+            sprites_this_frame: 0,
 
             lcd_control: 0x91,
             lcd_status: 0x82,
@@ -184,7 +195,7 @@ impl Ppu {
         LYC_EQ_LY_FLAG
     }
 
-    #[inline]
+    #[inline(always)]
     fn get_mode(&self) -> LCDMode {
         match self.lcd_status & 0x03 {
             0 => LCDMode::HBlank,
@@ -201,7 +212,7 @@ impl Ppu {
     #[inline(always)]
     pub fn get_bg_palette(&self) -> u8 { self.bg_palette }
 
-    #[inline]
+    #[inline(always)]
     /// If LY equals LYC, the LYC=LY flag in STAT register is set.
     /// And if the corresponding interrupt is enabled, the LCD STAT interrupt is requested.
     fn ly_equals_lyc_check(&mut self, interrupt_flag: &mut Interrupt) {
@@ -319,6 +330,7 @@ impl Ppu {
         }
     }
 
+    #[inline(always)]
     pub fn draw_scanline<R: Renderer>(&mut self, renderer: &mut R) {
         // draw background
         if self.bg_enable() {
@@ -332,24 +344,32 @@ impl Ppu {
 
         // draw sprites
         if self.obj_enable() {
-            self.draw_sprites(renderer)
+            self.sprites_this_frame += self.draw_sprites(renderer)
         };
     }
 
-    #[inline(always)]
-    pub fn draw_tile<R: Renderer>(
-        &mut self,
-        renderer: &mut R,
-        pixel: (usize, usize),
-        tile: (u8, u8),
-        tile_map_base: u16,
-        line_in_tile: u8,
-    ) {
-        let (pixel_x, pixel_y) = pixel;
-        let (tile_x, tile_y) = tile;
+    fn draw_bg<R: Renderer>(&mut self, renderer: &mut R) {
+        let current_line = self.ly;
+        let bg_y = current_line.wrapping_add(self.scroll_y);
 
-        let tile_index: usize = (tile_y as usize / 8) * 32 + (tile_x as usize / 8);
-        let tile_number = self.read(tile_map_base + tile_index as u16);
+        let tile_y = bg_y >> 3;
+        let line_in_tile = (bg_y & 7) as u16;
+
+        let tile_map_base = if self.bg_tile_map_address() {
+            COND_WINDOW_VRAM_ADDR
+        } else {
+            DEFAULT_WINDOW_VRAM_ADDR
+        };
+
+        // calculate just once the base address of the whole row of tiles, instead of calculating it for each tile
+        let tile_map_row_addr = tile_map_base + (tile_y as u16) * 32;
+        let is_signed = !self.bg_and_window_tile_data();
+
+        let bg_x = self.scroll_x;
+        let mut tile_x = bg_x >> 3;
+        let mut bit_index = 7 - (bg_x & 7);
+
+        let mut tile_number = self.vram[(tile_map_row_addr + tile_x as u16) as usize];
 
         // The "$8000 method" uses $8000 as its base pointer and uses an unsigned addressing,
         // meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
@@ -357,112 +377,135 @@ impl Ppu {
         // The "$8800 method" uses $9000 as its base pointer and uses a signed addressing,
         // meaning that tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1; or, to put it differently,
         // "$8800 addressing" takes tiles 0-127 from block 2 and tiles 128-255 from block 1.
-        let tile_data_base = if self.bg_and_window_tile_data() || tile_number >= 128 {
-            UNSIGNED_BASE_ADDR
+        let mut tile_data_base = if !is_signed || tile_number >= 128 {
+            UNSIGNED_VRAM_ADDR
         } else {
-            SIGNED_BASE_ADDR
+            SIGNED_VRAM_ADDR
         };
+        let mut tile_address = tile_data_base + (tile_number as u16) * 16;
 
-        let tile_address = tile_data_base + (tile_number as u16) * 16;
-
-        let first_byte = self.read(tile_address + (line_in_tile as u16) * 2);
-        let second_byte = self.read(tile_address + (line_in_tile as u16) * 2 + 1);
-
-        let bit_index = 7 - (tile_x % 8);
-
-        let low_pixel = (first_byte >> bit_index) & 1;
-        let high_pixel = (second_byte >> bit_index) & 1;
-
-        let color_id = (high_pixel << 1) | low_pixel;
-
-        renderer.write_pixel(pixel_x, pixel_y, renderer.get_color(self.bg_palette, color_id));
-    }
-
-    fn draw_bg<R: Renderer>(&mut self, renderer: &mut R) {
-        let current_line = self.ly;
-
-        let tile_map_base = if self.bg_tile_map_address() {
-            COND_WINDOW_BASE_ADDR
-        } else {
-            DEFAULT_WINDOW_BASE_ADDR
-        };
+        let mut first_byte = self.vram[(tile_address + line_in_tile * 2) as usize];
+        let mut second_byte = self.vram[(tile_address + line_in_tile * 2 + 1) as usize];
 
         for pixel in 0..DMG_SCREEN_WIDTH {
-            let bg_x = (pixel as u8).wrapping_add(self.scroll_x);
-            let bg_y = current_line.wrapping_add(self.scroll_y);
+            let low_pixel = (first_byte >> bit_index) & 1;
+            let high_pixel = (second_byte >> bit_index) & 1;
+            let color_id = (high_pixel << 1) | low_pixel;
 
-            let line_in_tile = bg_y % 8;
+            self.bg_cache[pixel] = color_id;
+            renderer.write_pixel(pixel, current_line as usize, self.bg_palette, color_id);
 
-            self.draw_tile(
-                renderer,
-                (pixel, current_line as usize),
-                (bg_x, bg_y),
-                tile_map_base,
-                line_in_tile,
-            );
+            if bit_index == 0 {
+                bit_index = 7;
+                tile_x = (tile_x + 1) & 31;
+
+                tile_number = self.vram[(tile_map_row_addr + tile_x as u16) as usize];
+                tile_data_base = if !is_signed || tile_number >= 128 {
+                    UNSIGNED_VRAM_ADDR
+                } else {
+                    SIGNED_VRAM_ADDR
+                };
+                tile_address = tile_data_base + (tile_number as u16) * 16;
+
+                first_byte = self.vram[(tile_address + line_in_tile * 2) as usize];
+                second_byte = self.vram[(tile_address + line_in_tile * 2 + 1) as usize];
+            } else {
+                bit_index -= 1;
+            }
         }
     }
 
     fn draw_window<R: Renderer>(&mut self, renderer: &mut R) {
         let current_line = self.ly;
         let window_y = self.wy;
-        let window_x = self.wx as isize - 7;
 
         if current_line < window_y {
             return;
         }
 
+        let window_x = self.wx as isize - 7;
+        let start_pixel = if window_x < 0 { 0 } else { window_x as usize };
+
+        if start_pixel >= DMG_SCREEN_WIDTH {
+            return;
+        }
+
         let tile_map_base = if self.window_tile_map_address() {
-            COND_WINDOW_BASE_ADDR
+            COND_WINDOW_VRAM_ADDR
         } else {
-            DEFAULT_WINDOW_BASE_ADDR
+            DEFAULT_WINDOW_VRAM_ADDR
         };
 
-        let mut window_rendered = false;
+        let win_y = self.window_line_counter;
+        let tile_y = win_y >> 3;
+        let line_in_tile = (win_y & 7) as u16;
+        let tile_map_row_addr = tile_map_base + (tile_y as u16) * 32;
+        let is_signed = !self.bg_and_window_tile_data();
 
-        for pixel in 0..DMG_SCREEN_WIDTH {
-            if (pixel as isize) < window_x {
-                continue;
+        let window_column = if window_x < 0 { (-window_x) as u8 } else { 0 };
+        let mut tile_x = window_column >> 3;
+        let mut bit_index = 7 - (window_column & 7);
+
+        let mut tile_number = self.vram[(tile_map_row_addr + tile_x as u16) as usize];
+        let mut tile_data_base = if !is_signed || tile_number >= 128 {
+            UNSIGNED_VRAM_ADDR
+        } else {
+            SIGNED_VRAM_ADDR
+        };
+        let mut tile_address = tile_data_base + (tile_number as u16) * 16;
+
+        let mut first_byte = self.vram[(tile_address + line_in_tile * 2) as usize];
+        let mut second_byte = self.vram[(tile_address + line_in_tile * 2 + 1) as usize];
+
+        for pixel in start_pixel..DMG_SCREEN_WIDTH {
+            let low_pixel = (first_byte >> bit_index) & 1;
+            let high_pixel = (second_byte >> bit_index) & 1;
+            let color_id = (high_pixel << 1) | low_pixel;
+
+            self.bg_cache[pixel] = color_id;
+            renderer.write_pixel(pixel, current_line as usize, self.bg_palette, color_id);
+
+            if bit_index == 0 {
+                bit_index = 7;
+                tile_x = (tile_x + 1) & 31;
+
+                tile_number = self.vram[(tile_map_row_addr + tile_x as u16) as usize];
+                tile_data_base = if !is_signed || tile_number >= 128 {
+                    UNSIGNED_VRAM_ADDR
+                } else {
+                    SIGNED_VRAM_ADDR
+                };
+                tile_address = tile_data_base + (tile_number as u16) * 16;
+
+                first_byte = self.vram[(tile_address + line_in_tile * 2) as usize];
+                second_byte = self.vram[(tile_address + line_in_tile * 2 + 1) as usize];
+            } else {
+                bit_index -= 1;
             }
-
-            window_rendered = true;
-
-            let window_column = (pixel as isize - window_x) as u8;
-            let window_y = self.window_line_counter;
-
-            let line_in_tile = window_y % 8;
-
-            self.draw_tile(
-                renderer,
-                (pixel, current_line as usize),
-                (window_column, window_y),
-                tile_map_base,
-                line_in_tile,
-            );
         }
 
-        if window_rendered {
-            self.window_line_counter = self.window_line_counter.wrapping_add(1);
-        }
+        self.window_line_counter = self.window_line_counter.wrapping_add(1);
     }
 
-    fn draw_sprites<R: Renderer>(&mut self, renderer: &mut R) {
+    fn draw_sprites<R: Renderer>(&mut self, renderer: &mut R) -> usize {
         let current_line = self.ly;
         let sprite_height = if self.obj_size() { 16 } else { 8 };
         let mut drawn_sprites = 0u8;
-        let mut sprites_count = 0u8;
 
         // track which sprite owns each pixel in the current line
         let mut pixel_owner: [Option<u8>; DMG_SCREEN_WIDTH] = [None; DMG_SCREEN_WIDTH];
 
-        while drawn_sprites < MAX_SPRITES_PER_LINE && sprites_count < MAX_SPRITES_IN_OAM {
-            let oam_addr = OAM_START + (sprites_count as u16) * 4;
-            let sprite = Sprite::from_oam(self, oam_addr);
+        for sprites_count in 0..MAX_SPRITES_IN_OAM {
+            if drawn_sprites >= MAX_SPRITES_PER_LINE {
+                break;
+            }
+
+            let oam_addr = (sprites_count as u16) * 4;
+            let sprite = Sprite::from_oam(&self.oam_ram[oam_addr as usize..oam_addr as usize + 4]);
 
             // is sprite in current line?
             let line_offset = current_line.wrapping_sub(sprite.ypos);
             if line_offset >= sprite_height {
-                sprites_count += 1;
                 continue;
             }
 
@@ -482,9 +525,17 @@ impl Ppu {
                 }
             }
 
-            let tile_addr = VRAM_START + (tile_index as u16) * 16 + (line_in_sprite as u16) * 2;
-            let low_tile_byte = self.read(tile_addr);
-            let high_tile_byte = self.read(tile_addr + 1);
+            let tile_addr = (tile_index as u16) * 16 + (line_in_sprite as u16) * 2;
+
+            // access vram directly
+            let mut low_tile_byte = self.vram[tile_addr as usize];
+            let mut high_tile_byte = self.vram[tile_addr as usize + 1];
+
+            // reverse the bits just once per byte, and not per pixel
+            if sprite.xflip() {
+                low_tile_byte = low_tile_byte.reverse_bits();
+                high_tile_byte = high_tile_byte.reverse_bits();
+            }
 
             let palette = if sprite.palette_number() {
                 self.obj1_palette
@@ -493,10 +544,11 @@ impl Ppu {
             };
 
             for pixel in 0..8 {
-                let bit_index = if sprite.xflip() { pixel } else { 7 - pixel };
+                // always from left to right, even if xflip is enabled, because we reversed the bits already in that case
+                let bit_index = 7 - pixel;
 
-                let low_bit = (low_tile_byte >> bit_index) & 0x01;
-                let high_bit = (high_tile_byte >> bit_index) & 0x01;
+                let low_bit = (low_tile_byte >> bit_index) & 1;
+                let high_bit = (high_tile_byte >> bit_index) & 1;
                 let color_id = (high_bit << 1) | low_bit;
 
                 // transparent pixel
@@ -511,34 +563,32 @@ impl Ppu {
 
                 let sx = screen_x as usize;
 
-                // sprite under background
-                if sprite.priority() {
-                    let bg_pixel = renderer.read_pixel(sx, current_line as usize);
-                    if bg_pixel != renderer.get_color(self.bg_palette, 0) {
-                        continue;
-                    }
+                if let Some(owner_x) = pixel_owner[sx]
+                    && owner_x <= sprite.xpos
+                {
+                    continue;
                 }
 
-                let should_draw = match pixel_owner[sx] {
-                    Some(owner_x) => sprite.xpos < owner_x,
-                    None => true,
-                };
-
-                if should_draw {
-                    pixel_owner[sx] = Some(sprite.xpos);
-                    renderer.write_pixel(sx, current_line as usize, renderer.get_color(palette, color_id));
+                // sprite under background, using cache
+                if sprite.priority() && self.bg_cache[sx] != 0 {
+                    continue;
                 }
+
+                pixel_owner[sx] = Some(sprite.xpos);
+                renderer.write_pixel(sx, current_line as usize, palette, color_id);
             }
 
             drawn_sprites += 1;
-            sprites_count += 1;
         }
+
+        drawn_sprites as usize
     }
 
     /// Writing to DMA register will copy from ROM or RAM to OAM memory
     /// It will take 160 dots or 320 at double speed
     /// CPU can access only HRAM and PPU can't access OAM
     /// Most games transfer to HRAM code to continue execution in CPU, and execute DMA transfer in VBlank
+    // TODO: implement this coping memory directly from cartridge to OAM
     pub fn dma_transfer(gb: &mut Dmg, src_addr: u8) {
         let src_addr = (src_addr as u16) << 8;
         for i in 0..OAM_SIZE {

@@ -10,13 +10,14 @@ use crate::{
 /// it can get a condition to jump only if the condition is met
 /// the condition is based on carry and zero flags
 /// the address is encoded as a signed 8 bit immediate value
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Jr {
     pub jc: JumpCondition,
     pub offset: u8,
 }
 
 impl Jr {
-    pub fn new(jc: JumpCondition, offset: u8) -> Box<Self> { Box::new(Self { jc, offset }) }
+    pub fn new(jc: JumpCondition, offset: u8) -> InstructionBox { InstructionBox::new(Self { jc, offset }) }
 }
 
 impl Instruction for Jr {

@@ -28,11 +28,12 @@ fn sbc(gb: &mut Dmg, val: u8) -> Flags {
 
 /// Subtraction with carry instruction
 /// Subtracts the value of the wanted register from register A, and the carry flag
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SbcR8 {
     src: R8,
 }
 impl SbcR8 {
-    pub fn new(src: R8) -> Box<Self> { Box::new(Self { src }) }
+    pub fn new(src: R8) -> InstructionBox { InstructionBox::new(Self { src }) }
 }
 impl Instruction for SbcR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -46,9 +47,10 @@ impl Instruction for SbcR8 {
 
 /// Subtraction with carry instruction
 /// Subtracts the value pointed by HL from register A, and the carry flag
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SbcPointedByHL;
 impl SbcPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 impl Instruction for SbcPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -62,11 +64,12 @@ impl Instruction for SbcPointedByHL {
 
 /// Subtraction with carry instruction
 /// Subtracts the value of the immediate 8 bit value from register A, and the carry flag
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SbcImm8 {
     n8: u8,
 }
 impl SbcImm8 {
-    pub fn new(n8: u8) -> Box<Self> { Box::new(Self { n8 }) }
+    pub fn new(n8: u8) -> InstructionBox { InstructionBox::new(Self { n8 }) }
 }
 impl Instruction for SbcImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

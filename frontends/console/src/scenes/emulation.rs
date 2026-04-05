@@ -4,10 +4,11 @@ use crate::scenes::GameMenuState;
 use crate::utils::layout::*;
 use crate::utils::roms::save_cartridge;
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::InputManager;
+use gbeed_raylib_common::input::InputManager;
 use raylib::prelude::*;
 use std::path::PathBuf;
 
+#[derive(Debug)]
 pub struct EmulationState {
     pub input: InputManager,
 }

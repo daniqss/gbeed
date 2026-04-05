@@ -17,11 +17,12 @@ fn and_u8_flags(result: u8) -> Flags {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AndR8 {
     src: R8,
 }
 impl AndR8 {
-    pub fn new(src: R8) -> Box<Self> { Box::new(Self { src }) }
+    pub fn new(src: R8) -> InstructionBox { InstructionBox::new(Self { src }) }
 }
 impl Instruction for AndR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -33,9 +34,10 @@ impl Instruction for AndR8 {
     fn disassembly(&self) -> String { format!("and {}", self.src) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AndPointedByHL;
 impl AndPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 impl Instruction for AndPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -47,11 +49,12 @@ impl Instruction for AndPointedByHL {
     fn disassembly(&self) -> String { "and [hl]".to_string() }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct AndImm8 {
     val: u8,
 }
 impl AndImm8 {
-    pub fn new(val: u8) -> Box<Self> { Box::new(Self { val }) }
+    pub fn new(val: u8) -> InstructionBox { InstructionBox::new(Self { val }) }
 }
 impl Instruction for AndImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

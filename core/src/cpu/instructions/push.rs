@@ -20,12 +20,13 @@ use crate::{
 /// ld [sp], b  ; B, D or H
 /// dec sp
 /// ld [sp], c   ; C, E or L
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Push {
     src: R16,
 }
 
 impl Push {
-    pub fn new(src: R16) -> Box<Self> { Box::new(Self { src }) }
+    pub fn new(src: R16) -> InstructionBox { InstructionBox::new(Self { src }) }
 }
 
 impl Instruction for Push {

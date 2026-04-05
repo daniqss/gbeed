@@ -8,13 +8,14 @@ use crate::{
 
 /// call given address
 /// pushes the next instruction address on the stack, and then jumps to it
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Call {
     jc: JumpCondition,
     n16: u16,
 }
 
 impl Call {
-    pub fn new(jc: JumpCondition, n16: u16) -> Box<Self> { Box::new(Self { jc, n16 }) }
+    pub fn new(jc: JumpCondition, n16: u16) -> InstructionBox { InstructionBox::new(Self { jc, n16 }) }
 }
 
 impl Instruction for Call {

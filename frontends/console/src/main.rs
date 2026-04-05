@@ -3,9 +3,10 @@ mod scenes;
 mod utils;
 
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{Palette, Texture};
+use gbeed_raylib_common::{color, Texture};
 use raylib::prelude::*;
 use std::path::PathBuf;
+use std::process::exit;
 
 use crate::controller::ConsoleController;
 use crate::scenes::{EmulatorState, SelectionMenuState};
@@ -28,6 +29,8 @@ impl EmulatorApp {
             DMG_SCREEN_HEIGHT as i32,
         );
 
+        let palette = color::Palette::default();
+
         Self {
             state: EmulatorState::SelectionMenu(SelectionMenuState::new()),
             gb: None,
@@ -38,9 +41,15 @@ impl EmulatorApp {
                 rl,
                 thread,
                 screen,
-                palette: Palette::default(),
+                palette,
+                palette_color: palette.get_palette_color(),
             },
         }
+    }
+
+    #[inline(always)]
+    pub fn should_close(&self) -> bool {
+        self.controller.rl.window_should_close() || matches!(self.state, EmulatorState::Exit)
     }
 
     pub fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -63,6 +72,9 @@ impl EmulatorApp {
             )?,
             EmulatorState::GameMenu(state) => state.update(&self.controller.rl, dt, &self.gb),
             EmulatorState::SettingsMenu(state) => state.update(dt, &mut self.controller),
+
+            // emulator should have already been closed at this point
+            EmulatorState::Exit => unreachable!(),
         };
 
         if let Some(state) = next_state {
@@ -73,25 +85,43 @@ impl EmulatorApp {
     }
 
     pub fn draw(&mut self) {
-        let palette = self.controller.palette;
         let ConsoleController {
-            rl, thread, screen, ..
+            rl,
+            thread,
+            screen,
+            palette,
+            palette_color,
+            ..
         } = &mut self.controller;
 
         rl.draw(thread, |mut d| {
-            d.clear_background(palette.background());
+            d.clear_background(color::background(palette_color));
 
             match &self.state {
-                EmulatorState::SelectionMenu(state) => state.draw(&mut d, palette),
+                EmulatorState::SelectionMenu(state) => state.draw(&mut d, palette_color),
                 EmulatorState::Emulation(state) => state.draw(&mut d, screen),
                 EmulatorState::GameMenu(state) => {
-                    state.draw(&mut d, screen, &self.gb, &self.rom_path, palette)
+                    state.draw(&mut d, screen, &self.gb, &self.rom_path, palette_color)
                 }
-                EmulatorState::SettingsMenu(state) => state.draw(&mut d, palette),
+                EmulatorState::SettingsMenu(state) => state.draw(&mut d, palette, palette_color),
+
+                EmulatorState::Exit => return,
             }
 
-            draw_header(&mut d, &self.state, palette);
-            draw_footer(&mut d, &self.state, palette);
+            draw_header(&mut d, &self.state, palette_color);
+            draw_footer(&mut d, &self.state, palette_color);
+            d.draw_fps(215, 220);
+            // if let Some(gb) = &mut self.gb {
+            //     d.draw_text(
+            //         &format!("{}", gb.ppu.sprites_this_frame),
+            //         205,
+            //         200,
+            //         16,
+            //         Color::GREENYELLOW,
+            //     );
+
+            //     gb.ppu.sprites_this_frame = 0;
+            // }
         });
     }
 }
@@ -101,14 +131,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .size(SCREEN_WIDTH, SCREEN_HEIGHT)
         .title("gbeed")
         .build();
-    rl.set_target_fps(60);
+    // rl.set_target_fps(60);
+    rl.set_exit_key(None);
 
     let mut app = EmulatorApp::new(rl, thread);
 
-    while !app.controller.rl.window_should_close() {
+    while !app.should_close() {
         app.update()?;
         app.draw();
     }
 
-    Ok(())
+    exit(0)
 }

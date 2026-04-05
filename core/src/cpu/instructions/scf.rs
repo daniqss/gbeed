@@ -6,10 +6,11 @@ use crate::{
     prelude::*,
 };
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Scf;
 
 impl Scf {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for Scf {

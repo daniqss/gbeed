@@ -7,10 +7,11 @@ use crate::{
 };
 
 /// disable interrupts
-pub struct Di {}
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Di;
 
 impl Di {
-    pub fn new() -> Box<Self> { Box::new(Self {}) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 
 impl Instruction for Di {

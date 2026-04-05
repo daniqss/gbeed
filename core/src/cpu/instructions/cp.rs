@@ -20,11 +20,12 @@ fn cp_flags(result: u8, a: u8, subtrahend: u8, did_borrow: bool) -> Flags {
 /// ComPare instruction
 /// Compare the value in register A with the given target
 /// Works by subtract the src value from register A and sets flags accordingly, but does not store the result
+#[derive(Debug, Default, Clone, Copy)]
 pub struct CpR8 {
     src: R8,
 }
 impl CpR8 {
-    pub fn new(src: R8) -> Box<Self> { Box::new(Self { src }) }
+    pub fn new(src: R8) -> InstructionBox { InstructionBox::new(Self { src }) }
 }
 impl Instruction for CpR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -40,9 +41,10 @@ impl Instruction for CpR8 {
     fn disassembly(&self) -> String { format!("cp {}", self.src) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct CpPointedByHL;
 impl CpPointedByHL {
-    pub fn new() -> Box<Self> { Box::new(Self) }
+    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
 }
 impl Instruction for CpPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -58,11 +60,12 @@ impl Instruction for CpPointedByHL {
     fn disassembly(&self) -> String { "cp [hl]".to_string() }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
 pub struct CpImm8 {
     val: u8,
 }
 impl CpImm8 {
-    pub fn new(val: u8) -> Box<Self> { Box::new(Self { val }) }
+    pub fn new(val: u8) -> InstructionBox { InstructionBox::new(Self { val }) }
 }
 impl Instruction for CpImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

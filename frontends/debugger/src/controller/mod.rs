@@ -23,8 +23,9 @@ impl RaylibController {
 
 impl Renderer for RaylibController {
     fn read_pixel(&self, x: usize, y: usize) -> u32 { self.renderer.read_pixel(x, y) }
-    fn write_pixel(&mut self, x: usize, y: usize, color: u32) { self.renderer.write_pixel(x, y, color); }
-    fn get_color(&self, palette: u8, color_id: u8) -> u32 { self.renderer.get_color(palette, color_id) }
+    fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
+        self.renderer.write_pixel(x, y, palette, color_id);
+    }
     fn draw_screen(&mut self) { self.renderer.draw_screen() }
 }
 

@@ -8,12 +8,13 @@ use crate::{
 
 /// restart instruction, same that call, but faster for suitable addresses
 /// used to call a interruption routine
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Rst {
     pub vec: u8,
 }
 
 impl Rst {
-    pub fn new(vec: u8) -> Box<Self> { Box::new(Self { vec }) }
+    pub fn new(vec: u8) -> InstructionBox { InstructionBox::new(Self { vec }) }
 }
 
 impl Instruction for Rst {

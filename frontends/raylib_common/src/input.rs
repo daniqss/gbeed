@@ -1,7 +1,7 @@
 use gbeed_core::{Joypad, JoypadButton};
 use raylib::prelude::*;
 
-#[derive(Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct InputState {
     pub up: bool,
     pub down: bool,
@@ -19,6 +19,7 @@ pub trait ToInputState {
     fn to_input(&self, rl: &RaylibHandle) -> InputState;
 }
 
+#[derive(Debug)]
 pub struct InputKeyTriggers {
     pub up: [KeyboardKey; 2],
     pub down: [KeyboardKey; 2],
@@ -66,7 +67,7 @@ impl ToInputState for InputKeyTriggers {
     }
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct MouseButtonArea {
     pub x: i32,
     pub y: i32,
@@ -86,7 +87,7 @@ impl MouseButtonArea {
     // press??
 }
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct InputMouseTriggers {
     pub up: MouseButtonArea,
     pub down: MouseButtonArea,
@@ -125,6 +126,7 @@ impl ToInputState for InputMouseTriggers {
 }
 
 // sneak peek of future GPIO support
+#[derive(Debug, Default, Copy, Clone)]
 pub struct _InputGpioTriggers {}
 
 impl InputState {
@@ -159,6 +161,7 @@ impl InputState {
     }
 }
 
+#[derive(Debug)]
 pub struct InputManager {
     pub key_triggers: InputKeyTriggers,
     pub mouse_triggers: Option<InputMouseTriggers>,

@@ -20,13 +20,14 @@ pub use rst::Rst;
 /// jump NotZero if zero flag is not set, `self.f & ZERO_FLAG_MASK == 0`
 /// jump Carry if carry flag is set
 /// jump NotCarry if carry flag is not set
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum JumpCondition {
+    #[default]
+    None,
     Zero(bool),
     NotZero(bool),
     Carry(bool),
     NotCarry(bool),
-    None,
 }
 
 impl JumpCondition {

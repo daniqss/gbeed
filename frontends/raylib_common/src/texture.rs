@@ -24,9 +24,11 @@ impl Texture {
 impl std::ops::Index<usize> for Texture {
     type Output = u8;
 
+    #[inline(always)]
     fn index(&self, idx: usize) -> &Self::Output { &self.framebuffer[idx] }
 }
 
 impl std::ops::IndexMut<usize> for Texture {
+    #[inline(always)]
     fn index_mut(&mut self, idx: usize) -> &mut Self::Output { &mut self.framebuffer[idx] }
 }

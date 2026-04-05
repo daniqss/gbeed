@@ -1,4 +1,4 @@
-use gbeed_raylib_common::Palette;
+use gbeed_raylib_common::color;
 use raylib::prelude::*;
 
 use crate::scenes::EmulatorState;
@@ -26,23 +26,27 @@ pub const VISIBLE_TOP: i32 = CONTENT_TOP + SECTION_PAD;
 pub const VISIBLE_BOTTOM: i32 = CONTENT_BOTTOM - SECTION_PAD;
 
 /// Draws the header with the tabs
-pub fn draw_header(d: &mut RaylibDrawHandle, current_state: &EmulatorState, palette: Palette) {
+pub fn draw_header(
+    d: &mut RaylibDrawHandle,
+    current_state: &EmulatorState,
+    palette_color: &color::PaletteColor,
+) {
     let (sel_active, game_active, set_active) = match current_state {
         EmulatorState::SelectionMenu(_) => (true, false, false),
         EmulatorState::GameMenu(_) => (false, true, false),
         EmulatorState::SettingsMenu(_) => (false, false, true),
-        EmulatorState::Emulation(_) => return,
+        EmulatorState::Emulation(_) | EmulatorState::Exit => return,
     };
 
     let tab_style = |active: bool| {
         if active {
-            (FONT_SIZE + 2, palette.foreground())
+            (FONT_SIZE + 2, color::foreground(palette_color))
         } else {
-            (FONT_SIZE, palette.primary())
+            (FONT_SIZE, color::primary(palette_color))
         }
     };
 
-    d.draw_rectangle(0, 0, SCREEN_WIDTH, CONTENT_TOP, palette.background());
+    d.draw_rectangle(0, 0, SCREEN_WIDTH, CONTENT_TOP, color::background(palette_color));
 
     let (sel_size, sel_color) = tab_style(sel_active);
     let (game_size, game_color) = tab_style(game_active);
@@ -66,7 +70,7 @@ pub fn draw_header(d: &mut RaylibDrawHandle, current_state: &EmulatorState, pale
         PADDING_Y + HEADER_H,
         SCREEN_WIDTH - PADDING_X,
         PADDING_Y + HEADER_H,
-        palette.secondary(),
+        color::secondary(palette_color),
     );
 }
 
@@ -76,7 +80,7 @@ pub fn draw_menu_list(
     items: &[(&str, &str)],
     selected: usize,
     scroll_offset: usize,
-    palette: Palette,
+    palette_color: &color::PaletteColor,
 ) {
     let height = VISIBLE_TOP - VISIBLE_BOTTOM;
     let visible_count = (height / ITEM_H) as usize;
@@ -86,7 +90,7 @@ pub fn draw_menu_list(
         VISIBLE_BOTTOM,
         SCROLLBAR_W,
         height,
-        palette.secondary(),
+        color::secondary(palette_color),
     );
 
     let total = items.len();
@@ -96,7 +100,13 @@ pub fn draw_menu_list(
     } else {
         VISIBLE_TOP + (((selected as f32) / (total - 1) as f32) * (height - thumb_h) as f32) as i32
     };
-    d.draw_rectangle(SCROLLBAR_X, thumb_y, SCROLLBAR_W, thumb_h, palette.foreground());
+    d.draw_rectangle(
+        SCROLLBAR_X,
+        thumb_y,
+        SCROLLBAR_W,
+        thumb_h,
+        color::primary(palette_color),
+    );
 
     for i in 0..visible_count {
         let idx = scroll_offset + i;
@@ -109,10 +119,16 @@ pub fn draw_menu_list(
         let val_display = (!value.is_empty()).then(|| format!("< {} >", value));
 
         if idx == selected {
-            d.draw_rectangle(0, y, SCROLLBAR_X - 2, ITEM_H, palette.foreground());
-            d.draw_rectangle(0, y, 2, ITEM_H, palette.primary());
-            d.draw_text("$", PADDING_X, y + 2, FONT_SIZE, palette.secondary());
-            d.draw_text(label, PADDING_X + 12, y + 2, FONT_SIZE, palette.background());
+            d.draw_rectangle(0, y, SCROLLBAR_X - 2, ITEM_H, color::foreground(palette_color));
+            d.draw_rectangle(0, y, 2, ITEM_H, color::primary(palette_color));
+            d.draw_text("$", PADDING_X, y + 2, FONT_SIZE, color::secondary(palette_color));
+            d.draw_text(
+                label,
+                PADDING_X + 12,
+                y + 2,
+                FONT_SIZE,
+                color::background(palette_color),
+            );
             if let Some(ref val) = val_display {
                 let val_w = d.measure_text(val, FONT_SIZE);
                 d.draw_text(
@@ -120,11 +136,17 @@ pub fn draw_menu_list(
                     SCROLLBAR_X - val_w - 4,
                     y + 2,
                     FONT_SIZE,
-                    palette.background(),
+                    color::background(palette_color),
                 );
             }
         } else {
-            d.draw_text(label, PADDING_X + 12, y + 2, FONT_SIZE, palette.primary());
+            d.draw_text(
+                label,
+                PADDING_X + 12,
+                y + 2,
+                FONT_SIZE,
+                color::primary(palette_color),
+            );
             if let Some(ref val) = val_display {
                 let val_w = d.measure_text(val, FONT_SIZE);
                 d.draw_text(
@@ -132,7 +154,7 @@ pub fn draw_menu_list(
                     SCROLLBAR_X - val_w - 4,
                     y + 2,
                     FONT_SIZE,
-                    palette.secondary(),
+                    color::primary(palette_color),
                 );
             }
         }
@@ -140,12 +162,12 @@ pub fn draw_menu_list(
 }
 
 /// Draws the selection menu footer with control hints
-pub fn draw_footer(d: &mut RaylibDrawHandle, state: &EmulatorState, palette: Palette) {
+pub fn draw_footer(d: &mut RaylibDrawHandle, state: &EmulatorState, palette_color: &color::PaletteColor) {
     let hint = match state {
         EmulatorState::SelectionMenu(_) => "w/s to navigate roms and a to select",
         EmulatorState::GameMenu(_) => "a to enter back the game",
         EmulatorState::SettingsMenu(_) => "w/s to navigate and a/b to change values",
-        EmulatorState::Emulation(_) => return,
+        EmulatorState::Emulation(_) | EmulatorState::Exit => return,
     };
 
     d.draw_rectangle(
@@ -153,11 +175,11 @@ pub fn draw_footer(d: &mut RaylibDrawHandle, state: &EmulatorState, palette: Pal
         CONTENT_BOTTOM,
         SCREEN_WIDTH,
         SCREEN_HEIGHT - CONTENT_BOTTOM,
-        palette.background(),
+        color::background(palette_color),
     );
 
     let sep_y = CONTENT_BOTTOM;
-    d.draw_line(0, sep_y, SCREEN_WIDTH, sep_y, palette.secondary());
+    d.draw_line(0, sep_y, SCREEN_WIDTH, sep_y, color::secondary(palette_color));
 
     let hint_w = d.measure_text(hint, FONT_SIZE - 1);
     let y = sep_y + (FOOTER_H - (FONT_SIZE - 1)) / 2;
@@ -166,6 +188,6 @@ pub fn draw_footer(d: &mut RaylibDrawHandle, state: &EmulatorState, palette: Pal
         (SCREEN_WIDTH - hint_w) / 2,
         y,
         FONT_SIZE - 1,
-        palette.primary(),
+        color::primary(palette_color),
     );
 }

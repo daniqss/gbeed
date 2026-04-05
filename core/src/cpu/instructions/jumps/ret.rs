@@ -7,12 +7,13 @@ use crate::{
 };
 
 /// return from subroutine
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Ret {
     pub jc: JumpCondition,
 }
 
 impl Ret {
-    pub fn new(jc: JumpCondition) -> Box<Self> { Box::new(Self { jc }) }
+    pub fn new(jc: JumpCondition) -> InstructionBox { InstructionBox::new(Self { jc }) }
 }
 
 impl Instruction for Ret {
