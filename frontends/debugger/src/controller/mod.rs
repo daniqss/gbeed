@@ -13,9 +13,9 @@ pub struct RaylibController {
 }
 
 impl RaylibController {
-    pub fn new(rl: RaylibHandle, thread: RaylibThread) -> Self {
+    pub fn new(rl: RaylibHandle, thread: RaylibThread, layout: renderer::Layout) -> Self {
         Self {
-            renderer: RaylibRenderer::new(rl, thread),
+            renderer: RaylibRenderer::new(rl, thread, layout),
             serial_listener: RaylibSerialListener,
         }
     }

@@ -14,6 +14,7 @@ extern "C" {
         simulate_infinite_loop: std::os::raw::c_int,
     );
     pub fn emscripten_run_script(script: *const std::os::raw::c_char);
+    pub fn emscripten_run_script_int(script: *const std::os::raw::c_char) -> std::os::raw::c_int;
 }
 
 pub unsafe extern "C" fn wasm_main_loop(app: *mut EmulatorApp) {
