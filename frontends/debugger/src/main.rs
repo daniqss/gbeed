@@ -235,6 +235,8 @@ impl EmulatorApp {
             self.controller
                 .renderer
                 .update_scroll(gb.read(0xFF43) as i32, gb.read(0xFF42) as i32);
+
+            self.controller.renderer.draw_screen();
         } else {
             // Draw a "Drop ROM" message
             let mut d = self

@@ -283,8 +283,6 @@ impl Ppu {
                         interrupt_flag.set_lcd_stat_interrupt(true);
                     }
 
-                    renderer.draw_screen();
-
                     LCDMode::VBlank
                 }
                 // frame not done yet

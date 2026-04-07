@@ -29,8 +29,6 @@ impl Renderer for ConsoleController {
         self.screen[index + 1] = color.g;
         self.screen[index + 2] = color.b;
     }
-
-    fn draw_screen(&mut self) { self.screen.update(); }
 }
 
 impl SerialListener for ConsoleController {

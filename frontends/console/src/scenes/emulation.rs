@@ -42,6 +42,10 @@ impl EmulationState {
         self.input.state().apply(&mut gb.joypad);
 
         gb.run(controller)?;
+
+        // update screen with the new framebuffer data
+        controller.screen.update();
+
         Ok(None)
     }
 
@@ -54,5 +58,6 @@ impl EmulationState {
             0.0,
             Color::WHITE,
         );
+        // d.draw_texture(&screen.texture, 0, 0, Color::WHITE);
     }
 }

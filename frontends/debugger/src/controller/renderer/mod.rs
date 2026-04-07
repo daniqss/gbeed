@@ -111,28 +111,8 @@ impl RaylibRenderer {
             }
         };
     }
-}
 
-impl Renderer for RaylibRenderer {
-    fn read_pixel(&self, x: usize, y: usize) -> u32 {
-        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
-
-        ((self.screen_texture[index] as u32) << 16)
-            | ((self.screen_texture[index + 1] as u32) << 8)
-            | (self.screen_texture[index + 2] as u32)
-    }
-
-    fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
-        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
-        let shade = (palette >> (color_id * 2)) & 0x03;
-        let color = GB_PALETTE[shade as usize];
-
-        self.screen_texture[index] = color.r;
-        self.screen_texture[index + 1] = color.g;
-        self.screen_texture[index + 2] = color.b;
-    }
-
-    fn draw_screen(&mut self) {
+    pub fn draw_screen(&mut self) {
         self.screen_texture.update();
 
         let thread = &self.thread;
@@ -488,6 +468,26 @@ impl Renderer for RaylibRenderer {
                 );
             }
         }
+    }
+}
+
+impl Renderer for RaylibRenderer {
+    fn read_pixel(&self, x: usize, y: usize) -> u32 {
+        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
+
+        ((self.screen_texture[index] as u32) << 16)
+            | ((self.screen_texture[index + 1] as u32) << 8)
+            | (self.screen_texture[index + 2] as u32)
+    }
+
+    fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
+        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
+        let shade = (palette >> (color_id * 2)) & 0x03;
+        let color = GB_PALETTE[shade as usize];
+
+        self.screen_texture[index] = color.r;
+        self.screen_texture[index + 1] = color.g;
+        self.screen_texture[index + 2] = color.b;
     }
 }
 

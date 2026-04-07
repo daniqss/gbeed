@@ -19,8 +19,6 @@ macro_rules! controller {
             fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
                 self.renderer.write_pixel(x, y, palette, color_id)
             }
-
-            fn draw_screen(&mut self) { self.renderer.draw_screen() }
         }
 
         impl SerialListener for $name {

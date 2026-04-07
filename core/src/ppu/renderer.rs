@@ -4,7 +4,6 @@ use crate::ppu::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH};
 pub trait Renderer {
     fn read_pixel(&self, x: usize, y: usize) -> u32;
     fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8);
-    fn draw_screen(&mut self);
 }
 
 pub struct DefaultRenderer {
@@ -31,5 +30,4 @@ impl Renderer for DefaultRenderer {
         let shade = (palette >> (color_id * 2)) & 0x03;
         self.framebuffer[y][x] = self.colors[shade as usize];
     }
-    fn draw_screen(&mut self) {}
 }
