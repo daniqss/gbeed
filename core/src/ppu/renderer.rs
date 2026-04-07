@@ -1,9 +1,10 @@
-use crate::ppu::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH};
+use crate::ppu::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH, Ppu};
 
 /// UI crates that uses gbeed must implement
 pub trait Renderer {
     fn read_pixel(&self, x: usize, y: usize) -> u32;
     fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8);
+    fn update_screen(&mut self, ppu: &Ppu);
 }
 
 pub struct DefaultRenderer {
@@ -30,4 +31,5 @@ impl Renderer for DefaultRenderer {
         let shade = (palette >> (color_id * 2)) & 0x03;
         self.framebuffer[y][x] = self.colors[shade as usize];
     }
+    fn update_screen(&mut self, _: &Ppu) {}
 }

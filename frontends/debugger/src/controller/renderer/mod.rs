@@ -1,6 +1,7 @@
 mod colors;
 
 use gbeed_core::prelude::*;
+use gbeed_core::Ppu;
 use gbeed_core::Renderer;
 use gbeed_raylib_common::{input, Texture};
 use raylib::prelude::*;
@@ -90,10 +91,7 @@ impl RaylibRenderer {
         self.game_region = clean(format!("{region:?}"));
     }
 
-    pub fn update_scroll(&mut self, x: i32, y: i32) {
-        self.scroll_x = x;
-        self.scroll_y = y;
-    }
+    pub fn update_scroll(&mut self, scroll: (i32, i32)) { (self.scroll_x, self.scroll_y) = scroll; }
 
     pub fn cycle_fps(&mut self) {
         self.fps_mode = match self.fps_mode {
@@ -488,6 +486,24 @@ impl Renderer for RaylibRenderer {
         self.screen_texture[index] = color.r;
         self.screen_texture[index + 1] = color.g;
         self.screen_texture[index + 2] = color.b;
+    }
+
+    fn update_screen(&mut self, ppu: &Ppu) {
+        self.screen_texture.update();
+
+        update_tiles(&mut self.tile_textures[0], ppu.tile_block0());
+        update_tiles(&mut self.tile_textures[1], ppu.tile_block1());
+        update_tiles(&mut self.tile_textures[2], ppu.tile_block2());
+
+        update_bg_map(
+            &mut self.bg_map_texture,
+            ppu.bg_map0(),
+            ppu.tile_data(),
+            ppu.bg_tile_map_address(),
+            ppu.get_bg_palette(),
+        );
+
+        self.update_scroll(ppu.get_scroll());
     }
 }
 

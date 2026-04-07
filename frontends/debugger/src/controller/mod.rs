@@ -1,7 +1,7 @@
 mod listener;
 pub mod renderer;
 
-use gbeed_core::{Controller, Renderer, SerialListener};
+use gbeed_core::{Controller, Ppu, Renderer, SerialListener};
 use raylib::prelude::*;
 
 use listener::RaylibSerialListener;
@@ -26,6 +26,7 @@ impl Renderer for RaylibController {
     fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
         self.renderer.write_pixel(x, y, palette, color_id);
     }
+    fn update_screen(&mut self, ppu: &Ppu) { self.renderer.update_screen(ppu) }
 }
 
 impl SerialListener for RaylibController {

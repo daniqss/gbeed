@@ -131,7 +131,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .size(SCREEN_WIDTH, SCREEN_HEIGHT)
         .title("gbeed")
         .build();
-    // rl.set_target_fps(60);
+    rl.set_target_fps(30);
     rl.set_exit_key(None);
 
     let mut app = EmulatorApp::new(rl, thread);

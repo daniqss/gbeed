@@ -1,4 +1,4 @@
-use gbeed_core::{prelude::DMG_SCREEN_WIDTH, Controller, Renderer, SerialListener};
+use gbeed_core::{prelude::DMG_SCREEN_WIDTH, Controller, Ppu, Renderer, SerialListener};
 use gbeed_raylib_common::{color, Texture};
 use raylib::prelude::*;
 
@@ -29,6 +29,8 @@ impl Renderer for ConsoleController {
         self.screen[index + 1] = color.g;
         self.screen[index + 2] = color.b;
     }
+
+    fn update_screen(&mut self, _: &Ppu) { self.screen.update(); }
 }
 
 impl SerialListener for ConsoleController {

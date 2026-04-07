@@ -211,31 +211,6 @@ impl EmulatorApp {
 
             gb.run(&mut self.controller)?;
 
-            renderer::update_tiles(
-                &mut self.controller.renderer.tile_textures[0],
-                gb.ppu.tile_block0(),
-            );
-            renderer::update_tiles(
-                &mut self.controller.renderer.tile_textures[1],
-                gb.ppu.tile_block1(),
-            );
-            renderer::update_tiles(
-                &mut self.controller.renderer.tile_textures[2],
-                gb.ppu.tile_block2(),
-            );
-
-            renderer::update_bg_map(
-                &mut self.controller.renderer.bg_map_texture,
-                gb.ppu.bg_map0(),
-                gb.ppu.tile_data(),
-                gb.ppu.bg_tile_map_address(),
-                gb.ppu.get_bg_palette(),
-            );
-
-            self.controller
-                .renderer
-                .update_scroll(gb.read(0xFF43) as i32, gb.read(0xFF42) as i32);
-
             self.controller.renderer.draw_screen();
         } else {
             // Draw a "Drop ROM" message

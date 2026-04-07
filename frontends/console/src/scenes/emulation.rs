@@ -8,15 +8,19 @@ use gbeed_raylib_common::input::InputManager;
 use raylib::prelude::*;
 use std::path::PathBuf;
 
+const GB_FRAME_TIME: f32 = 1.0 / 59.73; // 59.73
+
 #[derive(Debug)]
 pub struct EmulationState {
     pub input: InputManager,
+    pub accumulator: f32,
 }
 
 impl EmulationState {
     pub fn new() -> Self {
         Self {
             input: InputManager::default(),
+            accumulator: 0.0,
         }
     }
 
@@ -41,10 +45,14 @@ impl EmulationState {
 
         self.input.state().apply(&mut gb.joypad);
 
-        gb.run(controller)?;
+        let speed = if self.input.state().speed_up { 2.0 } else { 1.0 };
 
-        // update screen with the new framebuffer data
-        controller.screen.update();
+        self.accumulator += dt * speed;
+
+        while self.accumulator >= GB_FRAME_TIME {
+            gb.run(controller)?;
+            self.accumulator -= GB_FRAME_TIME;
+        }
 
         Ok(None)
     }

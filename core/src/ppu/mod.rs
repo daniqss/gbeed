@@ -207,6 +207,9 @@ impl Ppu {
     }
 
     #[inline(always)]
+    pub fn get_scroll(&self) -> (i32, i32) { (self.scroll_x as i32, self.scroll_y as i32) }
+
+    #[inline(always)]
     fn set_mode(&mut self, mode: LCDMode) { self.lcd_status = (self.lcd_status & 0xFC) | mode as u8; }
 
     #[inline(always)]
@@ -282,6 +285,8 @@ impl Ppu {
                     if self.vblank_interrupt() {
                         interrupt_flag.set_lcd_stat_interrupt(true);
                     }
+
+                    renderer.update_screen(self);
 
                     LCDMode::VBlank
                 }
