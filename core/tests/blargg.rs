@@ -1,4 +1,4 @@
-use gbeed_core::{Controller, DefaultRenderer, Renderer, SerialListener, prelude::*};
+use gbeed_core::{Controller, DefaultRenderer, Ppu, Renderer, SerialListener, prelude::*};
 use std::{fs, path::Path};
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;

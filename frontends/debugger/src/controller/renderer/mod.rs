@@ -1,6 +1,7 @@
 mod colors;
 
 use gbeed_core::prelude::*;
+use gbeed_core::Ppu;
 use gbeed_core::Renderer;
 use gbeed_raylib_common::{input, Texture};
 use raylib::prelude::*;
@@ -38,12 +39,13 @@ pub enum FpsMode {
 }
 
 pub struct RaylibRenderer {
-    pub rl: RaylibHandle,
-    pub thread: RaylibThread,
-
+    // textures before raylib handle and thread to get dropped first
     pub screen_texture: Texture,
     pub bg_map_texture: Texture,
     pub tile_textures: [Texture; 3],
+
+    pub rl: RaylibHandle,
+    pub thread: RaylibThread,
 
     pub buttons: input::InputState,
     pub game_name: String,
@@ -90,10 +92,7 @@ impl RaylibRenderer {
         self.game_region = clean(format!("{region:?}"));
     }
 
-    pub fn update_scroll(&mut self, x: i32, y: i32) {
-        self.scroll_x = x;
-        self.scroll_y = y;
-    }
+    pub fn update_scroll(&mut self, scroll: (i32, i32)) { (self.scroll_x, self.scroll_y) = scroll; }
 
     pub fn cycle_fps(&mut self) {
         self.fps_mode = match self.fps_mode {
@@ -111,28 +110,8 @@ impl RaylibRenderer {
             }
         };
     }
-}
 
-impl Renderer for RaylibRenderer {
-    fn read_pixel(&self, x: usize, y: usize) -> u32 {
-        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
-
-        ((self.screen_texture[index] as u32) << 16)
-            | ((self.screen_texture[index + 1] as u32) << 8)
-            | (self.screen_texture[index + 2] as u32)
-    }
-
-    fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
-        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
-        let shade = (palette >> (color_id * 2)) & 0x03;
-        let color = GB_PALETTE[shade as usize];
-
-        self.screen_texture[index] = color.r;
-        self.screen_texture[index + 1] = color.g;
-        self.screen_texture[index + 2] = color.b;
-    }
-
-    fn draw_screen(&mut self) {
+    pub fn draw_screen(&mut self) {
         self.screen_texture.update();
 
         let thread = &self.thread;
@@ -488,6 +467,44 @@ impl Renderer for RaylibRenderer {
                 );
             }
         }
+    }
+}
+
+impl Renderer for RaylibRenderer {
+    fn read_pixel(&self, x: usize, y: usize) -> u32 {
+        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
+
+        ((self.screen_texture[index] as u32) << 16)
+            | ((self.screen_texture[index + 1] as u32) << 8)
+            | (self.screen_texture[index + 2] as u32)
+    }
+
+    fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
+        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
+        let shade = (palette >> (color_id * 2)) & 0x03;
+        let color = GB_PALETTE[shade as usize];
+
+        self.screen_texture[index] = color.r;
+        self.screen_texture[index + 1] = color.g;
+        self.screen_texture[index + 2] = color.b;
+    }
+
+    fn update_screen(&mut self, ppu: &Ppu) {
+        self.screen_texture.update();
+
+        update_tiles(&mut self.tile_textures[0], ppu.tile_block0());
+        update_tiles(&mut self.tile_textures[1], ppu.tile_block1());
+        update_tiles(&mut self.tile_textures[2], ppu.tile_block2());
+
+        update_bg_map(
+            &mut self.bg_map_texture,
+            ppu.bg_map0(),
+            ppu.tile_data(),
+            ppu.bg_tile_map_address(),
+            ppu.get_bg_palette(),
+        );
+
+        self.update_scroll(ppu.get_scroll());
     }
 }
 

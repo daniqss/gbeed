@@ -161,6 +161,29 @@ impl InputState {
     }
 }
 
+macro_rules! impl_input_methods {
+    ($($name:ident),*) => {
+        $(
+            paste::paste! {
+                #[inline(always)]
+                pub fn [<is_held_ $name>](&self) -> bool {
+                    self.current.$name
+                }
+
+                #[inline(always)]
+                pub fn [<is_pressed_ $name>](&self) -> bool {
+                    self.current.$name && !self.previous.$name
+                }
+
+                #[inline(always)]
+                pub fn [<is_repeated_ $name>](&self, dt: f32) -> bool {
+                    self.[<is_pressed_ $name>]() || (self.current.$name && self.check_repeat(dt))
+                }
+            }
+        )*
+    };
+}
+
 #[derive(Debug)]
 pub struct InputManager {
     pub key_triggers: InputKeyTriggers,
@@ -241,29 +264,7 @@ impl InputManager {
 
     pub fn state(&self) -> InputState { self.current }
 
-    pub fn is_pressed_up(&self) -> bool { self.current.up && !self.previous.up }
-    pub fn is_pressed_down(&self) -> bool { self.current.down && !self.previous.down }
-    pub fn is_pressed_left(&self) -> bool { self.current.left && !self.previous.left }
-    pub fn is_pressed_right(&self) -> bool { self.current.right && !self.previous.right }
-    pub fn is_pressed_a(&self) -> bool { self.current.a && !self.previous.a }
-    pub fn is_pressed_b(&self) -> bool { self.current.b && !self.previous.b }
-    pub fn is_pressed_start(&self) -> bool { self.current.start && !self.previous.start }
-    pub fn is_pressed_select(&self) -> bool { self.current.select && !self.previous.select }
-    pub fn is_pressed_escape(&self) -> bool { self.current.escape && !self.previous.escape }
-    pub fn is_pressed_speed_up(&self) -> bool { self.current.speed_up && !self.previous.speed_up }
-
-    pub fn is_repeated_up(&self, dt: f32) -> bool {
-        self.is_pressed_up() || (self.current.up && self.check_repeat(dt))
-    }
-    pub fn is_repeated_down(&self, dt: f32) -> bool {
-        self.is_pressed_down() || (self.current.down && self.check_repeat(dt))
-    }
-    pub fn is_repeated_left(&self, dt: f32) -> bool {
-        self.is_pressed_left() || (self.current.left && self.check_repeat(dt))
-    }
-    pub fn is_repeated_right(&self, dt: f32) -> bool {
-        self.is_pressed_right() || (self.current.right && self.check_repeat(dt))
-    }
+    impl_input_methods!(up, down, left, right, a, b, start, select, escape, speed_up);
 
     fn check_repeat(&self, dt: f32) -> bool {
         const REPEAT_DELAY: f32 = 0.3;

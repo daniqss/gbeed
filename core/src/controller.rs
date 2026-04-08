@@ -1,7 +1,5 @@
-use crate::ppu::DefaultRenderer;
-use crate::ppu::Renderer;
-use crate::serial::DefaultSerialListener;
-use crate::serial::SerialListener;
+use crate::ppu::{DefaultRenderer, Ppu, Renderer};
+use crate::serial::{DefaultSerialListener, SerialListener};
 
 pub trait Controller: SerialListener + Renderer {}
 
@@ -20,7 +18,7 @@ macro_rules! controller {
                 self.renderer.write_pixel(x, y, palette, color_id)
             }
 
-            fn draw_screen(&mut self) { self.renderer.draw_screen() }
+            fn update_screen(&mut self, ppu: &Ppu) { self.renderer.update_screen(ppu) }
         }
 
         impl SerialListener for $name {
