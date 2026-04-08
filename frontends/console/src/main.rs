@@ -6,9 +6,8 @@ use gbeed_core::prelude::*;
 use gbeed_raylib_common::{color, Texture};
 use raylib::prelude::*;
 use std::path::PathBuf;
-use std::process::exit;
 
-use crate::controller::ConsoleController;
+use crate::controller::{ConsoleController, SpeedUpMode};
 use crate::scenes::{EmulatorState, SelectionMenuState};
 use crate::utils::layout::{draw_footer, draw_header, SCREEN_HEIGHT, SCREEN_WIDTH};
 
@@ -38,11 +37,13 @@ impl EmulatorApp {
             save_path: None,
 
             controller: ConsoleController {
-                rl,
-                thread,
                 screen,
                 palette,
                 palette_color: palette.get_palette_color(),
+                speed_up_mode: SpeedUpMode::Toggle(false),
+
+                rl,
+                thread,
             },
         }
     }
@@ -91,6 +92,7 @@ impl EmulatorApp {
             screen,
             palette,
             palette_color,
+            speed_up_mode,
             ..
         } = &mut self.controller;
 
@@ -103,7 +105,9 @@ impl EmulatorApp {
                 EmulatorState::GameMenu(state) => {
                     state.draw(&mut d, screen, &self.gb, &self.rom_path, palette_color)
                 }
-                EmulatorState::SettingsMenu(state) => state.draw(&mut d, palette, palette_color),
+                EmulatorState::SettingsMenu(state) => {
+                    state.draw(&mut d, palette, speed_up_mode, palette_color)
+                }
 
                 EmulatorState::Exit => return,
             }
@@ -141,5 +145,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         app.draw();
     }
 
-    exit(0)
+    Ok(())
 }

@@ -39,12 +39,13 @@ pub enum FpsMode {
 }
 
 pub struct RaylibRenderer {
-    pub rl: RaylibHandle,
-    pub thread: RaylibThread,
-
+    // textures before raylib handle and thread to get dropped first
     pub screen_texture: Texture,
     pub bg_map_texture: Texture,
     pub tile_textures: [Texture; 3],
+
+    pub rl: RaylibHandle,
+    pub thread: RaylibThread,
 
     pub buttons: input::InputState,
     pub game_name: String,

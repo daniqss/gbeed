@@ -2,12 +2,19 @@ use gbeed_core::{prelude::DMG_SCREEN_WIDTH, Controller, Ppu, Renderer, SerialLis
 use gbeed_raylib_common::{color, Texture};
 use raylib::prelude::*;
 
+pub enum SpeedUpMode {
+    Toggle(bool),
+    Hold,
+}
+
 pub struct ConsoleController {
-    pub rl: RaylibHandle,
-    pub thread: RaylibThread,
     pub screen: Texture,
     pub palette: color::Palette,
     pub palette_color: color::PaletteColor,
+    pub speed_up_mode: SpeedUpMode,
+
+    pub rl: RaylibHandle,
+    pub thread: RaylibThread,
 }
 
 impl Renderer for ConsoleController {

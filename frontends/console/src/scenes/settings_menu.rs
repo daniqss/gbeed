@@ -1,4 +1,4 @@
-use crate::controller::ConsoleController;
+use crate::controller::{ConsoleController, SpeedUpMode};
 use crate::scenes::{EmulatorState, GameMenuState, SelectionMenuState};
 use crate::utils::layout::{self, *};
 use gbeed_raylib_common::{color, input::InputManager};
@@ -7,15 +7,21 @@ use raylib::prelude::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SettingsOption {
     ColorPalette,
+    SpeedUpMode,
     Exit,
 }
 
 impl SettingsOption {
-    pub const ALL: [SettingsOption; 2] = [SettingsOption::ColorPalette, SettingsOption::Exit];
+    pub const ALL: [SettingsOption; 3] = [
+        SettingsOption::ColorPalette,
+        SettingsOption::SpeedUpMode,
+        SettingsOption::Exit,
+    ];
 
     pub fn name(&self) -> &str {
         match self {
             SettingsOption::ColorPalette => "Color Palette",
+            SettingsOption::SpeedUpMode => "Speed Up Mode",
             SettingsOption::Exit => "Exit",
         }
     }
@@ -81,6 +87,14 @@ impl SettingsMenuState {
                     controller.palette = controller.palette.prev();
                 }
             }
+            SettingsOption::SpeedUpMode => {
+                if self.input.is_pressed_a() || self.input.is_pressed_b() {
+                    controller.speed_up_mode = match controller.speed_up_mode {
+                        SpeedUpMode::Toggle(_) => SpeedUpMode::Hold,
+                        SpeedUpMode::Hold => SpeedUpMode::Toggle(false),
+                    };
+                }
+            }
             SettingsOption::Exit => {
                 if self.input.is_pressed_a() {
                     return Some(EmulatorState::Exit);
@@ -97,6 +111,7 @@ impl SettingsMenuState {
         &self,
         d: &mut RaylibDrawHandle,
         palette: &color::Palette,
+        speed_up_mode: &SpeedUpMode,
         palette_color: &color::PaletteColor,
     ) {
         let items: Vec<(&str, &str)> = SettingsOption::ALL
@@ -104,6 +119,10 @@ impl SettingsMenuState {
             .map(|opt| {
                 let value: &str = match opt {
                     SettingsOption::ColorPalette => palette.name(),
+                    SettingsOption::SpeedUpMode => match speed_up_mode {
+                        SpeedUpMode::Toggle(_) => "Toggle",
+                        SpeedUpMode::Hold => "Hold",
+                    },
                     SettingsOption::Exit => "",
                 };
                 (opt.name(), value)

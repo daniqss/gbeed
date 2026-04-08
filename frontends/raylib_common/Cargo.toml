@@ -5,4 +5,6 @@ edition = "2021"
 
 [dependencies]
 gbeed-core = { path = "../../core" }
+paste = "1.0.15"
 raylib = { git = "https://github.com/raylib-rs/raylib-rs", version = "5.7.0" }
+

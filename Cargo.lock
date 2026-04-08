@@ -126,6 +126,7 @@ name = "gbeed-raylib-common"
 version = "0.1.0"
 dependencies = [
  "gbeed-core",
+ "paste",
  "raylib",
 ]
 
