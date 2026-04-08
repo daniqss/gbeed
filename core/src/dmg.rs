@@ -104,10 +104,10 @@ impl Accessible<u16> for Dmg {
             OAM_START..=OAM_END => self.ppu.read(address),
 
             NOT_USABLE_START..=NOT_USABLE_END => {
-                eprintln!(
-                    "Reads to prohibited memory region [{}, {}] with address {:04X} return 0xFF",
-                    NOT_USABLE_START, NOT_USABLE_END, address
-                );
+                // eprintln!(
+                //     "Reads to prohibited memory region [{}, {}] with address {:04X} return 0xFF",
+                //     NOT_USABLE_START, NOT_USABLE_END, address
+                // );
                 0xFF
             }
 
@@ -124,7 +124,7 @@ impl Accessible<u16> for Dmg {
                 BANK_REGISTER => self.bank,
 
                 _ => {
-                    eprintln!("Reads to unimplemented IO register {:04X} return 0xFF", address);
+                    // eprintln!("Reads to unimplemented IO register {:04X} return 0xFF", address);
                     0xFF
                 }
             },
@@ -147,10 +147,12 @@ impl Accessible<u16> for Dmg {
             }
             OAM_START..=OAM_END => self.ppu.write(address, value),
 
-            NOT_USABLE_START..=NOT_USABLE_END => eprintln!(
-                "Writes to prohibited memory region [{}, {}] with address {:04X} are ignored",
-                NOT_USABLE_START, NOT_USABLE_END, address
-            ),
+            NOT_USABLE_START..=NOT_USABLE_END => {
+                // eprintln!(
+                //     "Writes to prohibited memory region [{}, {}] with address {:04X} are ignored",
+                //     NOT_USABLE_START, NOT_USABLE_END, address
+                // ),
+            }
 
             IO_REGISTERS_START..=IO_REGISTERS_END => match address {
                 JOYP => self.joypad.write(address, value),
@@ -163,6 +165,9 @@ impl Accessible<u16> for Dmg {
 
                 DMA_REGISTER => Ppu::dma_transfer(self, value),
                 PPU_REGISTER_START..=PPU_REGISTER_END => self.ppu.write(address, value),
+
+                // CGB CPU registers
+                cgb::KEY0_SYS..=cgb::KEY1_SPD => {}
 
                 BANK_REGISTER => {
                     // unmaps boot rom when boot reaches pc = 0x00FE, when load 1 in bank register (0xFF50)
@@ -180,8 +185,25 @@ impl Accessible<u16> for Dmg {
                     self.bank = value;
                 }
 
+                cgb::VBK => {}
+                cgb::HDMA1 => {}
+                cgb::HDMA2 => {}
+                cgb::HDMA3 => {}
+                cgb::HDMA4 => {}
+                cgb::HDMA5 => {}
+                cgb::RP => {}
+                cgb::BCPS_BGPI => {}
+                cgb::BCPD_BGPD => {}
+                cgb::OCPS_OBPI => {}
+                cgb::OCPD_OBPD => {}
+                cgb::OPRI => {}
+                cgb::SVBK_WBK => {}
+                cgb::PCM12 => {}
+                cgb::PCM34 => {}
+
                 _ => eprintln!("Writes to unimplemented IO register {:04X} are ignored", address),
             },
+
             HRAM_START..=HRAM_END => self.memory.hram[(address - HRAM_START) as usize] = value,
             IE => self.interrupt_enable.0 = value,
         }
