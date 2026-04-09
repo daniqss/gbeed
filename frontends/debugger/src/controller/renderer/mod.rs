@@ -1,17 +1,23 @@
-mod colors;
-
 use gbeed_core::prelude::*;
-use gbeed_core::Renderer;
-use gbeed_raylib_common::{input, Texture};
+use gbeed_raylib_common::{color::DMG_CLASSIC_PALETTE, input, Texture};
 use raylib::prelude::*;
 
-use colors::GB_PALETTE;
-
-#[allow(unused_imports)]
-pub use colors::{BACKGROUND, FOREGROUND, PRIMARY, SECONDARY};
+pub const FOREGROUND: Color = DMG_CLASSIC_PALETTE[0];
+pub const SECONDARY: Color = DMG_CLASSIC_PALETTE[1];
+pub const PRIMARY: Color = DMG_CLASSIC_PALETTE[2];
+pub const BACKGROUND: Color = DMG_CLASSIC_PALETTE[3];
 
 pub const PANEL_PADDING: i32 = 16;
 pub const HEADER_HEIGHT: i32 = 34;
+
+pub const TILES_PER_ROW: i32 = 16;
+pub const TILES_PER_COLUMN: i32 = 8;
+pub const TILE_PIXEL_SIZE: i32 = 8;
+pub const TILE_DISPLAY_SCALE: i32 = 3;
+pub const TILE_TEXTURE_WIDTH: i32 = TILES_PER_ROW * TILE_PIXEL_SIZE;
+pub const TILE_TEXTURE_HEIGHT: i32 = TILES_PER_COLUMN * TILE_PIXEL_SIZE;
+pub const TILE_DISPLAY_WIDTH: i32 = TILE_TEXTURE_WIDTH * TILE_DISPLAY_SCALE;
+pub const TILE_DISPLAY_HEIGHT: i32 = TILE_TEXTURE_HEIGHT * TILE_DISPLAY_SCALE;
 
 #[derive(Clone, Copy)]
 pub struct Layout {
@@ -50,18 +56,18 @@ impl Layout {
             let scaled_screen_width = screen_width;
             let scaled_screen_height = screen_width * DMG_SCREEN_HEIGHT as i32 / DMG_SCREEN_WIDTH as i32;
             let screen_center_x = screen_width / 2;
-            
+
             let controls_y = game_y + scaled_screen_height + PANEL_PADDING * 4;
-            
+
             let dpad_arm = 70;
             let dpad_size = 45;
             let dpad_x = screen_width / 4;
             let dpad_y = controls_y + 130;
-            
+
             let action_button_size = 85;
             let action_buttons_x = screen_width * 3 / 4;
             let action_buttons_y = controls_y + 80;
-            
+
             let start_select_width = 100;
             let start_select_gap = 25;
             let start_select_total = start_select_width * 2 + start_select_gap;
@@ -69,62 +75,149 @@ impl Layout {
             let start_select_y = dpad_y + dpad_arm + 60;
 
             Self {
-                is_mobile, game_x, game_y, scaled_screen_width, scaled_screen_height,
-                screen_center_x, controls_y,
-                middle_panel_x: 0, right_panel_x: 0, bg_map_width: 0, bg_map_height: 0,
-                dpad_x, dpad_y, dpad_arm, dpad_size,
-                start_select_x, start_select_y, start_select_width,
-                action_buttons_x, action_buttons_y, action_button_size,
+                is_mobile,
+                game_x,
+                game_y,
+                scaled_screen_width,
+                scaled_screen_height,
+                screen_center_x,
+                controls_y,
+                middle_panel_x: 0,
+                right_panel_x: 0,
+                bg_map_width: 0,
+                bg_map_height: 0,
+                dpad_x,
+                dpad_y,
+                dpad_arm,
+                dpad_size,
+                start_select_x,
+                start_select_y,
+                start_select_width,
+                action_buttons_x,
+                action_buttons_y,
+                action_button_size,
             }
         } else {
             let screen_scale = 4;
             let scaled_screen_width = DMG_SCREEN_WIDTH as i32 * screen_scale;
             let scaled_screen_height = DMG_SCREEN_HEIGHT as i32 * screen_scale;
-            
+
             let game_x = PANEL_PADDING;
             let screen_center_x = game_x + scaled_screen_width / 2;
             let controls_y = game_y + scaled_screen_height + PANEL_PADDING * 2;
-            
+
             let middle_panel_x = PANEL_PADDING + scaled_screen_width + PANEL_PADDING * 2;
             let bg_map_width = scaled_screen_height;
             let bg_map_height = scaled_screen_height;
             let right_panel_x = middle_panel_x + bg_map_width + PANEL_PADDING * 2;
-            
+
             let dpad_arm = 28;
             let dpad_size = 17;
             let dpad_x = screen_center_x - 160;
             let dpad_y = controls_y + 50;
-            
+
             let start_select_width = 60;
             let start_select_gap = 18;
             let start_select_total = start_select_width * 2 + start_select_gap;
             let start_select_x = screen_center_x - start_select_total / 2;
             let start_select_y = dpad_y - 10;
-            
+
             let action_button_size = 36;
             let action_buttons_x = screen_center_x + 160;
             let action_buttons_y = controls_y + 24;
 
             Self {
-                is_mobile, game_x, game_y, scaled_screen_width, scaled_screen_height,
-                screen_center_x, controls_y,
-                middle_panel_x, right_panel_x, bg_map_width, bg_map_height,
-                dpad_x, dpad_y, dpad_arm, dpad_size,
-                start_select_x, start_select_y, start_select_width,
-                action_buttons_x, action_buttons_y, action_button_size,
+                is_mobile,
+                game_x,
+                game_y,
+                scaled_screen_width,
+                scaled_screen_height,
+                screen_center_x,
+                controls_y,
+                middle_panel_x,
+                right_panel_x,
+                bg_map_width,
+                bg_map_height,
+                dpad_x,
+                dpad_y,
+                dpad_arm,
+                dpad_size,
+                start_select_x,
+                start_select_y,
+                start_select_width,
+                action_buttons_x,
+                action_buttons_y,
+                action_button_size,
             }
         }
     }
-}
 
-pub const TILES_PER_ROW: i32 = 16;
-pub const TILES_PER_COLUMN: i32 = 8;
-pub const TILE_PIXEL_SIZE: i32 = 8;
-pub const TILE_DISPLAY_SCALE: i32 = 3;
-pub const TILE_TEXTURE_WIDTH: i32 = TILES_PER_ROW * TILE_PIXEL_SIZE;
-pub const TILE_TEXTURE_HEIGHT: i32 = TILES_PER_COLUMN * TILE_PIXEL_SIZE;
-pub const TILE_DISPLAY_WIDTH: i32 = TILE_TEXTURE_WIDTH * TILE_DISPLAY_SCALE;
-pub const TILE_DISPLAY_HEIGHT: i32 = TILE_TEXTURE_HEIGHT * TILE_DISPLAY_SCALE;
+    pub fn get_mouse_triggers(&self) -> input::InputMouseTriggers {
+        use input::MouseButtonArea;
+
+        input::InputMouseTriggers {
+            up: MouseButtonArea::new(
+                self.dpad_x - self.dpad_size,
+                self.dpad_y - self.dpad_arm - self.dpad_size,
+                self.dpad_size * 2,
+                self.dpad_size * 2,
+            ),
+            down: MouseButtonArea::new(
+                self.dpad_x - self.dpad_size,
+                self.dpad_y + self.dpad_arm - self.dpad_size,
+                self.dpad_size * 2,
+                self.dpad_size * 2,
+            ),
+            left: MouseButtonArea::new(
+                self.dpad_x - self.dpad_arm - self.dpad_size,
+                self.dpad_y - self.dpad_size,
+                self.dpad_size * 2,
+                self.dpad_size * 2,
+            ),
+            right: MouseButtonArea::new(
+                self.dpad_x + self.dpad_arm - self.dpad_size,
+                self.dpad_y - self.dpad_size,
+                self.dpad_size * 2,
+                self.dpad_size * 2,
+            ),
+            select: MouseButtonArea::new(
+                self.start_select_x,
+                self.start_select_y,
+                self.start_select_width,
+                20,
+            ),
+            start: MouseButtonArea::new(
+                self.start_select_x + self.start_select_width + 18,
+                self.start_select_y,
+                self.start_select_width,
+                20,
+            ),
+            a: MouseButtonArea::new(
+                self.action_buttons_x - self.action_button_size / 2 + 24,
+                self.action_buttons_y,
+                self.action_button_size,
+                self.action_button_size,
+            ),
+            b: MouseButtonArea::new(
+                self.action_buttons_x - self.action_button_size / 2 - 24,
+                self.action_buttons_y + self.action_button_size + 8,
+                self.action_button_size,
+                self.action_button_size,
+            ),
+            speed_up: if self.is_mobile {
+                None
+            } else {
+                Some(MouseButtonArea::new(
+                    self.screen_center_x - 118 / 2,
+                    self.controls_y - 20,
+                    118,
+                    26,
+                ))
+            },
+            ..Default::default()
+        }
+    }
+}
 
 #[derive(Copy, Clone)]
 pub enum FpsMode {
@@ -134,9 +227,6 @@ pub enum FpsMode {
 }
 
 pub struct RaylibRenderer {
-    pub rl: RaylibHandle,
-    pub thread: RaylibThread,
-
     pub screen_texture: Texture,
     pub bg_map_texture: Texture,
     pub tile_textures: [Texture; 3],
@@ -152,23 +242,16 @@ pub struct RaylibRenderer {
 }
 
 impl RaylibRenderer {
-    pub fn new(mut rl: RaylibHandle, thread: RaylibThread, layout: Layout) -> Self {
-        let screen_texture = Texture::new(
-            &mut rl,
-            &thread,
-            DMG_SCREEN_WIDTH as i32,
-            DMG_SCREEN_HEIGHT as i32,
-        );
-        let bg_map_texture = Texture::new(&mut rl, &thread, 256, 256);
+    pub fn new(rl: &mut RaylibHandle, thread: &RaylibThread, layout: Layout) -> Self {
+        let screen_texture = Texture::new(rl, thread, DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32);
+        let bg_map_texture = Texture::new(rl, thread, 256, 256);
         let tile_textures = [
-            Texture::new(&mut rl, &thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
-            Texture::new(&mut rl, &thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
-            Texture::new(&mut rl, &thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
+            Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
+            Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
+            Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
         ];
 
         Self {
-            rl,
-            thread,
             screen_texture,
             bg_map_texture,
             tile_textures,
@@ -193,47 +276,43 @@ impl RaylibRenderer {
         self.scroll_y = y;
     }
 
-    pub fn cycle_fps(&mut self) {
+    pub fn cycle_fps(&mut self, rl: &mut RaylibHandle) {
         self.fps_mode = match self.fps_mode {
             FpsMode::Target60 => {
-                self.rl.set_target_fps(120);
+                rl.set_target_fps(120);
                 FpsMode::Target120
             }
             FpsMode::Target120 => {
-                self.rl.set_target_fps(0);
+                rl.set_target_fps(0);
                 FpsMode::Unlimited
             }
             FpsMode::Unlimited => {
-                self.rl.set_target_fps(60);
+                rl.set_target_fps(60);
                 FpsMode::Target60
             }
         };
     }
-}
 
-impl Renderer for RaylibRenderer {
-    fn read_pixel(&self, x: usize, y: usize) -> u32 {
+    pub fn read_pixel(&self, x: usize, y: usize) -> u32 {
         let index = (y * DMG_SCREEN_WIDTH + x) * 3;
-
         ((self.screen_texture[index] as u32) << 16)
             | ((self.screen_texture[index + 1] as u32) << 8)
             | (self.screen_texture[index + 2] as u32)
     }
 
-    fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
+    pub fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
         let index = (y * DMG_SCREEN_WIDTH + x) * 3;
         let shade = (palette >> (color_id * 2)) & 0x03;
-        let color = GB_PALETTE[shade as usize];
+        let color = DMG_CLASSIC_PALETTE[shade as usize];
 
         self.screen_texture[index] = color.r;
         self.screen_texture[index + 1] = color.g;
         self.screen_texture[index + 2] = color.b;
     }
 
-    fn draw_screen(&mut self) {
+    pub fn draw_screen(&mut self, rl: &mut RaylibHandle, thread: &RaylibThread) {
         self.screen_texture.update();
 
-        let thread = &self.thread;
         let screen_texture = &self.screen_texture.texture;
         let tile_textures = [
             &self.tile_textures[0].texture,
@@ -244,84 +323,68 @@ impl Renderer for RaylibRenderer {
         let buttons = &self.buttons;
         let game_name = self.game_name.clone();
         let game_region = self.game_region.clone();
-
-        let mut draw = self.rl.begin_drawing(thread);
-        let screen_height = draw.get_screen_height();
         let layout = self.layout;
 
-        draw.clear_background(colors::BACKGROUND);
+        let mut d = rl.begin_drawing(thread);
+        d.clear_background(BACKGROUND);
 
-        // vertical divider spanning full height
         if !layout.is_mobile {
-            draw.draw_rectangle(
+            d.draw_rectangle(
                 layout.middle_panel_x - PANEL_PADDING,
                 0,
                 1,
-                screen_height,
-                colors::SECONDARY,
+                d.get_screen_height(),
+                SECONDARY,
             );
         }
 
-        // LEFT PANEL
-
+        // Header
         let game_x = layout.game_x;
-
-        // header vertically centred around header_center_y
         let header_center_y = PANEL_PADDING + HEADER_HEIGHT / 2;
-
         let title_font_size = 22;
         let title_y = header_center_y - title_font_size / 2;
-        let name_width = draw.measure_text(&game_name, title_font_size);
-        draw.draw_text(&game_name, game_x, title_y, title_font_size, colors::FOREGROUND);
+        let name_width = d.measure_text(&game_name, title_font_size);
+        d.draw_text(&game_name, game_x, title_y, title_font_size, FOREGROUND);
 
         let region_font_size = 11;
         let region_y = header_center_y - region_font_size / 2;
-        draw.draw_text(
+        d.draw_text(
             &game_region,
             game_x + name_width + 10,
             region_y,
             region_font_size,
-            colors::SECONDARY,
+            SECONDARY,
         );
 
         let fps_font_size = 26;
-        let fps_value = draw.get_fps();
-        let fps_str = format!("{fps_value:3}");
-        let fps_label_font_size = 11;
-        let fps_label = "fps";
-        let fps_number_width = draw.measure_text(&fps_str, fps_font_size);
-        let fps_label_width = draw.measure_text(fps_label, fps_label_font_size);
-
-        let fps_group_width = fps_number_width + 4 + fps_label_width;
-        let fps_x = game_x + layout.scaled_screen_width - fps_group_width;
-        let fps_y = header_center_y - fps_font_size / 2;
-        let fps_label_y = header_center_y - fps_label_font_size / 2;
-        draw.draw_text(&fps_str, fps_x, fps_y, fps_font_size, colors::FOREGROUND);
-        draw.draw_text(
-            fps_label,
+        let fps_str = format!("{:3}", d.get_fps());
+        let fps_number_width = d.measure_text(&fps_str, fps_font_size);
+        let fps_x = game_x + layout.scaled_screen_width - (fps_number_width + 30);
+        d.draw_text(
+            &fps_str,
+            fps_x,
+            header_center_y - fps_font_size / 2,
+            fps_font_size,
+            FOREGROUND,
+        );
+        d.draw_text(
+            "fps",
             fps_x + fps_number_width + 4,
-            fps_label_y,
-            fps_label_font_size,
-            colors::SECONDARY,
+            header_center_y - 5,
+            11,
+            SECONDARY,
         );
 
-        // gb screen starts immediately after header
+        // Screen
         let game_y = layout.game_y;
-        draw.draw_rectangle(
+        d.draw_rectangle(
             game_x - 3,
             game_y - 3,
             layout.scaled_screen_width + 6,
             layout.scaled_screen_height + 6,
-            colors::PRIMARY,
+            PRIMARY,
         );
-        draw.draw_rectangle_lines(
-            game_x - 3,
-            game_y - 3,
-            layout.scaled_screen_width + 6,
-            layout.scaled_screen_height + 6,
-            colors::PRIMARY,
-        );
-        draw.draw_texture_pro(
+        d.draw_texture_pro(
             screen_texture,
             Rectangle::new(0.0, 0.0, DMG_SCREEN_WIDTH as f32, DMG_SCREEN_HEIGHT as f32),
             Rectangle::new(
@@ -335,122 +398,136 @@ impl Renderer for RaylibRenderer {
             Color::WHITE,
         );
 
-        // controls centred under the gb screen
-        let _controls_y = layout.controls_y;
-        let _screen_center_x = layout.screen_center_x;
-
+        // Controls
         #[cfg(not(target_arch = "wasm32"))]
-        draw_fps_btn(
-            &mut draw,
-            _screen_center_x,
-            _controls_y,
-            match self.fps_mode {
-                FpsMode::Target60 => "TARGET  60 Hz",
-                FpsMode::Target120 => "TARGET 120 Hz",
-                FpsMode::Unlimited => "TARGET  UNLIM",
-            },
-        );
+        if !layout.is_mobile {
+            let screen_center_x = layout.screen_center_x;
+            let controls_y = layout.controls_y;
+            draw_fps_btn(
+                &mut d,
+                screen_center_x,
+                controls_y,
+                match self.fps_mode {
+                    FpsMode::Target60 => "TARGET  60 Hz",
+                    FpsMode::Target120 => "TARGET 120 Hz",
+                    FpsMode::Unlimited => "TARGET  UNLIM",
+                },
+            );
+        }
 
-        // dpad: centre the cross on screen_center_x - 160 (leave room for a/b on the right)
+        // D-PAD
         let dpad_x = layout.dpad_x;
         let dpad_y = layout.dpad_y;
         let dpad_arm = layout.dpad_arm;
         let dpad_size = layout.dpad_size;
-
-        // apex toward center: up=0°, down=180°, left=270°, right=90°
         draw_pad_btn(
-            &mut draw,
+            &mut d,
             dpad_x,
             dpad_y - dpad_arm,
             dpad_size,
             0.0,
             "W",
             buttons.up,
+            layout.is_mobile,
         );
         draw_pad_btn(
-            &mut draw,
+            &mut d,
             dpad_x,
             dpad_y + dpad_arm,
             dpad_size,
             180.0,
             "S",
             buttons.down,
+            layout.is_mobile,
         );
         draw_pad_btn(
-            &mut draw,
+            &mut d,
             dpad_x - dpad_arm,
             dpad_y,
             dpad_size,
             270.0,
             "A",
             buttons.left,
+            layout.is_mobile,
         );
         draw_pad_btn(
-            &mut draw,
+            &mut d,
             dpad_x + dpad_arm,
             dpad_y,
             dpad_size,
             90.0,
             "D",
             buttons.right,
+            layout.is_mobile,
         );
 
-        // start / select
-        let start_select_width = layout.start_select_width;
-        let start_select_x = layout.start_select_x;
-        let start_select_y = layout.start_select_y;
+        // Start/Select
         draw_small_btn(
-            &mut draw,
-            start_select_x,
-            start_select_y,
-            start_select_width,
+            &mut d,
+            layout.start_select_x,
+            layout.start_select_y,
+            layout.start_select_width,
             20,
             "SELECT",
             "SHIFT / ;",
             buttons.select,
+            layout.is_mobile,
         );
         draw_small_btn(
-            &mut draw,
-            start_select_x + start_select_width + 18,
-            start_select_y,
-            start_select_width,
+            &mut d,
+            layout.start_select_x + layout.start_select_width + 18,
+            layout.start_select_y,
+            layout.start_select_width,
             20,
             "START",
             "L",
             buttons.start,
+            layout.is_mobile,
         );
 
-        // a/b
-        let action_buttons_x = layout.action_buttons_x;
-        let action_buttons_y = layout.action_buttons_y;
-        let action_button_size = layout.action_button_size;
+        // A/B
+        let action_x = layout.action_buttons_x;
+        let action_y = layout.action_buttons_y;
+        let action_size = layout.action_button_size;
         draw_action_btn(
-            &mut draw,
-            action_buttons_x - action_button_size / 2 + 24,
-            action_buttons_y,
-            action_button_size,
+            &mut d,
+            action_x - action_size / 2 + 24,
+            action_y,
+            action_size,
             "A",
             "Z / J",
             buttons.a,
+            layout.is_mobile,
         );
         draw_action_btn(
-            &mut draw,
-            action_buttons_x - action_button_size / 2 - 24,
-            action_buttons_y + action_button_size + 8,
-            action_button_size,
+            &mut d,
+            action_x - action_size / 2 - 24,
+            action_y + action_size + 8,
+            action_size,
             "B",
             "X / K",
             buttons.b,
+            layout.is_mobile,
         );
 
-        // Debugging panels
+        // Debug Panels
         if !layout.is_mobile {
-            // MIDDLE PANEL (BG Map)
-            let map_x = layout.middle_panel_x;
+            self.draw_debug_panels(&mut d, layout, tile_textures);
+        }
+    }
+
+    fn draw_debug_panels(
+        &self,
+        d: &mut RaylibDrawHandle,
+        layout: Layout,
+        tile_textures: [&raylib::texture::Texture2D; 3],
+    ) {
+        let game_y = layout.game_y;
+        let map_x = layout.middle_panel_x;
         let bg_map_y = game_y;
-        let bg_map_label_y = bg_map_y - 12;
-        draw.draw_text("bg map $9800", map_x, bg_map_label_y, 14, colors::SECONDARY);
-        draw.draw_texture_pro(
+
+        d.draw_text("bg map $9800", map_x, bg_map_y - 12, 14, SECONDARY);
+        d.draw_texture_pro(
             &self.bg_map_texture.texture,
             Rectangle::new(0.0, 0.0, 256.0, 256.0),
             Rectangle::new(
@@ -464,7 +541,7 @@ impl Renderer for RaylibRenderer {
             Color::WHITE,
         );
 
-        // scroll over the bg map
+        // Scroll overlay
         let scale = layout.bg_map_width as f32 / 256.0;
         let scroll_x = self.scroll_x;
         let scroll_y = self.scroll_y;
@@ -473,71 +550,48 @@ impl Renderer for RaylibRenderer {
         let scroll_wraps_x = (scroll_x + 160) >= 256;
         let scroll_wraps_y = (scroll_y + 144) >= 256;
 
-        let to_screen = |pixel_x: i32, pixel_y: i32| {
+        let to_screen = |px: i32, py: i32| {
             Vector2::new(
-                map_x as f32 + pixel_x as f32 * scale,
-                bg_map_y as f32 + pixel_y as f32 * scale,
+                map_x as f32 + px as f32 * scale,
+                bg_map_y as f32 + py as f32 * scale,
             )
         };
-
         const OVERLAY_COLOR: Color = Color {
             r: 255,
             g: 220,
             b: 0,
             a: 255,
         };
-        const OVERLAY_THICKNESS: f32 = 1.5;
 
-        for &row_y in &[scroll_y, scroll_end_y] {
+        for &ry in &[scroll_y, scroll_end_y] {
             if !scroll_wraps_x {
-                draw.draw_line_ex(
-                    to_screen(scroll_x, row_y),
-                    to_screen(scroll_x + 160, row_y),
-                    OVERLAY_THICKNESS,
+                d.draw_line_ex(
+                    to_screen(scroll_x, ry),
+                    to_screen(scroll_x + 160, ry),
+                    1.5,
                     OVERLAY_COLOR,
                 );
             } else {
-                draw.draw_line_ex(
-                    to_screen(scroll_x, row_y),
-                    to_screen(256, row_y),
-                    OVERLAY_THICKNESS,
-                    OVERLAY_COLOR,
-                );
-                draw.draw_line_ex(
-                    to_screen(0, row_y),
-                    to_screen(scroll_end_x, row_y),
-                    OVERLAY_THICKNESS,
-                    OVERLAY_COLOR,
-                );
+                d.draw_line_ex(to_screen(scroll_x, ry), to_screen(256, ry), 1.5, OVERLAY_COLOR);
+                d.draw_line_ex(to_screen(0, ry), to_screen(scroll_end_x, ry), 1.5, OVERLAY_COLOR);
             }
         }
-        for &column_x in &[scroll_x, scroll_end_x] {
+        for &cx in &[scroll_x, scroll_end_x] {
             if !scroll_wraps_y {
-                draw.draw_line_ex(
-                    to_screen(column_x, scroll_y),
-                    to_screen(column_x, scroll_y + 144),
-                    OVERLAY_THICKNESS,
+                d.draw_line_ex(
+                    to_screen(cx, scroll_y),
+                    to_screen(cx, scroll_y + 144),
+                    1.5,
                     OVERLAY_COLOR,
                 );
             } else {
-                draw.draw_line_ex(
-                    to_screen(column_x, scroll_y),
-                    to_screen(column_x, 256),
-                    OVERLAY_THICKNESS,
-                    OVERLAY_COLOR,
-                );
-                draw.draw_line_ex(
-                    to_screen(column_x, 0),
-                    to_screen(column_x, scroll_end_y),
-                    OVERLAY_THICKNESS,
-                    OVERLAY_COLOR,
-                );
+                d.draw_line_ex(to_screen(cx, scroll_y), to_screen(cx, 256), 1.5, OVERLAY_COLOR);
+                d.draw_line_ex(to_screen(cx, 0), to_screen(cx, scroll_end_y), 1.5, OVERLAY_COLOR);
             }
         }
 
-        // RIGHT PANEL (Tiles)
-        let right_panel_x = layout.right_panel_x;
-
+        // Tiles
+        let right_x = layout.right_panel_x;
         const TV_LABELS: [&str; 3] = [
             "vram  $8000-$87ff  (block 0)",
             "vram  $8800-$8fff  (block 1)",
@@ -545,17 +599,15 @@ impl Renderer for RaylibRenderer {
         ];
         let tv_stride = TILE_DISPLAY_HEIGHT + 16;
 
-        for i in 0..3_usize {
-            let tile_texture_y = game_y + i as i32 * tv_stride;
-            let tile_label_y = tile_texture_y - 12;
-
-            draw.draw_text(TV_LABELS[i], right_panel_x, tile_label_y, 14, colors::SECONDARY);
-            draw.draw_texture_pro(
-                &tile_textures[i],
+        for i in 0..3 {
+            let ty = game_y + i as i32 * tv_stride;
+            d.draw_text(TV_LABELS[i], right_x, ty - 12, 14, SECONDARY);
+            d.draw_texture_pro(
+                tile_textures[i],
                 Rectangle::new(0.0, 0.0, TILE_TEXTURE_WIDTH as f32, TILE_TEXTURE_HEIGHT as f32),
                 Rectangle::new(
-                    right_panel_x as f32,
-                    tile_texture_y as f32,
+                    right_x as f32,
+                    ty as f32,
                     TILE_DISPLAY_WIDTH as f32,
                     TILE_DISPLAY_HEIGHT as f32,
                 ),
@@ -564,191 +616,132 @@ impl Renderer for RaylibRenderer {
                 Color::WHITE,
             );
 
-            let mut grid_color = colors::BACKGROUND;
+            let mut grid_color = BACKGROUND;
             grid_color.a = 60;
-            let grid_cell_size = TILE_PIXEL_SIZE * TILE_DISPLAY_SCALE;
-            for column in 0..=TILES_PER_ROW {
-                draw.draw_line(
-                    right_panel_x + column * grid_cell_size,
-                    tile_texture_y,
-                    right_panel_x + column * grid_cell_size,
-                    tile_texture_y + TILE_DISPLAY_HEIGHT,
+            let cell = TILE_PIXEL_SIZE * TILE_DISPLAY_SCALE;
+            for col in 0..=TILES_PER_ROW {
+                d.draw_line(
+                    right_x + col * cell,
+                    ty,
+                    right_x + col * cell,
+                    ty + TILE_DISPLAY_HEIGHT,
                     grid_color,
                 );
             }
             for row in 0..=TILES_PER_COLUMN {
-                draw.draw_line(
-                    right_panel_x,
-                    tile_texture_y + row * grid_cell_size,
-                    right_panel_x + TILE_DISPLAY_WIDTH,
-                    tile_texture_y + row * grid_cell_size,
+                d.draw_line(
+                    right_x,
+                    ty + row * cell,
+                    right_x + TILE_DISPLAY_WIDTH,
+                    ty + row * cell,
                     grid_color,
                 );
             }
-        }
         }
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn draw_fps_btn(draw: &mut RaylibDrawHandle, screen_center_x: i32, controls_y: i32, target_str: &str) {
-    // fps button above others
-    let fps_button_width = 118_i32;
-    let fps_button_height = 26_i32;
-    let fps_button_x = screen_center_x - fps_button_width / 2;
-    let fps_button_y = controls_y - 20;
-
-    draw.draw_rectangle(
-        fps_button_x,
-        fps_button_y,
-        fps_button_width,
-        fps_button_height,
-        colors::BACKGROUND,
-    );
-    draw.draw_rectangle_lines(
-        fps_button_x,
-        fps_button_y,
-        fps_button_width,
-        fps_button_height,
-        colors::PRIMARY,
-    );
-    let text_width = draw.measure_text(target_str, 12);
-    draw.draw_text(
-        target_str,
-        fps_button_x + (fps_button_width - text_width) / 2,
-        fps_button_y + (fps_button_height - 15) / 2,
-        12,
-        colors::PRIMARY,
-    );
+fn draw_fps_btn(d: &mut RaylibDrawHandle, center_x: i32, controls_y: i32, text: &str) {
+    let w = 118;
+    let h = 26;
+    let x = center_x - w / 2;
+    let y = controls_y - 20;
+    d.draw_rectangle(x, y, w, h, BACKGROUND);
+    d.draw_rectangle_lines(x, y, w, h, PRIMARY);
+    let tw = d.measure_text(text, 12);
+    d.draw_text(text, x + (w - tw) / 2, y + (h - 15) / 2, 12, PRIMARY);
 }
 
 fn draw_pad_btn(
-    draw: &mut RaylibDrawHandle,
-    center_x: i32,
-    center_y: i32,
+    d: &mut RaylibDrawHandle,
+    cx: i32,
+    cy: i32,
     size: i32,
-    rotation_deg: f32,
+    rot: f32,
     key: &str,
     pressed: bool,
+    is_mobile: bool,
 ) {
-    let (background_color, foreground_color, border_color) = if pressed {
-        (colors::PRIMARY, colors::BACKGROUND, colors::PRIMARY)
+    let (bg, fg, border) = if pressed {
+        (PRIMARY, BACKGROUND, PRIMARY)
     } else {
-        (colors::BACKGROUND, colors::FOREGROUND, colors::SECONDARY)
+        (BACKGROUND, FOREGROUND, SECONDARY)
     };
-
-    let size_f = size as f32;
-    let base_points: [(f32, f32); 5] = [
-        (-size_f, -size_f),
-        (size_f, -size_f),
-        (size_f, 0.0),
-        (0.0, size_f),
-        (-size_f, 0.0),
-    ];
-
-    let rotation_rad = rotation_deg.to_radians();
-    let (sin_r, cos_r) = rotation_rad.sin_cos();
-
-    let vertices: Vec<Vector2> = base_points
+    let sf = size as f32;
+    let pts = [(-sf, -sf), (sf, -sf), (sf, 0.0), (0.0, sf), (-sf, 0.0)];
+    let rad = rot.to_radians();
+    let (s, c) = rad.sin_cos();
+    let v: Vec<Vector2> = pts
         .iter()
-        .map(|&(x, y)| {
-            Vector2::new(
-                center_x as f32 + x * cos_r - y * sin_r,
-                center_y as f32 + x * sin_r + y * cos_r,
-            )
-        })
+        .map(|&(x, y)| Vector2::new(cx as f32 + x * c - y * s, cy as f32 + x * s + y * c))
         .collect();
 
-    // fan of 3 triangles, CCW winding in screen space
-    draw.draw_triangle(vertices[0], vertices[3], vertices[1], background_color); // A D B
-    draw.draw_triangle(vertices[0], vertices[4], vertices[3], background_color); // A E D
-    draw.draw_triangle(vertices[1], vertices[3], vertices[2], background_color); // B D C
-
-    // outline
+    d.draw_triangle(v[0], v[3], v[1], bg);
+    d.draw_triangle(v[0], v[4], v[3], bg);
+    d.draw_triangle(v[1], v[3], v[2], bg);
     for i in 0..5 {
-        draw.draw_line_v(vertices[i], vertices[(i + 1) % 5], border_color);
+        d.draw_line_v(v[i], v[(i + 1) % 5], border);
     }
 
-    let font_size = 11;
-    let text_width = draw.measure_text(key, font_size);
-    draw.draw_text(
-        key,
-        center_x - text_width / 2,
-        center_y - font_size / 2,
-        font_size,
-        foreground_color,
-    );
+    if !is_mobile {
+        let fs = 11;
+        let tw = d.measure_text(key, fs);
+        d.draw_text(key, cx - tw / 2, cy - fs / 2, fs, fg);
+    }
 }
 
 fn draw_action_btn(
-    draw: &mut RaylibDrawHandle,
+    d: &mut RaylibDrawHandle,
     x: i32,
     y: i32,
     size: i32,
     label: &str,
     key: &str,
     pressed: bool,
+    is_mobile: bool,
 ) {
-    let (background_color, foreground_color, border_color) = if pressed {
-        (colors::PRIMARY, colors::BACKGROUND, colors::PRIMARY)
+    let (bg, fg, border) = if pressed {
+        (PRIMARY, BACKGROUND, PRIMARY)
     } else {
-        (colors::BACKGROUND, colors::FOREGROUND, colors::SECONDARY)
+        (BACKGROUND, FOREGROUND, SECONDARY)
     };
-
-    draw.draw_rectangle(x, y, size, size, background_color);
-    draw.draw_rectangle_lines(x, y, size, size, border_color);
-
-    let font_size = 18;
-    let text_width = draw.measure_text(label, font_size);
-    draw.draw_text(
-        label,
-        x + (size - text_width) / 2,
-        y + (size - font_size) / 2,
-        font_size,
-        foreground_color,
-    );
-
-    let key_font_size = 8;
-    let key_width = draw.measure_text(key, key_font_size);
-    draw.draw_text(
-        key,
-        x + (size - key_width) / 2,
-        y + size + 4,
-        key_font_size,
-        colors::SECONDARY,
-    );
+    d.draw_rectangle(x, y, size, size, bg);
+    d.draw_rectangle_lines(x, y, size, size, border);
+    let fs = if is_mobile { 28 } else { 18 };
+    let tw = d.measure_text(label, fs);
+    d.draw_text(label, x + (size - tw) / 2, y + (size - fs) / 2, fs, fg);
+    if !is_mobile {
+        let kfs = 8;
+        let kw = d.measure_text(key, kfs);
+        d.draw_text(key, x + (size - kw) / 2, y + size + 4, kfs, SECONDARY);
+    }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn draw_small_btn(
-    draw: &mut RaylibDrawHandle,
+    d: &mut RaylibDrawHandle,
     x: i32,
     y: i32,
-    width: i32,
-    height: i32,
+    w: i32,
+    h: i32,
     label: &str,
     key: &str,
     pressed: bool,
+    is_mobile: bool,
 ) {
-    let (background_color, foreground_color, border_color) = if pressed {
-        (colors::PRIMARY, colors::BACKGROUND, colors::PRIMARY)
+    let (bg, fg, border) = if pressed {
+        (PRIMARY, BACKGROUND, PRIMARY)
     } else {
-        (colors::BACKGROUND, colors::FOREGROUND, colors::SECONDARY)
+        (BACKGROUND, FOREGROUND, SECONDARY)
     };
-
-    draw.draw_rectangle(x, y, width, height, background_color);
-    draw.draw_rectangle_lines(x, y, width, height, border_color);
-
-    let font_size = 9;
-    let text_width = draw.measure_text(label, font_size);
-    draw.draw_text(
-        label,
-        x + (width - text_width) / 2,
-        y + (height - font_size) / 2,
-        font_size,
-        foreground_color,
-    );
-    draw.draw_text(key, x, y + height + 3, 7, colors::SECONDARY);
+    d.draw_rectangle(x, y, w, h, bg);
+    d.draw_rectangle_lines(x, y, w, h, border);
+    let fs = if is_mobile { 14 } else { 9 };
+    let tw = d.measure_text(label, fs);
+    d.draw_text(label, x + (w - tw) / 2, y + (h - fs) / 2, fs, fg);
+    if !is_mobile {
+        d.draw_text(key, x, y + h + 3, 7, SECONDARY);
+    }
 }
 
 pub fn update_bg_map(
@@ -758,73 +751,49 @@ pub fn update_bg_map(
     is_mode_8000: bool,
     palette: u8,
 ) {
-    let stride = 256_usize;
-
-    for tile_y in 0..32_usize {
-        for tile_x in 0..32_usize {
-            let tile_number = map_data[tile_y * 32 + tile_x];
-
-            let tile_base = if is_mode_8000 {
-                (tile_number as usize) * 16
+    for ty in 0..32 {
+        for tx in 0..32 {
+            let tn = map_data[ty * 32 + tx];
+            let base = if is_mode_8000 {
+                tn as usize * 16
             } else {
-                let signed_tile_number = tile_number as i8 as i32;
-                (0x1000_i32 + signed_tile_number * 16) as usize
+                (0x1000_i32 + (tn as i8 as i32) * 16) as usize
             };
-
-            let pixel_x_base = tile_x * 8;
-            let pixel_y_base = tile_y * 8;
-
-            for row in 0..8_usize {
-                let low_byte = tile_data[tile_base + row * 2];
-                let high_byte = tile_data[tile_base + row * 2 + 1];
-
-                for column in 0..8_usize {
-                    let bit_index = 7 - column;
-                    let color_id = (((high_byte >> bit_index) & 1) << 1) | ((low_byte >> bit_index) & 1);
-
-                    let shade = (palette >> (color_id * 2)) & 0x03;
-                    let color = colors::GB_PALETTE[shade as usize];
-                    let index = ((pixel_y_base + row) * stride + (pixel_x_base + column)) * 3;
-
-                    texture[index] = color.r;
-                    texture[index + 1] = color.g;
-                    texture[index + 2] = color.b;
+            for row in 0..8 {
+                let lb = tile_data[base + row * 2];
+                let hb = tile_data[base + row * 2 + 1];
+                for col in 0..8 {
+                    let bit = 7 - col;
+                    let cid = (((hb >> bit) & 1) << 1) | ((lb >> bit) & 1);
+                    let color = DMG_CLASSIC_PALETTE[((palette >> (cid * 2)) & 0x03) as usize];
+                    let idx = ((ty * 8 + row) * 256 + (tx * 8 + col)) * 3;
+                    texture[idx] = color.r;
+                    texture[idx + 1] = color.g;
+                    texture[idx + 2] = color.b;
                 }
             }
         }
     }
-
     texture.update();
 }
 
-// decodes a 2bpp vram block into the tile texture (region 0/$8000, 1/$8800, 2/$9000)
 pub fn update_tiles(texture: &mut Texture, data: &[u8]) {
-    let stride = TILE_TEXTURE_WIDTH as usize;
-
-    for tile_index in 0..128_usize {
-        let tile_base_x = (tile_index % TILES_PER_ROW as usize) * TILE_PIXEL_SIZE as usize;
-        let tile_base_y = (tile_index / TILES_PER_ROW as usize) * TILE_PIXEL_SIZE as usize;
-        let data_base = tile_index * 16;
-
-        for row in 0..8_usize {
-            let low_byte = data[data_base + row * 2];
-            let high_byte = data[data_base + row * 2 + 1];
-
-            for column in 0..8_usize {
-                let bit_index = 7 - column;
-                let color_id = (((high_byte >> bit_index) & 1) << 1) | ((low_byte >> bit_index) & 1);
-
-                let color = colors::GB_PALETTE[color_id as usize];
-                let pixel_x = tile_base_x + column;
-                let pixel_y = tile_base_y + row;
-                let index = (pixel_y * stride + pixel_x) * 3;
-
-                texture[index] = color.r;
-                texture[index + 1] = color.g;
-                texture[index + 2] = color.b;
+    for ti in 0..128 {
+        let bx = (ti % TILES_PER_ROW as usize) * 8;
+        let by = (ti / TILES_PER_ROW as usize) * 8;
+        for row in 0..8 {
+            let lb = data[ti * 16 + row * 2];
+            let hb = data[ti * 16 + row * 2 + 1];
+            for col in 0..8 {
+                let bit = 7 - col;
+                let cid = (((hb >> bit) & 1) << 1) | ((lb >> bit) & 1);
+                let color = DMG_CLASSIC_PALETTE[cid as usize];
+                let idx = ((by + row) * TILE_TEXTURE_WIDTH as usize + (bx + col)) * 3;
+                texture[idx] = color.r;
+                texture[idx + 1] = color.g;
+                texture[idx + 2] = color.b;
             }
         }
     }
-
     texture.update();
 }

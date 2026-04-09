@@ -1,5 +1,5 @@
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::input::{InputManager, InputMouseTriggers, MouseButtonArea};
+use gbeed_raylib_common::input::InputManager;
 
 mod controller;
 #[cfg(target_arch = "wasm32")]
@@ -84,7 +84,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        while !app.controller.renderer.rl.window_should_close() && !app.input.state().escape {
+        while !app.controller.rl.window_should_close() && !app.input.state().escape {
             app.update()?;
         }
 
@@ -132,39 +132,7 @@ impl EmulatorApp {
         let layout = renderer::Layout::new(window_width, window_height, is_mobile);
         let controller = RaylibController::new(rl, thread, layout);
 
-        let mouse_triggers = InputMouseTriggers {
-            up: MouseButtonArea::new(layout.dpad_x - 17, layout.dpad_y - layout.dpad_arm - 17, 34, 34),
-            down: MouseButtonArea::new(layout.dpad_x - 17, layout.dpad_y + layout.dpad_arm - 17, 34, 34),
-            left: MouseButtonArea::new(layout.dpad_x - layout.dpad_arm - 17, layout.dpad_y - 17, 34, 34),
-            right: MouseButtonArea::new(layout.dpad_x + layout.dpad_arm - 17, layout.dpad_y - 17, 34, 34),
-            select: MouseButtonArea::new(
-                layout.start_select_x,
-                layout.start_select_y,
-                layout.start_select_width,
-                20,
-            ),
-            start: MouseButtonArea::new(
-                layout.start_select_x + layout.start_select_width + 18,
-                layout.start_select_y,
-                layout.start_select_width,
-                20,
-            ),
-            a: MouseButtonArea::new(layout.action_buttons_x - 18 + 24, layout.action_buttons_y, 36, 36),
-            b: MouseButtonArea::new(
-                layout.action_buttons_x - 18 - 24,
-                layout.action_buttons_y + 44,
-                36,
-                36,
-            ),
-            speed_up: Some(MouseButtonArea::new(
-                layout.screen_center_x - 118 / 2,
-                layout.controls_y - 20,
-                118,
-                26,
-            )),
-            ..Default::default()
-        };
-
+        let mouse_triggers = layout.get_mouse_triggers();
         let input = InputManager::new(0.1, None, Some(mouse_triggers), None);
 
         Self {
@@ -218,8 +186,8 @@ impl EmulatorApp {
 
     pub fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         // Handle Drag and Drop
-        if self.controller.renderer.rl.is_file_dropped() {
-            let dropped_files = self.controller.renderer.rl.load_dropped_files();
+        if self.controller.rl.is_file_dropped() {
+            let dropped_files = self.controller.rl.load_dropped_files();
             if let Some(file_path) = dropped_files.iter().next() {
                 if let Err(e) = self.load_rom(file_path) {
                     eprintln!("Failed to load dropped ROM: {e}");
@@ -227,12 +195,12 @@ impl EmulatorApp {
             }
         }
 
-        let dt = self.controller.renderer.rl.get_frame_time();
-        self.input.update(&self.controller.renderer.rl, dt);
+        let dt = self.controller.rl.get_frame_time();
+        self.input.update(&self.controller.rl, dt);
         self.controller.renderer.buttons = self.input.state();
 
         if self.input.is_pressed_speed_up() {
-            self.controller.renderer.cycle_fps();
+            self.controller.renderer.cycle_fps(&mut self.controller.rl);
         }
 
         if let Some(ref mut gb) = self.gb {
@@ -266,11 +234,7 @@ impl EmulatorApp {
                 .update_scroll(gb.read(0xFF43) as i32, gb.read(0xFF42) as i32);
         } else {
             // Draw a "Drop ROM" message
-            let mut d = self
-                .controller
-                .renderer
-                .rl
-                .begin_drawing(&self.controller.renderer.thread);
+            let mut d = self.controller.rl.begin_drawing(&self.controller.thread);
             d.clear_background(renderer::BACKGROUND);
             let msg = "Drag and Drop a Game Boy ROM to start";
             let font_size = 20;

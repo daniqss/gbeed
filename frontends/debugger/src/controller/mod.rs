@@ -5,17 +5,22 @@ use gbeed_core::{Controller, Renderer, SerialListener};
 use raylib::prelude::*;
 
 use listener::RaylibSerialListener;
-use renderer::RaylibRenderer;
+use renderer::{Layout, RaylibRenderer};
 
 pub struct RaylibController {
+    pub rl: RaylibHandle,
+    pub thread: RaylibThread,
     pub renderer: RaylibRenderer,
-    serial_listener: RaylibSerialListener,
+    pub serial_listener: RaylibSerialListener,
 }
 
 impl RaylibController {
-    pub fn new(rl: RaylibHandle, thread: RaylibThread, layout: renderer::Layout) -> Self {
+    pub fn new(mut rl: RaylibHandle, thread: RaylibThread, layout: Layout) -> Self {
+        let renderer = RaylibRenderer::new(&mut rl, &thread, layout);
         Self {
-            renderer: RaylibRenderer::new(rl, thread, layout),
+            rl,
+            thread,
+            renderer,
             serial_listener: RaylibSerialListener,
         }
     }
@@ -26,7 +31,9 @@ impl Renderer for RaylibController {
     fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
         self.renderer.write_pixel(x, y, palette, color_id);
     }
-    fn draw_screen(&mut self) { self.renderer.draw_screen() }
+    fn draw_screen(&mut self) {
+        self.renderer.draw_screen(&mut self.rl, &self.thread);
+    }
 }
 
 impl SerialListener for RaylibController {
