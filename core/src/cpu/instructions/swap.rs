@@ -22,7 +22,7 @@ pub struct SwapR8 {
 }
 
 impl SwapR8 {
-    pub fn new(dst: R8) -> InstructionBox { InstructionBox::new(Self { dst }) }
+    pub fn new(dst: R8) -> InstructionBox<Self> { InstructionBox::new(Self { dst }) }
 }
 
 impl Instruction for SwapR8 {
@@ -40,7 +40,7 @@ impl Instruction for SwapR8 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SwapPointedByHL;
 impl SwapPointedByHL {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
 }
 impl Instruction for SwapPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

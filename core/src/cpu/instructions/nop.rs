@@ -11,7 +11,7 @@ use crate::{
 pub struct Nop;
 
 impl Nop {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
 }
 
 impl Instruction for Nop {

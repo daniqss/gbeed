@@ -11,7 +11,7 @@ use crate::{
 pub struct Di;
 
 impl Di {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
 }
 
 impl Instruction for Di {

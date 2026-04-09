@@ -28,7 +28,7 @@ fn rrca(value: u8) -> u8 { (value >> 1) | ((value & 1) << 7) }
 pub struct Rrca;
 
 impl Rrca {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self {}) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self {}) }
 }
 
 impl Instruction for Rrca {

@@ -12,7 +12,7 @@ use crate::{
 pub struct Cpl;
 
 impl Cpl {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self {}) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self {}) }
 }
 
 impl Instruction for Cpl {
