@@ -28,7 +28,7 @@ pub struct BitR8 {
 }
 
 impl BitR8 {
-    pub fn new(bit: u8, target: R8) -> InstructionBox { InstructionBox::new(Self { bit, target }) }
+    pub fn new(bit: u8, target: R8) -> InstructionBox<Self> { InstructionBox::new(Self { bit, target }) }
 }
 impl Instruction for BitR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -47,7 +47,7 @@ pub struct BitPointedByHL {
     bit: u8,
 }
 impl BitPointedByHL {
-    pub fn new(bit: u8) -> InstructionBox { InstructionBox::new(Self { bit }) }
+    pub fn new(bit: u8) -> InstructionBox<Self> { InstructionBox::new(Self { bit }) }
 }
 impl Instruction for BitPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

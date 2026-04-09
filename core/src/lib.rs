@@ -1,3 +1,6 @@
+#![feature(coerce_unsized, unsize)]
+#![feature(ptr_metadata)]
+
 mod apu;
 mod cartrigde;
 pub mod controller;

@@ -18,7 +18,7 @@ pub struct LdhImm8A {
 }
 
 impl LdhImm8A {
-    pub fn new(addr_offset: u8) -> InstructionBox { InstructionBox::new(Self { addr_offset }) }
+    pub fn new(addr_offset: u8) -> InstructionBox<Self> { InstructionBox::new(Self { addr_offset }) }
 }
 
 impl Instruction for LdhImm8A {
@@ -44,7 +44,7 @@ impl Instruction for LdhImm8A {
 pub struct LdhCA;
 
 impl LdhCA {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdhCA {
@@ -70,7 +70,7 @@ pub struct LdhAImm8 {
 }
 
 impl LdhAImm8 {
-    pub fn new(addr_offset: u8) -> InstructionBox { InstructionBox::new(Self { addr_offset }) }
+    pub fn new(addr_offset: u8) -> InstructionBox<Self> { InstructionBox::new(Self { addr_offset }) }
 }
 
 impl Instruction for LdhAImm8 {
@@ -96,7 +96,7 @@ impl Instruction for LdhAImm8 {
 pub struct LdhAC;
 
 impl LdhAC {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdhAC {

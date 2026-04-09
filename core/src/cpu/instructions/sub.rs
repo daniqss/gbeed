@@ -27,7 +27,7 @@ pub struct SubR8 {
     src: R8,
 }
 impl SubR8 {
-    pub fn new(src: R8) -> InstructionBox { InstructionBox::new(Self { src }) }
+    pub fn new(src: R8) -> InstructionBox<Self> { InstructionBox::new(Self { src }) }
 }
 impl Instruction for SubR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -48,7 +48,7 @@ impl Instruction for SubR8 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SubPointedByHL;
 impl SubPointedByHL {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self {}) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self {}) }
 }
 impl Instruction for SubPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -71,7 +71,7 @@ pub struct SubImm8 {
     val: u8,
 }
 impl SubImm8 {
-    pub fn new(val: u8) -> InstructionBox { InstructionBox::new(Self { val }) }
+    pub fn new(val: u8) -> InstructionBox<Self> { InstructionBox::new(Self { val }) }
 }
 impl Instruction for SubImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
