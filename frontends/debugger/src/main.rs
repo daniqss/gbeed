@@ -11,7 +11,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use controller::{RaylibController, renderer};
+use controller::{DebuggerController, renderer};
 #[cfg(target_arch = "wasm32")]
 use web::{
     APP_PTR, emscripten_set_main_loop_arg, load_rom_from_js, local_storage, save_game_wasm, wasm_main_loop,
@@ -25,17 +25,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
-            "-g" | "--game" => {
-                if i + 1 < args.len() {
-                    game_path = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "-g" | "--game" if i + 1 < args.len() => {
+                game_path = Some(args[i + 1].clone());
+                i += 1;
             }
-            "-b" | "--boot" | "--boot_rom" => {
-                if i + 1 < args.len() {
-                    boot_path = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "-b" | "--boot" | "--boot_rom" if i + 1 < args.len() => {
+                boot_path = Some(args[i + 1].clone());
+                i += 1;
             }
             "-h" | "--help" => {
                 print_help();
@@ -88,7 +84,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[repr(C)]
 pub struct EmulatorApp {
     gb: Option<Dmg>,
-    controller: RaylibController,
+    controller: DebuggerController,
     save_path: Option<PathBuf>,
     boot_rom: Option<Vec<u8>>,
     input: InputManager,
@@ -97,7 +93,7 @@ pub struct EmulatorApp {
 impl EmulatorApp {
     fn new(rl: RaylibHandle, thread: RaylibThread, boot_path: Option<String>) -> Self {
         let boot_rom = boot_path.and_then(|path| fs::read(path).ok());
-        let controller = RaylibController::new(rl, thread);
+        let controller = DebuggerController::new(rl, thread);
 
         let game_x = renderer::PANEL_PADDING;
         let game_y = renderer::PANEL_PADDING + renderer::HEADER_HEIGHT;
@@ -202,9 +198,12 @@ impl EmulatorApp {
         self.input.update(&self.controller.renderer.rl, dt);
         self.controller.renderer.buttons = self.input.state();
 
-        if self.input.is_pressed_speed_up() {
-            self.controller.renderer.cycle_fps();
-        }
+        // if self.input.is_pressed_speed_up() {
+        //     self.controller.renderer.speed_up_mode = match self.controller.renderer.speed_up_mode {
+        //         SpeedUpMode::Toggle(active) => SpeedUpMode::Toggle(!active),
+        //         SpeedUpMode::Hold => SpeedUpMode::Hold,
+        //     };
+        // }
 
         if let Some(ref mut gb) = self.gb {
             self.input.state().apply(&mut gb.joypad);

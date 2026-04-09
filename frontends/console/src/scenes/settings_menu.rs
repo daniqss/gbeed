@@ -1,29 +1,35 @@
-use crate::controller::{ConsoleController, SpeedUpMode};
+use crate::controller::ConsoleController;
 use crate::scenes::{EmulationState, EmulatorState, GameMenuState, SelectionMenuState};
 use crate::utils::layout::{self, *};
 use gbeed_core::Dmg;
-use gbeed_raylib_common::{color, input::InputManager};
+use gbeed_raylib_common::{
+    color::{Palette, PaletteColor},
+    input::InputManager,
+    settings::{SpeedUpMode, SpeedUpMultiplier, TargetedFps},
+};
 use raylib::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SettingsOption {
     ColorPalette,
     SpeedUpMode,
+    SpeedUpMultiplier,
+    TargetedFps,
     Exit,
 }
 
+use SettingsOption::*;
+
 impl SettingsOption {
-    pub const ALL: [SettingsOption; 3] = [
-        SettingsOption::ColorPalette,
-        SettingsOption::SpeedUpMode,
-        SettingsOption::Exit,
-    ];
+    pub const ALL: [SettingsOption; 5] = [ColorPalette, SpeedUpMode, SpeedUpMultiplier, TargetedFps, Exit];
 
     pub fn name(&self) -> &str {
         match self {
-            SettingsOption::ColorPalette => "Color Palette",
-            SettingsOption::SpeedUpMode => "Speed Up Mode",
-            SettingsOption::Exit => "Exit",
+            ColorPalette => "Color Palette",
+            SpeedUpMode => "Speed Up Mode",
+            SpeedUpMultiplier => "Speed Up Multiplier",
+            TargetedFps => "Targeted FPS",
+            Exit => "Exit",
         }
     }
 }
@@ -87,7 +93,7 @@ impl SettingsMenuState {
         let current_option = SettingsOption::ALL[self.selected];
 
         match current_option {
-            SettingsOption::ColorPalette => {
+            ColorPalette => {
                 if self.input.is_pressed_a() {
                     controller.palette = controller.palette.next();
                 }
@@ -95,7 +101,7 @@ impl SettingsMenuState {
                     controller.palette = controller.palette.prev();
                 }
             }
-            SettingsOption::SpeedUpMode => {
+            SpeedUpMode => {
                 if self.input.is_pressed_a() || self.input.is_pressed_b() {
                     controller.speed_up_mode = match controller.speed_up_mode {
                         SpeedUpMode::Toggle(_) => SpeedUpMode::Hold,
@@ -103,7 +109,28 @@ impl SettingsMenuState {
                     };
                 }
             }
-            SettingsOption::Exit => {
+
+            SpeedUpMultiplier => {
+                if self.input.is_pressed_a() {
+                    controller.speed_up_multiplier = controller.speed_up_multiplier.next();
+                }
+                if self.input.is_pressed_b() {
+                    controller.speed_up_multiplier = controller.speed_up_multiplier.prev();
+                }
+            }
+
+            TargetedFps => {
+                if self.input.is_pressed_a() {
+                    controller.targeted_fps = controller.targeted_fps.next();
+                    controller.rl.set_target_fps(controller.targeted_fps as u32);
+                }
+                if self.input.is_pressed_b() {
+                    controller.targeted_fps = controller.targeted_fps.prev();
+                    controller.rl.set_target_fps(controller.targeted_fps as u32);
+                }
+            }
+
+            Exit => {
                 if self.input.is_pressed_a() {
                     return Some(EmulatorState::Exit);
                 }
@@ -118,20 +145,33 @@ impl SettingsMenuState {
     pub fn draw(
         &self,
         d: &mut RaylibDrawHandle,
-        palette: &color::Palette,
+        palette: &Palette,
+        palette_color: &PaletteColor,
         speed_up_mode: &SpeedUpMode,
-        palette_color: &color::PaletteColor,
+        speed_up_multiplier: &SpeedUpMultiplier,
+        targeted_fps: &TargetedFps,
     ) {
         let items: Vec<(&str, &str)> = SettingsOption::ALL
             .iter()
             .map(|opt| {
                 let value: &str = match opt {
-                    SettingsOption::ColorPalette => palette.name(),
-                    SettingsOption::SpeedUpMode => match speed_up_mode {
+                    ColorPalette => palette.name(),
+                    SpeedUpMode => match speed_up_mode {
                         SpeedUpMode::Toggle(_) => "Toggle",
                         SpeedUpMode::Hold => "Hold",
                     },
-                    SettingsOption::Exit => "",
+                    SpeedUpMultiplier => match speed_up_multiplier {
+                        SpeedUpMultiplier::OneAndHalf => "1.5x",
+                        SpeedUpMultiplier::Double => "2x",
+                        SpeedUpMultiplier::Cuadruple => "4x",
+                    },
+                    TargetedFps => match targeted_fps {
+                        TargetedFps::Target30 => "30",
+                        TargetedFps::Target60 => "60",
+                        TargetedFps::Unlimited => "Unlimited",
+                    },
+
+                    Exit => "",
                 };
                 (opt.name(), value)
             })
