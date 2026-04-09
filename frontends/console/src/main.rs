@@ -3,13 +3,13 @@ mod scenes;
 mod utils;
 
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{color, Texture};
+use gbeed_raylib_common::{Texture, color};
 use raylib::prelude::*;
 use std::path::PathBuf;
 
 use crate::controller::{ConsoleController, SpeedUpMode};
 use crate::scenes::{EmulatorState, SelectionMenuState};
-use crate::utils::layout::{draw_footer, draw_header, SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::utils::layout::{SCREEN_HEIGHT, SCREEN_WIDTH, draw_footer, draw_header};
 
 struct EmulatorApp {
     state: EmulatorState,
@@ -72,7 +72,7 @@ impl EmulatorApp {
                 &mut self.controller,
             )?,
             EmulatorState::GameMenu(state) => state.update(&self.controller.rl, dt, &self.gb),
-            EmulatorState::SettingsMenu(state) => state.update(dt, &mut self.controller),
+            EmulatorState::SettingsMenu(state) => state.update(dt, self.gb.as_ref(), &mut self.controller),
 
             // emulator should have already been closed at this point
             EmulatorState::Exit => unreachable!(),

@@ -20,7 +20,10 @@ impl GameMenuState {
     pub fn update(&mut self, rl: &RaylibHandle, dt: f32, gb: &Option<Dmg>) -> Option<EmulatorState> {
         self.input.update(rl, dt);
 
-        if (self.input.is_pressed_a() || self.input.is_pressed_start() || self.input.is_pressed_select())
+        if (self.input.is_pressed_a()
+            || self.input.is_pressed_start()
+            || self.input.is_pressed_select()
+            || self.input.is_pressed_escape())
             && gb.is_some()
         {
             return Some(EmulatorState::Emulation(EmulationState::new()));

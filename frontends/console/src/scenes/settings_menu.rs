@@ -1,6 +1,7 @@
 use crate::controller::{ConsoleController, SpeedUpMode};
-use crate::scenes::{EmulatorState, GameMenuState, SelectionMenuState};
+use crate::scenes::{EmulationState, EmulatorState, GameMenuState, SelectionMenuState};
 use crate::utils::layout::{self, *};
+use gbeed_core::Dmg;
 use gbeed_raylib_common::{color, input::InputManager};
 use raylib::prelude::*;
 
@@ -43,7 +44,12 @@ impl SettingsMenuState {
         }
     }
 
-    pub fn update(&mut self, dt: f32, controller: &mut ConsoleController) -> Option<EmulatorState> {
+    pub fn update(
+        &mut self,
+        dt: f32,
+        gb: Option<&Dmg>,
+        controller: &mut ConsoleController,
+    ) -> Option<EmulatorState> {
         self.input.update(&controller.rl, dt);
 
         let count = SettingsOption::ALL.len();
@@ -71,9 +77,11 @@ impl SettingsMenuState {
         if self.input.is_repeated_left(dt) {
             return Some(EmulatorState::GameMenu(GameMenuState::new()));
         }
-
         if self.input.is_repeated_right(dt) {
             return Some(EmulatorState::SelectionMenu(SelectionMenuState::new()));
+        }
+        if self.input.is_pressed_escape() && gb.is_some() {
+            return Some(EmulatorState::Emulation(EmulationState::new()));
         }
 
         let current_option = SettingsOption::ALL[self.selected];

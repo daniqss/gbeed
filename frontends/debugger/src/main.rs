@@ -11,10 +11,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use controller::{renderer, RaylibController};
+use controller::{RaylibController, renderer};
 #[cfg(target_arch = "wasm32")]
 use web::{
-    emscripten_set_main_loop_arg, load_rom_from_js, local_storage, save_game_wasm, wasm_main_loop, APP_PTR,
+    APP_PTR, emscripten_set_main_loop_arg, load_rom_from_js, local_storage, save_game_wasm, wasm_main_loop,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -51,10 +51,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut app = EmulatorApp::new(rl, thread, boot_path);
 
-    if let Some(path) = game_path {
-        if let Err(e) = app.load_rom(&path) {
-            eprintln!("Failed to load ROM from args: {e}");
-        }
+    if let Some(path) = game_path
+        && let Err(e) = app.load_rom(&path)
+    {
+        eprintln!("Failed to load ROM from args: {e}");
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -191,10 +191,10 @@ impl EmulatorApp {
         // Handle Drag and Drop
         if self.controller.renderer.rl.is_file_dropped() {
             let dropped_files = self.controller.renderer.rl.load_dropped_files();
-            if let Some(file_path) = dropped_files.iter().next() {
-                if let Err(e) = self.load_rom(file_path) {
-                    eprintln!("Failed to load dropped ROM: {e}");
-                }
+            if let Some(file_path) = dropped_files.iter().next()
+                && let Err(e) = self.load_rom(file_path)
+            {
+                eprintln!("Failed to load dropped ROM: {e}");
             }
         }
 
