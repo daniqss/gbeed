@@ -13,7 +13,7 @@ pub struct Ret {
 }
 
 impl Ret {
-    pub fn new(jc: JumpCondition) -> InstructionBox { InstructionBox::new(Self { jc }) }
+    pub fn new(jc: JumpCondition) -> InstructionBox<Self> { InstructionBox::new(Self { jc }) }
 }
 
 impl Instruction for Ret {

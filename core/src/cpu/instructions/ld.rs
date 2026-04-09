@@ -16,7 +16,7 @@ pub struct LdR8R8 {
 }
 
 impl LdR8R8 {
-    pub fn new(dst: R8, src: R8) -> InstructionBox { InstructionBox::new(Self { dst, src }) }
+    pub fn new(dst: R8, src: R8) -> InstructionBox<Self> { InstructionBox::new(Self { dst, src }) }
 }
 
 impl Instruction for LdR8R8 {
@@ -39,7 +39,7 @@ pub struct LdR8Imm8 {
 }
 
 impl LdR8Imm8 {
-    pub fn new(dst: R8, val: u8) -> InstructionBox { InstructionBox::new(Self { dst, val }) }
+    pub fn new(dst: R8, val: u8) -> InstructionBox<Self> { InstructionBox::new(Self { dst, val }) }
 }
 
 impl Instruction for LdR8Imm8 {
@@ -61,7 +61,7 @@ pub struct LdR16Imm16 {
 }
 
 impl LdR16Imm16 {
-    pub fn new(dst: R16, val: u16) -> InstructionBox { InstructionBox::new(Self { dst, val }) }
+    pub fn new(dst: R16, val: u16) -> InstructionBox<Self> { InstructionBox::new(Self { dst, val }) }
 }
 
 impl Instruction for LdR16Imm16 {
@@ -82,7 +82,7 @@ pub struct LdSPImm16 {
 }
 
 impl LdSPImm16 {
-    pub fn new(val: u16) -> InstructionBox { InstructionBox::new(Self { val }) }
+    pub fn new(val: u16) -> InstructionBox<Self> { InstructionBox::new(Self { val }) }
 }
 
 impl Instruction for LdSPImm16 {
@@ -103,7 +103,7 @@ pub struct LdPointedByHLR8 {
 }
 
 impl LdPointedByHLR8 {
-    pub fn new(src: R8) -> InstructionBox { InstructionBox::new(Self { src }) }
+    pub fn new(src: R8) -> InstructionBox<Self> { InstructionBox::new(Self { src }) }
 }
 
 impl Instruction for LdPointedByHLR8 {
@@ -125,7 +125,7 @@ pub struct LdPointedByHLImm8 {
 }
 
 impl LdPointedByHLImm8 {
-    pub fn new(val: u8) -> InstructionBox { InstructionBox::new(Self { val }) }
+    pub fn new(val: u8) -> InstructionBox<Self> { InstructionBox::new(Self { val }) }
 }
 
 impl Instruction for LdPointedByHLImm8 {
@@ -146,7 +146,7 @@ pub struct LdR8PointedByHL {
 }
 
 impl LdR8PointedByHL {
-    pub fn new(dst: R8) -> InstructionBox { InstructionBox::new(Self { dst }) }
+    pub fn new(dst: R8) -> InstructionBox<Self> { InstructionBox::new(Self { dst }) }
 }
 
 impl Instruction for LdR8PointedByHL {
@@ -168,7 +168,7 @@ pub struct LdPointedByR16A {
 }
 
 impl LdPointedByR16A {
-    pub fn new(dst: R16) -> InstructionBox { InstructionBox::new(Self { dst }) }
+    pub fn new(dst: R16) -> InstructionBox<Self> { InstructionBox::new(Self { dst }) }
 }
 
 impl Instruction for LdPointedByR16A {
@@ -190,7 +190,7 @@ pub struct LdPointedByImm16A {
 }
 
 impl LdPointedByImm16A {
-    pub fn new(addr: u16) -> InstructionBox { InstructionBox::new(Self { addr }) }
+    pub fn new(addr: u16) -> InstructionBox<Self> { InstructionBox::new(Self { addr }) }
 }
 
 impl Instruction for LdPointedByImm16A {
@@ -211,7 +211,7 @@ pub struct LdAPointedByR16 {
 }
 
 impl LdAPointedByR16 {
-    pub fn new(src: R16) -> InstructionBox { InstructionBox::new(Self { src }) }
+    pub fn new(src: R16) -> InstructionBox<Self> { InstructionBox::new(Self { src }) }
 }
 
 impl Instruction for LdAPointedByR16 {
@@ -233,7 +233,7 @@ pub struct LdAPointedByImm16 {
 }
 
 impl LdAPointedByImm16 {
-    pub fn new(addr: u16) -> InstructionBox { InstructionBox::new(Self { addr }) }
+    pub fn new(addr: u16) -> InstructionBox<Self> { InstructionBox::new(Self { addr }) }
 }
 
 impl Instruction for LdAPointedByImm16 {
@@ -252,7 +252,7 @@ impl Instruction for LdAPointedByImm16 {
 pub struct LdPointedByHLIncA;
 
 impl LdPointedByHLIncA {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdPointedByHLIncA {
@@ -273,7 +273,7 @@ impl Instruction for LdPointedByHLIncA {
 pub struct LdPointedByHLDecA;
 
 impl LdPointedByHLDecA {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdPointedByHLDecA {
@@ -294,7 +294,7 @@ impl Instruction for LdPointedByHLDecA {
 pub struct LdAPointedByHLInc;
 
 impl LdAPointedByHLInc {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdAPointedByHLInc {
@@ -315,7 +315,7 @@ impl Instruction for LdAPointedByHLInc {
 pub struct LdAPointedByHLDec;
 
 impl LdAPointedByHLDec {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdAPointedByHLDec {
@@ -338,7 +338,7 @@ pub struct LdImm16SP {
 }
 
 impl LdImm16SP {
-    pub fn new(addr: u16) -> InstructionBox { InstructionBox::new(Self { addr }) }
+    pub fn new(addr: u16) -> InstructionBox<Self> { InstructionBox::new(Self { addr }) }
 }
 
 impl Instruction for LdImm16SP {
@@ -359,7 +359,7 @@ pub struct LdHLSPPlusImm8 {
 }
 
 impl LdHLSPPlusImm8 {
-    pub fn new(e8: i8) -> InstructionBox { InstructionBox::new(Self { e8 }) }
+    pub fn new(e8: i8) -> InstructionBox<Self> { InstructionBox::new(Self { e8 }) }
 }
 
 impl Instruction for LdHLSPPlusImm8 {
@@ -388,7 +388,7 @@ impl Instruction for LdHLSPPlusImm8 {
 pub struct LdSPHL;
 
 impl LdSPHL {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
 }
 
 impl Instruction for LdSPHL {

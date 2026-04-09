@@ -28,7 +28,7 @@ fn rlca(value: u8) -> u8 { value.rotate_left(1) }
 pub struct Rlca;
 
 impl Rlca {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self {}) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self {}) }
 }
 
 impl Instruction for Rlca {

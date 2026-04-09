@@ -23,11 +23,11 @@
     devShells = eachSystem (system: pkgs: let
       rustToolchain = with fenix.packages.${system};
         combine [
-          stable.cargo
-          stable.rustc
-          stable.clippy
+          latest.cargo
+          latest.rustc
+          latest.clippy
           latest.rustfmt
-          targets.wasm32-unknown-emscripten.stable.rust-std
+          targets.wasm32-unknown-emscripten.latest.rust-std
         ];
 
       commonPackages = with pkgs; [

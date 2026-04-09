@@ -17,7 +17,7 @@ pub use registers::{Register8 as R8, Register16 as R16};
 
 use std::fmt::{self, Display, Formatter};
 
-pub type FetchResult = std::result::Result<InstructionBox, InstructionError>;
+pub type FetchResult = std::result::Result<InstructionBox<dyn Instruction>, InstructionError>;
 
 pub const AFTER_BOOT_CPU: Cpu = Cpu {
     a: 0x01,
@@ -95,7 +95,7 @@ impl Cpu {
         self.halted = AFTER_BOOT_CPU.halted;
     }
 
-    pub fn step(gb: &mut Dmg) -> Option<InstructionBox> {
+    pub fn step(gb: &mut Dmg) -> Option<InstructionBox<dyn Instruction>> {
         // check if is neccessatry to handle interrupts before executing the instruction
         if Cpu::handle_interrupts(gb) {
             // 5 Mcycles = 2 NOP + 3 ...
@@ -187,7 +187,7 @@ impl Cpu {
     pub fn fetch(gb: &mut Dmg, opcode: u8) -> FetchResult {
         let cpu = &gb.cpu;
 
-        let instruction: InstructionBox = match opcode {
+        let instruction: InstructionBox<dyn Instruction> = match opcode {
             0x00 => Nop::new(),
             0x01 => LdR16Imm16::new(R16::BC, gb.load(cpu.pc.wrapping_add(1))),
             0x02 => LdPointedByR16A::new(R16::BC),
@@ -457,7 +457,7 @@ impl Cpu {
         let bit = (cb_opcode & 0x38) >> 3;
         let cpu = &gb.cpu;
 
-        let instruction: InstructionBox = match cb_opcode {
+        let instruction: InstructionBox<dyn Instruction> = match cb_opcode {
             0x00 => RlcR8::new(R8::B),
             0x01 => RlcR8::new(R8::C),
             0x02 => RlcR8::new(R8::D),
