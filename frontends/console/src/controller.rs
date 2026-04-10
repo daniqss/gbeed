@@ -12,6 +12,7 @@ pub struct ConsoleController {
     pub speed_up_mode: SpeedUpMode,
     pub speed_up_multiplier: SpeedUpMultiplier,
     pub targeted_fps: TargetedFps,
+    pub draw_debug_info: bool,
 
     pub rl: RaylibHandle,
     pub thread: RaylibThread,

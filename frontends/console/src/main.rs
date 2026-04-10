@@ -46,6 +46,7 @@ impl EmulatorApp {
                 speed_up_mode: SpeedUpMode::default(),
                 speed_up_multiplier: SpeedUpMultiplier::default(),
                 targeted_fps: TargetedFps::default(),
+                draw_debug_info: false,
 
                 rl,
                 thread,
@@ -100,6 +101,7 @@ impl EmulatorApp {
             speed_up_mode,
             speed_up_multiplier,
             targeted_fps,
+            draw_debug_info,
             ..
         } = &mut self.controller;
 
@@ -119,6 +121,7 @@ impl EmulatorApp {
                     speed_up_mode,
                     speed_up_multiplier,
                     targeted_fps,
+                    *draw_debug_info,
                 ),
 
                 EmulatorState::Exit => return,
@@ -126,18 +129,20 @@ impl EmulatorApp {
 
             draw_header(&mut d, &self.state, palette_color);
             draw_footer(&mut d, &self.state, palette_color);
-            d.draw_fps(215, 220);
-            // if let Some(gb) = &mut self.gb {
-            //     d.draw_text(
-            //         &format!("{}", gb.ppu.sprites_this_frame),
-            //         205,
-            //         200,
-            //         16,
-            //         Color::GREENYELLOW,
-            //     );
-
-            //     gb.ppu.sprites_this_frame = 0;
-            // }
+            if *draw_debug_info {
+                d.draw_text(
+                    match speed_up_multiplier {
+                        SpeedUpMultiplier::OneAndHalf => "1.5x",
+                        SpeedUpMultiplier::Double => "2x",
+                        SpeedUpMultiplier::Cuadruple => "4x",
+                    },
+                    215,
+                    200,
+                    16,
+                    Color::GREEN,
+                );
+                d.draw_fps(215, 220);
+            }
         });
     }
 }
