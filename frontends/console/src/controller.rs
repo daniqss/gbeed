@@ -1,17 +1,18 @@
-use gbeed_core::{prelude::DMG_SCREEN_WIDTH, Controller, Ppu, Renderer, SerialListener};
-use gbeed_raylib_common::{color, Texture};
+use gbeed_core::{Controller, Ppu, Renderer, SerialListener, prelude::DMG_SCREEN_WIDTH};
+use gbeed_raylib_common::{
+    Texture, color,
+    settings::{SpeedUpMode, SpeedUpMultiplier, TargetedFps},
+};
 use raylib::prelude::*;
-
-pub enum SpeedUpMode {
-    Toggle(bool),
-    Hold,
-}
 
 pub struct ConsoleController {
     pub screen: Texture,
     pub palette: color::Palette,
     pub palette_color: color::PaletteColor,
     pub speed_up_mode: SpeedUpMode,
+    pub speed_up_multiplier: SpeedUpMultiplier,
+    pub targeted_fps: TargetedFps,
+    pub draw_debug_info: bool,
 
     pub rl: RaylibHandle,
     pub thread: RaylibThread,

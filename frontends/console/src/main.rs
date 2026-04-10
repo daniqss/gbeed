@@ -3,13 +3,16 @@ mod scenes;
 mod utils;
 
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{color, Texture};
+use gbeed_raylib_common::{
+    Texture, color,
+    settings::{SpeedUpMode, SpeedUpMultiplier, TargetedFps},
+};
 use raylib::prelude::*;
 use std::path::PathBuf;
 
-use crate::controller::{ConsoleController, SpeedUpMode};
+use crate::controller::ConsoleController;
 use crate::scenes::{EmulatorState, SelectionMenuState};
-use crate::utils::layout::{draw_footer, draw_header, SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::utils::layout::{SCREEN_HEIGHT, SCREEN_WIDTH, draw_footer, draw_header};
 
 struct EmulatorApp {
     state: EmulatorState,
@@ -40,7 +43,10 @@ impl EmulatorApp {
                 screen,
                 palette,
                 palette_color: palette.get_palette_color(),
-                speed_up_mode: SpeedUpMode::Toggle(false),
+                speed_up_mode: SpeedUpMode::default(),
+                speed_up_multiplier: SpeedUpMultiplier::default(),
+                targeted_fps: TargetedFps::default(),
+                draw_debug_info: false,
 
                 rl,
                 thread,
@@ -72,7 +78,7 @@ impl EmulatorApp {
                 &mut self.controller,
             )?,
             EmulatorState::GameMenu(state) => state.update(&self.controller.rl, dt, &self.gb),
-            EmulatorState::SettingsMenu(state) => state.update(dt, &mut self.controller),
+            EmulatorState::SettingsMenu(state) => state.update(dt, self.gb.as_ref(), &mut self.controller),
 
             // emulator should have already been closed at this point
             EmulatorState::Exit => unreachable!(),
@@ -93,6 +99,9 @@ impl EmulatorApp {
             palette,
             palette_color,
             speed_up_mode,
+            speed_up_multiplier,
+            targeted_fps,
+            draw_debug_info,
             ..
         } = &mut self.controller;
 
@@ -105,27 +114,35 @@ impl EmulatorApp {
                 EmulatorState::GameMenu(state) => {
                     state.draw(&mut d, screen, &self.gb, &self.rom_path, palette_color)
                 }
-                EmulatorState::SettingsMenu(state) => {
-                    state.draw(&mut d, palette, speed_up_mode, palette_color)
-                }
+                EmulatorState::SettingsMenu(state) => state.draw(
+                    &mut d,
+                    palette,
+                    palette_color,
+                    speed_up_mode,
+                    speed_up_multiplier,
+                    targeted_fps,
+                    *draw_debug_info,
+                ),
 
                 EmulatorState::Exit => return,
             }
 
             draw_header(&mut d, &self.state, palette_color);
             draw_footer(&mut d, &self.state, palette_color);
-            d.draw_fps(215, 220);
-            // if let Some(gb) = &mut self.gb {
-            //     d.draw_text(
-            //         &format!("{}", gb.ppu.sprites_this_frame),
-            //         205,
-            //         200,
-            //         16,
-            //         Color::GREENYELLOW,
-            //     );
-
-            //     gb.ppu.sprites_this_frame = 0;
-            // }
+            if *draw_debug_info {
+                d.draw_text(
+                    match speed_up_multiplier {
+                        SpeedUpMultiplier::OneAndHalf => "1.5x",
+                        SpeedUpMultiplier::Double => "2x",
+                        SpeedUpMultiplier::Cuadruple => "4x",
+                    },
+                    215,
+                    200,
+                    16,
+                    Color::GREEN,
+                );
+                d.draw_fps(215, 220);
+            }
         });
     }
 }

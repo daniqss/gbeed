@@ -1,11 +1,10 @@
 use crate::controller::ConsoleController;
-use crate::controller::SpeedUpMode;
 use crate::scenes::EmulatorState;
 use crate::scenes::GameMenuState;
 use crate::utils::layout::*;
 use crate::utils::roms::save_cartridge;
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::input::InputManager;
+use gbeed_raylib_common::{input::InputManager, settings::SpeedUpMode};
 use raylib::prelude::*;
 use std::path::PathBuf;
 
@@ -48,8 +47,10 @@ impl EmulationState {
 
         self.input.state().apply(&mut gb.joypad);
 
+        let selected_speed_up = controller.speed_up_multiplier.get_multiplier();
+
         let speed = match &mut controller.speed_up_mode {
-            SpeedUpMode::Hold if self.input.is_held_speed_up() => 2.0,
+            SpeedUpMode::Hold if self.input.is_held_speed_up() => selected_speed_up,
             SpeedUpMode::Hold => 1.0,
 
             SpeedUpMode::Toggle(active) => {
@@ -57,11 +58,7 @@ impl EmulationState {
                     *active = !*active;
                 }
 
-                if *active {
-                    2.0
-                } else {
-                    1.0
-                }
+                if *active { selected_speed_up } else { 1.0 }
             }
         };
 

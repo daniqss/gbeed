@@ -1,28 +1,50 @@
-use crate::controller::{ConsoleController, SpeedUpMode};
-use crate::scenes::{EmulatorState, GameMenuState, SelectionMenuState};
+use std::fmt::Debug;
+
+use crate::controller::ConsoleController;
+use crate::scenes::{EmulationState, EmulatorState, GameMenuState, SelectionMenuState};
 use crate::utils::layout::{self, *};
-use gbeed_raylib_common::{color, input::InputManager};
+use gbeed_core::Dmg;
+use gbeed_raylib_common::{
+    color::{Palette, PaletteColor},
+    impl_cyclic_enum,
+    input::InputManager,
+    settings::{SpeedUpMode, SpeedUpMultiplier, TargetedFps},
+};
 use raylib::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SettingsOption {
     ColorPalette,
     SpeedUpMode,
+    SpeedUpMultiplier,
+    TargetedFps,
+    DrawDebugInfo,
     Exit,
 }
 
-impl SettingsOption {
-    pub const ALL: [SettingsOption; 3] = [
-        SettingsOption::ColorPalette,
-        SettingsOption::SpeedUpMode,
-        SettingsOption::Exit,
-    ];
+use SettingsOption::*;
 
+impl_cyclic_enum!(
+    SettingsOption,
+    [
+        ColorPalette,
+        SpeedUpMode,
+        SpeedUpMultiplier,
+        TargetedFps,
+        DrawDebugInfo,
+        Exit
+    ]
+);
+
+impl SettingsOption {
     pub fn name(&self) -> &str {
         match self {
-            SettingsOption::ColorPalette => "Color Palette",
-            SettingsOption::SpeedUpMode => "Speed Up Mode",
-            SettingsOption::Exit => "Exit",
+            ColorPalette => "Color Palette",
+            SpeedUpMode => "Speed Up Mode",
+            SpeedUpMultiplier => "Speed Up Multiplier",
+            TargetedFps => "Targeted FPS",
+            DrawDebugInfo => "Draw Debug Info",
+            Exit => "Exit",
         }
     }
 }
@@ -30,7 +52,7 @@ impl SettingsOption {
 #[derive(Debug)]
 pub struct SettingsMenuState {
     pub input: InputManager,
-    pub selected: usize,
+    pub selected: SettingsOption,
     pub scroll_offset: usize,
 }
 
@@ -38,48 +60,50 @@ impl SettingsMenuState {
     pub fn new() -> Self {
         Self {
             input: InputManager::default(),
-            selected: 0,
+            selected: ColorPalette,
             scroll_offset: 0,
         }
     }
 
-    pub fn update(&mut self, dt: f32, controller: &mut ConsoleController) -> Option<EmulatorState> {
+    pub fn update(
+        &mut self,
+        dt: f32,
+        gb: Option<&Dmg>,
+        controller: &mut ConsoleController,
+    ) -> Option<EmulatorState> {
         self.input.update(&controller.rl, dt);
 
-        let count = SettingsOption::ALL.len();
         let visible_count = ((VISIBLE_BOTTOM - VISIBLE_TOP) / ITEM_H) as usize;
 
         if self.input.is_pressed_up() {
-            if self.selected == 0 {
-                self.selected = count - 1;
-            } else {
-                self.selected -= 1;
-            }
+            self.selected = self.selected.prev();
         }
 
         if self.input.is_pressed_down() {
-            self.selected = (self.selected + 1) % count;
+            self.selected = self.selected.next();
         }
 
-        if self.selected < self.scroll_offset {
-            self.scroll_offset = self.selected;
+        let selected_idx = SettingsOption::position(&self.selected);
+
+        if selected_idx < self.scroll_offset {
+            self.scroll_offset = selected_idx;
         }
-        if self.selected >= self.scroll_offset + visible_count {
-            self.scroll_offset = self.selected + 1 - visible_count;
+        if selected_idx >= self.scroll_offset + visible_count {
+            self.scroll_offset = selected_idx + 1 - visible_count;
         }
 
         if self.input.is_repeated_left(dt) {
             return Some(EmulatorState::GameMenu(GameMenuState::new()));
         }
-
         if self.input.is_repeated_right(dt) {
             return Some(EmulatorState::SelectionMenu(SelectionMenuState::new()));
         }
+        if self.input.is_pressed_escape() && gb.is_some() {
+            return Some(EmulatorState::Emulation(EmulationState::new()));
+        }
 
-        let current_option = SettingsOption::ALL[self.selected];
-
-        match current_option {
-            SettingsOption::ColorPalette => {
+        match self.selected {
+            ColorPalette => {
                 if self.input.is_pressed_a() {
                     controller.palette = controller.palette.next();
                 }
@@ -87,15 +111,39 @@ impl SettingsMenuState {
                     controller.palette = controller.palette.prev();
                 }
             }
-            SettingsOption::SpeedUpMode => {
+            SpeedUpMode => {
                 if self.input.is_pressed_a() || self.input.is_pressed_b() {
-                    controller.speed_up_mode = match controller.speed_up_mode {
-                        SpeedUpMode::Toggle(_) => SpeedUpMode::Hold,
-                        SpeedUpMode::Hold => SpeedUpMode::Toggle(false),
-                    };
+                    controller.speed_up_mode = controller.speed_up_mode.next();
                 }
             }
-            SettingsOption::Exit => {
+
+            SpeedUpMultiplier => {
+                if self.input.is_pressed_a() {
+                    controller.speed_up_multiplier = controller.speed_up_multiplier.next();
+                }
+                if self.input.is_pressed_b() {
+                    controller.speed_up_multiplier = controller.speed_up_multiplier.prev();
+                }
+            }
+
+            TargetedFps => {
+                if self.input.is_pressed_a() {
+                    controller.targeted_fps = controller.targeted_fps.next();
+                    controller.rl.set_target_fps(controller.targeted_fps as u32);
+                }
+                if self.input.is_pressed_b() {
+                    controller.targeted_fps = controller.targeted_fps.prev();
+                    controller.rl.set_target_fps(controller.targeted_fps as u32);
+                }
+            }
+
+            DrawDebugInfo => {
+                if self.input.is_pressed_a() || self.input.is_pressed_b() {
+                    controller.draw_debug_info = !controller.draw_debug_info;
+                }
+            }
+
+            Exit => {
                 if self.input.is_pressed_a() {
                     return Some(EmulatorState::Exit);
                 }
@@ -107,28 +155,47 @@ impl SettingsMenuState {
         None
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &self,
         d: &mut RaylibDrawHandle,
-        palette: &color::Palette,
+        palette: &Palette,
+        palette_color: &PaletteColor,
         speed_up_mode: &SpeedUpMode,
-        palette_color: &color::PaletteColor,
+        speed_up_multiplier: &SpeedUpMultiplier,
+        targeted_fps: &TargetedFps,
+        draw_debug_info: bool,
     ) {
         let items: Vec<(&str, &str)> = SettingsOption::ALL
             .iter()
             .map(|opt| {
                 let value: &str = match opt {
-                    SettingsOption::ColorPalette => palette.name(),
-                    SettingsOption::SpeedUpMode => match speed_up_mode {
+                    ColorPalette => palette.name(),
+                    SpeedUpMode => match speed_up_mode {
                         SpeedUpMode::Toggle(_) => "Toggle",
                         SpeedUpMode::Hold => "Hold",
                     },
-                    SettingsOption::Exit => "",
+                    SpeedUpMultiplier => match speed_up_multiplier {
+                        SpeedUpMultiplier::OneAndHalf => "1.5x",
+                        SpeedUpMultiplier::Double => "2x",
+                        SpeedUpMultiplier::Cuadruple => "4x",
+                    },
+                    TargetedFps => match targeted_fps {
+                        TargetedFps::Target30 => "30",
+                        TargetedFps::Target60 => "60",
+                        TargetedFps::Unlimited => "Unlimited",
+                    },
+                    DrawDebugInfo if draw_debug_info => "On",
+                    DrawDebugInfo => "Off",
+
+                    Exit => "",
                 };
                 (opt.name(), value)
             })
             .collect();
 
-        layout::draw_menu_list(d, &items, self.selected, self.scroll_offset, palette_color);
+        let selected_idx = SettingsOption::position(&self.selected);
+
+        layout::draw_menu_list(d, &items, selected_idx, self.scroll_offset, palette_color);
     }
 }

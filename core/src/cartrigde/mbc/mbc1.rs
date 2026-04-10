@@ -153,10 +153,8 @@ impl MemoryBankController for Mbc1 {
     fn write_rom(&mut self, address: u16, value: u8) {
         match address {
             // any 0xA in lower bits enables RAM, any other value disables it
-            MBC1_RAM_ENABLE_START..=MBC1_RAM_ENABLE_END => {
-                if self.ram.is_some() {
-                    self.ram_enabled = (value & 0x0F) == 0x0A
-                }
+            MBC1_RAM_ENABLE_START..=MBC1_RAM_ENABLE_END if self.ram.is_some() => {
+                self.ram_enabled = (value & 0x0F) == 0x0A
             }
 
             ROM_BANK_NUMBER_START..=ROM_BANK_NUMBER_END => self.primary_bank = value & 0x1F,

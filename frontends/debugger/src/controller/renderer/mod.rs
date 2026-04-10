@@ -1,9 +1,9 @@
 mod colors;
 
-use gbeed_core::prelude::*;
 use gbeed_core::Ppu;
 use gbeed_core::Renderer;
-use gbeed_raylib_common::{input, Texture};
+use gbeed_core::prelude::*;
+use gbeed_raylib_common::{Texture, input, settings};
 use raylib::prelude::*;
 
 use colors::GB_PALETTE;
@@ -31,13 +31,6 @@ pub const TILE_TEXTURE_HEIGHT: i32 = TILES_PER_COLUMN * TILE_PIXEL_SIZE;
 pub const TILE_DISPLAY_WIDTH: i32 = TILE_TEXTURE_WIDTH * TILE_DISPLAY_SCALE;
 pub const TILE_DISPLAY_HEIGHT: i32 = TILE_TEXTURE_HEIGHT * TILE_DISPLAY_SCALE;
 
-#[derive(Copy, Clone)]
-pub enum FpsMode {
-    Target60,
-    Target120,
-    Unlimited,
-}
-
 pub struct RaylibRenderer {
     // textures before raylib handle and thread to get dropped first
     pub screen_texture: Texture,
@@ -50,7 +43,7 @@ pub struct RaylibRenderer {
     pub buttons: input::InputState,
     pub game_name: String,
     pub game_region: String,
-    pub fps_mode: FpsMode,
+    pub fps_mode: settings::TargetedFps,
 
     pub scroll_x: i32,
     pub scroll_y: i32,
@@ -80,7 +73,7 @@ impl RaylibRenderer {
             buttons: input::InputState::default(),
             game_name: "Unknown".into(),
             game_region: "Unknown".into(),
-            fps_mode: FpsMode::Target60,
+            fps_mode: settings::TargetedFps::Target60,
             scroll_x: 0,
             scroll_y: 0,
         }
@@ -93,23 +86,6 @@ impl RaylibRenderer {
     }
 
     pub fn update_scroll(&mut self, scroll: (i32, i32)) { (self.scroll_x, self.scroll_y) = scroll; }
-
-    pub fn cycle_fps(&mut self) {
-        self.fps_mode = match self.fps_mode {
-            FpsMode::Target60 => {
-                self.rl.set_target_fps(120);
-                FpsMode::Target120
-            }
-            FpsMode::Target120 => {
-                self.rl.set_target_fps(0);
-                FpsMode::Unlimited
-            }
-            FpsMode::Unlimited => {
-                self.rl.set_target_fps(60);
-                FpsMode::Target60
-            }
-        };
-    }
 
     pub fn draw_screen(&mut self) {
         self.screen_texture.update();
@@ -225,9 +201,9 @@ impl RaylibRenderer {
             screen_center_x,
             controls_y,
             match self.fps_mode {
-                FpsMode::Target60 => "TARGET  60 Hz",
-                FpsMode::Target120 => "TARGET 120 Hz",
-                FpsMode::Unlimited => "TARGET  UNLIM",
+                settings::TargetedFps::Target30 => "TARGET 30 FPS",
+                settings::TargetedFps::Target60 => "TARGET 60 FPS",
+                settings::TargetedFps::Unlimited => "TARGET UNLIM",
             },
         );
 
