@@ -59,20 +59,46 @@ pub trait Accessible16<Address16, Address8>: Accessible<Address8> {
 #[derive(Debug)]
 pub struct Memory {
     pub boot_rom: Option<Vec<u8>>,
-    pub ram: [u8; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize],
-    pub hram: [u8; HRAM_SIZE as usize],
+    pub ram: Box<[u8; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize]>,
+    pub hram: Box<[u8; HRAM_SIZE as usize]>,
 }
 
 impl Memory {
     pub fn new(boot_rom: Option<Vec<u8>>) -> Memory {
         Memory {
             boot_rom,
-            ram: [0; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize],
-            hram: [0; HRAM_SIZE as usize],
+            ram: Box::new([0; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize]),
+            hram: Box::new([0; HRAM_SIZE as usize]),
         }
     }
 }
 
 impl Default for Memory {
     fn default() -> Self { Memory::new(None) }
+}
+
+pub mod cgb {
+    pub const KEY0_SYS: u16 = 0xFF4C;
+    pub const KEY1_SPD: u16 = 0xFF4D;
+
+    pub const VBK: u16 = 0xFF4F;
+
+    pub const HDMA1: u16 = 0xFF51;
+    pub const HDMA2: u16 = 0xFF52;
+    pub const HDMA3: u16 = 0xFF53;
+    pub const HDMA4: u16 = 0xFF54;
+    pub const HDMA5: u16 = 0xFF55;
+
+    pub const RP: u16 = 0xFF56;
+
+    pub const BCPS_BGPI: u16 = 0xFF68;
+    pub const BCPD_BGPD: u16 = 0xFF69;
+    pub const OCPS_OBPI: u16 = 0xFF6A;
+    pub const OCPD_OBPD: u16 = 0xFF6B;
+
+    pub const OPRI: u16 = 0xFF6C;
+    pub const SVBK_WBK: u16 = 0xFF70;
+
+    pub const PCM12: u16 = 0xFF76;
+    pub const PCM34: u16 = 0xFF77;
 }
