@@ -19,7 +19,7 @@ pub trait ToInputState {
     fn to_input(&self, rl: &RaylibHandle) -> InputState;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InputKeyTriggers {
     pub up: [KeyboardKey; 2],
     pub down: [KeyboardKey; 2],
@@ -184,7 +184,7 @@ macro_rules! impl_input_methods {
     };
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InputManager {
     pub key_triggers: InputKeyTriggers,
     pub mouse_triggers: Option<InputMouseTriggers>,
