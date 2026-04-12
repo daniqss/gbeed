@@ -1,5 +1,7 @@
 use raylib::prelude::*;
 
+use crate::impl_cyclic_enum;
+
 pub type PaletteColor = [Color; 4];
 
 pub const DMG_CLASSIC_PALETTE: PaletteColor = [
@@ -79,56 +81,41 @@ pub enum Palette {
     Pink,
 }
 
+use Palette::*;
+
+impl_cyclic_enum!(
+    Palette,
+    [
+        DmgClassic, GrayScale, Red, Turquoise, Blue, Green, Yellow, Purple, Pink
+    ]
+);
+
 impl Palette {
-    pub const ALL: [Palette; 9] = [
-        Palette::DmgClassic,
-        Palette::GrayScale,
-        Palette::Red,
-        Palette::Turquoise,
-        Palette::Blue,
-        Palette::Green,
-        Palette::Yellow,
-        Palette::Purple,
-        Palette::Pink,
-    ];
-
-    #[inline(always)]
-    pub fn next(self) -> Self {
-        let idx = self as usize;
-        Self::ALL[(idx + 1) % Self::ALL.len()]
-    }
-
-    #[inline(always)]
-    pub fn prev(self) -> Self {
-        let idx = self as usize;
-        Self::ALL[if idx == 0 { Self::ALL.len() - 1 } else { idx - 1 }]
-    }
-
     pub fn get_palette_color(&self) -> PaletteColor {
         match self {
-            Palette::DmgClassic => DMG_CLASSIC_PALETTE,
-            Palette::GrayScale => GRAYSCALE_PALETTE,
-            Palette::Red => RED_PALETTE,
-            Palette::Turquoise => TURQUOISE_PALETTE,
-            Palette::Blue => BLUE_PALETTE,
-            Palette::Green => GREEN_PALETTE,
-            Palette::Yellow => YELLOW_PALETTE,
-            Palette::Purple => PURPLE_PALETTE,
-            Palette::Pink => PINK_PALETTE,
+            DmgClassic => DMG_CLASSIC_PALETTE,
+            GrayScale => GRAYSCALE_PALETTE,
+            Red => RED_PALETTE,
+            Turquoise => TURQUOISE_PALETTE,
+            Blue => BLUE_PALETTE,
+            Green => GREEN_PALETTE,
+            Yellow => YELLOW_PALETTE,
+            Purple => PURPLE_PALETTE,
+            Pink => PINK_PALETTE,
         }
     }
 
     pub fn name(&self) -> &str {
         match self {
-            Palette::DmgClassic => "DmgClassic",
-            Palette::GrayScale => "GrayScale",
-            Palette::Red => "Red",
-            Palette::Turquoise => "Turquoise",
-            Palette::Blue => "Blue",
-            Palette::Green => "Green",
-            Palette::Yellow => "Yellow",
-            Palette::Purple => "Purple",
-            Palette::Pink => "Pink",
+            DmgClassic => "DmgClassic",
+            GrayScale => "GrayScale",
+            Red => "Red",
+            Turquoise => "Turquoise",
+            Blue => "Blue",
+            Green => "Green",
+            Yellow => "Yellow",
+            Purple => "Purple",
+            Pink => "Pink",
         }
     }
 }

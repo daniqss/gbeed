@@ -6,7 +6,7 @@ use crate::EmulatorApp;
 // 1. set up the main loop in a way that works with the browser's event loop
 // 2. use the browser's APIs injecting Javascript code from Rust
 #[allow(improper_ctypes)]
-extern "C" {
+unsafe extern "C" {
     pub fn emscripten_set_main_loop_arg(
         func: unsafe extern "C" fn(*mut EmulatorApp),
         arg: *mut EmulatorApp,
@@ -18,7 +18,7 @@ extern "C" {
 }
 
 pub unsafe extern "C" fn wasm_main_loop(app: *mut EmulatorApp) {
-    let app = &mut *app;
+    let app = unsafe { &mut *app };
     if let Err(e) = app.update() {
         eprintln!("Error during update: {e}");
     }
@@ -27,8 +27,8 @@ pub unsafe extern "C" fn wasm_main_loop(app: *mut EmulatorApp) {
 /// We need a static reference to be able to call save_game from JavaScript
 pub static mut APP_PTR: *mut EmulatorApp = std::ptr::null_mut();
 
-#[no_mangle]
-pub extern "C" fn save_game_wasm() {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn save_game_wasm() {
     unsafe {
         if !APP_PTR.is_null() {
             let _ = (*APP_PTR).save_game();
@@ -37,10 +37,12 @@ pub extern "C" fn save_game_wasm() {
 }
 
 #[cfg(target_arch = "wasm32")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn load_rom_from_js(path_ptr: *const std::ffi::c_char) {
-    let path = std::ffi::CStr::from_ptr(path_ptr).to_str().unwrap_or("");
-    if let Some(app) = APP_PTR.as_mut() {
+    let path = unsafe { std::ffi::CStr::from_ptr(path_ptr) }
+        .to_str()
+        .unwrap_or("");
+    if let Some(app) = unsafe { APP_PTR.as_mut() } {
         if let Err(e) = app.load_rom(path) {
             eprintln!("Failed to load ROM from JS: {e}");
         }

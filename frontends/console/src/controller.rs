@@ -1,13 +1,21 @@
-use gbeed_core::{prelude::DMG_SCREEN_WIDTH, Controller, Renderer, SerialListener};
-use gbeed_raylib_common::{color, Texture};
+use gbeed_core::{Controller, Ppu, Renderer, SerialListener, prelude::DMG_SCREEN_WIDTH};
+use gbeed_raylib_common::{
+    Texture, color,
+    settings::{SpeedUpMode, SpeedUpMultiplier, TargetedFps},
+};
 use raylib::prelude::*;
 
 pub struct ConsoleController {
-    pub rl: RaylibHandle,
-    pub thread: RaylibThread,
     pub screen: Texture,
     pub palette: color::Palette,
     pub palette_color: color::PaletteColor,
+    pub speed_up_mode: SpeedUpMode,
+    pub speed_up_multiplier: SpeedUpMultiplier,
+    pub targeted_fps: TargetedFps,
+    pub draw_debug_info: bool,
+
+    pub rl: RaylibHandle,
+    pub thread: RaylibThread,
 }
 
 impl Renderer for ConsoleController {
@@ -30,7 +38,7 @@ impl Renderer for ConsoleController {
         self.screen[index + 2] = color.b;
     }
 
-    fn draw_screen(&mut self) { self.screen.update(); }
+    fn update_screen(&mut self, _: &Ppu) { self.screen.update(); }
 }
 
 impl SerialListener for ConsoleController {

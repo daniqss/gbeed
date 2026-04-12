@@ -82,12 +82,12 @@ pub fn draw_menu_list(
     scroll_offset: usize,
     palette_color: &color::PaletteColor,
 ) {
-    let height = VISIBLE_TOP - VISIBLE_BOTTOM;
+    let height = VISIBLE_BOTTOM - VISIBLE_TOP;
     let visible_count = (height / ITEM_H) as usize;
 
     d.draw_rectangle(
         SCROLLBAR_X,
-        VISIBLE_BOTTOM,
+        VISIBLE_TOP,
         SCROLLBAR_W,
         height,
         color::secondary(palette_color),

@@ -9,7 +9,7 @@
         "args": [
           "build",
           "--bin=gbeed",
-          "--package=gbeed-ui",
+          "--package=gbeed-console",
           "--features",
           "${env:DISPLAY_FEATURES}"
         ],
@@ -18,7 +18,6 @@
           "kind": "bin"
         }
       },
-      "args": ["-g", "tetris.gb"],
       "cwd": "${workspaceFolder}"
     }
   ]

@@ -56,7 +56,7 @@ impl SelectionMenuState {
         let move_up = self.input.is_repeated_up(dt);
         let move_down = self.input.is_repeated_down(dt);
 
-        let visible_count = ((VISIBLE_TOP - VISIBLE_BOTTOM) / ITEM_H) as usize;
+        let visible_count = ((VISIBLE_BOTTOM - VISIBLE_TOP) / ITEM_H) as usize;
 
         if !self.roms.is_empty() {
             if move_up && self.selected > 0 {
@@ -93,6 +93,9 @@ impl SelectionMenuState {
         }
         if self.input.is_repeated_left(dt) {
             return Ok(Some(EmulatorState::SettingsMenu(SettingsMenuState::new())));
+        }
+        if self.input.is_pressed_escape() && gb.is_some() {
+            return Ok(Some(EmulatorState::Emulation(EmulationState::new())));
         }
 
         Ok(None)

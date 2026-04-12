@@ -13,7 +13,7 @@ use crate::{
 pub struct Ei;
 
 impl Ei {
-    pub fn new() -> InstructionBox { InstructionBox::new(Self) }
+    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
 }
 
 impl Instruction for Ei {

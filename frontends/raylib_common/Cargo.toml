@@ -1,8 +1,10 @@
 [package]
 name = "gbeed-raylib-common"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 gbeed-core = { path = "../../core" }
+paste = "1.0.15"
 raylib = { git = "https://github.com/raylib-rs/raylib-rs", version = "5.7.0" }
+

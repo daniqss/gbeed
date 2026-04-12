@@ -11,10 +11,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use controller::{renderer, RaylibController};
+use controller::{DebuggerController, renderer};
 #[cfg(target_arch = "wasm32")]
 use web::{
-    emscripten_set_main_loop_arg, load_rom_from_js, local_storage, save_game_wasm, wasm_main_loop, APP_PTR,
+    APP_PTR, emscripten_set_main_loop_arg, load_rom_from_js, local_storage, save_game_wasm, wasm_main_loop,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -25,17 +25,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
-            "-g" | "--game" => {
-                if i + 1 < args.len() {
-                    game_path = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "-g" | "--game" if i + 1 < args.len() => {
+                game_path = Some(args[i + 1].clone());
+                i += 1;
             }
-            "-b" | "--boot" | "--boot_rom" => {
-                if i + 1 < args.len() {
-                    boot_path = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "-b" | "--boot" | "--boot_rom" if i + 1 < args.len() => {
+                boot_path = Some(args[i + 1].clone());
+                i += 1;
             }
             "-h" | "--help" => {
                 print_help();
@@ -76,10 +72,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut app = EmulatorApp::new(rl, thread, boot_path, is_mobile, window_width, window_height);
 
-    if let Some(path) = game_path {
-        if let Err(e) = app.load_rom(&path) {
-            eprintln!("Failed to load ROM from args: {e}");
-        }
+    if let Some(path) = game_path
+        && let Err(e) = app.load_rom(&path)
+    {
+        eprintln!("Failed to load ROM from args: {e}");
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -113,7 +109,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[repr(C)]
 pub struct EmulatorApp {
     gb: Option<Dmg>,
-    controller: RaylibController,
+    controller: DebuggerController,
     save_path: Option<PathBuf>,
     boot_rom: Option<Vec<u8>>,
     input: InputManager,
@@ -130,7 +126,7 @@ impl EmulatorApp {
     ) -> Self {
         let boot_rom = boot_path.and_then(|path| fs::read(path).ok());
         let layout = renderer::Layout::new(window_width, window_height, is_mobile);
-        let controller = RaylibController::new(rl, thread, layout);
+        let controller = DebuggerController::new(rl, thread, layout);
 
         let mouse_triggers = layout.get_mouse_triggers();
         let input = InputManager::new(0.1, None, Some(mouse_triggers), None);
@@ -188,10 +184,10 @@ impl EmulatorApp {
         // Handle Drag and Drop
         if self.controller.rl.is_file_dropped() {
             let dropped_files = self.controller.rl.load_dropped_files();
-            if let Some(file_path) = dropped_files.iter().next() {
-                if let Err(e) = self.load_rom(file_path) {
-                    eprintln!("Failed to load dropped ROM: {e}");
-                }
+            if let Some(file_path) = dropped_files.iter().next()
+                && let Err(e) = self.load_rom(file_path)
+            {
+                eprintln!("Failed to load dropped ROM: {e}");
             }
         }
 
@@ -199,39 +195,21 @@ impl EmulatorApp {
         self.input.update(&self.controller.rl, dt);
         self.controller.renderer.buttons = self.input.state();
 
-        if self.input.is_pressed_speed_up() {
-            self.controller.renderer.cycle_fps(&mut self.controller.rl);
-        }
+        // if self.input.is_pressed_speed_up() {
+        //     self.controller.renderer.speed_up_mode = match self.controller.renderer.speed_up_mode {
+        //         SpeedUpMode::Toggle(active) => SpeedUpMode::Toggle(!active),
+        //         SpeedUpMode::Hold => SpeedUpMode::Hold,
+        //     };
+        // }
 
         if let Some(ref mut gb) = self.gb {
             self.input.state().apply(&mut gb.joypad);
 
             gb.run(&mut self.controller)?;
 
-            renderer::update_tiles(
-                &mut self.controller.renderer.tile_textures[0],
-                gb.ppu.tile_block0(),
-            );
-            renderer::update_tiles(
-                &mut self.controller.renderer.tile_textures[1],
-                gb.ppu.tile_block1(),
-            );
-            renderer::update_tiles(
-                &mut self.controller.renderer.tile_textures[2],
-                gb.ppu.tile_block2(),
-            );
-
-            renderer::update_bg_map(
-                &mut self.controller.renderer.bg_map_texture,
-                gb.ppu.bg_map0(),
-                gb.ppu.tile_data(),
-                gb.ppu.bg_tile_map_address(),
-                gb.ppu.get_bg_palette(),
-            );
-
             self.controller
                 .renderer
-                .update_scroll(gb.read(0xFF43) as i32, gb.read(0xFF42) as i32);
+                .draw_screen(&mut self.controller.rl, &self.controller.thread);
         } else {
             // Draw a "Drop ROM" message
             let mut d = self.controller.rl.begin_drawing(&self.controller.thread);

@@ -180,7 +180,7 @@ impl Accessible<u16> for Apu {
             NR12 => self.nr12 = value,
             NR13 => self.nr13 = value,
             NR14 => self.nr14 = value,
-            0xFF15 => println!("Writes in unused Apu memory range are ignored, {address:04X}"),
+            0xFF15 => {} // println!("Writes in unused Apu memory range are ignored, {address:04X}"),
             NR21 => self.nr21 = value,
             NR22 => self.nr22 = value,
             NR23 => self.nr23 = value,
@@ -190,7 +190,7 @@ impl Accessible<u16> for Apu {
             NR32 => self.nr32 = value,
             NR33 => self.nr33 = value,
             NR34 => self.nr34 = value,
-            0xFF1F => println!("Writes in unused Apu memory range are ignored, {address:04X}"),
+            0xFF1F => {} // println!("Writes in unused Apu memory range are ignored, {address:04X}"),
             NR41 => self.nr41 = value,
             NR42 => self.nr42 = value,
             NR43 => self.nr43 = value,
@@ -199,7 +199,7 @@ impl Accessible<u16> for Apu {
             NR51 => self.nr51 = value,
             // audio master control, if turning off audio, disable all channels
             NR52 => self.nr52 = (value & AUDIO_ON_OFF) | (self.nr52 & 0x7F),
-            0xFF27..=0xFF2F => println!("Writes in unused Apu memory range are ignored, {address:04X}"),
+            0xFF27..=0xFF2F => {} // println!("Writes in unused Apu memory range are ignored, {address:04X}"),
             addr @ 0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize] = value,
 
             _ => unreachable!(

@@ -4,19 +4,25 @@ use crate::scenes::GameMenuState;
 use crate::utils::layout::*;
 use crate::utils::roms::save_cartridge;
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::input::InputManager;
+use gbeed_raylib_common::{input::InputManager, settings::SpeedUpMode};
 use raylib::prelude::*;
 use std::path::PathBuf;
+
+const GB_FRAME_TIME: f32 = 1.0 / 59.73;
+const MAX_STEPS: usize = 5;
+const MAX_ACCUMULATOR: f32 = GB_FRAME_TIME * MAX_STEPS as f32;
 
 #[derive(Debug)]
 pub struct EmulationState {
     pub input: InputManager,
+    pub accumulator: f32,
 }
 
 impl EmulationState {
     pub fn new() -> Self {
         Self {
             input: InputManager::default(),
+            accumulator: 0.0,
         }
     }
 
@@ -41,7 +47,33 @@ impl EmulationState {
 
         self.input.state().apply(&mut gb.joypad);
 
-        gb.run(controller)?;
+        let selected_speed_up = controller.speed_up_multiplier.get_multiplier();
+
+        let speed = match &mut controller.speed_up_mode {
+            SpeedUpMode::Hold if self.input.is_held_speed_up() => selected_speed_up,
+            SpeedUpMode::Hold => 1.0,
+
+            SpeedUpMode::Toggle(active) => {
+                if self.input.is_pressed_speed_up() {
+                    *active = !*active;
+                }
+
+                if *active { selected_speed_up } else { 1.0 }
+            }
+        };
+
+        // avoid spiral of death by capping the accumulator if the hardware can't keep up
+        self.accumulator += dt * speed;
+        self.accumulator = self.accumulator.min(MAX_ACCUMULATOR);
+
+        let mut steps = 0;
+
+        while self.accumulator >= GB_FRAME_TIME && steps < MAX_STEPS {
+            gb.run(controller)?;
+            self.accumulator -= GB_FRAME_TIME;
+            steps += 1;
+        }
+
         Ok(None)
     }
 
@@ -54,5 +86,6 @@ impl EmulationState {
             0.0,
             Color::WHITE,
         );
+        // d.draw_texture(&screen.texture, 0, 0, Color::WHITE);
     }
 }

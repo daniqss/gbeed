@@ -1,5 +1,8 @@
+use gbeed_core::Ppu;
+use gbeed_core::Renderer;
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{color::DMG_CLASSIC_PALETTE, input, Texture};
+use gbeed_raylib_common::color::DMG_CLASSIC_PALETTE;
+use gbeed_raylib_common::{Texture, input, settings};
 use raylib::prelude::*;
 
 pub const FOREGROUND: Color = DMG_CLASSIC_PALETTE[0];
@@ -219,14 +222,7 @@ impl Layout {
     }
 }
 
-#[derive(Copy, Clone)]
-pub enum FpsMode {
-    Target60,
-    Target120,
-    Unlimited,
-}
-
-pub struct RaylibRenderer {
+pub struct DebuggerRenderer {
     pub screen_texture: Texture,
     pub bg_map_texture: Texture,
     pub tile_textures: [Texture; 3],
@@ -234,14 +230,14 @@ pub struct RaylibRenderer {
     pub buttons: input::InputState,
     pub game_name: String,
     pub game_region: String,
-    pub fps_mode: FpsMode,
+    pub fps_mode: settings::TargetedFps,
 
     pub scroll_x: i32,
     pub scroll_y: i32,
     pub layout: Layout,
 }
 
-impl RaylibRenderer {
+impl DebuggerRenderer {
     pub fn new(rl: &mut RaylibHandle, thread: &RaylibThread, layout: Layout) -> Self {
         let screen_texture = Texture::new(rl, thread, DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32);
         let bg_map_texture = Texture::new(rl, thread, 256, 256);
@@ -258,7 +254,7 @@ impl RaylibRenderer {
             buttons: input::InputState::default(),
             game_name: "Unknown".into(),
             game_region: "Unknown".into(),
-            fps_mode: FpsMode::Target60,
+            fps_mode: settings::TargetedFps::Target60,
             scroll_x: 0,
             scroll_y: 0,
             layout,
@@ -271,27 +267,7 @@ impl RaylibRenderer {
         self.game_region = clean(format!("{region:?}"));
     }
 
-    pub fn update_scroll(&mut self, x: i32, y: i32) {
-        self.scroll_x = x;
-        self.scroll_y = y;
-    }
-
-    pub fn cycle_fps(&mut self, rl: &mut RaylibHandle) {
-        self.fps_mode = match self.fps_mode {
-            FpsMode::Target60 => {
-                rl.set_target_fps(120);
-                FpsMode::Target120
-            }
-            FpsMode::Target120 => {
-                rl.set_target_fps(0);
-                FpsMode::Unlimited
-            }
-            FpsMode::Unlimited => {
-                rl.set_target_fps(60);
-                FpsMode::Target60
-            }
-        };
-    }
+    pub fn update_scroll(&mut self, scroll: (i32, i32)) { (self.scroll_x, self.scroll_y) = scroll; }
 
     pub fn read_pixel(&self, x: usize, y: usize) -> u32 {
         let index = (y * DMG_SCREEN_WIDTH + x) * 3;
@@ -309,7 +285,9 @@ impl RaylibRenderer {
         self.screen_texture[index + 1] = color.g;
         self.screen_texture[index + 2] = color.b;
     }
+}
 
+impl DebuggerRenderer {
     pub fn draw_screen(&mut self, rl: &mut RaylibHandle, thread: &RaylibThread) {
         self.screen_texture.update();
 
@@ -399,21 +377,21 @@ impl RaylibRenderer {
         );
 
         // Controls
-        #[cfg(not(target_arch = "wasm32"))]
-        if !layout.is_mobile {
-            let screen_center_x = layout.screen_center_x;
-            let controls_y = layout.controls_y;
-            draw_fps_btn(
-                &mut d,
-                screen_center_x,
-                controls_y,
-                match self.fps_mode {
-                    FpsMode::Target60 => "TARGET  60 Hz",
-                    FpsMode::Target120 => "TARGET 120 Hz",
-                    FpsMode::Unlimited => "TARGET  UNLIM",
-                },
-            );
-        }
+        // #[cfg(not(target_arch = "wasm32"))]
+        // if !layout.is_mobile {
+        //     let screen_center_x = layout.screen_center_x;
+        //     let controls_y = layout.controls_y;
+        //     draw_fps_btn(
+        //         &mut d,
+        //         screen_center_x,
+        //         controls_y,
+        //         match self.fps_mode {
+        //             FpsMode::Target60 => "TARGET  60 Hz",
+        //             FpsMode::Target120 => "TARGET 120 Hz",
+        //             FpsMode::Unlimited => "TARGET  UNLIM",
+        //         },
+        //     );
+        // }
 
         // D-PAD
         let dpad_x = layout.dpad_x;
@@ -638,6 +616,44 @@ impl RaylibRenderer {
                 );
             }
         }
+    }
+}
+
+impl Renderer for DebuggerRenderer {
+    fn read_pixel(&self, x: usize, y: usize) -> u32 {
+        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
+
+        ((self.screen_texture[index] as u32) << 16)
+            | ((self.screen_texture[index + 1] as u32) << 8)
+            | (self.screen_texture[index + 2] as u32)
+    }
+
+    fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
+        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
+        let shade = (palette >> (color_id * 2)) & 0x03;
+        let color = DMG_CLASSIC_PALETTE[shade as usize];
+
+        self.screen_texture[index] = color.r;
+        self.screen_texture[index + 1] = color.g;
+        self.screen_texture[index + 2] = color.b;
+    }
+
+    fn update_screen(&mut self, ppu: &Ppu) {
+        self.screen_texture.update();
+
+        update_tiles(&mut self.tile_textures[0], ppu.tile_block0());
+        update_tiles(&mut self.tile_textures[1], ppu.tile_block1());
+        update_tiles(&mut self.tile_textures[2], ppu.tile_block2());
+
+        update_bg_map(
+            &mut self.bg_map_texture,
+            ppu.bg_map0(),
+            ppu.tile_data(),
+            ppu.bg_tile_map_address(),
+            ppu.get_bg_palette(),
+        );
+
+        self.update_scroll(ppu.get_scroll());
     }
 }
 

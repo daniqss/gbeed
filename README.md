@@ -9,20 +9,17 @@ Core emulator is mostly complete, and allow sufficintly good emulation in most g
 
 The following games, the best-selling games of the DMG catalog, are tested in initial areas and are playable without major issues.
 
-| Selling Ranking | Game               | Playable                 | Cartridge Type                        | ROM Size | RAM Size |
-|-----------------|--------------------|--------------------------|---------------------------------------|----------|----------|
-| 1               | Pokémon Red        | 🟩 Playable              | GB MBC3 + RAM + Battery               | 1024 KB  | 32 KB    |
-| 2               | Tetris             | 🟩 Playable              | GB ROM Only                           | 32 KB    | None     |
-| 3               | Pokémon Gold       | 🟩 Playable              | GBC MBC3 + Timer + RAM + Battery      | 2048 KB  | 32 KB    |
-| 3               | Pokémon Crystal    | 🟩 Not Supported         | GBC Only MBC3 + Timer + RAM + Battery | 2048 KB  | 32 KB    |
-| 4               | Super Mario Land   | 🟩 Playable              | GB MBC1                               | 64 KB    | None     |
-| 5               | Super Mario Land 2 | 🟩 Playable<sup>*1</sup> | GB MBC1 + RAM + Battery               | 512 KB   | 8 KB     |
-| 7               | Pokemon Pinball    | 🟩 Playable              | GBC MBC5 Rumble + RAM + Battery       | 1024 KB  | 8 KB     |
-| 11              | Link's Awakining   | 🟩 Playable              | GB MBC1 + RAM + Battery               | 512 KB   | 8 KB     |
+| Selling Ranking | Game               | Playable         | Cartridge Type                        | ROM Size | RAM Size |
+|-----------------|--------------------|------------------|---------------------------------------|----------|----------|
+| 1               | Pokémon Red        | 🟩 Playable      | GB MBC3 + RAM + Battery               | 1024 KB  | 32 KB    |
+| 2               | Tetris             | 🟩 Playable      | GB ROM Only                           | 32 KB    | None     |
+| 3               | Pokémon Gold       | 🟩 Playable      | GBC MBC3 + Timer + RAM + Battery      | 2048 KB  | 32 KB    |
+| 3               | Pokémon Crystal    | 🟩 Not Supported | GBC Only MBC3 + Timer + RAM + Battery | 2048 KB  | 32 KB    |
+| 4               | Super Mario Land   | 🟩 Playable      | GB MBC1                               | 64 KB    | None     |
+| 5               | Super Mario Land 2 | 🟩 Playable      | GB MBC1 + RAM + Battery               | 512 KB   | 8 KB     |
+| 7               | Pokemon Pinball    | 🟩 Playable      | GBC MBC5 Rumble + RAM + Battery       | 1024 KB  | 8 KB     |
+| 11              | Link's Awakining   | 🟩 Playable      | GB MBC1 + RAM + Battery               | 512 KB   | 8 KB     |
 
-<sub>
-<sup>1</sup> This game save file tends to get corrupted, crashing the game sometimes<br>
-</sub>
 
 ### Tests
 The emulator is tested using [Blargg's rom test](https://github.com/retrio/gb-test-roms) and [Mooneye test suite](https://github.com/Gekkio/mooneye-test-suite) and passes basic CPU instructions and MBC tests, but fails most of the timing tests. See passed tests in `core/tests`.

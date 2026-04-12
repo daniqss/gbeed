@@ -34,7 +34,7 @@ pub struct Pop {
 }
 
 impl Pop {
-    pub fn new(dst: R16) -> InstructionBox { InstructionBox::new(Self { dst }) }
+    pub fn new(dst: R16) -> InstructionBox<Self> { InstructionBox::new(Self { dst }) }
 }
 impl Instruction for Pop {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
