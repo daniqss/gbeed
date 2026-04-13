@@ -57,9 +57,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut app = EmulatorApp::new(rl, thread, boot_path, is_mobile);
 
+    // load ROM if its provided via command line args
     if let Some(path) = game_path {
-        if let Err(e) = app.load_rom(&path) {
-            eprintln!("Failed to load ROM from args: {e}");
+        match app.load_rom(&path) {
+            Ok(state) => app.state = state,
+            Err(e) => eprintln!("Failed to load ROM from args: {e}"),
         }
     }
 
