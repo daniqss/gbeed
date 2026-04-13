@@ -231,7 +231,7 @@ impl EmulationScene {
         draw_action_btn(
             d,
             x - size / 2 - 24,
-            y + size + 8,
+            y + size + 28,
             size,
             "B",
             "X / K",

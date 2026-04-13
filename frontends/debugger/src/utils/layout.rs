@@ -37,27 +37,30 @@ impl Layout {
         let game_y = PANEL_PADDING + HEADER_HEIGHT;
 
         if is_mobile {
-            let game_x = 0;
-            let scaled_screen_width = screen_width;
-            let scaled_screen_height = screen_width * DMG_SCREEN_HEIGHT as i32 / DMG_SCREEN_WIDTH as i32;
+            let game_x = PANEL_PADDING;
+            let scaled_screen_width = screen_width - PANEL_PADDING * 2;
+            let scaled_screen_height =
+                scaled_screen_width * DMG_SCREEN_HEIGHT as i32 / DMG_SCREEN_WIDTH as i32;
             let screen_center_x = screen_width / 2;
 
-            let controls_y = game_y + scaled_screen_height + PANEL_PADDING * 4;
+            let controls_y = game_y + scaled_screen_height + PANEL_PADDING * 2;
 
-            let dpad_arm = 70;
-            let dpad_size = 45;
+            let dpad_arm = 68;
+            let dpad_size = 44;
             let dpad_x = screen_width / 4;
-            let dpad_y = controls_y + 130;
+            let dpad_y = controls_y + 180;
 
-            let action_button_size = 85;
+            let action_button_size = 76;
+            let ab_gap = 28;
             let action_buttons_x = screen_width * 3 / 4;
-            let action_buttons_y = controls_y + 80;
+            let action_buttons_y = dpad_y - (action_button_size + ab_gap) / 2;
 
-            let start_select_width = 100;
-            let start_select_gap = 25;
+            let b_bottom = action_buttons_y + action_button_size + ab_gap + action_button_size;
+            let start_select_width = 88;
+            let start_select_gap = 20;
             let start_select_total = start_select_width * 2 + start_select_gap;
             let start_select_x = screen_center_x - start_select_total / 2;
-            let start_select_y = dpad_y + dpad_arm + 60;
+            let start_select_y = b_bottom + 32;
 
             Self {
                 is_mobile,
@@ -183,7 +186,7 @@ impl Layout {
             ),
             b: MouseButtonArea::new(
                 self.action_buttons_x - self.action_button_size / 2 - 24,
-                self.action_buttons_y + self.action_button_size + 8,
+                self.action_buttons_y + self.action_button_size + 28,
                 self.action_button_size,
                 self.action_button_size,
             ),

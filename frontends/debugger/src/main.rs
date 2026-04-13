@@ -139,10 +139,7 @@ impl EmulatorApp {
         }
     }
 
-    pub fn should_close(&self) -> bool {
-        self.controller.rl.window_should_close()
-    }
-
+    pub fn should_close(&self) -> bool { self.controller.rl.window_should_close() }
 
     pub fn load_rom(&mut self, path: &str) -> Result<EmulatorState, Box<dyn std::error::Error>> {
         let game_data = fs::read(path)?;
@@ -175,7 +172,11 @@ impl EmulatorApp {
         self.gb = Some(Dmg::new(game, self.boot_rom.clone()));
         self.save_path = Some(save_path);
 
-        Ok(EmulatorState::Emulation(EmulationScene::new(self.layout.clone(), title, region)))
+        Ok(EmulatorState::Emulation(EmulationScene::new(
+            self.layout.clone(),
+            title,
+            region,
+        )))
     }
 
     pub fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -195,11 +196,9 @@ impl EmulatorApp {
         }
 
         let next_state = match &mut self.state {
-            EmulatorState::WaitingFile(scene) => match scene.update(&mut self.controller)? {
-                Some(path) => self.load_rom(&path).ok(),
-                // if no path was selected, it can be because the user hasn't interacted yet, or because the file dialog is getting the rom
-                // in this case, a wasm function will be called from js loading the rom and changing the state
-                None => None
+            EmulatorState::WaitingFile(scene) => match scene.update(&mut self.controller) {
+                Ok(Some(path)) => self.load_rom(&path).ok(),
+                _ => None,
             },
             EmulatorState::Emulation(scene) => {
                 scene.scroll_x = self.controller.scroll_x;

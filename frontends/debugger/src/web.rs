@@ -44,7 +44,7 @@ pub unsafe extern "C" fn load_rom_from_js(path_ptr: *const std::ffi::c_char) {
         .unwrap_or("");
     if let Some(app) = unsafe { APP_PTR.as_mut() } {
         match app.load_rom(path) {
-            Ok(state) => app.state = state, 
+            Ok(state) => app.state = state,
             Err(e) => eprintln!("Failed to load ROM from JS: {e}"),
         }
     }

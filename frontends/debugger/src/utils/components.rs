@@ -1,7 +1,6 @@
 use crate::utils::{BACKGROUND, FOREGROUND, SECONDARY};
 use raylib::prelude::*;
 
-
 #[allow(clippy::too_many_arguments)]
 pub fn draw_pad_btn(
     d: &mut RaylibDrawHandle,
