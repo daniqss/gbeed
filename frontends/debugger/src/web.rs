@@ -37,13 +37,6 @@ pub unsafe extern "C" fn save_game_wasm() {
     }
 }
 
-pub unsafe fn open_file_dialog() {
-    let script = std::ffi::CString::new("document.getElementById('rom-input').click()").unwrap();
-    unsafe {
-        crate::web::emscripten_run_script(script.as_ptr());
-    }
-}
-
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn load_rom_from_js(path_ptr: *const std::ffi::c_char) {
     let path = unsafe { std::ffi::CStr::from_ptr(path_ptr) }

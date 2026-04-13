@@ -1,17 +1,6 @@
-use crate::utils::{BACKGROUND, FOREGROUND, PRIMARY, SECONDARY};
-use gbeed_raylib_common::input::MouseButtonArea;
+use crate::utils::{BACKGROUND, FOREGROUND, SECONDARY};
 use raylib::prelude::*;
 
-pub fn draw_fps_btn(d: &mut RaylibDrawHandle, center_x: i32, controls_y: i32, text: &str) {
-    let w = 118;
-    let h = 26;
-    let x = center_x - w / 2;
-    let y = controls_y - 20;
-    d.draw_rectangle(x, y, w, h, BACKGROUND);
-    d.draw_rectangle_lines(x, y, w, h, PRIMARY);
-    let tw = d.measure_text(text, 12);
-    d.draw_text(text, x + (w - tw) / 2, y + (h - 15) / 2, 12, PRIMARY);
-}
 
 #[allow(clippy::too_many_arguments)]
 pub fn draw_pad_btn(
@@ -107,22 +96,22 @@ pub fn draw_small_btn(
     }
 }
 
-pub fn draw_button(d: &mut RaylibDrawHandle, area: &MouseButtonArea, text: &str) {
-    let (bg, fg, border) = if area.is_hovered(d) {
-        (FOREGROUND, BACKGROUND, FOREGROUND)
-    } else {
-        (BACKGROUND, FOREGROUND, FOREGROUND)
-    };
-    d.draw_rectangle(area.x, area.y, area.width, area.height, bg);
-    d.draw_rectangle_lines(area.x, area.y, area.width, area.height, border);
+// pub fn draw_button(d: &mut RaylibDrawHandle, area: &MouseButtonArea, text: &str) {
+//     let (bg, fg, border) = if area.is_hovered(d) {
+//         (FOREGROUND, BACKGROUND, FOREGROUND)
+//     } else {
+//         (BACKGROUND, FOREGROUND, FOREGROUND)
+//     };
+//     d.draw_rectangle(area.x, area.y, area.width, area.height, bg);
+//     d.draw_rectangle_lines(area.x, area.y, area.width, area.height, border);
 
-    let font_size = 20;
-    let tw = d.measure_text(text, font_size);
-    d.draw_text(
-        text,
-        area.x + (area.width - tw) / 2,
-        area.y + (area.height - font_size) / 2,
-        font_size,
-        fg,
-    );
-}
+//     let font_size = 20;
+//     let tw = d.measure_text(text, font_size);
+//     d.draw_text(
+//         text,
+//         area.x + (area.width - tw) / 2,
+//         area.y + (area.height - font_size) / 2,
+//         font_size,
+//         fg,
+//     );
+// }

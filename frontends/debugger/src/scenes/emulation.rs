@@ -107,7 +107,6 @@ impl EmulationScene {
             SECONDARY,
         );
 
-        // FPS
         let fps_font_size = 26;
         let fps_str = format!("{:3}", d.get_fps());
         let fps_width = d.measure_text(&fps_str, fps_font_size);
@@ -127,10 +126,9 @@ impl EmulationScene {
         let (x, y) = (self.layout.game_x, self.layout.game_y);
         let (w, h) = (self.layout.scaled_screen_width, self.layout.scaled_screen_height);
 
-        // Border
+        // screen border
         d.draw_rectangle(x - 3, y - 3, w + 6, h + 6, PRIMARY);
 
-        // Texture
         d.draw_texture_pro(
             texture,
             Rectangle::new(0.0, 0.0, DMG_SCREEN_WIDTH as f32, DMG_SCREEN_HEIGHT as f32),

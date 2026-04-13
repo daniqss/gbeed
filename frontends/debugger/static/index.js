@@ -19,12 +19,18 @@ function loadRomFile(file) {
 
     // load the ROM in the emulator
     Module.ccall("load_rom_from_js", null, ["string"], [filePath]);
+
+    // hide button after loading first ROM
+    document.getElementById("open-rom-btn").style.display = "none";
   };
   reader.readAsArrayBuffer(file);
 }
 
-// load the selected ROM
+// open file dialog when the button is clicked, and load the selected ROM
 const romInput = document.getElementById("rom-input");
+document.getElementById("open-rom-btn").addEventListener("click", () => {
+  romInput.click();
+});
 romInput.addEventListener("change", () => {
   if (romInput.files.length > 0) {
     loadRomFile(romInput.files[0]);

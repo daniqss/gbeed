@@ -1,31 +1,14 @@
 use crate::controller::DebuggerController;
-use crate::utils::{BACKGROUND, FOREGROUND, components::draw_button};
-use crate::web;
-use gbeed_core::prelude::*;
-use gbeed_raylib_common::input::{MouseButtonArea};
+use crate::utils::{BACKGROUND, FOREGROUND};
 use raylib::prelude::*;
 
 #[derive(Default, Debug)]
-pub struct WaitingFileScene {
-    pub select_btn: MouseButtonArea,
-    pub was_button_pressed: bool,
-}
+pub struct WaitingFileScene;
 
 impl WaitingFileScene {
-    pub fn new() -> Self {
-        Self {
-            select_btn: MouseButtonArea::default(),
-            was_button_pressed: false,
-        }
-    }
+    pub fn new() -> Self { Self }
 
-    pub fn update_layout(&mut self, screen_w: i32, screen_h: i32) {
-        let (w, h) = (200, 40);
-        let x = (screen_w - w) / 2;
-        let y = (screen_h - h) / 2 - 40;
-
-        self.select_btn = MouseButtonArea::new(x, y, w, h);
-    }
+    pub fn update_layout(&mut self, _screen_w: i32, _screen_h: i32) {}
 
     pub fn update(
         &mut self,
@@ -35,18 +18,6 @@ impl WaitingFileScene {
             let dropped_files = controller.rl.load_dropped_files();
             if let Some(file_path) = dropped_files.iter().next() {
                 return Ok(Some(file_path.to_string()));
-            }
-        }
-
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            let is_down = self.select_btn.is_pressed(&controller.rl, MouseButton::MOUSE_BUTTON_LEFT);
-            if is_down && !self.was_button_pressed {
-                self.was_button_pressed = true;
-                unsafe {
-                    web::open_file_dialog();
-                }
             }
         }
 
@@ -69,14 +40,9 @@ impl WaitingFileScene {
         d.draw_text(
             msg,
             (screen_w - width) / 2,
-            (screen_h - font_size) / 2 + 40,
+            (screen_h - font_size) / 2,
             font_size,
             FOREGROUND,
         );
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            draw_button(d, &self.select_btn, "Select ROM");
-        }
     }
 }
