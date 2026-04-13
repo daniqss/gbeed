@@ -1,31 +1,28 @@
 use gbeed_core::prelude::*;
+use raylib::prelude::*;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 mod controller;
 mod scenes;
 mod utils;
+
 #[cfg(target_arch = "wasm32")]
 mod web;
 
-use raylib::prelude::*;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
-
 use controller::DebuggerController;
 use scenes::{EmulationScene, EmulatorState, WaitingFileScene};
-use utils::Layout;
+use utils::{BACKGROUND, Layout};
+
 #[cfg(target_arch = "wasm32")]
 use web::{
     APP_PTR, emscripten_set_main_loop_arg, load_rom_from_js, local_storage, save_game_wasm, wasm_main_loop,
 };
 
-use crate::utils::BACKGROUND;
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
-    let mut game_path: Option<String> = None;
-    let mut boot_path: Option<String> = None;
+    let mut game_path = None;
+    let mut boot_path = None;
 
     let mut i = 1;
     while i < args.len() {
@@ -40,15 +37,58 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "-h" | "--help" => {
                 print_help();
-                return Ok(());
+                std::process::exit(0);
             }
             _ => {}
         }
         i += 1;
     }
 
+    let (width, height, is_mobile) = get_platform_info();
+
+    let (mut rl, thread) = raylib::init()
+        .size(width, height)
+        .title("gbeed")
+        .resizable()
+        .build();
+
+    rl.set_target_fps(60);
+    rl.set_exit_key(None);
+
+    let mut app = EmulatorApp::new(rl, thread, boot_path, is_mobile);
+
+    if let Some(path) = game_path {
+        if let Err(e) = app.load_rom(&path) {
+            eprintln!("Failed to load ROM from args: {e}");
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        while !app.should_close() {
+            app.update()?;
+            app.draw();
+        }
+        let _ = app.save_game();
+    }
+
     #[cfg(target_arch = "wasm32")]
-    let (window_width, window_height, is_mobile) = unsafe {
+    unsafe {
+        // force the linker to keep these functions
+        let _ = save_game_wasm as *const ();
+        let _ = load_rom_from_js as *const ();
+
+        let app_ptr = Box::into_raw(Box::new(app));
+        APP_PTR = app_ptr;
+        emscripten_set_main_loop_arg(wasm_main_loop, app_ptr, 0, 1);
+    }
+
+    Ok(())
+}
+
+fn get_platform_info() -> (i32, i32, bool) {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
         let script_w = std::ffi::CString::new(
             "Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)",
         )
@@ -61,62 +101,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let h = web::emscripten_run_script_int(script_h.as_ptr());
 
         let script_m = std::ffi::CString::new("(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.innerWidth / window.innerHeight) < 1.0) ? 1 : 0").unwrap();
-        let m = web::emscripten_run_script_int(script_m.as_ptr()) != 0;
-        (w, h, m)
-    };
-
-    #[cfg(not(target_arch = "wasm32"))]
-    let (window_width, window_height, is_mobile) = (1920, 1080, false);
-
-    let (mut rl, thread) = raylib::init()
-        .size(window_width, window_height)
-        .title("gbeed")
-        .resizable()
-        .build();
-    rl.set_target_fps(60);
-
-    let mut app = EmulatorApp::new(rl, thread, boot_path, is_mobile, window_width, window_height);
-
-    if let Some(path) = game_path {
-        if let Err(e) = app.load_rom(&path) {
-            eprintln!("Failed to load ROM from args: {e}");
-            app.state = EmulatorState::WaitingFile(WaitingFileScene::new());
-        } else {
-            app.state = EmulatorState::Emulation(EmulationScene::new(
-                Layout::new(window_width, window_height, is_mobile),
-                "game name mmm".to_string(),
-                "game region".to_string(),
-            ));
-        }
+        let is_mobile = web::emscripten_run_script_int(script_m.as_ptr()) != 0;
+        (w, h, is_mobile)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    {
-        while !app.should_close() {
-            app.update()?;
-            app.draw();
-        }
-
-        if let Err(e) = app.save_game() {
-            eprintln!("Failed to save game on exit: {e}");
-        }
-    }
-
-    // Force the linker to keep save_game_wasm
-    #[cfg(target_arch = "wasm32")]
-    let _ = save_game_wasm as *const ();
-    #[cfg(target_arch = "wasm32")]
-    let _ = load_rom_from_js as *const ();
-
-    // set up the wasm main loop
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        let app_ptr = Box::into_raw(Box::new(app));
-        APP_PTR = app_ptr;
-        emscripten_set_main_loop_arg(wasm_main_loop, app_ptr, 0, 1);
-    }
-
-    Ok(())
+    (1920, 1080, false)
 }
 
 #[repr(C)]
@@ -126,24 +116,18 @@ pub struct EmulatorApp {
     save_path: Option<PathBuf>,
     boot_rom: Option<Vec<u8>>,
     state: EmulatorState,
+    layout: Layout,
 }
 
 impl EmulatorApp {
-    fn new(
-        rl: RaylibHandle,
-        thread: RaylibThread,
-        boot_path: Option<String>,
-        is_mobile: bool,
-        window_width: i32,
-        window_height: i32,
-    ) -> Self {
+    pub fn new(rl: RaylibHandle, thread: RaylibThread, boot_path: Option<String>, is_mobile: bool) -> Self {
         let boot_rom = boot_path.and_then(|path| fs::read(path).ok());
-        let layout = Layout::new(window_width, window_height, is_mobile);
+        let (sw, sh) = (rl.get_screen_width(), rl.get_screen_height());
+        let layout = Layout::new(sw, sh, is_mobile);
         let controller = DebuggerController::new(rl, thread);
-
-        let _mouse_triggers = layout.get_mouse_triggers();
-
-        let state = EmulatorState::WaitingFile(WaitingFileScene::new());
+        let mut scene = WaitingFileScene::new();
+        scene.update_layout(sw, sh);
+        let state = EmulatorState::WaitingFile(scene);
 
         Self {
             gb: None,
@@ -151,19 +135,18 @@ impl EmulatorApp {
             save_path: None,
             boot_rom,
             state,
+            layout,
         }
     }
 
-    #[inline(always)]
     pub fn should_close(&self) -> bool {
         self.controller.rl.window_should_close() || matches!(self.state, EmulatorState::Exit)
     }
 
-    fn load_rom(&mut self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn load_rom(&mut self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let game_data = fs::read(path)?;
 
         let save_path = if cfg!(target_arch = "wasm32") {
-            // in web we need to clean the /.glfw_dropped_files/ directory
             PathBuf::from(format!(
                 "saves/{}",
                 save_path_from_rom(path.split('/').next_back().unwrap_or("")).to_string_lossy()
@@ -181,20 +164,17 @@ impl EmulatorApp {
                 println!("Loaded save file from {}", save_path.display());
                 Some(data)
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                println!("No save file found at {}, starting fresh", save_path.display());
-                None
-            }
-            Err(e) => return Err(Box::new(e)),
+            _ => None,
         };
 
         let game = Cartridge::new(&game_data, save).map_err(|e| format!("{e}"))?;
-
-        // self.controller.game_name = game.header.title.clone();
-        // self.controller.game_region = format!("{:?}", game.header.destination);
+        let title = game.header.title.clone();
+        let region = format!("{:?}", game.header.destination);
 
         self.gb = Some(Dmg::new(game, self.boot_rom.clone()));
         self.save_path = Some(save_path);
+
+        self.state = EmulatorState::Emulation(EmulationScene::new(self.layout.clone(), title, region));
 
         Ok(())
     }
@@ -202,28 +182,34 @@ impl EmulatorApp {
     pub fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let dt = self.controller.rl.get_frame_time();
 
+        // Handle window resizing
+        if self.controller.rl.is_window_resized() {
+            let (sw, sh) = (
+                self.controller.rl.get_screen_width(),
+                self.controller.rl.get_screen_height(),
+            );
+            self.layout = Layout::new(sw, sh, self.layout.is_mobile);
+            match &mut self.state {
+                EmulatorState::Emulation(scene) => scene.update_layout(self.layout),
+                EmulatorState::WaitingFile(scene) => scene.update_layout(sw, sh),
+                _ => {}
+            }
+        }
+
         let next_state = match &mut self.state {
             EmulatorState::WaitingFile(scene) => match scene.update(dt, &mut self.controller)? {
-                Some(crate::scenes::WaitingFileEvent::LoadRom(path)) => {
+                Some(path) => {
                     self.load_rom(&path)?;
-                    Some(EmulatorState::Emulation(EmulationScene::new(
-                        Layout::new(
-                            self.controller.rl.get_screen_width(),
-                            self.controller.rl.get_screen_height(),
-                            false,
-                        ),
-                        "game name mmm".to_string(),
-                        "game region".to_string(),
-                    )))
+                    None // load_rom already updates the state
                 }
-                Some(crate::scenes::WaitingFileEvent::Exit) => Some(EmulatorState::Exit),
                 None => None,
             },
-            EmulatorState::Emulation(scene) => scene.update(dt, &mut self.gb, &mut self.controller)?,
-            EmulatorState::Exit => {
-                self.state = EmulatorState::Exit;
-                return Ok(());
+            EmulatorState::Emulation(scene) => {
+                scene.scroll_x = self.controller.scroll_x;
+                scene.scroll_y = self.controller.scroll_y;
+                scene.update(dt, &mut self.gb, &mut self.controller)?
             }
+            EmulatorState::Exit => return Ok(()),
         };
 
         if let Some(state) = next_state {
@@ -234,43 +220,43 @@ impl EmulatorApp {
     }
 
     pub fn draw(&mut self) {
-        let DebuggerController {
-            rl,
-            thread,
-            screen_texture,
-            tile_textures,
-            bg_map_texture,
-            ..
-        } = &mut self.controller;
+        let state = &self.state;
+        let controller = &mut self.controller;
 
-        rl.draw(thread, |mut d| {
+        controller.rl.draw(&controller.thread, |mut d| {
             d.clear_background(BACKGROUND);
 
-            match &self.state {
+            match state {
                 EmulatorState::WaitingFile(scene) => scene.draw(&mut d),
-                EmulatorState::Emulation(scene) => {
-                    scene.draw(&mut d, screen_texture, tile_textures, bg_map_texture)
-                }
+                EmulatorState::Emulation(scene) => scene.draw(
+                    &mut d,
+                    &controller.screen_texture,
+                    &controller.tile_textures,
+                    &controller.bg_map_texture,
+                ),
                 EmulatorState::Exit => {}
             }
         });
     }
 
-    fn save_game(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let gb = self.gb.as_ref().ok_or("No game loaded")?;
-        let save_data = gb.cartridge.save_game().ok_or("Game does not support saving")?;
-        let save_path = self.save_path.as_ref().ok_or("Save path not set")?;
+    pub fn save_game(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let (gb, save_path) = match (self.gb.as_ref(), self.save_path.as_ref()) {
+            (Some(gb), Some(path)) => (gb, path),
+            _ => return Ok(()),
+        };
 
-        #[cfg(target_arch = "wasm32")]
-        local_storage::store_save(save_path, save_data);
+        if let Some(save_data) = gb.cartridge.save_game() {
+            #[cfg(target_arch = "wasm32")]
+            local_storage::store_save(save_path, save_data);
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            if let Some(parent) = save_path.parent() {
-                fs::create_dir_all(parent)?;
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                if let Some(parent) = save_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(save_path, save_data)?;
+                println!("Game saved successfully to {}", save_path.display());
             }
-            fs::write(save_path, save_data)?;
-            println!("Game saved successfully to {}", save_path.display());
         }
 
         Ok(())

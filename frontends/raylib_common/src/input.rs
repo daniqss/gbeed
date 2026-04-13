@@ -78,13 +78,19 @@ pub struct MouseButtonArea {
 impl MouseButtonArea {
     pub fn new(x: i32, y: i32, width: i32, height: i32) -> Self { Self { x, y, width, height } }
 
-    #[inline]
+    #[inline(always)]
     pub fn contains(&self, mouse: Vector2) -> bool {
         let (mx, my) = (mouse.x as i32, mouse.y as i32);
         mx >= self.x && mx < self.x + self.width && my >= self.y && my < self.y + self.height
     }
 
-    // press??
+    #[inline(always)]
+    pub fn is_hovered(&self, rl: &RaylibHandle) -> bool { self.contains(rl.get_mouse_position()) }
+
+    #[inline(always)]
+    pub fn is_pressed(&self, rl: &RaylibHandle, mouse_button: MouseButton) -> bool {
+        rl.is_mouse_button_down(mouse_button) && self.contains(rl.get_mouse_position())
+    }
 }
 
 #[derive(Debug, Default, Copy, Clone)]

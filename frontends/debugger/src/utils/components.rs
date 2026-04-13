@@ -1,4 +1,5 @@
 use crate::utils::{BACKGROUND, FOREGROUND, PRIMARY, SECONDARY};
+use gbeed_raylib_common::input::MouseButtonArea;
 use raylib::prelude::*;
 
 pub fn draw_fps_btn(d: &mut RaylibDrawHandle, center_x: i32, controls_y: i32, text: &str) {
@@ -24,7 +25,7 @@ pub fn draw_pad_btn(
     is_mobile: bool,
 ) {
     let (bg, fg, border) = if pressed {
-        (PRIMARY, BACKGROUND, PRIMARY)
+        (FOREGROUND, BACKGROUND, FOREGROUND)
     } else {
         (BACKGROUND, FOREGROUND, SECONDARY)
     };
@@ -63,7 +64,7 @@ pub fn draw_action_btn(
     is_mobile: bool,
 ) {
     let (bg, fg, border) = if pressed {
-        (PRIMARY, BACKGROUND, PRIMARY)
+        (FOREGROUND, BACKGROUND, FOREGROUND)
     } else {
         (BACKGROUND, FOREGROUND, SECONDARY)
     };
@@ -92,7 +93,7 @@ pub fn draw_small_btn(
     is_mobile: bool,
 ) {
     let (bg, fg, border) = if pressed {
-        (PRIMARY, BACKGROUND, PRIMARY)
+        (FOREGROUND, BACKGROUND, FOREGROUND)
     } else {
         (BACKGROUND, FOREGROUND, SECONDARY)
     };
@@ -104,4 +105,19 @@ pub fn draw_small_btn(
     if !is_mobile {
         d.draw_text(key, x, y + h + 3, 7, SECONDARY);
     }
+}
+
+pub fn draw_button(d: &mut RaylibDrawHandle, area: MouseButtonArea, text: &str, is_hover: bool) {
+    let bg = if is_hover { SECONDARY } else { PRIMARY };
+    d.draw_rectangle(area.x, area.y, area.width, area.height, bg);
+
+    let fs = 18;
+    let tw = d.measure_text(text, fs);
+    d.draw_text(
+        text,
+        area.x + (area.width - tw) / 2,
+        area.y + (area.height - fs) / 2,
+        fs,
+        BACKGROUND,
+    );
 }

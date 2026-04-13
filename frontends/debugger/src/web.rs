@@ -22,6 +22,7 @@ pub unsafe extern "C" fn wasm_main_loop(app: *mut EmulatorApp) {
     if let Err(e) = app.update() {
         eprintln!("Error during update: {e}");
     }
+    app.draw();
 }
 
 /// We need a static reference to be able to call save_game from JavaScript
@@ -36,8 +37,6 @@ pub unsafe extern "C" fn save_game_wasm() {
     }
 }
 
-use crate::scenes::{EmulationScene, EmulatorState};
-
 #[cfg(target_arch = "wasm32")]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn load_rom_from_js(path_ptr: *const std::ffi::c_char) {
@@ -47,8 +46,6 @@ pub unsafe extern "C" fn load_rom_from_js(path_ptr: *const std::ffi::c_char) {
     if let Some(app) = unsafe { APP_PTR.as_mut() } {
         if let Err(e) = app.load_rom(path) {
             eprintln!("Failed to load ROM from JS: {e}");
-        } else {
-            app.state = EmulatorState::Emulation(EmulationScene::new(app.layout));
         }
     }
 }
