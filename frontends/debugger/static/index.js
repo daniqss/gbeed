@@ -39,7 +39,12 @@ romInput.addEventListener("change", () => {
 });
 
 var Module = {
-  canvas: document.getElementById("canvas"),
+  canvas: (function () {
+    var canvas = document.getElementById("canvas");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    return canvas;
+  })(),
   onRuntimeInitialized: () => {
     window.addEventListener("beforeunload", () => {
       if (Module._save_game_wasm) {

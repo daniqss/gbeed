@@ -1,6 +1,6 @@
 use crate::scenes::{EmulationState, EmulatorState, SelectionMenuState, SettingsMenuState};
 use crate::utils::layout::*;
-use gbeed_core::prelude::{Dmg, DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH};
+use gbeed_core::prelude::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH, Dmg};
 use gbeed_raylib_common::{color, input::InputManager};
 use raylib::prelude::*;
 use std::path::PathBuf;
@@ -66,7 +66,7 @@ impl GameMenuState {
 
         // draw the emulator screen in the background if a rom is loaded
         d.draw_texture_pro(
-            &screen.texture,
+            screen,
             Rectangle::new(0.0, 0.0, DMG_SCREEN_WIDTH as f32, DMG_SCREEN_HEIGHT as f32),
             Rectangle::new(0.0, 0.0, SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32),
             Vector2::new(0.0, 0.0),

@@ -59,16 +59,16 @@ pub trait Accessible16<Address16, Address8>: Accessible<Address8> {
 #[derive(Debug)]
 pub struct Memory {
     pub boot_rom: Option<Vec<u8>>,
-    pub ram: [u8; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize],
-    pub hram: [u8; HRAM_SIZE as usize],
+    pub ram: Box<[u8; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize]>,
+    pub hram: Box<[u8; HRAM_SIZE as usize]>,
 }
 
 impl Memory {
     pub fn new(boot_rom: Option<Vec<u8>>) -> Memory {
         Memory {
             boot_rom,
-            ram: [0; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize],
-            hram: [0; HRAM_SIZE as usize],
+            ram: Box::new([0; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize]),
+            hram: Box::new([0; HRAM_SIZE as usize]),
         }
     }
 }

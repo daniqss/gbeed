@@ -1,17 +1,19 @@
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::input::{InputManager, InputMouseTriggers, MouseButtonArea};
+use raylib::prelude::*;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 mod controller;
+mod scenes;
+mod utils;
+
 #[cfg(target_arch = "wasm32")]
 mod web;
 
-use raylib::prelude::*;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use controller::DebuggerController;
+use scenes::{EmulationScene, EmulatorState, WaitingFileScene};
+use utils::{BACKGROUND, Layout};
 
-use controller::{DebuggerController, renderer};
 #[cfg(target_arch = "wasm32")]
 use web::{
     APP_PTR, emscripten_set_main_loop_arg, load_rom_from_js, local_storage, save_game_wasm, wasm_main_loop,
@@ -19,8 +21,8 @@ use web::{
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
-    let mut game_path: Option<String> = None;
-    let mut boot_path: Option<String> = None;
+    let mut game_path = None;
+    let mut boot_path = None;
 
     let mut i = 1;
     while i < args.len() {
@@ -35,44 +37,47 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "-h" | "--help" => {
                 print_help();
-                return Ok(());
+                std::process::exit(0);
             }
             _ => {}
         }
         i += 1;
     }
 
-    let (mut rl, thread) = raylib::init().size(1920, 1080).title("gbeed").resizable().build();
+    let (width, height, is_mobile) = get_platform_info();
+
+    let (mut rl, thread) = raylib::init()
+        .size(width, height)
+        .title("gbeed")
+        .resizable()
+        .build();
+
     rl.set_target_fps(60);
+    rl.set_exit_key(None);
 
-    let mut app = EmulatorApp::new(rl, thread, boot_path);
+    let mut app = EmulatorApp::new(rl, thread, boot_path, is_mobile);
 
-    if let Some(path) = game_path
-        && let Err(e) = app.load_rom(&path)
-    {
-        eprintln!("Failed to load ROM from args: {e}");
+    if let Some(path) = game_path {
+        if let Err(e) = app.load_rom(&path) {
+            eprintln!("Failed to load ROM from args: {e}");
+        }
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        while !app.controller.renderer.rl.window_should_close() && !app.input.state().escape {
+        while !app.should_close() {
             app.update()?;
+            app.draw();
         }
-
-        if let Err(e) = app.save_game() {
-            eprintln!("Failed to save game on exit: {e}");
-        }
+        let _ = app.save_game();
     }
 
-    // Force the linker to keep save_game_wasm
-    #[cfg(target_arch = "wasm32")]
-    let _ = save_game_wasm as *const ();
-    #[cfg(target_arch = "wasm32")]
-    let _ = load_rom_from_js as *const ();
-
-    // set up the wasm main loop
     #[cfg(target_arch = "wasm32")]
     unsafe {
+        // force the linker to keep these functions
+        let _ = save_game_wasm as *const ();
+        let _ = load_rom_from_js as *const ();
+
         let app_ptr = Box::into_raw(Box::new(app));
         APP_PTR = app_ptr;
         emscripten_set_main_loop_arg(wasm_main_loop, app_ptr, 0, 1);
@@ -81,73 +86,65 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn get_platform_info() -> (i32, i32, bool) {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        let script_w = std::ffi::CString::new(
+            "Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)",
+        )
+        .unwrap();
+        let script_h = std::ffi::CString::new(
+            "Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)",
+        )
+        .unwrap();
+        let w = web::emscripten_run_script_int(script_w.as_ptr());
+        let h = web::emscripten_run_script_int(script_h.as_ptr());
+
+        let script_m = std::ffi::CString::new("(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.innerWidth / window.innerHeight) < 1.0) ? 1 : 0").unwrap();
+        let is_mobile = web::emscripten_run_script_int(script_m.as_ptr()) != 0;
+        (w, h, is_mobile)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    (1920, 1080, false)
+}
+
 #[repr(C)]
 pub struct EmulatorApp {
     gb: Option<Dmg>,
     controller: DebuggerController,
     save_path: Option<PathBuf>,
     boot_rom: Option<Vec<u8>>,
-    input: InputManager,
+    state: EmulatorState,
+    layout: Layout,
 }
 
 impl EmulatorApp {
-    fn new(rl: RaylibHandle, thread: RaylibThread, boot_path: Option<String>) -> Self {
+    pub fn new(rl: RaylibHandle, thread: RaylibThread, boot_path: Option<String>, is_mobile: bool) -> Self {
         let boot_rom = boot_path.and_then(|path| fs::read(path).ok());
+        let (sw, sh) = (rl.get_screen_width(), rl.get_screen_height());
+        let layout = Layout::new(sw, sh, is_mobile);
         let controller = DebuggerController::new(rl, thread);
-
-        let game_x = renderer::PANEL_PADDING;
-        let game_y = renderer::PANEL_PADDING + renderer::HEADER_HEIGHT;
-        let screen_center_x = game_x + renderer::SCALED_SCREEN_WIDTH / 2;
-        let controls_y = game_y + renderer::SCALED_SCREEN_HEIGHT + renderer::PANEL_PADDING * 2;
-
-        let dpad_x = screen_center_x - 160;
-        let dpad_y = controls_y + 50;
-        let dpad_arm = 28;
-
-        let start_select_center_x = screen_center_x;
-        let start_select_width = 60;
-        let start_select_gap = 18;
-        let start_select_total = start_select_width * 2 + start_select_gap;
-        let start_select_x = start_select_center_x - start_select_total / 2;
-        let start_select_y = dpad_y - 10;
-
-        let action_buttons_x = screen_center_x + 160;
-        let action_buttons_y = controls_y + 24;
-
-        let mouse_triggers = InputMouseTriggers {
-            up: MouseButtonArea::new(dpad_x - 17, dpad_y - dpad_arm - 17, 34, 34),
-            down: MouseButtonArea::new(dpad_x - 17, dpad_y + dpad_arm - 17, 34, 34),
-            left: MouseButtonArea::new(dpad_x - dpad_arm - 17, dpad_y - 17, 34, 34),
-            right: MouseButtonArea::new(dpad_x + dpad_arm - 17, dpad_y - 17, 34, 34),
-            select: MouseButtonArea::new(start_select_x, start_select_y, 60, 20),
-            start: MouseButtonArea::new(start_select_x + 60 + 18, start_select_y, 60, 20),
-            a: MouseButtonArea::new(action_buttons_x - 18 + 24, action_buttons_y, 36, 36),
-            b: MouseButtonArea::new(action_buttons_x - 18 - 24, action_buttons_y + 44, 36, 36),
-            speed_up: Some(MouseButtonArea::new(
-                screen_center_x - 118 / 2,
-                controls_y - 20,
-                118,
-                26,
-            )),
-            ..Default::default()
-        };
-
-        let input = InputManager::new(0.1, None, Some(mouse_triggers), None);
+        let mut scene = WaitingFileScene::new();
+        scene.update_layout(sw, sh);
+        let state = EmulatorState::WaitingFile(scene);
 
         Self {
             gb: None,
             controller,
             save_path: None,
             boot_rom,
-            input,
+            state,
+            layout,
         }
     }
 
-    fn load_rom(&mut self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn should_close(&self) -> bool { self.controller.rl.window_should_close() }
+
+    pub fn load_rom(&mut self, path: &str) -> Result<EmulatorState, Box<dyn std::error::Error>> {
         let game_data = fs::read(path)?;
 
         let save_path = if cfg!(target_arch = "wasm32") {
-            // in web we need to clean the /.glfw_dropped_files/ directory
             PathBuf::from(format!(
                 "saves/{}",
                 save_path_from_rom(path.split('/').next_back().unwrap_or("")).to_string_lossy()
@@ -165,86 +162,95 @@ impl EmulatorApp {
                 println!("Loaded save file from {}", save_path.display());
                 Some(data)
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                println!("No save file found at {}, starting fresh", save_path.display());
-                None
-            }
-            Err(e) => return Err(Box::new(e)),
+            _ => None,
         };
 
         let game = Cartridge::new(&game_data, save).map_err(|e| format!("{e}"))?;
-        self.controller
-            .renderer
-            .set_game_info(game.header.title.clone(), game.header.destination);
+        let title = game.header.title.clone();
+        let region = format!("{:?}", game.header.destination);
 
         self.gb = Some(Dmg::new(game, self.boot_rom.clone()));
         self.save_path = Some(save_path);
 
-        Ok(())
+        Ok(EmulatorState::Emulation(EmulationScene::new(
+            self.layout.clone(),
+            title,
+            region,
+        )))
     }
 
     pub fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        // Handle Drag and Drop
-        if self.controller.renderer.rl.is_file_dropped() {
-            let dropped_files = self.controller.renderer.rl.load_dropped_files();
-            if let Some(file_path) = dropped_files.iter().next()
-                && let Err(e) = self.load_rom(file_path)
-            {
-                eprintln!("Failed to load dropped ROM: {e}");
+        let dt = self.controller.rl.get_frame_time();
+
+        // handle window resizing
+        if self.controller.rl.is_window_resized() {
+            let (sw, sh) = (
+                self.controller.rl.get_screen_width(),
+                self.controller.rl.get_screen_height(),
+            );
+            self.layout = Layout::new(sw, sh, self.layout.is_mobile);
+            match &mut self.state {
+                EmulatorState::Emulation(scene) => scene.update_layout(self.layout),
+                EmulatorState::WaitingFile(scene) => scene.update_layout(sw, sh),
             }
         }
 
-        let dt = self.controller.renderer.rl.get_frame_time();
-        self.input.update(&self.controller.renderer.rl, dt);
-        self.controller.renderer.buttons = self.input.state();
+        let next_state = match &mut self.state {
+            EmulatorState::WaitingFile(scene) => match scene.update(&mut self.controller) {
+                Ok(Some(path)) => self.load_rom(&path).ok(),
+                _ => None,
+            },
+            EmulatorState::Emulation(scene) => {
+                scene.scroll_x = self.controller.scroll_x;
+                scene.scroll_y = self.controller.scroll_y;
+                scene.update(dt, self.gb.as_mut(), &mut self.controller)?
+            }
+        };
 
-        // if self.input.is_pressed_speed_up() {
-        //     self.controller.renderer.speed_up_mode = match self.controller.renderer.speed_up_mode {
-        //         SpeedUpMode::Toggle(active) => SpeedUpMode::Toggle(!active),
-        //         SpeedUpMode::Hold => SpeedUpMode::Hold,
-        //     };
-        // }
-
-        if let Some(ref mut gb) = self.gb {
-            self.input.state().apply(&mut gb.joypad);
-
-            gb.run(&mut self.controller)?;
-
-            self.controller.renderer.draw_screen();
-        } else {
-            // Draw a "Drop ROM" message
-            let mut d = self
-                .controller
-                .renderer
-                .rl
-                .begin_drawing(&self.controller.renderer.thread);
-            d.clear_background(renderer::BACKGROUND);
-            let msg = "Drag and Drop a Game Boy ROM to start";
-            let font_size = 20;
-            let width = d.measure_text(msg, font_size);
-            d.draw_text(
-                msg,
-                (d.get_screen_width() - width) / 2,
-                (d.get_screen_height() - font_size) / 2,
-                font_size,
-                renderer::FOREGROUND,
-            );
+        if let Some(state) = next_state {
+            self.state = state;
         }
+
         Ok(())
     }
 
-    fn save_game(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let gb = self.gb.as_ref().ok_or("No game loaded")?;
-        let save_data = gb.cartridge.save_game().ok_or("Game does not support saving")?;
-        let save_path = self.save_path.as_ref().ok_or("Save path not set")?;
+    pub fn draw(&mut self) {
+        let state = &self.state;
+        let controller = &mut self.controller;
 
-        #[cfg(target_arch = "wasm32")]
-        local_storage::store_save(save_path, save_data);
+        controller.rl.draw(&controller.thread, |mut d| {
+            d.clear_background(BACKGROUND);
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            fs::write(save_path, save_data)?;
-            println!("Game saved successfully to {}", save_path.display());
+            match state {
+                EmulatorState::WaitingFile(scene) => scene.draw(&mut d),
+                EmulatorState::Emulation(scene) => scene.draw(
+                    &mut d,
+                    &controller.screen_texture,
+                    &controller.tile_textures,
+                    &controller.bg_map_texture,
+                ),
+            }
+        });
+    }
+
+    pub fn save_game(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let (gb, save_path) = match (self.gb.as_ref(), self.save_path.as_ref()) {
+            (Some(gb), Some(path)) => (gb, path),
+            _ => return Ok(()),
+        };
+
+        if let Some(save_data) = gb.cartridge.save_game() {
+            #[cfg(target_arch = "wasm32")]
+            local_storage::store_save(save_path, save_data);
+
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                if let Some(parent) = save_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(save_path, save_data)?;
+                println!("Game saved successfully to {}", save_path.display());
+            }
         }
 
         Ok(())

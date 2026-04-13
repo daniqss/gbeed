@@ -73,7 +73,7 @@ pub fn load_cartridge(
         Err(e) => {
             return Err(Box::new(io::Error::other(format!(
                 "Failed to read save file at {s_path:?}: {e}"
-            ))))
+            ))));
         }
     };
 

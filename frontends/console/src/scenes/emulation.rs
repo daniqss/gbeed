@@ -79,7 +79,7 @@ impl EmulationState {
 
     pub fn draw(&self, d: &mut RaylibDrawHandle, screen: &gbeed_raylib_common::Texture) {
         d.draw_texture_pro(
-            &screen.texture,
+            screen,
             Rectangle::new(0.0, 0.0, DMG_SCREEN_WIDTH as f32, DMG_SCREEN_HEIGHT as f32),
             Rectangle::new(0.0, 0.0, SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32),
             Vector2::new(0.0, 0.0),

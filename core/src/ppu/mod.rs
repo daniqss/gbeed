@@ -207,7 +207,7 @@ impl Ppu {
     }
 
     #[inline(always)]
-    pub fn get_scroll(&self) -> (i32, i32) { (self.scroll_x as i32, self.scroll_y as i32) }
+    pub fn get_scroll(&self) -> (u8, u8) { (self.scroll_x, self.scroll_y) }
 
     #[inline(always)]
     fn set_mode(&mut self, mode: LCDMode) { self.lcd_status = (self.lcd_status & 0xFC) | mode as u8; }

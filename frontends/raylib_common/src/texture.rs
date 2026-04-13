@@ -1,8 +1,8 @@
 use raylib::prelude::*;
 
 pub struct Texture {
-    pub texture: Texture2D,
-    framebuffer: Vec<u8>,
+    texture: Texture2D,
+    framebuffer: Box<[u8]>,
 }
 
 impl Texture {
@@ -10,7 +10,7 @@ impl Texture {
         let mut img = Image::gen_image_color(width, height, Color::BLACK);
         img.set_format(PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
         let texture = rl.load_texture_from_image(thread, &img).unwrap();
-        let framebuffer = vec![0u8; (width * height * 3) as usize];
+        let framebuffer = vec![0u8; (width * height * 3) as usize].into_boxed_slice();
         Self { texture, framebuffer }
     }
 
@@ -31,4 +31,8 @@ impl std::ops::Index<usize> for Texture {
 impl std::ops::IndexMut<usize> for Texture {
     #[inline(always)]
     fn index_mut(&mut self, idx: usize) -> &mut Self::Output { &mut self.framebuffer[idx] }
+}
+
+impl std::convert::AsRef<raylib::ffi::Texture> for Texture {
+    fn as_ref(&self) -> &raylib::ffi::Texture { &self.texture }
 }
