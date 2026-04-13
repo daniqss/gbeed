@@ -45,22 +45,21 @@ impl Layout {
 
             let controls_y = game_y + scaled_screen_height + PANEL_PADDING * 2;
 
+            let start_select_width = 88;
+            let start_select_gap = 20;
+            let start_select_total = start_select_width * 2 + start_select_gap;
+            let start_select_x = screen_center_x - start_select_total / 2;
+            let start_select_y = controls_y;
+
             let dpad_arm = 68;
             let dpad_size = 44;
             let dpad_x = screen_width / 4;
-            let dpad_y = controls_y + 180;
+            let dpad_y = start_select_y + 160;
 
             let action_button_size = 76;
             let ab_gap = 28;
             let action_buttons_x = screen_width * 3 / 4;
             let action_buttons_y = dpad_y - (action_button_size + ab_gap) / 2;
-
-            let b_bottom = action_buttons_y + action_button_size + ab_gap + action_button_size;
-            let start_select_width = 88;
-            let start_select_gap = 20;
-            let start_select_total = start_select_width * 2 + start_select_gap;
-            let start_select_x = screen_center_x - start_select_total / 2;
-            let start_select_y = b_bottom + 32;
 
             Self {
                 is_mobile,

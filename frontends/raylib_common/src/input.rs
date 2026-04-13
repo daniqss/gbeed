@@ -109,25 +109,49 @@ pub struct InputMouseTriggers {
 
 impl ToInputState for InputMouseTriggers {
     fn to_input(&self, rl: &RaylibHandle) -> InputState {
+        let mut state = InputState::default();
         let mouse_pos = rl.get_mouse_position();
         let mouse_down = rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT);
+        let touch_count = rl.get_touch_point_count();
 
-        InputState {
-            up: mouse_down && self.up.contains(mouse_pos),
-            down: mouse_down && self.down.contains(mouse_pos),
-            left: mouse_down && self.left.contains(mouse_pos),
-            right: mouse_down && self.right.contains(mouse_pos),
-            a: mouse_down && self.a.contains(mouse_pos),
-            b: mouse_down && self.b.contains(mouse_pos),
-            start: mouse_down && self.start.contains(mouse_pos),
-            select: mouse_down && self.select.contains(mouse_pos),
-            escape: mouse_down && self.escape.as_ref().is_some_and(|area| area.contains(mouse_pos)),
-            speed_up: mouse_down
-                && self
-                    .speed_up
-                    .as_ref()
-                    .is_some_and(|area| area.contains(mouse_pos)),
+        // Recopilamos todas las posiciones activas UNA
+        let active_positions: Vec<Vector2> = (0..touch_count)
+            .map(|i| rl.get_touch_position(i))
+            .chain(std::iter::once(mouse_pos).filter(|_| mouse_down))
+            .collect();
+
+        let required: &mut [(&mut bool, &MouseButtonArea)] = &mut [
+            (&mut state.up, &self.up),
+            (&mut state.down, &self.down),
+            (&mut state.left, &self.left),
+            (&mut state.right, &self.right),
+            (&mut state.a, &self.a),
+            (&mut state.b, &self.b),
+            (&mut state.start, &self.start),
+            (&mut state.select, &self.select),
+        ];
+
+        // iter active positions only once and set all required states in one pass
+        'outer: for pos in &active_positions {
+            for (pressed, area) in required.iter_mut() {
+                if !**pressed && area.contains(*pos) {
+                    **pressed = true;
+                }
+            }
+
+            if required.iter().all(|(pressed, _)| **pressed) {
+                break 'outer;
+            }
         }
+
+        if let Some(area) = &self.escape {
+            state.escape = active_positions.iter().any(|p| area.contains(*p));
+        }
+        if let Some(area) = &self.speed_up {
+            state.speed_up = active_positions.iter().any(|p| area.contains(*p));
+        }
+
+        state
     }
 }
 

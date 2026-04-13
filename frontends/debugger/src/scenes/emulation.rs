@@ -140,8 +140,8 @@ impl EmulationScene {
     }
 
     fn draw_controls(&self, d: &mut RaylibDrawHandle) {
-        self.draw_dpad(d);
         self.draw_system_buttons(d);
+        self.draw_dpad(d);
         self.draw_action_buttons(d);
     }
 
