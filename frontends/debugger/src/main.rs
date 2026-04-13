@@ -140,10 +140,11 @@ impl EmulatorApp {
     }
 
     pub fn should_close(&self) -> bool {
-        self.controller.rl.window_should_close() || matches!(self.state, EmulatorState::Exit)
+        self.controller.rl.window_should_close()
     }
 
-    pub fn load_rom(&mut self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+
+    pub fn load_rom(&mut self, path: &str) -> Result<EmulatorState, Box<dyn std::error::Error>> {
         let game_data = fs::read(path)?;
 
         let save_path = if cfg!(target_arch = "wasm32") {
@@ -174,15 +175,13 @@ impl EmulatorApp {
         self.gb = Some(Dmg::new(game, self.boot_rom.clone()));
         self.save_path = Some(save_path);
 
-        self.state = EmulatorState::Emulation(EmulationScene::new(self.layout.clone(), title, region));
-
-        Ok(())
+        Ok(EmulatorState::Emulation(EmulationScene::new(self.layout.clone(), title, region)))
     }
 
     pub fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let dt = self.controller.rl.get_frame_time();
 
-        // Handle window resizing
+        // handle window resizing
         if self.controller.rl.is_window_resized() {
             let (sw, sh) = (
                 self.controller.rl.get_screen_width(),
@@ -192,24 +191,21 @@ impl EmulatorApp {
             match &mut self.state {
                 EmulatorState::Emulation(scene) => scene.update_layout(self.layout),
                 EmulatorState::WaitingFile(scene) => scene.update_layout(sw, sh),
-                _ => {}
             }
         }
 
         let next_state = match &mut self.state {
-            EmulatorState::WaitingFile(scene) => match scene.update(dt, &mut self.controller)? {
-                Some(path) => {
-                    self.load_rom(&path)?;
-                    None // load_rom already updates the state
-                }
-                None => None,
+            EmulatorState::WaitingFile(scene) => match scene.update(&mut self.controller)? {
+                Some(path) => self.load_rom(&path).ok(),
+                // if no path was selected, it can be because the user hasn't interacted yet, or because the file dialog is getting the rom
+                // in this case, a wasm function will be called from js loading the rom and changing the state
+                None => None
             },
             EmulatorState::Emulation(scene) => {
                 scene.scroll_x = self.controller.scroll_x;
                 scene.scroll_y = self.controller.scroll_y;
-                scene.update(dt, &mut self.gb, &mut self.controller)?
+                scene.update(dt, self.gb.as_mut(), &mut self.controller)?
             }
-            EmulatorState::Exit => return Ok(()),
         };
 
         if let Some(state) = next_state {
@@ -234,7 +230,6 @@ impl EmulatorApp {
                     &controller.tile_textures,
                     &controller.bg_map_texture,
                 ),
-                EmulatorState::Exit => {}
             }
         });
     }

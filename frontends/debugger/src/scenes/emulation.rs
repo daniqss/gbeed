@@ -41,14 +41,10 @@ impl EmulationScene {
     pub fn update(
         &mut self,
         dt: f32,
-        gb: &mut Option<Dmg>,
+        gb: Option<&mut Dmg>,
         controller: &mut DebuggerController,
     ) -> Result<Option<EmulatorState>, Box<dyn std::error::Error>> {
         self.input.update(&controller.rl, dt);
-
-        if self.input.is_held_escape() {
-            return Ok(Some(EmulatorState::Exit));
-        }
 
         if let Some(gb) = gb {
             self.input.state().apply(&mut gb.joypad);

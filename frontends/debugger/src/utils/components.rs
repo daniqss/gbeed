@@ -107,17 +107,22 @@ pub fn draw_small_btn(
     }
 }
 
-pub fn draw_button(d: &mut RaylibDrawHandle, area: MouseButtonArea, text: &str, is_hover: bool) {
-    let bg = if is_hover { SECONDARY } else { PRIMARY };
+pub fn draw_button(d: &mut RaylibDrawHandle, area: &MouseButtonArea, text: &str) {
+    let (bg, fg, border) = if area.is_hovered(d) {
+        (FOREGROUND, BACKGROUND, FOREGROUND)
+    } else {
+        (BACKGROUND, FOREGROUND, FOREGROUND)
+    };
     d.draw_rectangle(area.x, area.y, area.width, area.height, bg);
+    d.draw_rectangle_lines(area.x, area.y, area.width, area.height, border);
 
-    let fs = 18;
-    let tw = d.measure_text(text, fs);
+    let font_size = 20;
+    let tw = d.measure_text(text, font_size);
     d.draw_text(
         text,
         area.x + (area.width - tw) / 2,
-        area.y + (area.height - fs) / 2,
-        fs,
-        BACKGROUND,
+        area.y + (area.height - font_size) / 2,
+        font_size,
+        fg,
     );
 }

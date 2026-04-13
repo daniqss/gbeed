@@ -37,15 +37,22 @@ pub unsafe extern "C" fn save_game_wasm() {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+pub unsafe fn open_file_dialog() {
+    let script = std::ffi::CString::new("document.getElementById('rom-input').click()").unwrap();
+    unsafe {
+        crate::web::emscripten_run_script(script.as_ptr());
+    }
+}
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn load_rom_from_js(path_ptr: *const std::ffi::c_char) {
     let path = unsafe { std::ffi::CStr::from_ptr(path_ptr) }
         .to_str()
         .unwrap_or("");
     if let Some(app) = unsafe { APP_PTR.as_mut() } {
-        if let Err(e) = app.load_rom(path) {
-            eprintln!("Failed to load ROM from JS: {e}");
+        match app.load_rom(path) {
+            Ok(state) => app.state = state, 
+            Err(e) => eprintln!("Failed to load ROM from JS: {e}"),
         }
     }
 }
