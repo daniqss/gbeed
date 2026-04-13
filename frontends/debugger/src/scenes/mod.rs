@@ -2,12 +2,11 @@ mod emulation;
 mod waiting_file;
 
 pub use emulation::EmulationScene;
-pub use waiting_file::{WaitingFileScene, WaitingFileEvent};
+pub use waiting_file::{WaitingFileEvent, WaitingFileScene};
 
-#[derive(Default)]
+#[derive(Debug)]
 pub enum EmulatorState {
-    #[default]
-    Exit,
     WaitingFile(WaitingFileScene),
     Emulation(EmulationScene),
+    Exit,
 }

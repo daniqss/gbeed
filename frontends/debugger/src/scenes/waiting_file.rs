@@ -14,7 +14,11 @@ pub enum WaitingFileEvent {
 }
 
 impl WaitingFileScene {
-    pub fn new(input: InputManager) -> Self { Self { input } }
+    pub fn new() -> Self {
+        Self {
+            input: InputManager::default(),
+        }
+    }
 
     pub fn update(
         &mut self,

@@ -1,7 +1,5 @@
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{
-    Texture, color::DMG_CLASSIC_PALETTE, input::InputManager, settings::SpeedUpMultiplier,
-};
+use gbeed_raylib_common::{Texture, color::DMG_CLASSIC_PALETTE, settings::SpeedUpMultiplier};
 use raylib::prelude::*;
 
 pub const TILES_PER_ROW: i32 = 16;
@@ -18,13 +16,10 @@ pub struct DebuggerController {
     pub tile_textures: [Texture; 3],
     pub bg_map_texture: Texture,
 
-    pub buttons: InputManager,
-    pub game_name: String,
-    pub game_region: String,
-    pub speed_up_multiplier: SpeedUpMultiplier,
-
     pub scroll_x: i32,
     pub scroll_y: i32,
+
+    pub speed_up_multiplier: SpeedUpMultiplier,
 
     pub rl: RaylibHandle,
     pub thread: RaylibThread,
@@ -46,12 +41,9 @@ impl DebuggerController {
             ],
             bg_map_texture: Texture::new(&mut rl, &thread, 256, 256),
 
-            buttons: InputManager::default(),
-            game_name: String::new(),
-            game_region: String::new(),
-            speed_up_multiplier: SpeedUpMultiplier::OneAndHalf,
             scroll_x: 0,
             scroll_y: 0,
+            speed_up_multiplier: SpeedUpMultiplier::OneAndHalf,
 
             rl,
             thread,
@@ -93,7 +85,7 @@ impl Renderer for DebuggerController {
             ppu.get_bg_palette(),
         );
 
-        self.update_scroll(ppu.get_scroll());
+        update_scroll(&mut self.scroll_x, &mut self.scroll_y, ppu.get_scroll());
     }
 }
 
@@ -104,13 +96,6 @@ impl SerialListener for DebuggerController {
 }
 
 impl Controller for DebuggerController {}
-
-impl DebuggerController {
-    pub fn update_scroll(&mut self, scroll: (i32, i32)) {
-        self.scroll_x = scroll.0;
-        self.scroll_y = scroll.1;
-    }
-}
 
 pub fn update_bg_map(
     texture: &mut Texture,
@@ -164,4 +149,8 @@ pub fn update_tiles(texture: &mut Texture, data: &[u8]) {
         }
     }
     texture.update();
+}
+
+pub fn update_scroll(scroll_x: &mut i32, scroll_y: &mut i32, scroll: (u8, u8)) {
+    (*scroll_x, *scroll_y) = (scroll.0 as i32, scroll.1 as i32);
 }

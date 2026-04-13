@@ -1,7 +1,7 @@
 use raylib::prelude::*;
 
 pub struct Texture {
-    pub texture: Texture2D,
+    texture: Texture2D,
     framebuffer: Box<[u8]>,
 }
 
@@ -31,4 +31,8 @@ impl std::ops::Index<usize> for Texture {
 impl std::ops::IndexMut<usize> for Texture {
     #[inline(always)]
     fn index_mut(&mut self, idx: usize) -> &mut Self::Output { &mut self.framebuffer[idx] }
+}
+
+impl std::convert::AsRef<raylib::ffi::Texture> for Texture {
+    fn as_ref(&self) -> &raylib::ffi::Texture { &self.texture }
 }

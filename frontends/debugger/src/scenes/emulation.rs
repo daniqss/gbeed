@@ -7,15 +7,31 @@ use crate::utils::{
     BACKGROUND, FOREGROUND, HEADER_HEIGHT, Layout, PANEL_PADDING, PRIMARY, SECONDARY, components::*,
 };
 use gbeed_core::prelude::*;
+use gbeed_raylib_common::Texture;
+use gbeed_raylib_common::input::InputManager;
 use raylib::prelude::*;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct EmulationScene {
     pub layout: Layout,
+    pub input: InputManager,
+    pub scroll_x: i32,
+    pub scroll_y: i32,
+    pub game_name: String,
+    pub game_region: String,
 }
 
 impl EmulationScene {
-    pub fn new(layout: Layout) -> Self { Self { layout } }
+    pub fn new(layout: Layout, game_name: String, game_region: String) -> Self {
+        Self {
+            layout,
+            input: InputManager::default(),
+            scroll_x: 0,
+            scroll_y: 0,
+            game_name,
+            game_region,
+        }
+    }
 
     pub fn update(
         &mut self,
@@ -23,44 +39,32 @@ impl EmulationScene {
         gb: &mut Option<Dmg>,
         controller: &mut DebuggerController,
     ) -> Result<Option<EmulatorState>, Box<dyn std::error::Error>> {
-        controller.buttons.update(&controller.rl, dt);
+        self.input.update(&controller.rl, dt);
 
-        if controller.buttons.is_pressed_escape() {
+        if self.input.is_pressed_escape() {
             return Ok(Some(EmulatorState::Exit));
         }
 
         if let Some(gb) = gb {
-            controller.buttons.state().apply(&mut gb.joypad);
+            self.input.state().apply(&mut gb.joypad);
             gb.run(controller)?;
         }
 
         Ok(None)
     }
 
-    pub fn draw(&self, controller: &mut DebuggerController) { controller.draw_screen(&self.layout); }
-}
-
-impl DebuggerController {
-    pub fn draw_screen(&mut self, layout: &Layout) {
-        self.screen_texture.update();
-
-        let screen_texture = &self.screen_texture.texture;
-        let tile_textures = [
-            &self.tile_textures[0].texture,
-            &self.tile_textures[1].texture,
-            &self.tile_textures[2].texture,
-        ];
-
-        let buttons = self.buttons.state();
-        let game_name = self.game_name.clone();
-        let game_region = self.game_region.clone();
-
-        let mut d = self.rl.begin_drawing(&self.thread);
-        d.clear_background(BACKGROUND);
-
-        if !layout.is_mobile {
+    pub fn draw(
+        &self,
+        d: &mut RaylibDrawHandle,
+        screen_texture: &Texture,
+        tile_textures: &[Texture; 3],
+        bg_map_texture: &Texture,
+    ) {
+        let game_name = "umm game".to_string();
+        let game_region = "???".to_string();
+        if !self.layout.is_mobile {
             d.draw_rectangle(
-                layout.middle_panel_x - PANEL_PADDING,
+                self.layout.middle_panel_x - PANEL_PADDING,
                 0,
                 1,
                 d.get_screen_height(),
@@ -69,7 +73,7 @@ impl DebuggerController {
         }
 
         // Header
-        let game_x = layout.game_x;
+        let game_x = self.layout.game_x;
         let header_center_y = PANEL_PADDING + HEADER_HEIGHT / 2;
         let title_font_size = 22;
         let title_y = header_center_y - title_font_size / 2;
@@ -89,7 +93,7 @@ impl DebuggerController {
         let fps_font_size = 26;
         let fps_str = format!("{:3}", d.get_fps());
         let fps_number_width = d.measure_text(&fps_str, fps_font_size);
-        let fps_x = game_x + layout.scaled_screen_width - (fps_number_width + 30);
+        let fps_x = game_x + self.layout.scaled_screen_width - (fps_number_width + 30);
         d.draw_text(
             &fps_str,
             fps_x,
@@ -106,12 +110,12 @@ impl DebuggerController {
         );
 
         // Screen
-        let game_y = layout.game_y;
+        let game_y = self.layout.game_y;
         d.draw_rectangle(
             game_x - 3,
             game_y - 3,
-            layout.scaled_screen_width + 6,
-            layout.scaled_screen_height + 6,
+            self.layout.scaled_screen_width + 6,
+            self.layout.scaled_screen_height + 6,
             PRIMARY,
         );
         d.draw_texture_pro(
@@ -120,8 +124,8 @@ impl DebuggerController {
             Rectangle::new(
                 game_x as f32,
                 game_y as f32,
-                layout.scaled_screen_width as f32,
-                layout.scaled_screen_height as f32,
+                self.layout.scaled_screen_width as f32,
+                self.layout.scaled_screen_height as f32,
             ),
             Vector2::ZERO,
             0.0,
@@ -129,124 +133,117 @@ impl DebuggerController {
         );
 
         // D-PAD
-        let dpad_x = layout.dpad_x;
-        let dpad_y = layout.dpad_y;
-        let dpad_arm = layout.dpad_arm;
-        let dpad_size = layout.dpad_size;
+        let dpad_x = self.layout.dpad_x;
+        let dpad_y = self.layout.dpad_y;
+        let dpad_arm = self.layout.dpad_arm;
+        let dpad_size = self.layout.dpad_size;
         draw_pad_btn(
-            &mut d,
+            d,
             dpad_x,
             dpad_y - dpad_arm,
             dpad_size,
             0.0,
             "W",
-            buttons.up,
-            layout.is_mobile,
+            self.input.is_pressed_speed_up(),
+            self.layout.is_mobile,
         );
         draw_pad_btn(
-            &mut d,
+            d,
             dpad_x,
             dpad_y + dpad_arm,
             dpad_size,
             180.0,
             "S",
-            buttons.down,
-            layout.is_mobile,
+            self.input.is_pressed_down(),
+            self.layout.is_mobile,
         );
         draw_pad_btn(
-            &mut d,
+            d,
             dpad_x - dpad_arm,
             dpad_y,
             dpad_size,
             270.0,
             "A",
-            buttons.left,
-            layout.is_mobile,
+            self.input.is_pressed_left(),
+            self.layout.is_mobile,
         );
         draw_pad_btn(
-            &mut d,
+            d,
             dpad_x + dpad_arm,
             dpad_y,
             dpad_size,
             90.0,
             "D",
-            buttons.right,
-            layout.is_mobile,
+            self.input.is_pressed_right(),
+            self.layout.is_mobile,
         );
 
         // Start/Select
         draw_small_btn(
-            &mut d,
-            layout.start_select_x,
-            layout.start_select_y,
-            layout.start_select_width,
+            d,
+            self.layout.start_select_x,
+            self.layout.start_select_y,
+            self.layout.start_select_width,
             20,
             "SELECT",
             "SHIFT / ;",
-            buttons.select,
-            layout.is_mobile,
+            self.input.is_pressed_select(),
+            self.layout.is_mobile,
         );
         draw_small_btn(
-            &mut d,
-            layout.start_select_x + layout.start_select_width + 18,
-            layout.start_select_y,
-            layout.start_select_width,
+            d,
+            self.layout.start_select_x + self.layout.start_select_width + 18,
+            self.layout.start_select_y,
+            self.layout.start_select_width,
             20,
             "START",
             "L",
-            buttons.start,
-            layout.is_mobile,
+            self.input.is_pressed_start(),
+            self.layout.is_mobile,
         );
 
         // A/B
-        let action_x = layout.action_buttons_x;
-        let action_y = layout.action_buttons_y;
-        let action_size = layout.action_button_size;
+        let action_x = self.layout.action_buttons_x;
+        let action_y = self.layout.action_buttons_y;
+        let action_size = self.layout.action_button_size;
         draw_action_btn(
-            &mut d,
+            d,
             action_x - action_size / 2 + 24,
             action_y,
             action_size,
             "A",
             "Z / J",
-            buttons.a,
-            layout.is_mobile,
+            self.input.is_pressed_a(),
+            self.layout.is_mobile,
         );
         draw_action_btn(
-            &mut d,
+            d,
             action_x - action_size / 2 - 24,
             action_y + action_size + 8,
             action_size,
             "B",
             "X / K",
-            buttons.b,
-            layout.is_mobile,
+            self.input.is_pressed_b(),
+            self.layout.is_mobile,
         );
 
-        // Debug Panels
-        if !layout.is_mobile {
-            Self::draw_debug_panels(
-                &mut d,
-                layout,
-                tile_textures,
-                &self.bg_map_texture.texture,
-                self.scroll_x,
-                self.scroll_y,
-            );
+        // debug panels, only on desktop
+        if !self.layout.is_mobile {
+            self.draw_debug_panels(d, tile_textures, bg_map_texture);
         }
     }
 
     fn draw_debug_panels(
+        &self,
         d: &mut RaylibDrawHandle,
-        layout: &Layout,
-        tile_textures: [&raylib::texture::Texture2D; 3],
-        bg_map_texture: &raylib::texture::Texture2D,
-        scroll_x: i32,
-        scroll_y: i32,
+        tile_textures: &[Texture; 3],
+        bg_map_texture: &Texture,
     ) {
-        let game_y = layout.game_y;
-        let map_x = layout.middle_panel_x;
+        let game_y = self.layout.game_y;
+        let map_x = self.layout.middle_panel_x;
         let bg_map_y = game_y;
+        let scroll_x = self.scroll_x;
+        let scroll_y = self.scroll_y;
 
         d.draw_text("bg map $9800", map_x, bg_map_y - 12, 14, SECONDARY);
         d.draw_texture_pro(
@@ -255,8 +252,8 @@ impl DebuggerController {
             Rectangle::new(
                 map_x as f32,
                 bg_map_y as f32,
-                layout.bg_map_width as f32,
-                layout.bg_map_height as f32,
+                self.layout.bg_map_width as f32,
+                self.layout.bg_map_height as f32,
             ),
             Vector2::ZERO,
             0.0,
@@ -264,7 +261,7 @@ impl DebuggerController {
         );
 
         // Scroll overlay
-        let scale = layout.bg_map_width as f32 / 256.0;
+        let scale = self.layout.bg_map_width as f32 / 256.0;
         let scroll_end_x = (scroll_x + 160) % 256;
         let scroll_end_y = (scroll_y + 144) % 256;
         let scroll_wraps_x = (scroll_x + 160) >= 256;
@@ -311,7 +308,7 @@ impl DebuggerController {
         }
 
         // Tiles
-        let right_x = layout.right_panel_x;
+        let right_x = self.layout.right_panel_x;
         const TV_LABELS: [&str; 3] = [
             "vram  $8000-$87ff  (block 0)",
             "vram  $8800-$8fff  (block 1)",
@@ -323,7 +320,7 @@ impl DebuggerController {
             let ty = game_y + i as i32 * tv_stride;
             d.draw_text(TV_LABELS[i], right_x, ty - 12, 14, SECONDARY);
             d.draw_texture_pro(
-                tile_textures[i],
+                &tile_textures[i],
                 Rectangle::new(0.0, 0.0, TILE_TEXTURE_WIDTH as f32, TILE_TEXTURE_HEIGHT as f32),
                 Rectangle::new(
                     right_x as f32,
