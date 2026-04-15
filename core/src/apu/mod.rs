@@ -1,3 +1,5 @@
+mod channels;
+
 use crate::prelude::*;
 
 mem_range!(APU_REGISTER, 0xFF10, 0xFF3F);
