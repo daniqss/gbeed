@@ -1,4 +1,6 @@
-use gbeed_core::{Controller, DefaultRenderer, Ppu, Renderer, SerialListener, prelude::*};
+use gbeed_core::{
+    AudioPlayer, Controller, DefaultAudioPlayer, DefaultRenderer, Ppu, Renderer, SerialListener, prelude::*,
+};
 use std::{fs, path::Path};
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -36,7 +38,12 @@ impl SerialListener for MooneyeListener {
     }
 }
 
-controller!(MooneyeController, MooneyeListener, DefaultRenderer);
+controller!(
+    MooneyeController,
+    MooneyeListener,
+    DefaultRenderer,
+    DefaultAudioPlayer
+);
 
 fn run_mooneye_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let rom_path = format!("{}/{}", rom_dir, rom_name);
@@ -47,6 +54,7 @@ fn run_mooneye_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let mut controller = MooneyeController {
         listener,
         renderer: DefaultRenderer::new(),
+        audio_player: DefaultAudioPlayer::new(),
     };
     let mut gb = Dmg::new(cartridge, None);
 

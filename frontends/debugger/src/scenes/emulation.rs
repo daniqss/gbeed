@@ -22,15 +22,15 @@ pub struct EmulationScene {
 }
 
 impl EmulationScene {
-    pub fn new(layout: Layout, game_name: String, game_region: String) -> Self {
-        Self {
+    pub fn new(layout: Layout, game_name: String, game_region: String) -> Box<Self> {
+        Box::new(Self {
             input: InputManager::new(0.08, None, Some(layout.get_mouse_triggers()), None),
             layout,
             scroll_x: 0,
             scroll_y: 0,
             game_name,
             game_region,
-        }
+        })
     }
 
     pub fn update_layout(&mut self, layout: Layout) {
@@ -44,7 +44,7 @@ impl EmulationScene {
         gb: Option<&mut Dmg>,
         controller: &mut DebuggerController,
     ) -> Result<Option<EmulatorState>, Box<dyn std::error::Error>> {
-        self.input.update(&controller.rl, dt);
+        self.input.update(controller.rl, dt);
 
         if let Some(gb) = gb {
             self.input.state().apply(&mut gb.joypad);

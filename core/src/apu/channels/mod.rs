@@ -3,6 +3,11 @@ mod pulse;
 mod sweep_pulse;
 mod wave;
 
+pub use noise::Noise;
+pub use pulse::Pulse;
+pub use sweep_pulse::SweepPulse;
+pub use wave::{Wave, WAVE_RAM_END, WAVE_RAM_START};
+
 // duty cycles table -> 12.5%, 25%, 50%, 75%
 pub const DUTY_TABLE: [[u8; 8]; 4] = [
     [0, 0, 0, 0, 0, 0, 0, 1],

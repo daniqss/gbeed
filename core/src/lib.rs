@@ -15,7 +15,7 @@ mod serial;
 mod timer;
 pub mod utils;
 
-pub use apu::Apu;
+pub use apu::{Apu, AudioPlayer, DefaultAudioPlayer};
 pub use cartrigde::Cartridge;
 pub use controller::{Controller, DefaultController};
 pub use cpu::{AFTER_BOOT_CPU, Cpu};

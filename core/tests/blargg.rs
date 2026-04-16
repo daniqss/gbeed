@@ -1,4 +1,6 @@
-use gbeed_core::{Controller, DefaultRenderer, Ppu, Renderer, SerialListener, prelude::*};
+use gbeed_core::{
+    AudioPlayer, Controller, DefaultAudioPlayer, DefaultRenderer, Ppu, Renderer, SerialListener, prelude::*,
+};
 use std::{fs, path::Path};
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -76,7 +78,12 @@ impl SerialListener for BlarggListener {
     }
 }
 
-controller!(BlarggController, BlarggListener, DefaultRenderer);
+controller!(
+    BlarggController,
+    BlarggListener,
+    DefaultRenderer,
+    DefaultAudioPlayer
+);
 
 fn run_blargg_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let rom_path = format!("{}/{}", rom_dir, rom_name);
@@ -87,6 +94,7 @@ fn run_blargg_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let mut controller = BlarggController {
         listener,
         renderer: DefaultRenderer::new(),
+        audio_player: DefaultAudioPlayer::new(),
     };
     let mut gb = Dmg::new(cartridge, None);
 

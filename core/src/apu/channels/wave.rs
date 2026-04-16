@@ -3,6 +3,7 @@ use crate::prelude::*;
 
 mem_range!(WAVE_RAM, 0xFF30, 0xFF3F);
 
+#[derive(Debug, Default)]
 pub struct Wave {
     /// This register controls CH3’s DAC. Like other channels, turning the DAC off immediately turns the channel off as well.
     pub dac_enable: bool,
@@ -38,10 +39,11 @@ impl Wave {
     pub fn new() -> Self {
         Self {
             dac_enable: false,
-            length_timer: 0,
-            output_level: 0,
+            length_timer: 0xFF,
+            output_level: 0x9F,
             period_low: 0,
-            period_high: 0,
+            period_high: 0xBF,
+
             wave_ram: [0; 16],
 
             enabled: false,
@@ -129,7 +131,6 @@ impl Wave {
 
         let sample = self.wave_ram[self.sample_idx / 2];
 
-        // read first high nibble
         let sample = if self.sample_idx.is_multiple_of(2) {
             sample >> 4
         } else {
@@ -137,5 +138,17 @@ impl Wave {
         };
 
         self.get_output_level(sample)
+    }
+
+    pub fn tick(&mut self) {
+        if self.timer > 0 {
+            self.timer -= 1;
+        }
+
+        if self.timer == 0 {
+            let period = self.get_period();
+            self.timer = (2048 - period) * 2;
+            self.sample_idx = (self.sample_idx + 1) % 32;
+        }
     }
 }

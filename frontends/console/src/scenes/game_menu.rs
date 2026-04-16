@@ -1,6 +1,6 @@
 use crate::scenes::{EmulationState, EmulatorState, SelectionMenuState, SettingsMenuState};
 use crate::utils::layout::*;
-use gbeed_core::prelude::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH, Dmg};
+use gbeed_core::prelude::{Dmg, DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH};
 use gbeed_raylib_common::{color, input::InputManager};
 use raylib::prelude::*;
 use std::path::PathBuf;

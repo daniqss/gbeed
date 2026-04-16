@@ -7,5 +7,5 @@ pub use waiting_file::WaitingFileScene;
 #[derive(Debug)]
 pub enum EmulatorState {
     WaitingFile(WaitingFileScene),
-    Emulation(EmulationScene),
+    Emulation(Box<EmulationScene>),
 }

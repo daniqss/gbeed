@@ -1,14 +1,16 @@
+use crate::apu::{AudioPlayer, DefaultAudioPlayer};
 use crate::ppu::{DefaultRenderer, Ppu, Renderer};
 use crate::serial::{DefaultSerialListener, SerialListener};
 
-pub trait Controller: SerialListener + Renderer {}
+pub trait Controller: SerialListener + Renderer + AudioPlayer {}
 
 #[macro_export]
 macro_rules! controller {
-    ($name:ident, $listener:ty, $renderer:ty) => {
+    ($name:ident, $listener:ty, $renderer:ty, $audio_player:ty) => {
         pub struct $name {
             listener: $listener,
             renderer: $renderer,
+            audio_player: $audio_player,
         }
 
         impl Renderer for $name {
@@ -25,11 +27,22 @@ macro_rules! controller {
             fn on_transfer(&mut self, data: u8) { self.listener.on_transfer(data) }
         }
 
+        impl AudioPlayer for $name {
+            fn sample_rate(&self) -> u32 { self.audio_player.sample_rate() }
+            fn stereo(&self) -> bool { self.audio_player.stereo() }
+            fn write_buffer(&mut self, samples: &[i16]) { self.audio_player.write_buffer(samples) }
+        }
+
         impl Controller for $name {}
     };
 }
 
-controller!(DefaultController, DefaultSerialListener, DefaultRenderer);
+controller!(
+    DefaultController,
+    DefaultSerialListener,
+    DefaultRenderer,
+    DefaultAudioPlayer
+);
 
 impl DefaultController {
     #[allow(clippy::new_without_default)]
@@ -37,6 +50,7 @@ impl DefaultController {
         Self {
             listener: DefaultSerialListener::new(),
             renderer: DefaultRenderer::new(),
+            audio_player: DefaultAudioPlayer::new(),
         }
     }
 }

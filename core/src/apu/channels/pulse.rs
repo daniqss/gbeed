@@ -1,6 +1,7 @@
 use super::DUTY_TABLE;
 use crate::apu::*;
 
+#[derive(Debug, Default)]
 pub struct Pulse {
     /// wave duty, controls the output waveform
     pub wave_duty: u8,
@@ -34,11 +35,11 @@ pub struct Pulse {
 impl Pulse {
     pub fn new() -> Self {
         Self {
-            wave_duty: 0,
+            wave_duty: 0x3F,
             length_timer: 0,
             envelope: 0,
             period_low: 0,
-            period_high: 0,
+            period_high: 0xBF,
 
             enabled: false,
             timer: 0,
@@ -106,14 +107,14 @@ impl Pulse {
     #[inline(always)]
     fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
 
-    pub fn get_sample(&self) -> i16 {
+    pub fn get_sample(&self, volume: u8) -> i16 {
         if !self.enabled {
             return 0;
         }
 
-        let duty_pattern = DUTY_TABLE[self.wave_duty as usize];
-        if duty_pattern[self.duty_step as usize] == 1 {
-            self.current_volume as i16
+        let duty_pattern = DUTY_TABLE[(self.wave_duty & 0x03) as usize];
+        if duty_pattern[(self.duty_step & 0x07) as usize] == 1 {
+            volume as i16
         } else {
             0
         }

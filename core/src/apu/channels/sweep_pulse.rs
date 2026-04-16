@@ -1,6 +1,7 @@
 use super::DUTY_TABLE;
 use crate::apu::*;
 
+#[derive(Debug, Default)]
 pub struct SweepPulse {
     /// controls ch1's period sweep functionality
     pub sweep: u8,
@@ -40,12 +41,12 @@ pub struct SweepPulse {
 impl SweepPulse {
     pub fn new() -> Self {
         Self {
-            sweep: 0,
-            wave_duty: 0,
-            length_timer: 0,
+            sweep: 0x80,
+            wave_duty: 0xBF,
+            length_timer: 0xF3,
             envelope: 0,
             period_low: 0,
-            period_high: 0,
+            period_high: 0xBF,
 
             enabled: false,
             timer: 0,
@@ -128,14 +129,14 @@ impl SweepPulse {
     #[inline(always)]
     fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
 
-    pub fn get_sample(&self) -> i16 {
+    pub fn get_sample(&self, volume: u8) -> i16 {
         if !self.enabled {
             return 0;
         }
 
-        let duty_pattern = DUTY_TABLE[self.wave_duty as usize];
-        if duty_pattern[self.duty_step as usize] == 1 {
-            self.current_volume as i16
+        let duty_pattern = DUTY_TABLE[(self.wave_duty & 0x03) as usize];
+        if duty_pattern[(self.duty_step & 0x07) as usize] == 1 {
+            volume as i16
         } else {
             0
         }
@@ -176,6 +177,13 @@ impl SweepPulse {
 
             // re-check overflow immediately after updating
             self.calculate_sweep(false);
+        }
+    }
+
+    pub fn sweep_tick(&mut self) {
+        let step = self.sweep & 0x07;
+        if step > 0 {
+            self.calculate_sweep(true);
         }
     }
 }

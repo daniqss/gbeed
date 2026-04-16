@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     rl.set_target_fps(60);
     rl.set_exit_key(None);
 
-    let mut app = EmulatorApp::new(rl, thread, boot_path, is_mobile);
+    let mut app = EmulatorApp::new(&mut rl, &thread, boot_path, is_mobile);
 
     // load ROM if its provided via command line args
     if let Some(path) = game_path {
@@ -112,17 +112,22 @@ fn get_platform_info() -> (i32, i32, bool) {
 }
 
 #[repr(C)]
-pub struct EmulatorApp {
+pub struct EmulatorApp<'a> {
     gb: Option<Dmg>,
-    controller: DebuggerController,
+    controller: DebuggerController<'a>,
     save_path: Option<PathBuf>,
     boot_rom: Option<Vec<u8>>,
     state: EmulatorState,
     layout: Layout,
 }
 
-impl EmulatorApp {
-    pub fn new(rl: RaylibHandle, thread: RaylibThread, boot_path: Option<String>, is_mobile: bool) -> Self {
+impl<'a> EmulatorApp<'a> {
+    pub fn new(
+        rl: &'a mut RaylibHandle,
+        thread: &'a RaylibThread,
+        boot_path: Option<String>,
+        is_mobile: bool,
+    ) -> Self {
         let boot_rom = boot_path.and_then(|path| fs::read(path).ok());
         let (sw, sh) = (rl.get_screen_width(), rl.get_screen_height());
         let layout = Layout::new(sw, sh, is_mobile);
@@ -142,6 +147,8 @@ impl EmulatorApp {
     }
 
     pub fn should_close(&self) -> bool { self.controller.rl.window_should_close() }
+
+    pub fn init_audio(&mut self) { self.controller.init_audio(); }
 
     pub fn load_rom(&mut self, path: &str) -> Result<EmulatorState, Box<dyn std::error::Error>> {
         let game_data = fs::read(path)?;
@@ -175,7 +182,7 @@ impl EmulatorApp {
         self.save_path = Some(save_path);
 
         Ok(EmulatorState::Emulation(EmulationScene::new(
-            self.layout.clone(),
+            self.layout,
             title,
             region,
         )))
@@ -220,7 +227,7 @@ impl EmulatorApp {
         let state = &self.state;
         let controller = &mut self.controller;
 
-        controller.rl.draw(&controller.thread, |mut d| {
+        controller.rl.draw(controller.thread, |mut d| {
             d.clear_background(BACKGROUND);
 
             match state {

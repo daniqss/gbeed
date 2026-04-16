@@ -1,4 +1,8 @@
 mod channels;
+mod player;
+
+pub use channels::*;
+pub use player::*;
 
 use crate::prelude::*;
 
@@ -27,186 +31,471 @@ const NR51: u16 = 0xFF25;
 const NR52: u16 = 0xFF26;
 
 const AUDIO_ON_OFF: u8 = 0x80;
-const CH4_ON_FLAG: u8 = 0x08;
-const CH3_ON_FLAG: u8 = 0x04;
-const CH2_ON_FLAG: u8 = 0x02;
-const CH1_ON_FLAG: u8 = 0x01;
+// const CH4_ON_FLAG: u8 = 0x08;
+// const CH3_ON_FLAG: u8 = 0x04;
+// const CH2_ON_FLAG: u8 = 0x02;
+// const CH1_ON_FLAG: u8 = 0x01;
 
-const TRIGGER: u8 = 0x80;
-const LENGTH_ENABLE: u8 = 0x40;
+// const CHANNEL_DIVISORS: [u32; 8] = [8, 16, 32, 48, 64, 80, 96, 112];
 
-const DAC_ENABLE: u8 = 0x80;
+// pub const FRAME_SEQUENCER_RATE: u32 = 512;
+pub const CPU_FREQ: u32 = 4_194_304;
 
-/// Sweep (NR10) & Envelope (NRx2) bits
-const SWEEP_DIRECTION: u8 = 0x08; // 0=Add, 1=Sub
-const ENVELOPE_DIRECTION: u8 = 0x08;
-
-const LFSR_WIDTH: u8 = 0x08;
-
-/// | Channel     | Control (4) | Frequency (3) | Volume (2) | Length (1) | Sweep (0) |
-/// | :---------- | :---------: | :-----------: | :--------: | :--------: | :-------: |
-/// | **Voice 1** |    NR14     |     NR13      |    NR12    |    NR11    |   NR10    |
-/// | **Voice 2** |    NR24     |     NR23      |    NR22    |    NR21    |     -     |
-/// | **Voice 3** |    NR34     |     NR33      |    NR32    |    NR31    |   NR30    |
-/// | **Voice 4** |    NR44     |     NR43      |    NR42    |    NR41    |     -     |
 #[derive(Debug, Default)]
 pub struct Apu {
-    // channel one, pulse with sweep
-    nr10: u8,
-    nr11: u8,
-    nr12: u8,
-    nr13: u8,
-    nr14: u8,
+    sweep_pulse: SweepPulse,
+    pulse: Pulse,
+    wave: Wave,
+    noise: Noise,
 
-    // channel two, pulse
-    nr21: u8,
-    nr22: u8,
-    nr23: u8,
-    nr24: u8,
-
-    // channel 3, Wave
-    nr30: u8,
-    nr31: u8,
-    nr32: u8,
-    nr33: u8,
-    nr34: u8,
-    wave_ram: [u8; 16],
-
-    // channel 4, noise
-    nr41: u8,
-    nr42: u8,
-    nr43: u8,
-    nr44: u8,
-
-    // global sound control registers
     nr50: u8,
     nr51: u8,
     nr52: u8,
+
+    frame_sequencer: u8,
+    cycles: u32,
+
+    length_counter_ch1: u16,
+    length_counter_ch2: u16,
+    length_counter_ch3: u16,
+    length_counter_ch4: u16,
+
+    envelope_volume_ch1: u8,
+    envelope_volume_ch2: u8,
+    envelope_volume_ch4: u8,
+
+    envelope_timer_ch1: u8,
+    envelope_timer_ch2: u8,
+    envelope_timer_ch4: u8,
+
+    sample_counter: u32,
+    sample_rate: u32,
+    buffer: Vec<i16>,
 }
 
 impl Apu {
     pub fn new() -> Self {
         Self {
-            nr10: 0x80,
-            nr11: 0xBF,
-            nr12: 0xF3,
-            nr14: 0xBF,
-            nr21: 0x3F,
-            nr22: 0x00,
-            nr24: 0xBF,
-            nr30: 0x7F,
-            nr31: 0xFF,
-            nr32: 0x9F,
-            nr34: 0xBF,
-            nr41: 0xFF,
-            nr42: 0x00,
-            nr43: 0x00,
-            nr44: 0xBF,
+            sweep_pulse: SweepPulse::new(),
+            pulse: Pulse::new(),
+            wave: Wave::new(),
+            noise: Noise::new(),
+
             nr50: 0x77,
             nr51: 0xF3,
             nr52: 0xF1,
-            ..Default::default()
+
+            frame_sequencer: 0,
+            cycles: 0,
+
+            length_counter_ch1: 64,
+            length_counter_ch2: 64,
+            length_counter_ch3: 256,
+            length_counter_ch4: 64,
+
+            envelope_volume_ch1: 0,
+            envelope_volume_ch2: 0,
+            envelope_volume_ch4: 0,
+
+            envelope_timer_ch1: 0,
+            envelope_timer_ch2: 0,
+            envelope_timer_ch4: 0,
+
+            sample_counter: 0,
+            sample_rate: 44100,
+            buffer: Vec::with_capacity(8192),
+        }
+    }
+    pub fn is_active(&self) -> bool { self.nr52 & AUDIO_ON_OFF != 0 }
+
+    pub fn ch1_enabled(&self) -> bool { self.sweep_pulse.enabled && self.sweep_pulse.envelope & 0xF8 != 0 }
+
+    pub fn ch2_enabled(&self) -> bool { self.pulse.enabled && self.pulse.envelope & 0xF8 != 0 }
+
+    pub fn ch3_enabled(&self) -> bool { self.wave.enabled && self.wave.dac_enable }
+
+    pub fn ch4_enabled(&self) -> bool { self.noise.enabled && self.noise.envelope & 0xF8 != 0 }
+
+    pub fn sample_rate(&self) -> u32 { self.sample_rate }
+
+    pub fn set_sample_rate(&mut self, rate: u32) { self.sample_rate = rate; }
+
+    fn get_master_volume_left(&self) -> i32 { ((self.nr50 >> 4) & 0x07) as i32 + 1 }
+
+    fn get_master_volume_right(&self) -> i32 { (self.nr50 & 0x07) as i32 + 1 }
+
+    fn ch1_to_left(&self) -> bool { self.nr51 & 0x10 != 0 }
+
+    fn ch1_to_right(&self) -> bool { self.nr51 & 0x01 != 0 }
+
+    fn ch2_to_left(&self) -> bool { self.nr51 & 0x20 != 0 }
+
+    fn ch2_to_right(&self) -> bool { self.nr51 & 0x02 != 0 }
+
+    fn ch3_to_left(&self) -> bool { self.nr51 & 0x40 != 0 }
+
+    fn ch3_to_right(&self) -> bool { self.nr51 & 0x04 != 0 }
+
+    fn ch4_to_left(&self) -> bool { self.nr51 & 0x80 != 0 }
+
+    fn ch4_to_right(&self) -> bool { self.nr51 & 0x08 != 0 }
+
+    pub fn step<P: AudioPlayer>(&mut self, player: &mut P, delta: usize) {
+        if !self.is_active() {
+            return;
+        }
+
+        let total_cycles = delta as u32;
+        let sample_rate = player.sample_rate();
+
+        for _ in 0..total_cycles {
+            self.sweep_pulse.tick();
+            self.pulse.tick();
+            self.wave.tick();
+            self.noise.tick();
+
+            self.sample_counter += sample_rate;
+            if self.sample_counter >= CPU_FREQ {
+                self.sample_counter -= CPU_FREQ;
+                let sample = self.mix();
+                if player.stereo() {
+                    self.buffer.push(sample.0);
+                    self.buffer.push(sample.1);
+                } else {
+                    self.buffer.push(((sample.0 as i32 + sample.1 as i32) / 2) as i16);
+                }
+            }
+
+            self.cycles += 1;
+            if self.cycles >= 8192 {
+                self.cycles -= 8192;
+                self.frame_sequencer = (self.frame_sequencer + 1) % 8;
+                self.tick_frame_sequencer();
+            }
+        }
+
+        if self.buffer.len() >= 2048 {
+            player.write_buffer(&self.buffer);
+            self.buffer.clear();
         }
     }
 
-    bit_accessors! {
-        target: nr52;
-
-        AUDIO_ON_OFF,
-        CH1_ON_FLAG,
-        CH2_ON_FLAG,
-        CH3_ON_FLAG,
-        CH4_ON_FLAG
+    fn tick_frame_sequencer(&mut self) {
+        match self.frame_sequencer {
+            0 | 2 | 4 | 6 => {
+                self.tick_length();
+            }
+            7 => {
+                self.tick_length();
+                self.tick_envelope();
+            }
+            1 | 5 => {
+                self.tick_sweep();
+                self.tick_length();
+            }
+            _ => {}
+        }
     }
 
-    bit_accessors! { target: nr10; SWEEP_DIRECTION }
+    fn tick_length(&mut self) {
+        if self.sweep_pulse.enabled && self.sweep_pulse.period_high & 0x40 != 0 && self.length_counter_ch1 > 0
+        {
+            self.length_counter_ch1 -= 1;
+            if self.length_counter_ch1 == 0 {
+                self.sweep_pulse.enabled = false;
+            }
+        }
 
-    field_bit_accessors! { target: nr12; ENVELOPE_DIRECTION }
-    field_bit_accessors! { target: nr22; ENVELOPE_DIRECTION }
-    field_bit_accessors! { target: nr42; ENVELOPE_DIRECTION }
+        if self.pulse.enabled && self.pulse.period_high & 0x40 != 0 && self.length_counter_ch2 > 0 {
+            self.length_counter_ch2 -= 1;
+            if self.length_counter_ch2 == 0 {
+                self.pulse.enabled = false;
+            }
+        }
 
-    bit_accessors! { target: nr30; DAC_ENABLE }
+        if self.wave.enabled && self.wave.period_high & 0x40 != 0 && self.length_counter_ch3 > 0 {
+            self.length_counter_ch3 -= 1;
+            if self.length_counter_ch3 == 0 {
+                self.wave.enabled = false;
+            }
+        }
+        if self.noise.enabled && self.noise.control & 0x40 != 0 && self.length_counter_ch4 > 0 {
+            self.length_counter_ch4 -= 1;
+            if self.length_counter_ch4 == 0 {
+                self.noise.enabled = false;
+            }
+        }
+    }
 
-    field_bit_accessors! { target: nr14; TRIGGER, LENGTH_ENABLE }
-    field_bit_accessors! { target: nr24; TRIGGER, LENGTH_ENABLE }
-    field_bit_accessors! { target: nr34; TRIGGER, LENGTH_ENABLE }
-    field_bit_accessors! { target: nr44; TRIGGER, LENGTH_ENABLE }
+    fn tick_envelope(&mut self) {
+        if self.sweep_pulse.enabled {
+            if self.envelope_timer_ch1 > 0 {
+                self.envelope_timer_ch1 -= 1;
+            }
+            if self.envelope_timer_ch1 == 0 {
+                let envelope = self.sweep_pulse.envelope;
+                let pace = envelope & 0x07;
+                let direction = (envelope >> 3) & 0x01;
 
-    bit_accessors! { target: nr43; LFSR_WIDTH }
+                if pace > 0 {
+                    if direction == 0 && self.envelope_volume_ch1 > 0 {
+                        self.envelope_volume_ch1 -= 1;
+                    } else if direction == 1 && self.envelope_volume_ch1 < 15 {
+                        self.envelope_volume_ch1 += 1;
+                    }
+                }
+                self.envelope_timer_ch1 = if pace > 0 { pace } else { 8 };
+            }
+        }
 
-    pub fn is_active(&self) -> bool { self.nr52 & AUDIO_ON_OFF != 0 }
+        if self.pulse.enabled {
+            if self.envelope_timer_ch2 > 0 {
+                self.envelope_timer_ch2 -= 1;
+            }
+            if self.envelope_timer_ch2 == 0 {
+                let envelope = self.pulse.envelope;
+                let pace = envelope & 0x07;
+                let direction = (envelope >> 3) & 0x01;
+
+                if pace > 0 {
+                    if direction == 0 && self.envelope_volume_ch2 > 0 {
+                        self.envelope_volume_ch2 -= 1;
+                    } else if direction == 1 && self.envelope_volume_ch2 < 15 {
+                        self.envelope_volume_ch2 += 1;
+                    }
+                }
+                self.envelope_timer_ch2 = if pace > 0 { pace } else { 8 };
+            }
+        }
+
+        if self.noise.enabled {
+            if self.envelope_timer_ch4 > 0 {
+                self.envelope_timer_ch4 -= 1;
+            }
+            if self.envelope_timer_ch4 == 0 {
+                let envelope = self.noise.envelope;
+                let pace = envelope & 0x07;
+                let direction = (envelope >> 3) & 0x01;
+
+                if pace > 0 {
+                    if direction == 0 && self.envelope_volume_ch4 > 0 {
+                        self.envelope_volume_ch4 -= 1;
+                    } else if direction == 1 && self.envelope_volume_ch4 < 15 {
+                        self.envelope_volume_ch4 += 1;
+                    }
+                }
+                self.envelope_timer_ch4 = if pace > 0 { pace } else { 8 };
+            }
+        }
+    }
+
+    fn tick_sweep(&mut self) {
+        if self.sweep_pulse.enabled {
+            let sweep = self.sweep_pulse.sweep;
+            let pace = (sweep >> 4) & 0x07;
+            let step = sweep & 0x07;
+
+            if pace > 0 || step > 0 {
+                self.sweep_pulse.sweep_tick();
+            }
+        }
+    }
+
+    fn mix(&self) -> (i16, i16) {
+        let ch1_vol = if self.sweep_pulse.enabled {
+            self.sweep_pulse.get_sample(self.envelope_volume_ch1)
+        } else {
+            0
+        };
+
+        let ch2_vol = if self.pulse.enabled {
+            self.pulse.get_sample(self.envelope_volume_ch2)
+        } else {
+            0
+        };
+
+        let ch3_vol = if self.wave.enabled {
+            self.wave.get_sample()
+        } else {
+            0
+        };
+
+        let ch4_vol = if self.noise.enabled {
+            self.noise.get_sample(self.envelope_volume_ch4)
+        } else {
+            0
+        };
+
+        let master_vol_l = self.get_master_volume_left();
+        let master_vol_r = self.get_master_volume_right();
+
+        let mut left = 0i32;
+        let mut right = 0i32;
+
+        if self.ch1_to_left() {
+            left += ch1_vol as i32;
+        }
+        if self.ch1_to_right() {
+            right += ch1_vol as i32;
+        }
+
+        if self.ch2_to_left() {
+            left += ch2_vol as i32;
+        }
+        if self.ch2_to_right() {
+            right += ch2_vol as i32;
+        }
+
+        if self.ch3_to_left() {
+            left += ch3_vol as i32;
+        }
+        if self.ch3_to_right() {
+            right += ch3_vol as i32;
+        }
+
+        if self.ch4_to_left() {
+            left += ch4_vol as i32;
+        }
+        if self.ch4_to_right() {
+            right += ch4_vol as i32;
+        }
+
+        // max volume sum is 15 * 4 = 60. master volume is 1-8.
+        // 60 * 8 = 480. We want to scale to ~30000.
+        // 30000 / 480 = 62.5. Let's use 60 as factor.
+        left = left * master_vol_l * 60;
+        right = right * master_vol_r * 60;
+
+        left = left.clamp(i16::MIN as i32, i16::MAX as i32);
+        right = right.clamp(i16::MIN as i32, i16::MAX as i32);
+
+        (left as i16, right as i16)
+    }
+
+    pub fn flush<P: AudioPlayer>(&mut self, player: &mut P) {
+        if !self.buffer.is_empty() {
+            player.write_buffer(&self.buffer);
+            self.buffer.clear();
+        }
+    }
+
+    fn sync_envelope(&mut self) {
+        let env1 = self.sweep_pulse.envelope;
+        self.envelope_volume_ch1 = (env1 >> 4) & 0x0F;
+        self.envelope_timer_ch1 = env1 & 0x07;
+
+        let env2 = self.pulse.envelope;
+        self.envelope_volume_ch2 = (env2 >> 4) & 0x0F;
+        self.envelope_timer_ch2 = env2 & 0x07;
+
+        let env4 = self.noise.envelope;
+        self.envelope_volume_ch4 = (env4 >> 4) & 0x0F;
+        self.envelope_timer_ch4 = env4 & 0x07;
+    }
+
+    fn sync_length(&mut self) {
+        self.length_counter_ch1 = 64 - (self.sweep_pulse.length_timer & 0x3F) as u16;
+        self.length_counter_ch2 = 64 - (self.pulse.length_timer & 0x3F) as u16;
+        self.length_counter_ch3 = 256 - self.wave.length_timer as u16;
+        self.length_counter_ch4 = 64 - (self.noise.length_timer & 0x3F) as u16;
+    }
 }
 
 impl Accessible<u16> for Apu {
     fn read(&self, address: u16) -> u8 {
         match address {
-            NR10 => self.nr10,
-            NR11 => self.nr11,
-            NR12 => self.nr12,
-            NR13 => self.nr13,
-            NR14 => self.nr14,
+            NR10..=NR14 => self.sweep_pulse.read(address),
+            NR21..=NR24 => self.pulse.read(address),
+            NR30..=NR34 => self.wave.read(address),
+            NR41..=NR44 => self.noise.read(address),
 
-            NR21 => self.nr21,
-            NR22 => self.nr22,
-            NR23 => self.nr23,
-            NR24 => self.nr24,
-            NR30 => self.nr30,
-            NR31 => self.nr31,
-            NR32 => self.nr32,
-            NR33 => self.nr33,
-            NR34 => self.nr34,
-
-            NR41 => self.nr41,
-            NR42 => self.nr42,
-            NR43 => self.nr43,
-            NR44 => self.nr44,
             NR50 => self.nr50,
             NR51 => self.nr51,
-            NR52 => self.nr52,
-            addr @ 0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize],
-
-            0xFF15 | 0xFF1F | 0xFF27..=0xFF2F => {
-                println!("Reads to unimplemented Apu register {address:04X} return 0xFF");
-                0xFF
+            NR52 => {
+                let ch1 = if self.ch1_enabled() { 0x01 } else { 0 };
+                let ch2 = if self.ch2_enabled() { 0x02 } else { 0 };
+                let ch3 = if self.ch3_enabled() { 0x04 } else { 0 };
+                let ch4 = if self.ch4_enabled() { 0x08 } else { 0 };
+                self.nr52 | ch1 | ch2 | ch3 | ch4 | 0x70
             }
-            _ => unreachable!(
-                "Apu: read of address {address:04X} should have been handled by other components"
-            ),
+
+            WAVE_RAM_START..=WAVE_RAM_END => self.wave.wave_ram[(address - WAVE_RAM_START) as usize],
+
+            _ => 0xFF,
         }
     }
 
     fn write(&mut self, address: u16, value: u8) {
         match address {
-            NR10 => self.nr10 = value,
-            NR11 => self.nr11 = value,
-            NR12 => self.nr12 = value,
-            NR13 => self.nr13 = value,
-            NR14 => self.nr14 = value,
-            0xFF15 => {} // println!("Writes in unused Apu memory range are ignored, {address:04X}"),
-            NR21 => self.nr21 = value,
-            NR22 => self.nr22 = value,
-            NR23 => self.nr23 = value,
-            NR24 => self.nr24 = value,
-            NR30 => self.nr30 = value,
-            NR31 => self.nr31 = value,
-            NR32 => self.nr32 = value,
-            NR33 => self.nr33 = value,
-            NR34 => self.nr34 = value,
-            0xFF1F => {} // println!("Writes in unused Apu memory range are ignored, {address:04X}"),
-            NR41 => self.nr41 = value,
-            NR42 => self.nr42 = value,
-            NR43 => self.nr43 = value,
-            NR44 => self.nr44 = value,
+            NR10..=NR14 => {
+                self.sweep_pulse.write(address, value);
+                if address == NR11 {
+                    self.length_counter_ch1 = 64 - (value & 0x3F) as u16;
+                } else if address == NR14 && value & 0x80 != 0 {
+                    if self.length_counter_ch1 == 0 {
+                        self.length_counter_ch1 = 64;
+                    }
+                    self.envelope_volume_ch1 = (self.sweep_pulse.envelope & 0xF0) >> 4;
+                    self.envelope_timer_ch1 = self.sweep_pulse.envelope & 0x07;
+                }
+            }
+            NR21..=NR24 => {
+                self.pulse.write(address, value);
+                if address == NR21 {
+                    self.length_counter_ch2 = 64 - (value & 0x3F) as u16;
+                } else if address == NR24 && value & 0x80 != 0 {
+                    if self.length_counter_ch2 == 0 {
+                        self.length_counter_ch2 = 64;
+                    }
+                    self.envelope_volume_ch2 = (self.pulse.envelope & 0xF0) >> 4;
+                    self.envelope_timer_ch2 = self.pulse.envelope & 0x07;
+                }
+            }
+            NR30..=NR34 => {
+                self.wave.write(address, value);
+                if address == NR31 {
+                    self.length_counter_ch3 = 256 - value as u16;
+                } else if address == NR34 && value & 0x80 != 0 && self.length_counter_ch3 == 0 {
+                    self.length_counter_ch3 = 256;
+                }
+            }
+            NR41..=NR44 => {
+                self.noise.write(address, value);
+                if address == NR41 {
+                    self.length_counter_ch4 = 64 - (value & 0x3F) as u16;
+                } else if address == NR44 && value & 0x80 != 0 {
+                    if self.length_counter_ch4 == 0 {
+                        self.length_counter_ch4 = 64;
+                    }
+                    self.envelope_volume_ch4 = (self.noise.envelope & 0xF0) >> 4;
+                    self.envelope_timer_ch4 = self.noise.envelope & 0x07;
+                }
+            }
+
             NR50 => self.nr50 = value,
             NR51 => self.nr51 = value,
-            // audio master control, if turning off audio, disable all channels
-            NR52 => self.nr52 = (value & AUDIO_ON_OFF) | (self.nr52 & 0x7F),
-            0xFF27..=0xFF2F => {} // println!("Writes in unused Apu memory range are ignored, {address:04X}"),
-            addr @ 0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize] = value,
+            NR52 => {
+                let was_active = self.nr52 & AUDIO_ON_OFF != 0;
+                let now_active = value & AUDIO_ON_OFF != 0;
 
-            _ => unreachable!(
-                "Apu: write of address {address:04X} should have been handled by other components"
-            ),
+                if !was_active && now_active {
+                    self.frame_sequencer = 0;
+                    self.cycles = 0;
+                    self.sync_envelope();
+                    self.sync_length();
+                } else if was_active && !now_active {
+                    self.sweep_pulse.enabled = false;
+                    self.pulse.enabled = false;
+                    self.wave.enabled = false;
+                    self.noise.enabled = false;
+                }
+
+                self.nr52 = value & AUDIO_ON_OFF;
+            }
+
+            WAVE_RAM_START..=WAVE_RAM_END => self.wave.wave_ram[(address - WAVE_RAM_START) as usize] = value,
+
+            _ => {}
         }
     }
 }

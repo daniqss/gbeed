@@ -1,6 +1,7 @@
+use crate::apu::Apu;
 pub use crate::prelude::*;
 use crate::{
-    Apu, Cartridge, Controller, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
+    Cartridge, Controller, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
     apu::{APU_REGISTER_END, APU_REGISTER_START},
     cpu::{Instruction, R8, R16},
     interrupts::{IE, IF},
@@ -71,6 +72,7 @@ impl Dmg {
         }
 
         self.cpu.cycles = 0;
+        self.apu.flush(controller);
 
         Ok(())
     }
@@ -80,11 +82,12 @@ impl Dmg {
 
         let instruction = Cpu::step(self);
 
-        let delta = self.cpu.cycles.wrapping_sub(prev_cycles);
+        let delta = self.cpu.cycles.wrapping_sub(prev_cycles) * 4;
 
-        self.ppu.step(controller, delta * 4, &mut self.interrupt_flag);
-        self.timer.step(delta * 4, &mut self.interrupt_flag);
+        self.ppu.step(controller, delta, &mut self.interrupt_flag);
+        self.timer.step(delta, &mut self.interrupt_flag);
         self.serial.step(controller);
+        self.apu.step(controller, delta);
 
         instruction
     }

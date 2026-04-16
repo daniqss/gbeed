@@ -1,5 +1,6 @@
 use crate::apu::*;
 
+#[derive(Debug, Default)]
 pub struct Noise {
     /// initial length timer (write only)
     pub length_timer: u8,
@@ -32,10 +33,10 @@ pub struct Noise {
 impl Noise {
     pub fn new() -> Self {
         Self {
-            length_timer: 0,
+            length_timer: 0xFF,
             envelope: 0,
             frequency: 0,
-            control: 0,
+            control: 0xBF,
 
             enabled: false,
             timer: 0,
@@ -119,17 +120,12 @@ impl Noise {
         }
     }
 
-    pub fn get_sample(&self) -> i16 {
+    pub fn get_sample(&self, volume: u8) -> i16 {
         if !self.enabled {
             return 0;
         }
 
-        // bit 0 of lfsr holds the current output: 0 = silence, 1 = volume
-        if self.lfsr & 0x01 == 0 {
-            self.current_volume as i16
-        } else {
-            0
-        }
+        if self.lfsr & 0x01 == 0 { volume as i16 } else { 0 }
     }
 
     pub fn tick(&mut self) {

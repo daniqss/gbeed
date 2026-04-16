@@ -71,7 +71,7 @@ impl SettingsMenuState {
         gb: Option<&Dmg>,
         controller: &mut ConsoleController,
     ) -> Option<EmulatorState> {
-        self.input.update(&controller.rl, dt);
+        self.input.update(controller.rl, dt);
 
         let visible_count = ((VISIBLE_BOTTOM - VISIBLE_TOP) / ITEM_H) as usize;
 

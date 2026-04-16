@@ -1,5 +1,7 @@
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{Texture, color::DMG_CLASSIC_PALETTE, settings::SpeedUpMultiplier};
+use gbeed_core::AudioPlayer;
+use gbeed_raylib_common::{color::DMG_CLASSIC_PALETTE, settings::SpeedUpMultiplier, Texture};
+use raylib::ffi;
 use raylib::prelude::*;
 
 pub const TILES_PER_ROW: i32 = 16;
@@ -11,7 +13,9 @@ pub const TILE_TEXTURE_HEIGHT: i32 = TILES_PER_COLUMN * TILE_PIXEL_SIZE;
 pub const TILE_DISPLAY_WIDTH: i32 = TILE_TEXTURE_WIDTH * TILE_DISPLAY_SCALE;
 pub const TILE_DISPLAY_HEIGHT: i32 = TILE_TEXTURE_HEIGHT * TILE_DISPLAY_SCALE;
 
-pub struct DebuggerController {
+const SAMPLE_RATE: u32 = 44100;
+
+pub struct DebuggerController<'a> {
     pub screen_texture: Texture,
     pub tile_textures: [Texture; 3],
     pub bg_map_texture: Texture,
@@ -21,25 +25,22 @@ pub struct DebuggerController {
 
     pub speed_up_multiplier: SpeedUpMultiplier,
 
-    pub rl: RaylibHandle,
-    pub thread: RaylibThread,
+    pub rl: &'a mut RaylibHandle,
+    pub thread: &'a RaylibThread,
+    audio: Option<RaylibAudio>,
+    audio_stream: Option<ffi::AudioStream>,
 }
 
-impl DebuggerController {
-    pub fn new(mut rl: RaylibHandle, thread: RaylibThread) -> Self {
+impl<'a> DebuggerController<'a> {
+    pub fn new(rl: &'a mut RaylibHandle, thread: &'a RaylibThread) -> Self {
         Self {
-            screen_texture: Texture::new(
-                &mut rl,
-                &thread,
-                DMG_SCREEN_WIDTH as i32,
-                DMG_SCREEN_HEIGHT as i32,
-            ),
+            screen_texture: Texture::new(rl, thread, DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32),
             tile_textures: [
-                Texture::new(&mut rl, &thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
-                Texture::new(&mut rl, &thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
-                Texture::new(&mut rl, &thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
+                Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
+                Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
+                Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
             ],
-            bg_map_texture: Texture::new(&mut rl, &thread, 256, 256),
+            bg_map_texture: Texture::new(rl, thread, 256, 256),
 
             scroll_x: 0,
             scroll_y: 0,
@@ -47,11 +48,24 @@ impl DebuggerController {
 
             rl,
             thread,
+            audio: None,
+            audio_stream: None,
+        }
+    }
+
+    pub fn init_audio(&mut self) {
+        self.audio = Some(RaylibAudio::init_audio_device().expect("Failed to init audio"));
+        self.audio_stream = Some(unsafe { ffi::LoadAudioStream(SAMPLE_RATE, 16, 2) });
+
+        if let Some(stream) = self.audio_stream {
+            unsafe {
+                ffi::PlayAudioStream(stream);
+            }
         }
     }
 }
 
-impl Renderer for DebuggerController {
+impl Renderer for DebuggerController<'_> {
     fn read_pixel(&self, x: usize, y: usize) -> u32 {
         let index = (y * DMG_SCREEN_WIDTH + x) * 3;
 
@@ -89,13 +103,32 @@ impl Renderer for DebuggerController {
     }
 }
 
-impl SerialListener for DebuggerController {
+impl SerialListener for DebuggerController<'_> {
     fn on_transfer(&mut self, data: u8) {
         println!("through serial port -> {data:04X}");
     }
 }
 
-impl Controller for DebuggerController {}
+impl Controller for DebuggerController<'_> {}
+
+impl AudioPlayer for DebuggerController<'_> {
+    fn sample_rate(&self) -> u32 { SAMPLE_RATE }
+
+    fn stereo(&self) -> bool { true }
+
+    fn write_buffer(&mut self, samples: &[i16]) {
+        if let Some(stream) = self.audio_stream {
+            let frame_count = (samples.len() / 2) as i32;
+            if frame_count > 0 {
+                unsafe {
+                    if ffi::IsAudioStreamProcessed(stream) {
+                        ffi::UpdateAudioStream(stream, samples.as_ptr() as *const _, frame_count);
+                    }
+                }
+            }
+        }
+    }
+}
 
 pub fn update_bg_map(
     texture: &mut Texture,
