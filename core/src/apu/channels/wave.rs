@@ -61,7 +61,10 @@ impl Wave {
                 // TODO: mmm
                 self.wave_ram[(addr - WAVE_RAM_START) as usize]
             }
-            _ => 0xFF,
+
+            _ => unreachable!(
+                "Wave channel: read of address {addr:04X} should have been handled by other components"
+            ),
         }
     }
 
@@ -84,9 +87,11 @@ impl Wave {
                 }
                 self.period_high = value;
             }
-            WAVE_RAM_START..=WAVE_RAM_END => self.wave_ram[(addr - 0xFF30) as usize] = value,
+            WAVE_RAM_START..=WAVE_RAM_END => self.wave_ram[(addr - WAVE_RAM_START) as usize] = value,
 
-            _ => {}
+            _ => unreachable!(
+                "Wave channel: write of address {addr:04X} should have been handled by other components"
+            ),
         }
     }
 

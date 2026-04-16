@@ -1,3 +1,4 @@
+use super::DUTY_TABLE;
 use crate::apu::*;
 
 pub struct SweepPulse {
@@ -127,20 +128,12 @@ impl SweepPulse {
     #[inline(always)]
     fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
 
-    // duty cycles table: 12.5%, 25%, 50%, 75%
-    const DUTY_TABLE: [[u8; 8]; 4] = [
-        [0, 0, 0, 0, 0, 0, 0, 1], // 12.5%
-        [1, 0, 0, 0, 0, 0, 0, 1], // 25%
-        [1, 0, 0, 0, 0, 1, 1, 1], // 50%
-        [0, 1, 1, 1, 1, 1, 1, 0], // 75%
-    ];
-
     pub fn get_sample(&self) -> i16 {
         if !self.enabled {
             return 0;
         }
 
-        let duty_pattern = Self::DUTY_TABLE[self.wave_duty as usize];
+        let duty_pattern = DUTY_TABLE[self.wave_duty as usize];
         if duty_pattern[self.duty_step as usize] == 1 {
             self.current_volume as i16
         } else {
@@ -164,15 +157,15 @@ impl SweepPulse {
     fn calculate_sweep(&mut self, update: bool) {
         let step = self.sweep & 0x07;
         let negate = (self.sweep & 0x08) != 0;
-        let mut new_period = self.shadow_period >> step;
+        let new_period = self.shadow_period >> step;
 
-        if negate {
-            new_period = self.shadow_period.wrapping_sub(new_period);
+        let new_period = if negate {
+            self.shadow_period.wrapping_sub(new_period)
         } else {
-            new_period = self.shadow_period.wrapping_add(new_period);
-        }
+            self.shadow_period.wrapping_add(new_period)
+        };
 
-        // overflow check (> $7ff)
+        // overflow check
         if new_period > 0x7FF {
             self.enabled = false;
         } else if step > 0 && update {
