@@ -20,7 +20,7 @@ struct EmulatorApp<'a> {
 }
 
 impl<'a> EmulatorApp<'a> {
-    pub fn new(rl: &'a mut RaylibHandle, thread: &'a RaylibThread) -> Self {
+    pub fn new(rl: &'a mut RaylibHandle, thread: &'a RaylibThread, audio: &'a RaylibAudio) -> Self {
         let screen = Texture::new(rl, thread, DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32);
 
         let palette = color::Palette::default();
@@ -31,7 +31,7 @@ impl<'a> EmulatorApp<'a> {
             rom_path: None,
             save_path: None,
 
-            controller: ConsoleController::new(rl, thread, screen, palette),
+            controller: ConsoleController::new(rl, thread, audio, screen, palette),
         }
     }
 
@@ -133,10 +133,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .size(SCREEN_WIDTH, SCREEN_HEIGHT)
         .title("gbeed")
         .build();
+    let audio = RaylibAudio::init_audio_device()?;
+
     rl.set_target_fps(30);
     rl.set_exit_key(None);
 
-    let mut app = EmulatorApp::new(&mut rl, &thread);
+    let mut app = EmulatorApp::new(&mut rl, &thread, &audio);
 
     while !app.should_close() {
         app.update()?;
