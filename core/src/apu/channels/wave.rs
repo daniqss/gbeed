@@ -105,28 +105,32 @@ impl Wave {
     #[inline(always)]
     fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
 
-    pub fn get_sample(&self) -> u8 {
+    #[inline(always)]
+    fn get_output_level(&self, sample: u8) -> i16 {
+        match self.output_level {
+            0b00 => 0,
+            0b01 => sample as i16,
+            0b10 => sample as i16 >> 1,
+            0b11 => sample as i16 >> 2,
+
+            _ => 0,
+        }
+    }
+
+    pub fn get_sample(&self) -> i16 {
         if !self.enabled || !self.dac_enable {
             return 0;
         }
 
-        let byte_idx = self.sample_idx / 2;
-        let byte = self.wave_ram[byte_idx];
+        let sample = self.wave_ram[self.sample_idx / 2];
 
         // read first high nibble
-        let sample = if self.sample_idx % 2 == 0 {
-            byte >> 4
+        let sample = if self.sample_idx.is_multiple_of(2) {
+            sample >> 4
         } else {
-            byte & 0x0F
+            sample & 0x0F
         };
 
-        match self.output_level {
-            0b00 => 0,
-            0b01 => sample,
-            0b10 => sample >> 1,
-            0b11 => sample >> 2,
-
-            _ => 0,
-        }
+        self.get_output_level(sample)
     }
 }
