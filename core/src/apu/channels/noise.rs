@@ -78,6 +78,16 @@ impl Noise {
         }
     }
 
+    /// returns the channel's enable bit of audio master control
+    #[inline(always)]
+    pub fn is_enabled(&self) -> u8 {
+        if self.enabled && (self.envelope & 0xF8 != 0) {
+            0x08
+        } else {
+            0
+        }
+    }
+
     fn trigger(&mut self) {
         // only activates if dac is on (nr42 bits 3-7 != 0)
         if self.envelope & 0xF8 != 0 {

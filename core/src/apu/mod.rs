@@ -41,16 +41,37 @@ const AUDIO_ON_OFF: u8 = 0x80;
 // pub const FRAME_SEQUENCER_RATE: u32 = 512;
 pub const CPU_FREQ: u32 = 4_194_304;
 
-#[derive(Debug, Default)]
+pub const SAMPLE_RATE: u32 = 44100;
+pub const BUFFER_SIZE: usize = 4096;
+pub const STEREO_BUFFER_SIZE: usize = BUFFER_SIZE * 2;
+
+#[derive(Debug)]
 pub struct Apu {
     sweep_pulse: SweepPulse,
     pulse: Pulse,
     wave: Wave,
     noise: Noise,
 
-    nr50: u8,
-    nr51: u8,
-    nr52: u8,
+    /// - bit 7: works as `sound_panning` left but for the cartridge output (unused)
+    /// - bit 6-4: master volume for left output
+    /// - bit 3: works as `sound_panning` right but for the cartridge output (unused)
+    /// - bit 2-0: master volume for right output
+    ///
+    /// A value of 0 is treated as a volume of 1 (very quiet), and a value of 7 is treated as a volume of 8 (no volume reduction).
+    /// Importantly, the amplifier never mutes a non-silent input.
+    master_volume: u8,
+
+    /// channels can be panned left, center or right
+    /// bits 7-4: channels to left (ch4-ch1)
+    /// bits 3-0: channels to right (ch4-ch1)
+    /// setting a bit to 1 enables the channel to go to the respective output
+    sound_panning: u8,
+
+    /// Audio master control
+    /// - bit 7: audio on/off
+    /// - bit 6-4: unused
+    /// - bit 3-0: channels on/off (read-only)
+    master_control: u8,
 
     frame_sequencer: u8,
     cycles: u32,
@@ -69,8 +90,10 @@ pub struct Apu {
     envelope_timer_ch4: u8,
 
     sample_counter: u32,
-    sample_rate: u32,
-    buffer: Vec<i16>,
+}
+
+impl Default for Apu {
+    fn default() -> Self { Self::new() }
 }
 
 impl Apu {
@@ -81,9 +104,10 @@ impl Apu {
             wave: Wave::new(),
             noise: Noise::new(),
 
-            nr50: 0x77,
-            nr51: 0xF3,
-            nr52: 0xF1,
+            master_volume: 0x77,
+
+            sound_panning: 0xF3,
+            master_control: 0xF1,
 
             frame_sequencer: 0,
             cycles: 0,
@@ -102,43 +126,29 @@ impl Apu {
             envelope_timer_ch4: 0,
 
             sample_counter: 0,
-            sample_rate: 44100,
-            buffer: Vec::with_capacity(8192),
         }
     }
-    pub fn is_active(&self) -> bool { self.nr52 & AUDIO_ON_OFF != 0 }
+    pub fn is_active(&self) -> bool { self.master_control & AUDIO_ON_OFF != 0 }
 
-    pub fn ch1_enabled(&self) -> bool { self.sweep_pulse.enabled && self.sweep_pulse.envelope & 0xF8 != 0 }
+    fn get_master_volume_left(&self) -> i32 { ((self.master_volume >> 4) & 0x07) as i32 + 1 }
 
-    pub fn ch2_enabled(&self) -> bool { self.pulse.enabled && self.pulse.envelope & 0xF8 != 0 }
+    fn get_master_volume_right(&self) -> i32 { (self.master_volume & 0x07) as i32 + 1 }
 
-    pub fn ch3_enabled(&self) -> bool { self.wave.enabled && self.wave.dac_enable }
+    fn ch1_to_left(&self) -> bool { self.sound_panning & 0x10 != 0 }
 
-    pub fn ch4_enabled(&self) -> bool { self.noise.enabled && self.noise.envelope & 0xF8 != 0 }
+    fn ch1_to_right(&self) -> bool { self.sound_panning & 0x01 != 0 }
 
-    pub fn sample_rate(&self) -> u32 { self.sample_rate }
+    fn ch2_to_left(&self) -> bool { self.sound_panning & 0x20 != 0 }
 
-    pub fn set_sample_rate(&mut self, rate: u32) { self.sample_rate = rate; }
+    fn ch2_to_right(&self) -> bool { self.sound_panning & 0x02 != 0 }
 
-    fn get_master_volume_left(&self) -> i32 { ((self.nr50 >> 4) & 0x07) as i32 + 1 }
+    fn ch3_to_left(&self) -> bool { self.sound_panning & 0x40 != 0 }
 
-    fn get_master_volume_right(&self) -> i32 { (self.nr50 & 0x07) as i32 + 1 }
+    fn ch3_to_right(&self) -> bool { self.sound_panning & 0x04 != 0 }
 
-    fn ch1_to_left(&self) -> bool { self.nr51 & 0x10 != 0 }
+    fn ch4_to_left(&self) -> bool { self.sound_panning & 0x80 != 0 }
 
-    fn ch1_to_right(&self) -> bool { self.nr51 & 0x01 != 0 }
-
-    fn ch2_to_left(&self) -> bool { self.nr51 & 0x20 != 0 }
-
-    fn ch2_to_right(&self) -> bool { self.nr51 & 0x02 != 0 }
-
-    fn ch3_to_left(&self) -> bool { self.nr51 & 0x40 != 0 }
-
-    fn ch3_to_right(&self) -> bool { self.nr51 & 0x04 != 0 }
-
-    fn ch4_to_left(&self) -> bool { self.nr51 & 0x80 != 0 }
-
-    fn ch4_to_right(&self) -> bool { self.nr51 & 0x08 != 0 }
+    fn ch4_to_right(&self) -> bool { self.sound_panning & 0x08 != 0 }
 
     pub fn step<P: AudioPlayer>(&mut self, player: &mut P, delta: usize) {
         if !self.is_active() {
@@ -146,7 +156,6 @@ impl Apu {
         }
 
         let total_cycles = delta as u32;
-        let sample_rate = player.sample_rate();
 
         for _ in 0..total_cycles {
             self.sweep_pulse.tick();
@@ -154,16 +163,12 @@ impl Apu {
             self.wave.tick();
             self.noise.tick();
 
-            self.sample_counter += sample_rate;
+            self.sample_counter += SAMPLE_RATE;
             if self.sample_counter >= CPU_FREQ {
                 self.sample_counter -= CPU_FREQ;
                 let sample = self.mix();
-                if player.stereo() {
-                    self.buffer.push(sample.0);
-                    self.buffer.push(sample.1);
-                } else {
-                    self.buffer.push(((sample.0 as i32 + sample.1 as i32) / 2) as i16);
-                }
+
+                player.push_sample(sample.0);
             }
 
             self.cycles += 1;
@@ -174,10 +179,7 @@ impl Apu {
             }
         }
 
-        if self.buffer.len() >= 2048 {
-            player.write_buffer(&self.buffer);
-            self.buffer.clear();
-        }
+        // player.flush_buffer();
     }
 
     fn tick_frame_sequencer(&mut self) {
@@ -372,13 +374,6 @@ impl Apu {
         (left as i16, right as i16)
     }
 
-    pub fn flush<P: AudioPlayer>(&mut self, player: &mut P) {
-        if !self.buffer.is_empty() {
-            player.write_buffer(&self.buffer);
-            self.buffer.clear();
-        }
-    }
-
     fn sync_envelope(&mut self) {
         let env1 = self.sweep_pulse.envelope;
         self.envelope_volume_ch1 = (env1 >> 4) & 0x0F;
@@ -409,14 +404,15 @@ impl Accessible<u16> for Apu {
             NR30..=NR34 => self.wave.read(address),
             NR41..=NR44 => self.noise.read(address),
 
-            NR50 => self.nr50,
-            NR51 => self.nr51,
+            NR50 => self.master_volume,
+            NR51 => self.sound_panning,
             NR52 => {
-                let ch1 = if self.ch1_enabled() { 0x01 } else { 0 };
-                let ch2 = if self.ch2_enabled() { 0x02 } else { 0 };
-                let ch3 = if self.ch3_enabled() { 0x04 } else { 0 };
-                let ch4 = if self.ch4_enabled() { 0x08 } else { 0 };
-                self.nr52 | ch1 | ch2 | ch3 | ch4 | 0x70
+                (self.master_control & AUDIO_ON_OFF)
+                    | 0x70
+                    | self.noise.is_enabled()
+                    | self.wave.is_enabled()
+                    | self.pulse.is_enabled()
+                    | self.sweep_pulse.is_enabled()
             }
 
             WAVE_RAM_START..=WAVE_RAM_END => self.wave.wave_ram[(address - WAVE_RAM_START) as usize],
@@ -472,10 +468,10 @@ impl Accessible<u16> for Apu {
                 }
             }
 
-            NR50 => self.nr50 = value,
-            NR51 => self.nr51 = value,
+            NR50 => self.master_volume = value,
+            NR51 => self.sound_panning = value,
             NR52 => {
-                let was_active = self.nr52 & AUDIO_ON_OFF != 0;
+                let was_active = self.master_control & AUDIO_ON_OFF != 0;
                 let now_active = value & AUDIO_ON_OFF != 0;
 
                 if !was_active && now_active {
@@ -490,7 +486,7 @@ impl Accessible<u16> for Apu {
                     self.noise.enabled = false;
                 }
 
-                self.nr52 = value & AUDIO_ON_OFF;
+                self.master_control = value & AUDIO_ON_OFF;
             }
 
             WAVE_RAM_START..=WAVE_RAM_END => self.wave.wave_ram[(address - WAVE_RAM_START) as usize] = value,

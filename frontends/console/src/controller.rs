@@ -1,17 +1,22 @@
-use gbeed_core::{AudioPlayer, Controller, Ppu, Renderer, SerialListener, prelude::DMG_SCREEN_WIDTH};
+use gbeed_core::{
+    AudioPlayer, Controller, Ppu, Renderer, SAMPLE_RATE, STEREO_BUFFER_SIZE, SerialListener,
+    prelude::DMG_SCREEN_WIDTH,
+};
 use gbeed_raylib_common::{
     Texture, color,
     settings::{SpeedUpMode, SpeedUpMultiplier, TargetedFps},
 };
 use raylib::prelude::*;
 
-const SAMPLE_RATE: u32 = 44100;
-const BUFFER_SIZE: usize = 4096;
-
 pub struct ConsoleController<'a> {
     pub screen: Texture,
     pub palette: color::Palette,
     pub palette_color: color::PaletteColor,
+
+    sample_idx: usize,
+    audio_buffer: Box<[i16; STEREO_BUFFER_SIZE]>,
+    audio_stream: AudioStream<'a>,
+
     pub speed_up_mode: SpeedUpMode,
     pub speed_up_multiplier: SpeedUpMultiplier,
     pub targeted_fps: TargetedFps,
@@ -20,8 +25,6 @@ pub struct ConsoleController<'a> {
     pub rl: &'a mut RaylibHandle,
     pub thread: &'a RaylibThread,
     _audio: &'a RaylibAudio,
-    audio_stream: AudioStream<'a>,
-    audio_buffer: Vec<i16>,
 }
 
 impl<'a> ConsoleController<'a> {
@@ -41,15 +44,19 @@ impl<'a> ConsoleController<'a> {
             screen,
             palette,
             palette_color,
+
+            sample_idx: 0,
+            audio_buffer: Box::new([0; STEREO_BUFFER_SIZE]),
+            audio_stream,
+
             speed_up_mode: SpeedUpMode::default(),
             speed_up_multiplier: SpeedUpMultiplier::default(),
             targeted_fps: TargetedFps::default(),
             draw_debug_info: false,
+
             rl,
             thread,
             _audio: audio,
-            audio_stream,
-            audio_buffer: Vec::with_capacity(BUFFER_SIZE * 2),
         }
     }
 }
@@ -84,24 +91,19 @@ impl SerialListener for ConsoleController<'_> {
 }
 
 impl AudioPlayer for ConsoleController<'_> {
-    fn sample_rate(&self) -> u32 { SAMPLE_RATE }
+    fn playing_stereo(&self) -> bool { false }
 
-    fn stereo(&self) -> bool { false }
+    fn push_sample(&mut self, sample: i16) {
+        self.audio_buffer[self.sample_idx] = sample;
+        self.sample_idx = (self.sample_idx + 1) % STEREO_BUFFER_SIZE;
+    }
 
-    fn write_buffer(&mut self, samples: &[i16]) {
-        self.audio_buffer.extend_from_slice(samples);
-
-        while self.audio_stream.is_processed() && !self.audio_buffer.is_empty() {
-            let to_write = self.audio_buffer.len().min(BUFFER_SIZE);
-            let chunk: Vec<i16> = self.audio_buffer.drain(..to_write).collect();
-            if let Err(e) = self.audio_stream.update(&chunk) {
+    fn flush_buffer(&mut self) {
+        while self.audio_stream.is_processed() && self.sample_idx > 0 {
+            if let Err(e) = self.audio_stream.update(&self.audio_buffer[..self.sample_idx]) {
                 eprintln!("update error: {e}");
             }
-        }
-
-        if self.audio_buffer.len() > BUFFER_SIZE * 8 {
-            self.audio_buffer
-                .drain(..self.audio_buffer.len() - BUFFER_SIZE * 8);
+            self.sample_idx = 0;
         }
     }
 }

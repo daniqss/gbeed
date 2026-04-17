@@ -109,6 +109,10 @@ impl Wave {
         self.sample_idx = 1;
     }
 
+    /// returns the channel's enable bit of audio master control
+    #[inline(always)]
+    pub fn is_enabled(&self) -> u8 { if self.enabled && self.dac_enable { 0x04 } else { 0 } }
+
     #[inline(always)]
     fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
 

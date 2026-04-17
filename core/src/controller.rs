@@ -28,9 +28,9 @@ macro_rules! controller {
         }
 
         impl AudioPlayer for $name {
-            fn sample_rate(&self) -> u32 { self.audio_player.sample_rate() }
-            fn stereo(&self) -> bool { self.audio_player.stereo() }
-            fn write_buffer(&mut self, samples: &[i16]) { self.audio_player.write_buffer(samples) }
+            fn playing_stereo(&self) -> bool { self.audio_player.playing_stereo() }
+            fn push_sample(&mut self, sample: i16) { self.audio_player.push_sample(sample) }
+            fn flush_buffer(&mut self) { self.audio_player.flush_buffer() }
         }
 
         impl Controller for $name {}

@@ -104,6 +104,16 @@ impl Pulse {
         self.env_timer = self.envelope & 0x07;
     }
 
+    /// returns the channel's enable bit of audio master control
+    #[inline(always)]
+    pub fn is_enabled(&self) -> u8 {
+        if self.enabled && (self.envelope & 0xF8 != 0) {
+            0x02
+        } else {
+            0
+        }
+    }
+
     #[inline(always)]
     fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
 

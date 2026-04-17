@@ -72,7 +72,7 @@ impl Dmg {
         }
 
         self.cpu.cycles = 0;
-        self.apu.flush(controller);
+        controller.flush_buffer();
 
         Ok(())
     }
