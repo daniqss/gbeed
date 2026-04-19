@@ -135,7 +135,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build();
     let audio = RaylibAudio::init_audio_device()?;
 
-    rl.set_target_fps(30);
+    rl.set_target_fps(60);
     rl.set_exit_key(None);
 
     let mut app = EmulatorApp::new(&mut rl, &thread, &audio);

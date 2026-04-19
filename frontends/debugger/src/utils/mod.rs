@@ -2,7 +2,7 @@ pub mod components;
 mod layout;
 
 use gbeed_raylib_common::color::DMG_CLASSIC_PALETTE;
-pub use layout::{Layout, HEADER_HEIGHT, PANEL_PADDING};
+pub use layout::{HEADER_HEIGHT, Layout, PANEL_PADDING};
 use raylib::prelude::*;
 
 pub const FOREGROUND: Color = DMG_CLASSIC_PALETTE[0];

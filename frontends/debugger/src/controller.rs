@@ -1,7 +1,9 @@
 use gbeed_core::prelude::*;
-use gbeed_core::AudioPlayer;
-use gbeed_raylib_common::{color::DMG_CLASSIC_PALETTE, settings::SpeedUpMultiplier, Texture};
-use raylib::ffi;
+use gbeed_core::{
+    AudioPlayer, Controller, Ppu, Renderer, SAMPLE_RATE, STEREO_BUFFER_SIZE, SerialListener,
+    prelude::DMG_SCREEN_WIDTH,
+};
+use gbeed_raylib_common::{Texture, color::DMG_CLASSIC_PALETTE, settings::SpeedUpMultiplier};
 use raylib::prelude::*;
 
 pub const TILES_PER_ROW: i32 = 16;
@@ -13,26 +15,29 @@ pub const TILE_TEXTURE_HEIGHT: i32 = TILES_PER_COLUMN * TILE_PIXEL_SIZE;
 pub const TILE_DISPLAY_WIDTH: i32 = TILE_TEXTURE_WIDTH * TILE_DISPLAY_SCALE;
 pub const TILE_DISPLAY_HEIGHT: i32 = TILE_TEXTURE_HEIGHT * TILE_DISPLAY_SCALE;
 
-const SAMPLE_RATE: u32 = 44100;
-
 pub struct DebuggerController<'a> {
     pub screen_texture: Texture,
     pub tile_textures: [Texture; 3],
     pub bg_map_texture: Texture,
-
     pub scroll_x: i32,
     pub scroll_y: i32,
+
+    sample_idx: usize,
+    audio_buffer: Box<[i16; STEREO_BUFFER_SIZE]>,
+    audio_stream: AudioStream<'a>,
 
     pub speed_up_multiplier: SpeedUpMultiplier,
 
     pub rl: &'a mut RaylibHandle,
     pub thread: &'a RaylibThread,
-    audio: Option<RaylibAudio>,
-    audio_stream: Option<ffi::AudioStream>,
+    _audio: &'a RaylibAudio,
 }
 
 impl<'a> DebuggerController<'a> {
-    pub fn new(rl: &'a mut RaylibHandle, thread: &'a RaylibThread) -> Self {
+    pub fn new(rl: &'a mut RaylibHandle, thread: &'a RaylibThread, audio: &'a RaylibAudio) -> Self {
+        let audio_stream = audio.new_audio_stream(SAMPLE_RATE, 16, 1);
+        audio_stream.play();
+
         Self {
             screen_texture: Texture::new(rl, thread, DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32),
             tile_textures: [
@@ -41,26 +46,18 @@ impl<'a> DebuggerController<'a> {
                 Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
             ],
             bg_map_texture: Texture::new(rl, thread, 256, 256),
-
             scroll_x: 0,
             scroll_y: 0,
+
+            sample_idx: 0,
+            audio_buffer: Box::new([0; STEREO_BUFFER_SIZE]),
+            audio_stream,
+
             speed_up_multiplier: SpeedUpMultiplier::OneAndHalf,
 
             rl,
             thread,
-            audio: None,
-            audio_stream: None,
-        }
-    }
-
-    pub fn init_audio(&mut self) {
-        self.audio = Some(RaylibAudio::init_audio_device().expect("Failed to init audio"));
-        self.audio_stream = Some(unsafe { ffi::LoadAudioStream(SAMPLE_RATE, 16, 2) });
-
-        if let Some(stream) = self.audio_stream {
-            unsafe {
-                ffi::PlayAudioStream(stream);
-            }
+            _audio: audio,
         }
     }
 }
@@ -112,20 +109,19 @@ impl SerialListener for DebuggerController<'_> {
 impl Controller for DebuggerController<'_> {}
 
 impl AudioPlayer for DebuggerController<'_> {
-    fn sample_rate(&self) -> u32 { SAMPLE_RATE }
+    fn playing_stereo(&self) -> bool { false }
 
-    fn stereo(&self) -> bool { true }
+    fn push_sample(&mut self, sample: i16) {
+        self.audio_buffer[self.sample_idx] = sample;
+        self.sample_idx = (self.sample_idx + 1) % STEREO_BUFFER_SIZE;
+    }
 
-    fn write_buffer(&mut self, samples: &[i16]) {
-        if let Some(stream) = self.audio_stream {
-            let frame_count = (samples.len() / 2) as i32;
-            if frame_count > 0 {
-                unsafe {
-                    if ffi::IsAudioStreamProcessed(stream) {
-                        ffi::UpdateAudioStream(stream, samples.as_ptr() as *const _, frame_count);
-                    }
-                }
+    fn flush_buffer(&mut self) {
+        while self.audio_stream.is_processed() && self.sample_idx > 0 {
+            if let Err(e) = self.audio_stream.update(&self.audio_buffer[..self.sample_idx]) {
+                eprintln!("update error: {e}");
             }
+            self.sample_idx = 0;
         }
     }
 }

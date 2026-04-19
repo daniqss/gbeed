@@ -51,11 +51,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .title("gbeed")
         .resizable()
         .build();
+    let audio = RaylibAudio::init_audio_device()?;
 
     rl.set_target_fps(60);
     rl.set_exit_key(None);
 
-    let mut app = EmulatorApp::new(&mut rl, &thread, boot_path, is_mobile);
+    let mut app = EmulatorApp::new(&mut rl, &thread, &audio, boot_path, is_mobile);
 
     // load ROM if its provided via command line args
     if let Some(path) = game_path {
@@ -125,13 +126,14 @@ impl<'a> EmulatorApp<'a> {
     pub fn new(
         rl: &'a mut RaylibHandle,
         thread: &'a RaylibThread,
+        audio: &'a RaylibAudio,
         boot_path: Option<String>,
         is_mobile: bool,
     ) -> Self {
         let boot_rom = boot_path.and_then(|path| fs::read(path).ok());
         let (sw, sh) = (rl.get_screen_width(), rl.get_screen_height());
         let layout = Layout::new(sw, sh, is_mobile);
-        let controller = DebuggerController::new(rl, thread);
+        let controller = DebuggerController::new(rl, thread, audio);
         let mut scene = WaitingFileScene::new();
         scene.update_layout(sw, sh);
         let state = EmulatorState::WaitingFile(scene);
@@ -147,8 +149,6 @@ impl<'a> EmulatorApp<'a> {
     }
 
     pub fn should_close(&self) -> bool { self.controller.rl.window_should_close() }
-
-    pub fn init_audio(&mut self) { self.controller.init_audio(); }
 
     pub fn load_rom(&mut self, path: &str) -> Result<EmulatorState, Box<dyn std::error::Error>> {
         let game_data = fs::read(path)?;
