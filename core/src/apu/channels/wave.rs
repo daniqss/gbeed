@@ -106,7 +106,7 @@ impl Wave {
         let period = self.get_period();
         self.timer = (2048 - period) * 2;
 
-        self.sample_idx = 1;
+        self.sample_idx = 0;
     }
 
     /// returns the channel's enable bit of audio master control

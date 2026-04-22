@@ -122,11 +122,12 @@ impl Noise {
             return u32::MAX;
         }
 
-        // divider 0 is treated as 0.5, so the period is halved
+        // divider 0 is treated as 0.5, but the actual divisor in clocks is 8.
+        // the table is [8, 16, 32, 48, 64, 80, 96, 112]
         if divider == 0 {
-            (1u32 << shift) * 8 / 2
+            8 << shift
         } else {
-            divider * (1u32 << shift) * 8 * 2
+            (divider * 16) << shift
         }
     }
 

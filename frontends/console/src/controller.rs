@@ -93,9 +93,10 @@ impl SerialListener for ConsoleController<'_> {
 impl AudioPlayer for ConsoleController<'_> {
     fn playing_stereo(&self) -> bool { false }
 
-    fn push_sample(&mut self, sample: i16) {
-        self.audio_buffer[self.sample_idx] = sample;
-        self.sample_idx = (self.sample_idx + 1) % STEREO_BUFFER_SIZE;
+    fn push_sample(&mut self, left: i16, right: i16) {
+        self.audio_buffer[self.sample_idx] = left;
+        self.audio_buffer[self.sample_idx + 1] = right;
+        self.sample_idx = (self.sample_idx + 2) % STEREO_BUFFER_SIZE;
     }
 
     fn flush_buffer(&mut self) {

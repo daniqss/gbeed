@@ -31,6 +31,15 @@ const NR51: u16 = 0xFF25;
 const NR52: u16 = 0xFF26;
 
 const AUDIO_ON_OFF: u8 = 0x80;
+
+const CH4_LEFT: u8 = 0x80;
+const CH3_LEFT: u8 = 0x40;
+const CH2_LEFT: u8 = 0x20;
+const CH1_LEFT: u8 = 0x10;
+const CH4_RIGHT: u8 = 0x08;
+const CH3_RIGHT: u8 = 0x04;
+const CH2_RIGHT: u8 = 0x02;
+const CH1_RIGHT: u8 = 0x01;
 // const CH4_ON_FLAG: u8 = 0x08;
 // const CH3_ON_FLAG: u8 = 0x04;
 // const CH2_ON_FLAG: u8 = 0x02;
@@ -134,21 +143,7 @@ impl Apu {
 
     fn get_master_volume_right(&self) -> i32 { (self.master_volume & 0x07) as i32 + 1 }
 
-    fn ch1_to_left(&self) -> bool { self.sound_panning & 0x10 != 0 }
-
-    fn ch1_to_right(&self) -> bool { self.sound_panning & 0x01 != 0 }
-
-    fn ch2_to_left(&self) -> bool { self.sound_panning & 0x20 != 0 }
-
-    fn ch2_to_right(&self) -> bool { self.sound_panning & 0x02 != 0 }
-
-    fn ch3_to_left(&self) -> bool { self.sound_panning & 0x40 != 0 }
-
-    fn ch3_to_right(&self) -> bool { self.sound_panning & 0x04 != 0 }
-
-    fn ch4_to_left(&self) -> bool { self.sound_panning & 0x80 != 0 }
-
-    fn ch4_to_right(&self) -> bool { self.sound_panning & 0x08 != 0 }
+    bit_accessors!(target: sound_panning; CH1_LEFT, CH2_LEFT, CH3_LEFT, CH4_LEFT, CH1_RIGHT, CH2_RIGHT, CH3_RIGHT, CH4_RIGHT);
 
     pub fn step<P: AudioPlayer>(&mut self, player: &mut P, delta: usize) {
         if !self.is_active() {
@@ -166,9 +161,9 @@ impl Apu {
             self.sample_counter += SAMPLE_RATE;
             if self.sample_counter >= CPU_FREQ {
                 self.sample_counter -= CPU_FREQ;
-                let sample = self.mix();
+                let (left, right) = self.mix();
 
-                player.push_sample(sample.0);
+                player.push_sample(left, right);
             }
 
             self.cycles += 1;
@@ -182,18 +177,21 @@ impl Apu {
         // player.flush_buffer();
     }
 
+    /// ticks the frame sequencer, which controls the frequency of sound updates
     fn tick_frame_sequencer(&mut self) {
         match self.frame_sequencer {
-            0 | 2 | 4 | 6 => {
+            // length counter (256hz)
+            0 | 4 => {
                 self.tick_length();
             }
-            7 => {
+            // length counter (256hz) and period sweep (128hz)
+            2 | 6 => {
                 self.tick_length();
-                self.tick_envelope();
-            }
-            1 | 5 => {
                 self.tick_sweep();
-                self.tick_length();
+            }
+            // volume envelope (64hz)
+            7 => {
+                self.tick_envelope();
             }
             _ => {}
         }
@@ -328,45 +326,39 @@ impl Apu {
             0
         };
 
-        let master_vol_l = self.get_master_volume_left();
-        let master_vol_r = self.get_master_volume_right();
-
         let mut left = 0i32;
         let mut right = 0i32;
 
-        if self.ch1_to_left() {
+        if self.ch1_left() {
             left += ch1_vol as i32;
         }
-        if self.ch1_to_right() {
+        if self.ch1_right() {
             right += ch1_vol as i32;
         }
 
-        if self.ch2_to_left() {
+        if self.ch2_left() {
             left += ch2_vol as i32;
         }
-        if self.ch2_to_right() {
+        if self.ch2_right() {
             right += ch2_vol as i32;
         }
 
-        if self.ch3_to_left() {
+        if self.ch3_left() {
             left += ch3_vol as i32;
         }
-        if self.ch3_to_right() {
+        if self.ch3_right() {
             right += ch3_vol as i32;
         }
 
-        if self.ch4_to_left() {
+        if self.ch4_left() {
             left += ch4_vol as i32;
         }
-        if self.ch4_to_right() {
+        if self.ch4_right() {
             right += ch4_vol as i32;
         }
 
-        // max volume sum is 15 * 4 = 60. master volume is 1-8.
-        // 60 * 8 = 480. We want to scale to ~30000.
-        // 30000 / 480 = 62.5. Let's use 60 as factor.
-        left = left * master_vol_l * 60;
-        right = right * master_vol_r * 60;
+        left = left * self.get_master_volume_left() * 60;
+        right = right * self.get_master_volume_right() * 60;
 
         left = left.clamp(i16::MIN as i32, i16::MAX as i32);
         right = right.clamp(i16::MIN as i32, i16::MAX as i32);

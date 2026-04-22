@@ -29,7 +29,7 @@ macro_rules! controller {
 
         impl AudioPlayer for $name {
             fn playing_stereo(&self) -> bool { self.audio_player.playing_stereo() }
-            fn push_sample(&mut self, sample: i16) { self.audio_player.push_sample(sample) }
+            fn push_sample(&mut self, left: i16, right: i16) { self.audio_player.push_sample(left, right) }
             fn flush_buffer(&mut self) { self.audio_player.flush_buffer() }
         }
 
