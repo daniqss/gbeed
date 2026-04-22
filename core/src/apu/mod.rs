@@ -40,10 +40,11 @@ const CH4_RIGHT: u8 = 0x08;
 const CH3_RIGHT: u8 = 0x04;
 const CH2_RIGHT: u8 = 0x02;
 const CH1_RIGHT: u8 = 0x01;
-// const CH4_ON_FLAG: u8 = 0x08;
-// const CH3_ON_FLAG: u8 = 0x04;
-// const CH2_ON_FLAG: u8 = 0x02;
-// const CH1_ON_FLAG: u8 = 0x01;
+
+const CH4_ON_FLAG: u8 = 0x08;
+const CH3_ON_FLAG: u8 = 0x04;
+const CH2_ON_FLAG: u8 = 0x02;
+const CH1_ON_FLAG: u8 = 0x01;
 
 // const CHANNEL_DIVISORS: [u32; 8] = [8, 16, 32, 48, 64, 80, 96, 112];
 
@@ -143,6 +144,7 @@ impl Apu {
 
     fn get_master_volume_right(&self) -> i32 { (self.master_volume & 0x07) as i32 + 1 }
 
+    bit_accessors!(target: master_control; AUDIO_ON_OFF, CH1_ON_FLAG, CH2_ON_FLAG, CH3_ON_FLAG, CH4_ON_FLAG);
     bit_accessors!(target: sound_panning; CH1_LEFT, CH2_LEFT, CH3_LEFT, CH4_LEFT, CH1_RIGHT, CH2_RIGHT, CH3_RIGHT, CH4_RIGHT);
 
     pub fn step<P: AudioPlayer>(&mut self, player: &mut P, delta: usize) {
@@ -463,7 +465,7 @@ impl Accessible<u16> for Apu {
             NR50 => self.master_volume = value,
             NR51 => self.sound_panning = value,
             NR52 => {
-                let was_active = self.master_control & AUDIO_ON_OFF != 0;
+                let was_active = self.audio_on_off();
                 let now_active = value & AUDIO_ON_OFF != 0;
 
                 if !was_active && now_active {
