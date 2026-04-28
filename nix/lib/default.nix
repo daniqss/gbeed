@@ -1,4 +1,4 @@
-{
+{...}: {
   # platform-specific packages and cargo features for raylib display backends
   x11Packages = pkgs:
     with pkgs; [
