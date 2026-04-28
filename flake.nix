@@ -23,7 +23,7 @@
     fenix,
     nixos-raspberrypi,
     ...
-  }@inputs: let
+  } @ inputs: let
     eachSystem = f:
       nixpkgs.lib.genAttrs ["x86_64-linux" "aarch64-linux"]
       (system:
@@ -166,8 +166,9 @@
       default = self.devShells.${system}.x11;
     });
 
-    # NixOS configuration for RPi Zero 2 running gbeed
-    nixosConfigurations.gbeed02 = nixos-raspberrypi.lib.nixosSystemFull {
+    # nixos configuration for RPi Zero 2 running gbeed
+    # we should try nixosSystemFull to but for now this is good enough
+    nixosConfigurations.gbeed02 = nixos-raspberrypi.lib.nixosSystem {
       specialArgs = inputs;
       modules = [
         nixos-raspberrypi.nixosModules.sd-image
