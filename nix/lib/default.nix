@@ -3,11 +3,11 @@
   x11Packages = pkgs:
     with pkgs; [
       libGL
-      xorg.libX11
-      xorg.libXrandr
-      xorg.libXinerama
-      xorg.libXcursor
-      xorg.libXi
+      libx11
+      libxrandr
+      libxinerama
+      libxcursor
+      libxi
       alsa-lib
     ];
   x11Features = [];

@@ -10,6 +10,7 @@
 in {
   imports = with nixos-raspberrypi.nixosModules; [
     raspberry-pi-02.base
+    raspberry-pi-02.display-vc4
   ];
 
   image.baseName = lib.mkForce "gbeed02";
