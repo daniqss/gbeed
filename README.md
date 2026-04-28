@@ -2,8 +2,13 @@
 DMG Game Boy emulator for embedded devices. This project aims to provide a simple DMG Game Boy emulator that can run both over a graphical session and in a DRM/KMS environment, in a normal x86-64/arm Linux pc or in a Raspberry Pi Zero running Linux.
 
 This project consists of the emulator core and two emulator frontends made with [raylib](https://www.raylib.com/), that deals with graphics, input and audio.
-The [`console`](./frontends/console/) frontend is meant to be used in a Raspberry Pi Zero with a small display (using the raylib DRM backend). It 
+The [`console`](./frontends/console/) frontend is meant to be used in a Raspberry Pi Zero with a small display (using the raylib DRM backend).
 The [`debugger`](./frontends/debugger/) frontend is meant to be used in a normal Linux graphical session, both X11 and Wayland, or in [the browser](https://daniqss.github.io/gbeed/) thanks to the WASM build.
+
+### Recommended hardware
+The recommended device is the **Raspberry Pi Zero 2 W**, as its `aarch64` architecture has full NixOS support, allowing us to provide a ready-to-use SD card image (see [below](#raspberry-pi-zero-2-sd-image)).
+
+The original **Raspberry Pi Zero** (`armv6l`) is also supported, but only via a manually cross-compiled binary. NixOS does not support `armv6l` as a hosted system, so there is no managed image for it — device setup must be done manually (see [armv6l build](#how-to-build-for-armv6l-alpine-linux)).
 
 
 ![gbeed](./assets/game_collage.png)
@@ -51,6 +56,23 @@ just run -p gbeed-debugger -- -g <game_rom> -b <boot_rom>
 
 ### DRM/KMS support
 DRM support is tested in Intel, AMD and Broadcom iGPUs. In Nvidia (specifically GTX 1660 with drivers version 580) both `opengl_es_20` and `opengl_es_30` raylib features segfault at init (`dic 20 13:12:41 stoneward kernel: gbeed[6765]: segfault at 0 ip 00007fa29f9b4d31 sp 00007fff9c2052d0 error 4 in libnvidia-egl-gbm.so.1.1.2[1d31,7fa29f9b4000+3000] likely on CPU 0 (core 0, socket 0)`).
+
+### How to build a Raspberry Pi Zero 2 SD image
+The easiest way to run gbeed in a console format is on a Raspberry Pi Zero 2 W. This project offers a ready-to-use NixOS SD image built from this repository. The image boots directly into gbeed — no installer, no manual setup.
+
+Build the image (requires `aarch64-linux` or cross-compilation support configured in your Nix setup):
+```sh
+nix build github:daniqss/gbeed#installerImages.gbeed02
+```
+
+Flash it to your SD card:
+```sh
+sudo dd if=./result/sd-image/*.img of=/dev/<SD_CARD_DEVICE> bs=4M status=progress conv=fsync && sync
+```
+
+On first boot, the system starts directly into `gbeed`. ROMs should be placed at `/home/gbeed/roms/` (`.gb` and `.gbc` files). The system is also accessible over SSH on the local network once WiFi is configured via `iwctl`.
+
+> **Note:** WiFi credentials must be configured before or after flashing. Connect a keyboard and run `iwctl` to join a network, or provide a pre-configured `iwd` profile in `/var/lib/iwd/` after mounting the SD card.
 
 ### How to build for armv6l Alpine Linux
 The easiest way to build the project for armv6l is through cross-compilation on x86_64/aarch64. This is done via a podman or docker container and qemu using  the provided `Dockerfile.cross`. This provides a fully isolated build environment.
