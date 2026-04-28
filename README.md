@@ -6,9 +6,8 @@ The [`console`](./frontends/console/) frontend is meant to be used in a Raspberr
 The [`debugger`](./frontends/debugger/) frontend is meant to be used in a normal Linux graphical session, both X11 and Wayland, or in [the browser](https://daniqss.github.io/gbeed/) thanks to the WASM build.
 
 ### Recommended hardware
-The recommended device is the **Raspberry Pi Zero 2 W**, as its `aarch64` architecture has full NixOS support, allowing us to provide a ready-to-use SD card image (see [below](#raspberry-pi-zero-2-sd-image)).
-
-The original **Raspberry Pi Zero** (`armv6l`) is also supported, but only via a manually cross-compiled binary. NixOS does not support `armv6l` as a hosted system, so there is no managed image for it — device setup must be done manually (see [armv6l build](#how-to-build-for-armv6l-alpine-linux)).
+The recommended hardware to use the `console` frontend is the **Raspberry Pi Zero 2 W**, as its `aarch64` architecture has full NixOS support, allowing us to easily provide a ready-to-use SD card image (see [#raspberry-pi-zero-2-sd-image](#how-to-build-a-raspberry-pi-zero-2-sd-image)).
+The original **Raspberry Pi Zero** (`armv6l`) is also supported, but only via a manually cross-compiled binary. NixOS does not support `armv6l` as a hosted system, so there is no managed image for it. Device setup must be done manually (see [armv6l build](#how-to-build-for-armv6l-alpine-linux)).
 
 
 ![gbeed](./assets/game_collage.png)
@@ -59,16 +58,20 @@ DRM support is tested in Intel, AMD and Broadcom iGPUs. In Nvidia (specifically 
 
 
 ### How to build a Raspberry Pi Zero 2 SD image
-The easiest way to run gbeed in a console format is on a Raspberry Pi Zero 2 W. This project offers a ready-to-use NixOS SD image built from this repository. The image boots directly into gbeed — no installer, no manual setup.
+The easiest way to run gbeed in a console format is on a Raspberry Pi Zero 2 W. This project offers a ready-to-use NixOS SD image that boots directly into gbeed — no installer, no manual setup.
 
-Build the image (requires `aarch64-linux` right now or cross-compilation, not supported yet):
+#### Download a pre-built image
+Pre-built images are available on the [Releases](https://github.com/daniqss/gbeed/releases) page. Download `gbeed02.img.zst` from the latest release.
+
+#### Build from source
+You can also build the image yourself (requires an `aarch64-linux` host):
 ```sh
 nix build github:daniqss/gbeed#installerImages.gbeed02
 ```
 
-Flash it to your SD card:
+#### Flash it to your SD card
 ```sh
-sudo dd if=./result/sd-image/*.img of=/dev/<SD_CARD_DEVICE> bs=4M status=progress conv=fsync && sync
+zstd -d gbeed02.img.zst -c | sudo dd of=/dev/<SD_CARD_DEVICE> bs=4M status=progress conv=fsync && sync
 ```
 
 On first boot, the system starts directly into `gbeed`. ROMs should be placed at `/home/gbeed/roms/` (`.gb` and `.gbc` files). The system is also accessible over SSH on the local network once WiFi is configured via `iwctl`.

@@ -12,6 +12,8 @@ in {
     raspberry-pi-02.base
   ];
 
+  image.baseName = lib.mkForce "gbeed02";
+
   system.stateVersion = config.system.nixos.release;
   time.timeZone = "UTC";
   networking.hostName = "gbeed02";

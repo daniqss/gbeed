@@ -6,6 +6,7 @@ dist/
 
 # nix symlink
 result
+*img.zst
 
 roms/
 saves/
