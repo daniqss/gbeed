@@ -1,6 +1,13 @@
-{outputs, ...}: {
-  gbeed02 = outputs.lib.mkGbeedSystem {
-    host = ./gbeed02.nix;
-    modules = [];
+{
+  inputs,
+  outputs,
+  ...
+}: {
+  gbeed02 = inputs.nixos-raspberrypi.lib.nixosSystem {
+    specialArgs = inputs // {inherit outputs;};
+    modules = [
+      inputs.nixos-raspberrypi.nixosModules.sd-image
+      ./gbeed02.nix
+    ];
   };
 }
