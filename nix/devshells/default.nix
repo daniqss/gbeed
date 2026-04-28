@@ -4,6 +4,8 @@
   system,
   pkgs,
 }: let
+  inherit (outputs) lib;
+
   rustToolchain = with inputs.fenix.packages.${system};
     combine [
       latest.cargo
@@ -22,9 +24,25 @@
     perf
   ];
 in {
-  x11 = pkgs.callPackage ./x11.nix {inherit commonPackages;};
-  wayland = pkgs.callPackage ./wayland.nix {inherit commonPackages;};
-  drm = pkgs.callPackage ./drm.nix {inherit commonPackages outputs system;};
+  x11 = pkgs.callPackage ./x11.nix {
+    inherit commonPackages;
+    platformPackages = lib.x11Packages pkgs;
+    platformFeatures = lib.x11Features;
+  };
+  wayland = pkgs.callPackage ./wayland.nix {
+    inherit commonPackages;
+    platformPackages = lib.waylandPackages pkgs;
+    platformFeatures = lib.waylandFeatures;
+  };
+  drm = pkgs.callPackage ./drm.nix {
+    inherit commonPackages outputs system;
+    platformFeatures = lib.drmFeatures;
+    platformPackages = lib.drmPackages pkgs;
+  };
   wasm = pkgs.callPackage ./wasm.nix {inherit rustToolchain;};
-  default = pkgs.callPackage ./x11.nix {inherit commonPackages;};
+  default = pkgs.callPackage ./x11.nix {
+    inherit commonPackages;
+    platformPackages = lib.x11Packages pkgs;
+    platformFeatures = lib.x11Features;
+  };
 }

@@ -5,15 +5,11 @@
   clang,
   pkg-config,
   libdrm,
-  mesa,
-  libGL,
-  libglvnd,
-  alsa-lib,
+  drmPackages,
+  drmFeatures,
+  ...
 }: let
-  name = "gbeed-console";
-  version = "0.1.0";
-  description = "DMG Game Boy Emulator for embedded devices - Console Frontend";
-  repository = "https://github.com/daniqss/gbeed";
+  inherit ((lib.importTOML ../../frontends/console/Cargo.toml).package) name version description repository;
 in
   rustPlatform.buildRustPackage {
     pname = name;
@@ -25,37 +21,17 @@ in
       allowBuiltinFetchGit = true;
     };
 
-    nativeBuildInputs = [
-      cmake
-      clang
-      pkg-config
-      rustPlatform.bindgenHook
-    ];
+    nativeBuildInputs = [cmake clang pkg-config rustPlatform.bindgenHook];
+    buildInputs = drmPackages;
+    buildFeatures = drmFeatures;
+    cargoBuildFlags = ["-p" name];
 
-    buildInputs = [
-      libdrm
-      mesa
-      libGL
-      libglvnd
-      alsa-lib
-    ];
-
-    buildFeatures = [
-      "raylib/drm"
-      "raylib/opengl_es_20"
-    ];
-
-    # Only build the console frontend
-    cargoBuildFlags = ["-p" "gbeed-console"];
-
-    env = {
-      NIX_CFLAGS_COMPILE = "-I${libdrm.dev}/include/libdrm";
-    };
+    env.NIX_CFLAGS_COMPILE = "-I${libdrm.dev}/include/libdrm";
 
     meta = with lib; {
-      mainProgram = "gbeed-console";
       inherit description;
       homepage = repository;
+      mainProgram = "gbeed";
       license = licenses.gpl2;
       platforms = platforms.linux;
     };

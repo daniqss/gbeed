@@ -1,11 +1,12 @@
 {
+  outputs,
+  nixos-raspberrypi,
   config,
   pkgs,
   lib,
-  nixos-raspberrypi,
   ...
 }: let
-  gbeed = pkgs.callPackage ../packages/console.nix {};
+  gbeed = outputs.packages."aarch64-linux".console;
 in {
   imports = with nixos-raspberrypi.nixosModules; [
     raspberry-pi-02.base
@@ -54,7 +55,7 @@ in {
 
   # gbeed systemd service, launches on boot
   systemd.services.gbeed = {
-    description = "gbeed - Game Boy Emulator";
+    description = "Game Boy Emulator for Embedded Devices";
     after = ["multi-user.target"];
     wantedBy = ["multi-user.target"];
 
@@ -69,7 +70,7 @@ in {
       WorkingDirectory = "/home/gbeed";
 
       ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /home/gbeed/roms /home/gbeed/saves";
-      ExecStart = "${gbeed}/bin/gbeed";
+      ExecStart = "${lib.getExe gbeed}";
 
       Restart = "on-failure";
       RestartSec = "3";

@@ -4,16 +4,15 @@
   cmake,
   clang,
   pkg-config,
-  libdrm,
-  mesa,
-  libGL,
-  libglvnd,
-  alsa-lib,
+  x11Packages,
+  waylandPackages,
+  x11Features,
+  waylandFeatures,
+  # toggle wayland: (packages.debugger.override {withWayland = true;})
+  withWayland ? false,
+  ...
 }: let
-  name = "gbeed-debugger";
-  version = "0.1.0";
-  description = "DMG Game Boy Emulator for embedded devices - Debugger Frontend";
-  repository = "https://github.com/daniqss/gbeed";
+  inherit ((lib.importTOML ../../frontends/debugger/Cargo.toml).package) name version description repository;
 in
   rustPlatform.buildRustPackage {
     pname = name;
@@ -25,28 +24,21 @@ in
       allowBuiltinFetchGit = true;
     };
 
-    nativeBuildInputs = [
-      cmake
-      clang
-      pkg-config
-      rustPlatform.bindgenHook
-    ];
-
-    buildInputs = [
-      libdrm
-      mesa
-      libGL
-      libglvnd
-      alsa-lib
-    ];
-
-    # TODO: we need to specify x11 and wayland features
-    cargoBuildFlags = ["-p" "gbeed-debugger"];
+    nativeBuildInputs = [cmake clang pkg-config rustPlatform.bindgenHook];
+    buildInputs =
+      if withWayland
+      then waylandPackages
+      else x11Packages;
+    buildFeatures =
+      if withWayland
+      then waylandFeatures
+      else x11Features;
+    cargoBuildFlags = ["-p" name];
 
     meta = with lib; {
-      mainProgram = "gbeed-debugger";
       inherit description;
       homepage = repository;
+      mainProgram = name;
       license = licenses.gpl2;
       platforms = platforms.linux;
     };
