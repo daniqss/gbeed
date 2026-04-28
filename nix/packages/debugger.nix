@@ -35,6 +35,19 @@ in
       else x11Features;
     cargoBuildFlags = ["-p" name];
 
+    # raylib's vendored jar_mod.h triggers -Wstringop-overflow warnings
+    env.NIX_CFLAGS_COMPILE = "-Wno-error";
+
+    postFixup = let
+      rpath = lib.makeLibraryPath (
+        if withWayland
+        then waylandPackages
+        else x11Packages
+      );
+    in ''
+      patchelf --add-rpath ${rpath} $out/bin/${name}
+    '';
+
     meta = with lib; {
       inherit description;
       homepage = repository;

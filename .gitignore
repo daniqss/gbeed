@@ -3,6 +3,10 @@
 target/
 gbeed
 dist/
+
+# nix symlink
+result
+
 roms/
 saves/
 

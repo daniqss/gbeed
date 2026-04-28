@@ -26,7 +26,12 @@ in
     buildFeatures = drmFeatures;
     cargoBuildFlags = ["-p" name];
 
-    env.NIX_CFLAGS_COMPILE = "-I${libdrm.dev}/include/libdrm";
+    # -Wno-error: raylib's vendored jar_mod.h triggers -Wstringop-overflow warnings
+    env.NIX_CFLAGS_COMPILE = "-I${libdrm.dev}/include/libdrm -Wno-error";
+
+    postFixup = ''
+      patchelf --add-rpath ${lib.makeLibraryPath drmPackages} $out/bin/gbeed
+    '';
 
     meta = with lib; {
       inherit description;

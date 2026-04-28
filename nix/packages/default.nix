@@ -17,5 +17,6 @@ in let
   debugger = pkgs.callPackage ./debugger.nix platformArgs;
 in {
   inherit console debugger;
+  debugger-wayland = debugger.override {withWayland = true;};
   default = console;
 }
