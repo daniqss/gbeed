@@ -43,6 +43,7 @@
   drmPackages = pkgs:
     with pkgs; [
       libdrm
+      libgbm
       mesa
       libGL
       libglvnd
