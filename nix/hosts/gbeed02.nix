@@ -12,7 +12,6 @@ in {
     raspberry-pi-02.base
   ];
 
-  nixpkgs.hostPlatform = lib.mkForce "aarch64-linux";
   system.stateVersion = config.system.nixos.release;
   time.timeZone = "UTC";
   networking.hostName = "gbeed02";

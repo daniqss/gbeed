@@ -8,9 +8,9 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
-    fenix.url = "github:nix-community/fenix";
-    nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    fenix.url = "github:nix-community/fenix/monthly";
+    nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi";
   };
 
   outputs = inputs @ {

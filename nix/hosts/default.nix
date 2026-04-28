@@ -3,7 +3,7 @@
   outputs,
   ...
 }: {
-  gbeed02 = inputs.nixos-raspberrypi.lib.nixosSystem {
+  gbeed02 = inputs.nixos-raspberrypi.lib.nixosSystemFull {
     specialArgs = inputs // {inherit outputs;};
     modules = [
       inputs.nixos-raspberrypi.nixosModules.sd-image
