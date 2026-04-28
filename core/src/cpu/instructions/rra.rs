@@ -30,7 +30,7 @@ pub struct Rra {
 }
 
 impl Rra {
-    pub fn new(carry: bool) -> InstructionBox<Self> { InstructionBox::new(Self { carry }) }
+    pub fn new(carry: bool) -> Self { Self { carry } }
 }
 
 impl Instruction for Rra {

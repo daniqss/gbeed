@@ -90,8 +90,16 @@ pub trait Instruction {
     fn disassembly(&self) -> String;
 }
 
+impl<T: Instruction + Copy + 'static> From<T> for InstructionBox {
+    fn from(val: T) -> Self {
+        InstructionBox::new(val)
+    }
+}
+
 impl Display for dyn Instruction {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { write!(f, "{}", self.disassembly()) }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.disassembly())
+    }
 }
 
 /// solves the issue of overriding jumps with instruction length addition to pc

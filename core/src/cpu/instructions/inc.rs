@@ -22,7 +22,7 @@ pub struct IncR8 {
     dst: R8,
 }
 impl IncR8 {
-    pub fn new(dst: R8) -> InstructionBox<Self> { InstructionBox::new(Self { dst }) }
+    pub fn new(dst: R8) -> Self { Self { dst } }
 }
 
 impl Instruction for IncR8 {
@@ -40,7 +40,7 @@ impl Instruction for IncR8 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct IncPointedByHL;
 impl IncPointedByHL {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 
 impl Instruction for IncPointedByHL {
@@ -60,7 +60,7 @@ pub struct IncR16 {
     dst: R16,
 }
 impl IncR16 {
-    pub fn new(dst: R16) -> InstructionBox<Self> { InstructionBox::new(Self { dst }) }
+    pub fn new(dst: R16) -> Self { Self { dst } }
 }
 
 impl Instruction for IncR16 {
@@ -78,7 +78,7 @@ impl Instruction for IncR16 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct IncStackPointer;
 impl IncStackPointer {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 
 impl Instruction for IncStackPointer {
