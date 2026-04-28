@@ -19,9 +19,6 @@ function loadRomFile(file) {
 
     // load the ROM in the emulator
     Module.ccall("load_rom_from_js", null, ["string"], [filePath]);
-
-    // hide button after loading first ROM
-    document.getElementById("open-rom-btn").style.display = "none";
   };
   reader.readAsArrayBuffer(file);
 }

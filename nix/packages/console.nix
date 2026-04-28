@@ -9,20 +9,19 @@
   libGL,
   libglvnd,
   alsa-lib,
-  libgbm ? mesa,
 }: let
-  name = "gbeed";
+  name = "gbeed-console";
   version = "0.1.0";
-  description = "DMG Game Boy Emulator for embedded devices";
+  description = "DMG Game Boy Emulator for embedded devices - Console Frontend";
   repository = "https://github.com/daniqss/gbeed";
 in
-  rustPlatform.buildRustPackage rec {
+  rustPlatform.buildRustPackage {
     pname = name;
     inherit version;
 
-    src = lib.cleanSource ./..;
+    src = lib.cleanSource ../..;
     cargoLock = {
-      lockFile = ../Cargo.lock;
+      lockFile = ../../Cargo.lock;
       allowBuiltinFetchGit = true;
     };
 
@@ -54,7 +53,7 @@ in
     };
 
     meta = with lib; {
-      mainProgram = name;
+      mainProgram = "gbeed-console";
       inherit description;
       homepage = repository;
       license = licenses.gpl2;

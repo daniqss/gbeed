@@ -5,7 +5,7 @@
   nixos-raspberrypi,
   ...
 }: let
-  gbeed = pkgs.callPackage ./gbeed-package.nix {};
+  gbeed = pkgs.callPackage ../packages/console.nix {};
 in {
   imports = with nixos-raspberrypi.nixosModules; [
     raspberry-pi-02.base
@@ -43,6 +43,7 @@ in {
       Settings.AutoConnect = true;
     };
   };
+
   networking.firewall.allowedUDPPorts = [5353];
 
   environment.systemPackages = [
