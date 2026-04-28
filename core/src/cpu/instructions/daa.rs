@@ -11,7 +11,7 @@ use crate::{
 pub struct Daa;
 
 impl Daa {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 
 impl Instruction for Daa {

@@ -14,7 +14,7 @@ pub struct ResR8 {
     dst: R8,
 }
 impl ResR8 {
-    pub fn new(bit: u8, dst: R8) -> InstructionBox<Self> { InstructionBox::new(Self { bit, dst }) }
+    pub fn new(bit: u8, dst: R8) -> Self { Self { bit, dst } }
 }
 impl Instruction for ResR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -33,7 +33,7 @@ pub struct ResPointedByHL {
     bit: u8,
 }
 impl ResPointedByHL {
-    pub fn new(bit: u8) -> InstructionBox<Self> { InstructionBox::new(Self { bit }) }
+    pub fn new(bit: u8) -> Self { Self { bit } }
 }
 impl Instruction for ResPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

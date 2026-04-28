@@ -35,7 +35,7 @@ pub struct AddAR8 {
     src: R8,
 }
 impl AddAR8 {
-    pub fn new(src: R8) -> InstructionBox<Self> { InstructionBox::new(Self { src }) }
+    pub fn new(src: R8) -> Self { Self { src } }
 }
 impl Instruction for AddAR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -50,7 +50,7 @@ impl Instruction for AddAR8 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct AddAPointedByHL;
 impl AddAPointedByHL {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 impl Instruction for AddAPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -67,7 +67,7 @@ pub struct AddImm8 {
     val: u8,
 }
 impl AddImm8 {
-    pub fn new(val: u8) -> InstructionBox<Self> { InstructionBox::new(Self { val }) }
+    pub fn new(val: u8) -> Self { Self { val } }
 }
 impl Instruction for AddImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -84,7 +84,7 @@ pub struct AddR16 {
     src: R16,
 }
 impl AddR16 {
-    pub fn new(src: R16) -> InstructionBox<Self> { InstructionBox::new(Self { src }) }
+    pub fn new(src: R16) -> Self { Self { src } }
 }
 impl Instruction for AddR16 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -107,7 +107,7 @@ impl Instruction for AddR16 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct AddHLSP;
 impl AddHLSP {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 impl Instruction for AddHLSP {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -132,7 +132,7 @@ pub struct AddSPImm8 {
     val: i8,
 }
 impl AddSPImm8 {
-    pub fn new(val: i8) -> InstructionBox<Self> { InstructionBox::new(Self { val }) }
+    pub fn new(val: i8) -> Self { Self { val } }
 }
 impl Instruction for AddSPImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

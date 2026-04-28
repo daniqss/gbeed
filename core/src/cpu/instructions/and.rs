@@ -22,7 +22,7 @@ pub struct AndR8 {
     src: R8,
 }
 impl AndR8 {
-    pub fn new(src: R8) -> InstructionBox<Self> { InstructionBox::new(Self { src }) }
+    pub fn new(src: R8) -> Self { Self { src } }
 }
 impl Instruction for AndR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -37,7 +37,7 @@ impl Instruction for AndR8 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct AndPointedByHL;
 impl AndPointedByHL {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 impl Instruction for AndPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -54,7 +54,7 @@ pub struct AndImm8 {
     val: u8,
 }
 impl AndImm8 {
-    pub fn new(val: u8) -> InstructionBox<Self> { InstructionBox::new(Self { val }) }
+    pub fn new(val: u8) -> Self { Self { val } }
 }
 impl Instruction for AndImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

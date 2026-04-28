@@ -22,7 +22,7 @@ pub struct OrR8 {
     src: R8,
 }
 impl OrR8 {
-    pub fn new(src: R8) -> InstructionBox<Self> { InstructionBox::new(Self { src }) }
+    pub fn new(src: R8) -> Self { Self { src } }
 }
 impl Instruction for OrR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -37,7 +37,7 @@ impl Instruction for OrR8 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct OrPointedByHL;
 impl OrPointedByHL {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 impl Instruction for OrPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -54,7 +54,7 @@ pub struct OrImm8 {
     val: u8,
 }
 impl OrImm8 {
-    pub fn new(val: u8) -> InstructionBox<Self> { InstructionBox::new(Self { val }) }
+    pub fn new(val: u8) -> Self { Self { val } }
 }
 impl Instruction for OrImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

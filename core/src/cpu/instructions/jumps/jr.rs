@@ -17,9 +17,7 @@ pub struct Jr {
 }
 
 impl Jr {
-    pub fn new(jc: JumpCondition, offset: u8) -> InstructionBox<Self> {
-        InstructionBox::new(Self { jc, offset })
-    }
+    pub fn new(jc: JumpCondition, offset: u8) -> Self { Self { jc, offset } }
 }
 
 impl Instruction for Jr {

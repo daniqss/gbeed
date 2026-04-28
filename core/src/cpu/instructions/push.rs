@@ -26,7 +26,7 @@ pub struct Push {
 }
 
 impl Push {
-    pub fn new(src: R16) -> InstructionBox<Self> { InstructionBox::new(Self { src }) }
+    pub fn new(src: R16) -> Self { Self { src } }
 }
 
 impl Instruction for Push {

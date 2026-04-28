@@ -10,7 +10,7 @@ use crate::{
 pub struct Halt;
 
 impl Halt {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 
 impl Instruction for Halt {

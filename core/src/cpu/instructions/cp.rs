@@ -25,7 +25,7 @@ pub struct CpR8 {
     src: R8,
 }
 impl CpR8 {
-    pub fn new(src: R8) -> InstructionBox<Self> { InstructionBox::new(Self { src }) }
+    pub fn new(src: R8) -> Self { Self { src } }
 }
 impl Instruction for CpR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -44,7 +44,7 @@ impl Instruction for CpR8 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct CpPointedByHL;
 impl CpPointedByHL {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 impl Instruction for CpPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -65,7 +65,7 @@ pub struct CpImm8 {
     val: u8,
 }
 impl CpImm8 {
-    pub fn new(val: u8) -> InstructionBox<Self> { InstructionBox::new(Self { val }) }
+    pub fn new(val: u8) -> Self { Self { val } }
 }
 impl Instruction for CpImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
