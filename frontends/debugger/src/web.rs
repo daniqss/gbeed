@@ -50,6 +50,15 @@ pub unsafe extern "C" fn load_rom_from_js(path_ptr: *const std::ffi::c_char) {
     }
 }
 
+pub fn hide_open_rom_button() {
+    let script = "document.getElementById('open-rom-btn').style.display = 'none';";
+    if let Ok(script) = std::ffi::CString::new(script) {
+        unsafe {
+            emscripten_run_script(script.as_ptr());
+        }
+    }
+}
+
 pub mod local_storage {
     use super::*;
 
