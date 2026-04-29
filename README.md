@@ -90,13 +90,7 @@ This will:
 2. Build the project inside an `arm32v6/alpine` container.
 3. Extract the resulting binary as `./gbeed-armv6l`.
 
-### How to run tests
-To run the tests, you can use just:
-```sh
-just test
-```
 
-The boot rom test needs a valid dmg boot rom file to run in the project root, named `dmg_boot.bin` 
 ## Tests
 The emulator is tested using [Blargg's rom test](https://github.com/retrio/gb-test-roms) and [Mooneye test suite](https://github.com/Gekkio/mooneye-test-suite) and passes basic CPU instructions and MBC tests, but fails most of the timing tests. See passed tests in `core/tests`.
 
