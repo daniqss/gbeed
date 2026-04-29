@@ -14,7 +14,7 @@ use crate::{
 pub struct Stop;
 
 impl Stop {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 
 impl Instruction for Stop {

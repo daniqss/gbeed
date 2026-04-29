@@ -14,7 +14,7 @@ pub struct SetR8 {
     dst: R8,
 }
 impl SetR8 {
-    pub fn new(bit: u8, dst: R8) -> InstructionBox<Self> { InstructionBox::new(Self { bit, dst }) }
+    pub fn new(bit: u8, dst: R8) -> Self { Self { bit, dst } }
 }
 impl Instruction for SetR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -33,7 +33,7 @@ pub struct SetPointedByHL {
     bit: u8,
 }
 impl SetPointedByHL {
-    pub fn new(bit: u8) -> InstructionBox<Self> { InstructionBox::new(Self { bit }) }
+    pub fn new(bit: u8) -> Self { Self { bit } }
 }
 impl Instruction for SetPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

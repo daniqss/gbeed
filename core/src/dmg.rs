@@ -3,7 +3,7 @@ pub use crate::prelude::*;
 use crate::{
     Cartridge, Controller, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
     apu::{APU_REGISTER_END, APU_REGISTER_START},
-    cpu::{Instruction, R8, R16},
+    cpu::{R8, R16},
     interrupts::{IE, IF},
     joypad::JOYP,
     memory::*,
@@ -77,7 +77,7 @@ impl Dmg {
         Ok(())
     }
 
-    pub fn step<C: Controller>(&mut self, controller: &mut C) -> Option<InstructionBox<dyn Instruction>> {
+    pub fn step<C: Controller>(&mut self, controller: &mut C) -> Option<InstructionBox> {
         let prev_cycles = self.cpu.cycles;
 
         let instruction = Cpu::step(self);

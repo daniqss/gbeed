@@ -15,7 +15,7 @@ pub struct Call {
 }
 
 impl Call {
-    pub fn new(jc: JumpCondition, n16: u16) -> InstructionBox<Self> { InstructionBox::new(Self { jc, n16 }) }
+    pub fn new(jc: JumpCondition, n16: u16) -> Self { Self { jc, n16 } }
 }
 
 impl Instruction for Call {

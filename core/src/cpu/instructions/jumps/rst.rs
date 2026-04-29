@@ -14,7 +14,7 @@ pub struct Rst {
 }
 
 impl Rst {
-    pub fn new(vec: u8) -> InstructionBox<Self> { InstructionBox::new(Self { vec }) }
+    pub fn new(vec: u8) -> Self { Self { vec } }
 }
 
 impl Instruction for Rst {

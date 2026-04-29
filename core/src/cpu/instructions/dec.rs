@@ -23,7 +23,7 @@ pub struct DecR8 {
     dst: R8,
 }
 impl DecR8 {
-    pub fn new(dst: R8) -> InstructionBox<Self> { InstructionBox::new(Self { dst }) }
+    pub fn new(dst: R8) -> Self { Self { dst } }
 }
 
 impl Instruction for DecR8 {
@@ -41,7 +41,7 @@ impl Instruction for DecR8 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct DecPointedByHL;
 impl DecPointedByHL {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 
 impl Instruction for DecPointedByHL {
@@ -61,7 +61,7 @@ pub struct DecR16 {
     dst: R16,
 }
 impl DecR16 {
-    pub fn new(dst: R16) -> InstructionBox<Self> { InstructionBox::new(Self { dst }) }
+    pub fn new(dst: R16) -> Self { Self { dst } }
 }
 
 impl Instruction for DecR16 {
@@ -80,7 +80,7 @@ impl Instruction for DecR16 {
 pub struct DecStackPointer;
 
 impl DecStackPointer {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 
 impl Instruction for DecStackPointer {

@@ -4,6 +4,13 @@ target/
 gbeed
 dist/
 
+# nix symlink
+result
+*img.zst
+
+roms/
+saves/
+
 perf*
 flamegraph*
 *.svg

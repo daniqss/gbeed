@@ -31,7 +31,7 @@ pub struct RlcR8 {
 }
 
 impl RlcR8 {
-    pub fn new(dst: R8) -> InstructionBox<Self> { InstructionBox::new(Self { dst }) }
+    pub fn new(dst: R8) -> Self { Self { dst } }
 }
 
 impl Instruction for RlcR8 {
@@ -52,7 +52,7 @@ impl Instruction for RlcR8 {
 pub struct RlcPointedByHL;
 
 impl RlcPointedByHL {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 
 impl Instruction for RlcPointedByHL {

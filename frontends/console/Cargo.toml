@@ -1,5 +1,6 @@
 [package]
 name = "gbeed-console"
+description = "A console-like frontend for gbeed, meant for embedded devices"
 version = "0.1.0"
 edition = "2024"
 default-run = "gbeed"

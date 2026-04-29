@@ -1,5 +1,6 @@
 [package]
 name = "gbeed-debugger"
+description = "A debugger frontend for gbeed, meant for desktop platforms"
 version = "0.1.0"
 edition = "2024"
 

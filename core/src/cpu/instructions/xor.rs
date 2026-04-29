@@ -22,7 +22,7 @@ pub struct XorR8 {
     src: R8,
 }
 impl XorR8 {
-    pub fn new(src: R8) -> InstructionBox<Self> { InstructionBox::new(Self { src }) }
+    pub fn new(src: R8) -> Self { Self { src } }
 }
 impl Instruction for XorR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -37,7 +37,7 @@ impl Instruction for XorR8 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct XorPointedByHL;
 impl XorPointedByHL {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 impl Instruction for XorPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -54,7 +54,7 @@ pub struct XorImm8 {
     val: u8,
 }
 impl XorImm8 {
-    pub fn new(val: u8) -> InstructionBox<Self> { InstructionBox::new(Self { val }) }
+    pub fn new(val: u8) -> Self { Self { val } }
 }
 impl Instruction for XorImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

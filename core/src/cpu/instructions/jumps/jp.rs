@@ -13,9 +13,7 @@ pub struct JpToImm16 {
 }
 
 impl JpToImm16 {
-    pub fn new(jc: JumpCondition, addr: u16) -> InstructionBox<Self> {
-        InstructionBox::new(Self { jc, addr })
-    }
+    pub fn new(jc: JumpCondition, addr: u16) -> Self { Self { jc, addr } }
 }
 
 impl Instruction for JpToImm16 {
@@ -38,7 +36,7 @@ pub struct JpToHL {
 }
 
 impl JpToHL {
-    pub fn new(addr: u16) -> InstructionBox<Self> { InstructionBox::new(Self { addr }) }
+    pub fn new(addr: u16) -> Self { Self { addr } }
 }
 
 impl Instruction for JpToHL {

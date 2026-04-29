@@ -181,6 +181,9 @@ impl<'a> EmulatorApp<'a> {
         self.gb = Some(Dmg::new(game, self.boot_rom.clone()));
         self.save_path = Some(save_path);
 
+        #[cfg(target_arch = "wasm32")]
+        web::hide_open_rom_button();
+
         Ok(EmulatorState::Emulation(EmulationScene::new(
             self.layout,
             title,

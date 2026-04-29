@@ -33,7 +33,7 @@ pub struct SbcR8 {
     src: R8,
 }
 impl SbcR8 {
-    pub fn new(src: R8) -> InstructionBox<Self> { InstructionBox::new(Self { src }) }
+    pub fn new(src: R8) -> Self { Self { src } }
 }
 impl Instruction for SbcR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -50,7 +50,7 @@ impl Instruction for SbcR8 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SbcPointedByHL;
 impl SbcPointedByHL {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 impl Instruction for SbcPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -69,7 +69,7 @@ pub struct SbcImm8 {
     n8: u8,
 }
 impl SbcImm8 {
-    pub fn new(n8: u8) -> InstructionBox<Self> { InstructionBox::new(Self { n8 }) }
+    pub fn new(n8: u8) -> Self { Self { n8 } }
 }
 impl Instruction for SbcImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {

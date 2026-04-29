@@ -12,7 +12,7 @@ pub struct Ccf {
 }
 
 impl Ccf {
-    pub fn new(carry: bool) -> InstructionBox<Self> { InstructionBox::new(Self { carry }) }
+    pub fn new(carry: bool) -> Self { Self { carry } }
 }
 
 impl Instruction for Ccf {

@@ -16,7 +16,7 @@ pub struct SrlR8 {
     dst: R8,
 }
 impl SrlR8 {
-    pub fn new(dst: R8) -> InstructionBox<Self> { InstructionBox::new(Self { dst }) }
+    pub fn new(dst: R8) -> Self { Self { dst } }
 }
 impl Instruction for SrlR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
@@ -39,7 +39,7 @@ impl Instruction for SrlR8 {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SrlPointedByHL;
 impl SrlPointedByHL {
-    pub fn new() -> InstructionBox<Self> { InstructionBox::new(Self) }
+    pub fn new() -> Self { Self }
 }
 impl Instruction for SrlPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
