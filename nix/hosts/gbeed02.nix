@@ -60,40 +60,39 @@ in {
     pkgs.htop
   ];
 
-  # gbeed systemd service, launches on boot
-  systemd.services.gbeed = {
-    description = "Game Boy Emulator for Embedded Devices";
-    after = ["multi-user.target"];
-    wantedBy = ["multi-user.target"];
+  # commented until its fully tested
+  # systemd.services.gbeed = {
+  #   description = "Game Boy Emulator for Embedded Devices";
+  #   after = ["multi-user.target"];
+  #   wantedBy = ["multi-user.target"];
 
-    environment = {
-      HOME = "/home/gbeed";
-    };
+  #   environment = {
+  #     HOME = "/home/gbeed";
+  #   };
+  #   serviceConfig = {
+  #     Type = "simple";
+  #     User = "gbeed";
+  #     Group = "users";
+  #     WorkingDirectory = "/home/gbeed";
 
-    serviceConfig = {
-      Type = "simple";
-      User = "gbeed";
-      Group = "users";
-      WorkingDirectory = "/home/gbeed";
+  #     ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /home/gbeed/roms /home/gbeed/saves";
+  #     ExecStart = "${gbeed}/bin/gbeed";
 
-      ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /home/gbeed/roms /home/gbeed/saves";
-      ExecStart = "${lib.getExe gbeed}";
+  #     Restart = "on-failure";
+  #     RestartSec = "3";
 
-      Restart = "on-failure";
-      RestartSec = "3";
+  #     # DRM/KMS access
+  #     SupplementaryGroups = ["video" "render" "input"];
 
-      # DRM/KMS access
-      SupplementaryGroups = ["video" "render" "input"];
-
-      # TTY access for DRM
-      TTYPath = "/dev/tty1";
-      StandardInput = "tty";
-      StandardOutput = "tty";
-      StandardError = "journal";
-      TTYVHangup = true;
-      TTYReset = true;
-    };
-  };
+  #     # TTY access for DRM
+  #     TTYPath = "/dev/tty1";
+  #     StandardInput = "tty";
+  #     StandardOutput = "tty";
+  #     StandardError = "journal";
+  #     TTYVHangup = true;
+  #     TTYReset = true;
+  #   };
+  # };
 
   # filesystem layout for SD card
   fileSystems = {
