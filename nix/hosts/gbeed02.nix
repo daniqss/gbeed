@@ -6,7 +6,12 @@
   lib,
   ...
 }: let
-  gbeed = outputs.packages."aarch64-linux".console;
+  # we cannot use directly the outputs package because its build against different libgbm versions
+  # TODO: pass output packages the needed packages to make the derivation
+  gbeed = pkgs.callPackage ../packages/console.nix {
+    drmPackages = outputs.lib.drmPackages pkgs;
+    drmFeatures = outputs.lib.drmFeatures;
+  };
 in {
   imports = with nixos-raspberrypi.nixosModules; [
     raspberry-pi-02.base

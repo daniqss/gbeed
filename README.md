@@ -74,10 +74,9 @@ nix build github:daniqss/gbeed#installerImages.gbeed02
 zstd -d gbeed02.img.zst -c | sudo dd of=/dev/<SD_CARD_DEVICE> bs=4M status=progress conv=fsync && sync
 ```
 
-On first boot, the system starts directly into `gbeed`. ROMs should be placed at `/home/gbeed/roms/` (`.gb` and `.gbc` files). The system is also accessible over SSH on the local network once WiFi is configured via `iwctl`.
+On first boot, the system starts directly into `gbeed`. ROMs should be placed at `/home/gbeed/roms/` (`.gb` and `.gbc` files).
 
-> **Note:** WiFi credentials must be configured before or after flashing. Connect a keyboard and run `iwctl` to join a network, or provide a pre-configured `iwd` profile in `/var/lib/iwd/` after mounting the SD card.
-
+If more build customization is wanted, cloning the repository, modifying [the `gbeed02` host configuration](./nix/hosts/gbeed02.nix) and building the `installerImage` target will produce a custom image, and should not require intense compilation thanks to nixos-raspberrypi cachix.
 
 ### How to build for armv6l Alpine Linux
 The easiest way to build the project for armv6l is through cross-compilation on x86_64/aarch64. This is done via a podman or docker container and qemu using  the provided `Dockerfile.cross`. This provides a fully isolated build environment.
