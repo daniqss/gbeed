@@ -46,6 +46,16 @@ impl Noise {
         }
     }
 
+    field_bit_accessors!(target: control; TRIGGER, LENGTH_ENABLE);
+
+    pub fn clear_registers(&mut self) {
+        self.length_timer = 0;
+        self.envelope = 0;
+        self.frequency = 0;
+        self.control = 0;
+        self.enabled = false;
+    }
+
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
             NR41 => 0xFF,

@@ -34,6 +34,8 @@ pub struct SweepPulse {
     pub current_volume: u8,
     pub env_timer: u8,
     pub sweep_timer: u8,
+    /// internal flag: set if pace > 0 or shift > 0 at trigger time
+    pub sweep_enabled: bool,
     /// internal shadow period used by the sweep
     pub shadow_period: u16,
 }
@@ -54,8 +56,22 @@ impl SweepPulse {
             current_volume: 0,
             env_timer: 0,
             sweep_timer: 0,
+            sweep_enabled: false,
             shadow_period: 0,
         }
+    }
+
+    field_bit_accessors!(target: period_high; TRIGGER, LENGTH_ENABLE);
+
+    pub fn clear_registers(&mut self) {
+        self.sweep = 0;
+        self.wave_duty = 0;
+        self.length_timer = 0;
+        self.envelope = 0;
+        self.period_low = 0;
+        self.period_high = 0;
+        self.enabled = false;
+        self.sweep_enabled = false;
     }
 
     pub fn read(&self, addr: u16) -> u8 {
@@ -119,8 +135,9 @@ impl SweepPulse {
         let sweep_pace = (self.sweep & 0x70) >> 4;
         let sweep_step = self.sweep & 0x07;
         self.sweep_timer = if sweep_pace > 0 { sweep_pace } else { 8 };
+        self.sweep_enabled = sweep_pace > 0 || sweep_step > 0;
 
-        // if sweep step is not 0, an initial overflow calculation is made
+        // if sweep shift is not 0, an initial overflow check is made (no update)
         if sweep_step > 0 {
             self.calculate_sweep(false);
         }
@@ -130,7 +147,7 @@ impl SweepPulse {
     #[inline(always)]
     pub fn is_enabled(&self) -> u8 {
         if self.enabled && (self.envelope & 0xF8 != 0) {
-            0x02
+            0x01
         } else {
             0
         }
@@ -165,7 +182,7 @@ impl SweepPulse {
     }
 
     /// period sweep logic (nr10)
-    fn calculate_sweep(&mut self, update: bool) {
+    pub fn calculate_sweep(&mut self, update: bool) {
         let step = self.sweep & 0x07;
         let negate = (self.sweep & 0x08) != 0;
         let new_period = self.shadow_period >> step;
@@ -190,10 +207,16 @@ impl SweepPulse {
         }
     }
 
-    pub fn sweep_tick(&mut self) {
-        let step = self.sweep & 0x07;
-        if step > 0 {
-            self.calculate_sweep(true);
+    pub fn tick_sweep(&mut self) {
+        if self.sweep_timer > 0 {
+            self.sweep_timer -= 1;
+        }
+        if self.sweep_timer == 0 {
+            let pace = (self.sweep >> 4) & 0x07;
+            self.sweep_timer = if pace > 0 { pace } else { 8 };
+            if self.sweep_enabled && pace > 0 {
+                self.calculate_sweep(true);
+            }
         }
     }
 }

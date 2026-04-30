@@ -15,3 +15,8 @@ pub const DUTY_TABLE: [[u8; 8]; 4] = [
     [1, 0, 0, 0, 0, 1, 1, 1],
     [0, 1, 1, 1, 1, 1, 1, 0],
 ];
+
+/// To access the trigger bit of NRx4
+pub const TRIGGER: u8 = 0x80;
+/// To access the length enable bit of NRx4
+pub const LENGTH_ENABLE: u8 = 0x40;

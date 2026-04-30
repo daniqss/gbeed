@@ -49,6 +49,17 @@ impl Pulse {
         }
     }
 
+    field_bit_accessors!(target: period_high; TRIGGER, LENGTH_ENABLE);
+
+    pub fn clear_registers(&mut self) {
+        self.wave_duty = 0;
+        self.length_timer = 0;
+        self.envelope = 0;
+        self.period_low = 0;
+        self.period_high = 0;
+        self.enabled = false;
+    }
+
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
             NR21 => (self.wave_duty << 6) | 0x3F,

@@ -52,6 +52,19 @@ impl Wave {
         }
     }
 
+    field_bit_accessors!(target: period_high; TRIGGER, LENGTH_ENABLE);
+
+    pub fn clear_registers(&mut self) {
+        self.dac_enable = false;
+        self.length_timer = 0;
+        self.output_level = 0;
+        self.period_low = 0;
+        self.period_high = 0;
+        self.enabled = false;
+
+        // wave_ram is NOT cleared on poweroff
+    }
+
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
             NR30 => (if self.dac_enable { 0x80 } else { 0x00 } | 0x7F),
