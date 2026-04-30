@@ -24,3 +24,24 @@ gb-test-roms/
 *.bin
 *.zip
 *.tar*
+
+# latex related files
+*.acn
+*.acr
+*.alg
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.glg
+*.glo
+*.gls
+*.log
+*.out
+*.lot
+*.lof
+*.pdf
+*.toc
+*.xdv
+*.ist
