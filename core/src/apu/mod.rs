@@ -404,13 +404,6 @@ impl Apu {
         self.envelope_volume_ch4 = (env4 >> 4) & 0x0F;
         self.envelope_timer_ch4 = env4 & 0x07;
     }
-
-    fn sync_length(&mut self) {
-        self.length_counter_ch1 = 64 - (self.sweep_pulse.length_timer & 0x3F) as u16;
-        self.length_counter_ch2 = 64 - (self.pulse.length_timer & 0x3F) as u16;
-        self.length_counter_ch3 = 256 - self.wave.length_timer as u16;
-        self.length_counter_ch4 = 64 - (self.noise.length_timer & 0x3F) as u16;
-    }
 }
 
 impl Accessible<u16> for Apu {
@@ -573,10 +566,12 @@ impl Accessible<u16> for Apu {
                 let now_active = value & AUDIO_ON_OFF != 0;
 
                 if !was_active && now_active {
-                    self.frame_sequencer = 0;
+                    //start at step 7 so the first tick wraps to step 0 (length clock),
+                    // matching hardware behavior where power-on offsets the next frame time by 8192 T-cycles.
+                    self.frame_sequencer = 7;
+
                     self.cycles = 0;
                     self.sync_envelope();
-                    self.sync_length();
                 }
                 // clear all registers NR10-NR51 when APU is turned off
                 else if was_active && !now_active {
@@ -587,10 +582,7 @@ impl Accessible<u16> for Apu {
                     self.master_volume = 0;
                     self.sound_panning = 0;
 
-                    self.length_counter_ch1 = 0;
-                    self.length_counter_ch2 = 0;
-                    self.length_counter_ch3 = 0;
-                    self.length_counter_ch4 = 0;
+                    // on DMG, length counters are preserved across power off/on
                     self.envelope_volume_ch1 = 0;
                     self.envelope_volume_ch2 = 0;
                     self.envelope_volume_ch4 = 0;

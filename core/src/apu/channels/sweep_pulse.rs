@@ -38,6 +38,8 @@ pub struct SweepPulse {
     pub sweep_enabled: bool,
     /// internal shadow period used by the sweep
     pub shadow_period: u16,
+    /// set when a sweep calculation is performed in negate mode
+    pub sweep_negate_used: bool,
 }
 
 impl SweepPulse {
@@ -58,6 +60,7 @@ impl SweepPulse {
             sweep_timer: 0,
             sweep_enabled: false,
             shadow_period: 0,
+            sweep_negate_used: false,
         }
     }
 
@@ -72,6 +75,7 @@ impl SweepPulse {
         self.period_high = 0;
         self.enabled = false;
         self.sweep_enabled = false;
+        self.sweep_negate_used = false;
     }
 
     pub fn read(&self, addr: u16) -> u8 {
@@ -88,7 +92,13 @@ impl SweepPulse {
 
     pub fn write(&mut self, addr: u16, value: u8) {
         match addr {
-            NR10 => self.sweep = value,
+            NR10 => {
+                // if negate mode was used and is now cleared, disable the channel
+                if self.sweep_negate_used && (value & 0x08) == 0 {
+                    self.enabled = false;
+                }
+                self.sweep = value;
+            }
             NR11 => {
                 self.wave_duty = (value & 0xC0) >> 6;
                 self.length_timer = value & 0x3F;
@@ -136,6 +146,7 @@ impl SweepPulse {
         let sweep_step = self.sweep & 0x07;
         self.sweep_timer = if sweep_pace > 0 { sweep_pace } else { 8 };
         self.sweep_enabled = sweep_pace > 0 || sweep_step > 0;
+        self.sweep_negate_used = false;
 
         // if sweep shift is not 0, an initial overflow check is made (no update)
         if sweep_step > 0 {
@@ -188,6 +199,7 @@ impl SweepPulse {
         let new_period = self.shadow_period >> step;
 
         let new_period = if negate {
+            self.sweep_negate_used = true;
             self.shadow_period.wrapping_sub(new_period)
         } else {
             self.shadow_period.wrapping_add(new_period)
