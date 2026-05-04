@@ -24,6 +24,7 @@ in {
   time.timeZone = "UTC";
   networking.hostName = hostname;
 
+
   users.users.gbeed = {
     isNormalUser = true;
     extraGroups = ["video" "render" "input" "wheel"];
@@ -31,6 +32,7 @@ in {
     home = "/home/${username}";
   };
   users.users.root.initialHashedPassword = hostname;
+
   security.sudo = {
     enable = true;
     wheelNeedsPassword = false;
@@ -62,39 +64,39 @@ in {
   ];
 
   # gbeed systemd service, should launch on boot
-  systemd.services.gbeed = {
-    description = "Game Boy Emulator for Embedded Devices";
-    after = ["multi-user.target"];
-    wantedBy = ["multi-user.target"];
-
-    environment = {
-      HOME = "/home/${username}";
-    };
-
-    serviceConfig = {
-      Type = "simple";
-      User = username;
-      Group = "users";
-      WorkingDirectory = "/home/${username}";
-
-      ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /home/${username}/roms /home/${username}/saves";
-      ExecStart = "gbeed";
-
-      Restart = "on-failure";
-      RestartSec = "3";
-
-      # DRM/KMS access
-      SupplementaryGroups = ["video" "render" "input"];
-
-      # TTY access for DRM
-      TTYPath = "/dev/tty1";
-      StandardInput = "tty";
-      StandardOutput = "tty";
-      StandardError = "journal";
-      TTYVHangup = true;
-      TTYReset = true;
-    };
-  };
+  # systemd.services.gbeed = {
+  #   description = "Game Boy Emulator for Embedded Devices";
+  #   after = ["multi-user.target"];
+  #   wantedBy = ["multi-user.target"];
+  # 
+  #   environment = {
+  #     HOME = "/home/${username}";
+  #   };
+  # 
+  #   serviceConfig = {
+  #     Type = "simple";
+  #     User = username;
+  #     Group = "users";
+  #     WorkingDirectory = "/home/${username}";
+  # 
+  #     ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /home/${username}/roms /home/${username}/saves";
+  #     ExecStart = "gbeed";
+  # 
+  #     Restart = "on-failure";
+  #     RestartSec = "3";
+  # 
+  #     # DRM/KMS access
+  #     SupplementaryGroups = ["video" "render" "input"];
+  # 
+  #     # TTY access for DRM
+  #     TTYPath = "/dev/tty1";
+  #     StandardInput = "tty";
+  #     StandardOutput = "tty";
+  #     StandardError = "journal";
+  #     TTYVHangup = true;
+  #     TTYReset = true;
+  #   };
+  # };
 
   # filesystem layout for SD card
   fileSystems = {

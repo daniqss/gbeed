@@ -3,11 +3,7 @@ DMG Game Boy emulator for embedded devices. This project aims to provide a simpl
 
 This project consists of the emulator core and two emulator frontends made with [raylib](https://www.raylib.com/), that deals with graphics, input and audio.
 The [`console`](./frontends/console/) frontend is meant to be used in a Raspberry Pi Zero with a small display (using the raylib DRM backend).
-The [`debugger`](./frontends/debugger/) frontend is meant to be used in a normal Linux graphical session, both X11 and Wayland, or in [the browser](https://daniqss.github.io/gbeed/) thanks to the WASM build.
-
-### Recommended hardware
-The recommended hardware to use the `console` frontend is the **Raspberry Pi Zero 2 W**, as its `aarch64` architecture has full NixOS support, allowing us to easily provide a ready-to-use SD card image (see [#raspberry-pi-zero-2-sd-image](#how-to-build-a-raspberry-pi-zero-2-sd-image)).
-The original **Raspberry Pi Zero** (`armv6l`) is also supported, but only via a manually cross-compiled binary. NixOS does not support `armv6l` as a hosted system, so there is no managed image for it. Device setup must be done manually (see [armv6l build](#how-to-build-for-armv6l-alpine-linux)).
+The [`debugger`](./frontends/debugger/) frontend is meant to be used in a normal Linux graphical session, both X11 and Wayland, or in [the browser](https://daniqss.github.io/gbeed/) thanks to the WASM build
 
 
 ![gbeed](./assets/game_collage.png)
@@ -56,6 +52,9 @@ just run -p gbeed-debugger -- -g <game_rom> -b <boot_rom>
 ### DRM/KMS support
 DRM support is tested in Intel, AMD and Broadcom iGPUs. In Nvidia (specifically GTX 1660 with drivers version 580) both `opengl_es_20` and `opengl_es_30` raylib features segfault at init (`dic 20 13:12:41 stoneward kernel: gbeed[6765]: segfault at 0 ip 00007fa29f9b4d31 sp 00007fff9c2052d0 error 4 in libnvidia-egl-gbm.so.1.1.2[1d31,7fa29f9b4000+3000] likely on CPU 0 (core 0, socket 0)`).
 
+### Recommended hardware
+The recommended hardware to use the `console` frontend is the **Raspberry Pi Zero 2 W**, as its `aarch64` architecture has full NixOS support, allowing us to easily provide a ready-to-use SD card image (see [raspberry-pi-zero-2-sd-image](#how-to-build-a-raspberry-pi-zero-2-sd-image)).
+The original **Raspberry Pi Zero** (`armv6l`) is also supported, but only via a manually cross-compiled binary. NixOS does not support `armv6l` as a hosted system, so there is no managed image for it. Device setup must be done manually (see [armv6l build](#how-to-build-for-armv6l-alpine-linux)).
 
 ### How to build a Raspberry Pi Zero 2 SD image
 The easiest way to run gbeed in a console format is on a Raspberry Pi Zero 2 W. This project offers a ready-to-use NixOS SD image that boots directly into gbeed — no installer, no manual setup.
@@ -91,13 +90,7 @@ This will:
 2. Build the project inside an `arm32v6/alpine` container.
 3. Extract the resulting binary as `./gbeed-armv6l`.
 
-### How to run tests
-To run the tests, you can use just:
-```sh
-just test
-```
 
-The boot rom test needs a valid dmg boot rom file to run in the project root, named `dmg_boot.bin` 
 ## Tests
 The emulator is tested using [Blargg's rom test](https://github.com/retrio/gb-test-roms) and [Mooneye test suite](https://github.com/Gekkio/mooneye-test-suite) and passes basic CPU instructions and MBC tests, but fails most of the timing tests. See passed tests in `core/tests`.
 
@@ -105,7 +98,7 @@ For PPU testing, gbeed passes [dmg-acid2](https://github.com/mattcurrie/dmg-acid
 
 To run the tests, you can use just:
 ```sh
-just test
+just test --workspace
 ```
 
 The boot rom test needs a valid dmg boot rom file to run in the project root, named `dmg_boot.bin`
