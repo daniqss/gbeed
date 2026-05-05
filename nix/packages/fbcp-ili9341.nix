@@ -12,14 +12,25 @@ stdenv.mkDerivation rec {
   src = fetchFromGitHub {
     owner = "juj";
     repo = "fbcp-ili9341";
-    rev = "59bab283e088da53e474e2b6f4e4903b2c073533";
-    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    rev = "d0ebacf7c1f30b19b50997ebb67ba4f70ab95368";
+    hash = "sha256-53+HoVaVAfH7Rx6uMhQuELodK4zrDDwTmy6PpiOCtzU=";
   };
 
   nativeBuildInputs = [cmake];
   buildInputs = [libraspberrypi];
 
+  # The project targets 32-bit ARM and adds flags invalid on aarch64
+  postPatch = ''
+    substituteInPlace CMakeLists.txt \
+       --replace-fail "-marm" "" \
+       --replace-fail "-mhard-float" "" \
+       --replace-fail "-mfloat-abi=hard" "" \
+       --replace-fail "-mtls-dialect=gnu2" "" \
+       --replace-fail "-mabi=aapcs-linux" ""
+  '';
+
   cmakeFlags = [
+    "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
     "-DST7789VW=ON"
     "-DSPI_BUS_CLOCK_DIVISOR=6"
     "-DGPIO_TFT_DATA_CONTROL=25"
