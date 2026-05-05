@@ -10,6 +10,7 @@
   username = "gbeed";
   system = "aarch64-linux";
   gbeed = outputs.packages.${system}.console;
+  fbcp = outputs.packages.${system}.fbcp;
 in {
   imports = with nixos-raspberrypi.nixosModules; [
     raspberry-pi-02.base
@@ -135,7 +136,7 @@ in {
     serviceConfig = {
       Type = "simple";
       ExecStartPre = "${pkgs.coreutils}/bin/sleep 7";
-      ExecStart = "${pkgs.fbcp-ili9341}/bin/fbcp";
+      ExecStart = "${fbcp}/bin/fbcp-ili9341";
       Restart = "on-failure";
       RestartSec = "5";
     };
