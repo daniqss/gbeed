@@ -15,8 +15,9 @@
 in let
   console = pkgs.callPackage ./console.nix platformArgs;
   debugger = pkgs.callPackage ./debugger.nix platformArgs;
+  fbcp = pkgs.callPackage ./fbcp-ili9341.nix {};
 in {
-  inherit console debugger;
+  inherit console debugger fbcp;
   debugger-wayland = debugger.override {withWayland = true;};
   default = console;
 }

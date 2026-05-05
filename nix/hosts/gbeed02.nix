@@ -13,12 +13,76 @@
 in {
   imports = with nixos-raspberrypi.nixosModules; [
     raspberry-pi-02.base
-    raspberry-pi-02.display-vc4
+    # NOTE: display-vc4 removed — the 1.54" SPI LCD is incompatible with vc4-kms-v3d
   ];
 
   image.baseName = lib.mkForce hostname;
 
   hardware.graphics.enable = true;
+
+  # 1.54" SPI LCD display configuration
+  hardware.raspberry-pi.config = {
+    all = {
+      base-dt-params = {
+        spi = {
+          enable = true;
+          value = "on";
+        };
+      };
+
+      dt-overlays = {
+        lcd154 = {
+          enable = true;
+          params = {
+            rotate = {
+              enable = true;
+              value = "270";
+            };
+          };
+        };
+        dwc2 = {
+          enable = true;
+          params = {
+            dr_mode = {
+              enable = true;
+              value = "host";
+            };
+          };
+        };
+      };
+
+      options = {
+        hdmi_force_hotplug = {
+          enable = true;
+          value = true;
+        };
+        max_usb_current = {
+          enable = true;
+          value = true;
+        };
+        hdmi_group = {
+          enable = true;
+          value = "2";
+        };
+        hdmi_mode = {
+          enable = true;
+          value = "87";
+        };
+        hdmi_cvt = {
+          enable = true;
+          value = "480 480 60 6 0 0 0";
+        };
+        hdmi_drive = {
+          enable = true;
+          value = "2";
+        };
+        display_rotate = {
+          enable = true;
+          value = "0";
+        };
+      };
+    };
+  };
 
   system.stateVersion = config.system.nixos.release;
   time.timeZone = "UTC";
@@ -62,6 +126,20 @@ in {
     pkgs.tree
     pkgs.htop
   ];
+
+  # fbcp: copies HDMI framebuffer to the SPI LCD
+  systemd.services.fbcp = {
+    description = "Framebuffer Copy (HDMI to SPI LCD)";
+    after = ["multi-user.target"];
+    wantedBy = ["multi-user.target"];
+    serviceConfig = {
+      Type = "simple";
+      ExecStartPre = "${pkgs.coreutils}/bin/sleep 7";
+      ExecStart = "${pkgs.fbcp-ili9341}/bin/fbcp";
+      Restart = "on-failure";
+      RestartSec = "5";
+    };
+  };
 
   # gbeed systemd service, should launch on boot
   # systemd.services.gbeed = {
