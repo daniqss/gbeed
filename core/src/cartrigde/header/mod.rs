@@ -1,3 +1,4 @@
+use alloc::{format, string::{String, ToString}, vec, vec::Vec};
 mod license;
 mod ram;
 mod rom;
@@ -141,8 +142,8 @@ impl CartridgeHeader {
     }
 }
 
-impl std::fmt::Display for CartridgeHeader {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for CartridgeHeader {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.to_string_array().join("\n"))
     }
 }

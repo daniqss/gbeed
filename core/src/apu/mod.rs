@@ -163,10 +163,7 @@ impl Accessible<u16> for Apu {
             NR52 => self.nr52,
             addr @ 0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize],
 
-            0xFF15 | 0xFF1F | 0xFF27..=0xFF2F => {
-                println!("Reads to unimplemented Apu register {address:04X} return 0xFF");
-                0xFF
-            }
+            0xFF15 | 0xFF1F | 0xFF27..=0xFF2F => 0xFF,
             _ => unreachable!(
                 "Apu: read of address {address:04X} should have been handled by other components"
             ),
