@@ -100,7 +100,6 @@ impl Dmg {
 
         let delta = self.cpu.cycles.wrapping_sub(prev_cycles) * 4;
 
-
         self.ppu.step(controller, delta, &mut self.interrupt_flag);
         self.timer.step(delta, &mut self.interrupt_flag);
         self.serial.step(controller);
@@ -123,7 +122,7 @@ impl Accessible<u16> for Dmg {
             }
             OAM_START..=OAM_END => self.ppu.read(address),
 
-            NOT_USABLE_START..=NOT_USABLE_END => 0xFF
+            NOT_USABLE_START..=NOT_USABLE_END => 0xFF,
 
             IO_REGISTERS_START..=IO_REGISTERS_END => match address {
                 JOYP => self.joypad.read(address),
@@ -137,7 +136,7 @@ impl Accessible<u16> for Dmg {
 
                 BANK_REGISTER => self.bank,
 
-                _ => 0xFF
+                _ => 0xFF,
             },
             HRAM_START..=HRAM_END => self.memory.hram[(address - HRAM_START) as usize],
             IE => self.interrupt_enable.0,

@@ -1,4 +1,4 @@
-use crate::apu::STEREO_BUFFER_SIZE;
+use crate::{apu::STEREO_BUFFER_SIZE, prelude::*};
 
 pub trait AudioPlayer {
     fn playing_stereo(&self) -> bool;
