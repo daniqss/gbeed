@@ -38,7 +38,7 @@ impl EmulationState {
             return Ok(None);
         };
 
-        self.input.update(&controller.rl, dt);
+        self.input.update(controller.rl, dt);
 
         if self.input.is_pressed_escape() {
             save_cartridge(gb, save_path)?;

@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use core::fmt::{Display, Formatter};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum Register8 {
@@ -14,7 +14,7 @@ pub enum Register8 {
 }
 
 impl Display for Register8 {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
         write!(
             f,
             "{}",
@@ -44,7 +44,7 @@ pub enum Register16 {
 }
 
 impl Display for Register16 {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
         write!(
             f,
             "{}",

@@ -11,13 +11,15 @@ use crate::{
 };
 
 // TODO: not expose individual instructions
-pub use instructions::{Instruction, Len, Nop};
+pub use instructions::{Instruction, InstructionError, Len, Nop};
 use instructions::{JumpCondition as JC, *};
 pub use registers::{Register8 as R8, Register16 as R16};
 
-use std::fmt::{self, Display, Formatter};
+use core::fmt::{self, Display, Formatter};
 
-pub type FetchResult = std::result::Result<InstructionBox, InstructionError>;
+pub type FetchResult = core::result::Result<InstructionBox, InstructionError>;
+
+pub const FREQUENCY: u32 = 4_194_304;
 
 pub const AFTER_BOOT_CPU: Cpu = Cpu {
     a: 0x01,
@@ -95,46 +97,32 @@ impl Cpu {
         self.halted = AFTER_BOOT_CPU.halted;
     }
 
-    pub fn step(gb: &mut Dmg) -> Option<InstructionBox> {
+    pub fn step(gb: &mut Dmg) -> Result<Option<InstructionBox>, InstructionError> {
         // check if is neccessatry to handle interrupts before executing the instruction
         if Cpu::handle_interrupts(gb) {
             // 5 Mcycles = 2 NOP + 3 ...
             gb.cpu.cycles = gb.cpu.cycles.wrapping_add(5);
-            return None;
+            return Ok(None);
         }
 
         if gb.cpu.halted {
             gb.cpu.cycles = gb.cpu.cycles.wrapping_add(4);
-            return None;
+            return Ok(None);
         }
 
         let opcode = gb.read(gb.cpu.pc);
 
-        let mut instruction = match Cpu::fetch(gb, opcode) {
-            Ok(instr) => instr,
-            Err(e) => {
-                eprintln!("Error fetching instruction at {:04X}: {}", gb.cpu.pc, e);
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                return None;
-            }
-        };
-
-        let effect = match instruction.exec(gb) {
-            Ok(effect) => effect,
-            Err(e) => {
-                eprintln!("Error executing instruction at {:04X}: {}", gb.cpu.pc, e);
-                return None;
-            }
-        };
+        let mut instruction = Cpu::fetch(gb, opcode)?;
+        let effect = instruction.exec(gb)?;
 
         gb.cpu.cycles = gb.cpu.cycles.wrapping_add(effect.cycles as usize);
         gb.cpu.pc = match effect.len {
             Len::Jump(_) => gb.cpu.pc,
-            Len::AddLen(len) => gb.cpu.pc.wrapping_add(len as u16).into(),
+            Len::AddLen(len) => gb.cpu.pc.wrapping_add(len as u16),
         };
         effect.flags.apply(&mut gb.cpu.f);
 
-        Some(instruction)
+        Ok(Some(instruction))
     }
 
     fn handle_interrupts(gb: &mut Dmg) -> bool {
@@ -220,7 +208,7 @@ impl Cpu {
             0x1D => DecR8::new(R8::E).into(),
             0x1E => LdR8Imm8::new(R8::E, gb.read(cpu.pc.wrapping_add(1))).into(),
             0x1F => Rra::new(cpu.carry()).into(),
-            0x20 => Jr::new(JC::NotZero(cpu.not_zero()).into(), gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x20 => Jr::new(JC::NotZero(cpu.not_zero()), gb.read(cpu.pc.wrapping_add(1))).into(),
             0x21 => LdR16Imm16::new(R16::HL, gb.load(cpu.pc.wrapping_add(1))).into(),
             0x22 => LdPointedByHLIncA::new().into(),
             0x23 => IncR16::new(R16::HL).into(),
@@ -228,7 +216,7 @@ impl Cpu {
             0x25 => DecR8::new(R8::H).into(),
             0x26 => LdR8Imm8::new(R8::H, gb.read(cpu.pc.wrapping_add(1))).into(),
             0x27 => Daa::new().into(),
-            0x28 => Jr::new(JC::Zero(cpu.zero()).into(), gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x28 => Jr::new(JC::Zero(cpu.zero()), gb.read(cpu.pc.wrapping_add(1))).into(),
             0x29 => AddR16::new(R16::HL).into(),
             0x2A => LdAPointedByHLInc::new().into(),
             0x2b => DecR16::new(R16::HL).into(),
@@ -236,7 +224,7 @@ impl Cpu {
             0x2D => DecR8::new(R8::L).into(),
             0x2E => LdR8Imm8::new(R8::L, gb.read(cpu.pc.wrapping_add(1))).into(),
             0x2F => Cpl::new().into(),
-            0x30 => Jr::new(JC::NotCarry(cpu.not_carry()).into(), gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x30 => Jr::new(JC::NotCarry(cpu.not_carry()), gb.read(cpu.pc.wrapping_add(1))).into(),
             0x31 => LdSPImm16::new(gb.load(cpu.pc.wrapping_add(1))).into(),
             0x32 => LdPointedByHLDecA::new().into(),
             0x33 => IncStackPointer::new().into(),
@@ -244,7 +232,7 @@ impl Cpu {
             0x35 => DecPointedByHL::new().into(),
             0x36 => LdPointedByHLImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
             0x37 => Scf::new().into(),
-            0x38 => Jr::new(JC::Carry(cpu.carry()).into(), gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x38 => Jr::new(JC::Carry(cpu.carry()), gb.read(cpu.pc.wrapping_add(1))).into(),
             0x39 => AddHLSP::new().into(),
             0x3A => LdAPointedByHLDec::new().into(),
             0x3B => DecStackPointer::new().into(),
@@ -382,37 +370,37 @@ impl Cpu {
             0xBF => CpR8::new(R8::A).into(),
             0xC0 => Ret::new(JC::NotZero(cpu.not_zero())).into(),
             0xC1 => Pop::new(R16::BC).into(),
-            0xC2 => JpToImm16::new(JC::NotZero(cpu.not_zero()).into(), gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xC2 => JpToImm16::new(JC::NotZero(cpu.not_zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
             0xC3 => JpToImm16::new(JC::None, gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xC4 => Call::new(JC::NotZero(cpu.not_zero()).into(), gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xC4 => Call::new(JC::NotZero(cpu.not_zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
             0xC5 => Push::new(R16::BC).into(),
             0xC6 => AddImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
             0xC7 => Rst::new(0x00).into(),
             0xC8 => Ret::new(JC::Zero(cpu.zero())).into(),
             0xC9 => Ret::new(JC::None).into(),
-            0xCA => JpToImm16::new(JC::Zero(cpu.zero()).into(), gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xCA => JpToImm16::new(JC::Zero(cpu.zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
             0xCB => {
                 let cb_opcode = gb.read(cpu.pc.wrapping_add(1));
                 Cpu::fetch_cb(gb, cb_opcode)?
             }
-            0xCC => Call::new(JC::Zero(cpu.zero()).into(), gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xCC => Call::new(JC::Zero(cpu.zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
             0xCD => Call::new(JC::None, gb.load(cpu.pc.wrapping_add(1))).into(),
             0xCE => AdcImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
             0xCF => Rst::new(0x08).into(),
             0xD0 => Ret::new(JC::NotCarry(cpu.not_carry())).into(),
             0xD1 => Pop::new(R16::DE).into(),
-            0xD2 => JpToImm16::new(JC::NotCarry(cpu.not_carry()).into(), gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xD3 => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)).into(),
-            0xD4 => Call::new(JC::NotCarry(cpu.not_carry()).into(), gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xD2 => JpToImm16::new(JC::NotCarry(cpu.not_carry()), gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xD3 => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
+            0xD4 => Call::new(JC::NotCarry(cpu.not_carry()), gb.load(cpu.pc.wrapping_add(1))).into(),
             0xD5 => Push::new(R16::DE).into(),
             0xD6 => SubImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
             0xD7 => Rst::new(0x10).into(),
             0xD8 => Ret::new(JC::Carry(cpu.carry())).into(),
             0xD9 => Reti::new().into(),
-            0xDA => JpToImm16::new(JC::Carry(cpu.carry()).into(), gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xDB => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)).into(),
-            0xDC => Call::new(JC::Carry(cpu.carry()).into(), gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xDD => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)).into(),
+            0xDA => JpToImm16::new(JC::Carry(cpu.carry()), gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xDB => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
+            0xDC => Call::new(JC::Carry(cpu.carry()), gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xDD => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
             0xDE => SbcImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
             0xDF => Rst::new(0x18).into(),
             0xE0 => LdhImm8A::new(gb.read(cpu.pc.wrapping_add(1))).into(),
@@ -435,7 +423,7 @@ impl Cpu {
             0xF1 => Pop::new(R16::AF).into(),
             0xF2 => LdhAC::new().into(),
             0xF3 => Di::new().into(),
-            0xF4 => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)).into(),
+            0xF4 => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
             0xF5 => Push::new(R16::AF).into(),
             0xF6 => OrImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
             0xF7 => Rst::new(0x30).into(),

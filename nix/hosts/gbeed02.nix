@@ -6,37 +6,39 @@
   lib,
   ...
 }: let
-  # we cannot use directly the outputs package because its build against different libgbm versions
-  # TODO: pass output packages the needed packages to make the derivation
-  gbeed = pkgs.callPackage ../packages/console.nix {
-    drmPackages = outputs.lib.drmPackages pkgs;
-    drmFeatures = outputs.lib.drmFeatures;
-  };
+  hostname = "gbeed02";
+  username = "gbeed";
+  system = "aarch64-linux";
+  gbeed = outputs.packages.${system}.console;
 in {
   imports = with nixos-raspberrypi.nixosModules; [
     raspberry-pi-02.base
     raspberry-pi-02.display-vc4
   ];
 
-  image.baseName = lib.mkForce "gbeed02";
+  image.baseName = lib.mkForce hostname;
+
+  hardware.graphics.enable = true;
 
   system.stateVersion = config.system.nixos.release;
   time.timeZone = "UTC";
-  networking.hostName = "gbeed02";
+  networking.hostName = hostname;
+
 
   users.users.gbeed = {
     isNormalUser = true;
     extraGroups = ["video" "render" "input" "wheel"];
-    initialHashedPassword = "gameboy";
-    home = "/home/gbeed";
+    initialHashedPassword = hostname;
+    home = "/home/${username}";
   };
-  users.users.root.initialHashedPassword = "";
+  users.users.root.initialHashedPassword = hostname;
+
   security.sudo = {
     enable = true;
     wheelNeedsPassword = false;
   };
 
-  services.getty.autologinUser = "gbeed";
+  services.getty.autologinUser = username;
 
   services.openssh = {
     enable = true;
@@ -56,34 +58,36 @@ in {
 
   environment.systemPackages = [
     gbeed
+    pkgs.git
     pkgs.tree
     pkgs.htop
   ];
 
-  # commented until its fully tested
+  # gbeed systemd service, should launch on boot
   # systemd.services.gbeed = {
   #   description = "Game Boy Emulator for Embedded Devices";
   #   after = ["multi-user.target"];
   #   wantedBy = ["multi-user.target"];
-
+  # 
   #   environment = {
-  #     HOME = "/home/gbeed";
+  #     HOME = "/home/${username}";
   #   };
+  # 
   #   serviceConfig = {
   #     Type = "simple";
-  #     User = "gbeed";
+  #     User = username;
   #     Group = "users";
-  #     WorkingDirectory = "/home/gbeed";
-
-  #     ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /home/gbeed/roms /home/gbeed/saves";
-  #     ExecStart = "${gbeed}/bin/gbeed";
-
+  #     WorkingDirectory = "/home/${username}";
+  # 
+  #     ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /home/${username}/roms /home/${username}/saves";
+  #     ExecStart = "gbeed";
+  # 
   #     Restart = "on-failure";
   #     RestartSec = "3";
-
+  # 
   #     # DRM/KMS access
   #     SupplementaryGroups = ["video" "render" "input"];
-
+  # 
   #     # TTY access for DRM
   #     TTYPath = "/dev/tty1";
   #     StandardInput = "tty";

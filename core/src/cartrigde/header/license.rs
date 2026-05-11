@@ -1,3 +1,5 @@
+use alloc::borrow::ToOwned;
+use alloc::string::String;
 const OLD_LICENSE_ADDR: usize = 0x014B;
 const NEW_LICENSE_START_ADDR: usize = 0x0144;
 const NEW_LICENSE_END_ADDR: usize = 0x0145;

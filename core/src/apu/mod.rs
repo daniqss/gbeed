@@ -1,4 +1,14 @@
-use crate::prelude::*;
+mod channels;
+mod envelope;
+mod length_counter;
+mod player;
+
+use channels::*;
+use envelope::Envelope;
+use length_counter::LengthCounter;
+pub use player::*;
+
+use crate::{cpu, prelude::*};
 
 mem_range!(APU_REGISTER, 0xFF10, 0xFF3F);
 
@@ -25,186 +35,353 @@ const NR51: u16 = 0xFF25;
 const NR52: u16 = 0xFF26;
 
 const AUDIO_ON_OFF: u8 = 0x80;
+
+const CH4_LEFT: u8 = 0x80;
+const CH3_LEFT: u8 = 0x40;
+const CH2_LEFT: u8 = 0x20;
+const CH1_LEFT: u8 = 0x10;
+const CH4_RIGHT: u8 = 0x08;
+const CH3_RIGHT: u8 = 0x04;
+const CH2_RIGHT: u8 = 0x02;
+const CH1_RIGHT: u8 = 0x01;
+
 const CH4_ON_FLAG: u8 = 0x08;
 const CH3_ON_FLAG: u8 = 0x04;
 const CH2_ON_FLAG: u8 = 0x02;
 const CH1_ON_FLAG: u8 = 0x01;
 
-const TRIGGER: u8 = 0x80;
-const LENGTH_ENABLE: u8 = 0x40;
+pub const SAMPLE_RATE: u32 = 44100;
+pub const BUFFER_SIZE: usize = 4096;
+pub const STEREO_BUFFER_SIZE: usize = BUFFER_SIZE * 2;
 
-const DAC_ENABLE: u8 = 0x80;
+/// The base rate for the filter, this is used to calculate the
+/// filter rate based on the clock frequency and the sampling rate.
+const FILTER_RATE_BASE: f64 = 0.999958;
 
-/// Sweep (NR10) & Envelope (NRx2) bits
-const SWEEP_DIRECTION: u8 = 0x08; // 0=Add, 1=Sub
-const ENVELOPE_DIRECTION: u8 = 0x08;
-
-const LFSR_WIDTH: u8 = 0x08;
-
-/// | Channel     | Control (4) | Frequency (3) | Volume (2) | Length (1) | Sweep (0) |
-/// | :---------- | :---------: | :-----------: | :--------: | :--------: | :-------: |
-/// | **Voice 1** |    NR14     |     NR13      |    NR12    |    NR11    |   NR10    |
-/// | **Voice 2** |    NR24     |     NR23      |    NR22    |    NR21    |     -     |
-/// | **Voice 3** |    NR34     |     NR33      |    NR32    |    NR31    |   NR30    |
-/// | **Voice 4** |    NR44     |     NR43      |    NR42    |    NR41    |     -     |
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Apu {
-    // channel one, pulse with sweep
-    nr10: u8,
-    nr11: u8,
-    nr12: u8,
-    nr13: u8,
-    nr14: u8,
+    sweep_pulse: SweepPulse,
+    pulse: Pulse,
+    wave: Wave,
+    noise: Noise,
 
-    // channel two, pulse
-    nr21: u8,
-    nr22: u8,
-    nr23: u8,
-    nr24: u8,
+    /// - bit 7: works as `sound_panning` left but for the cartridge output (unused)
+    /// - bit 6-4: master volume for left output
+    /// - bit 3: works as `sound_panning` right but for the cartridge output (unused)
+    /// - bit 2-0: master volume for right output
+    ///
+    /// A value of 0 is treated as a volume of 1 (very quiet), and a value of 7 is treated as a volume of 8 (no volume reduction).
+    /// Importantly, the amplifier never mutes a non-silent input.
+    master_volume: u8,
 
-    // channel 3, Wave
-    nr30: u8,
-    nr31: u8,
-    nr32: u8,
-    nr33: u8,
-    nr34: u8,
-    wave_ram: [u8; 16],
+    /// channels can be panned left, center or right
+    /// bits 7-4: channels to left (ch4-ch1)
+    /// bits 3-0: channels to right (ch4-ch1)
+    /// setting a bit to 1 enables the channel to go to the respective output
+    sound_panning: u8,
 
-    // channel 4, noise
-    nr41: u8,
-    nr42: u8,
-    nr43: u8,
-    nr44: u8,
+    /// Audio master control
+    /// - bit 7: audio on/off
+    /// - bit 6-4: unused
+    /// - bit 3-0: channels on/off (read-only)
+    master_control: u8,
 
-    // global sound control registers
-    nr50: u8,
-    nr51: u8,
-    nr52: u8,
+    frame_sequencer: u8,
+    cycles: u32,
+
+    sample_counter: u32,
+
+    /// Per-channel state for the DC-blocking high-pass filter ([left, right]).
+    filter_diff: [f32; 2],
+    filter_rate: f32,
+}
+
+impl Default for Apu {
+    fn default() -> Self { Self::new() }
 }
 
 impl Apu {
     pub fn new() -> Self {
         Self {
-            nr10: 0x80,
-            nr11: 0xBF,
-            nr12: 0xF3,
-            nr14: 0xBF,
-            nr21: 0x3F,
-            nr22: 0x00,
-            nr24: 0xBF,
-            nr30: 0x7F,
-            nr31: 0xFF,
-            nr32: 0x9F,
-            nr34: 0xBF,
-            nr41: 0xFF,
-            nr42: 0x00,
-            nr43: 0x00,
-            nr44: 0xBF,
-            nr50: 0x77,
-            nr51: 0xF3,
-            nr52: 0xF1,
-            ..Default::default()
+            sweep_pulse: SweepPulse::new(),
+            pulse: Pulse::new(),
+            wave: Wave::new(),
+            noise: Noise::new(),
+
+            master_volume: 0x77,
+
+            sound_panning: 0xF3,
+            master_control: 0xF1,
+
+            frame_sequencer: 0,
+            cycles: 0,
+
+            sample_counter: 0,
+
+            filter_diff: [0.0; 2],
+            filter_rate: FILTER_RATE_BASE.powf(cpu::FREQUENCY as f64 / SAMPLE_RATE as f64) as f32,
         }
     }
 
-    bit_accessors! {
-        target: nr52;
+    #[inline(always)]
+    pub fn is_active(&self) -> bool { self.master_control & AUDIO_ON_OFF != 0 }
 
-        AUDIO_ON_OFF,
-        CH1_ON_FLAG,
-        CH2_ON_FLAG,
-        CH3_ON_FLAG,
-        CH4_ON_FLAG
+    #[inline(always)]
+    fn get_master_volume_left(&self) -> i32 { ((self.master_volume >> 4) & 0x07) as i32 + 1 }
+
+    #[inline(always)]
+    fn get_master_volume_right(&self) -> i32 { (self.master_volume & 0x07) as i32 + 1 }
+
+    bit_accessors!(target: master_control; AUDIO_ON_OFF, CH1_ON_FLAG, CH2_ON_FLAG, CH3_ON_FLAG, CH4_ON_FLAG);
+    bit_accessors!(target: sound_panning; CH1_LEFT, CH2_LEFT, CH3_LEFT, CH4_LEFT, CH1_RIGHT, CH2_RIGHT, CH3_RIGHT, CH4_RIGHT);
+
+    pub fn step<P: AudioPlayer>(&mut self, player: &mut P, delta: usize) {
+        if !self.is_active() {
+            return;
+        }
+
+        let total_cycles = delta as u32;
+
+        for _ in 0..total_cycles {
+            self.sweep_pulse.tick();
+            self.pulse.tick();
+            self.wave.tick();
+            self.noise.tick();
+
+            self.sample_counter += SAMPLE_RATE;
+            if self.sample_counter >= cpu::FREQUENCY {
+                self.sample_counter -= cpu::FREQUENCY;
+                let (left, right) = self.mix();
+
+                player.push_sample(left, right);
+            }
+
+            self.cycles += 1;
+            if self.cycles >= 8192 {
+                self.cycles -= 8192;
+                self.frame_sequencer = (self.frame_sequencer + 1) % 8;
+                self.tick_frame_sequencer();
+            }
+        }
+
+        // player.flush_buffer();
     }
 
-    bit_accessors! { target: nr10; SWEEP_DIRECTION }
+    /// ticks the frame sequencer, which controls the frequency of sound updates
+    fn tick_frame_sequencer(&mut self) {
+        match self.frame_sequencer {
+            // length counter (256hz)
+            0 | 4 => {
+                self.tick_length();
+            }
+            // length counter (256hz) and period sweep (128hz)
+            2 | 6 => {
+                self.tick_length();
+                self.sweep_pulse.tick_sweep();
+            }
+            // volume envelope (64hz)
+            7 => {
+                self.tick_envelope();
+            }
+            _ => {}
+        }
+    }
 
-    field_bit_accessors! { target: nr12; ENVELOPE_DIRECTION }
-    field_bit_accessors! { target: nr22; ENVELOPE_DIRECTION }
-    field_bit_accessors! { target: nr42; ENVELOPE_DIRECTION }
+    fn tick_length(&mut self) {
+        if self.sweep_pulse.period_high_length_enable() && self.sweep_pulse.length.clock() {
+            self.sweep_pulse.enabled = false;
+        }
+        if self.pulse.period_high_length_enable() && self.pulse.length.clock() {
+            self.pulse.enabled = false;
+        }
+        if self.wave.period_high_length_enable() && self.wave.length.clock() {
+            self.wave.enabled = false;
+        }
+        if self.noise.control_length_enable() && self.noise.length.clock() {
+            self.noise.enabled = false;
+        }
+    }
 
-    bit_accessors! { target: nr30; DAC_ENABLE }
+    fn tick_envelope(&mut self) {
+        self.sweep_pulse
+            .envelope_state
+            .tick(self.sweep_pulse.envelope, self.sweep_pulse.enabled);
+        self.pulse
+            .envelope_state
+            .tick(self.pulse.envelope, self.pulse.enabled);
+        self.noise
+            .envelope_state
+            .tick(self.noise.envelope, self.noise.enabled);
+    }
 
-    field_bit_accessors! { target: nr14; TRIGGER, LENGTH_ENABLE }
-    field_bit_accessors! { target: nr24; TRIGGER, LENGTH_ENABLE }
-    field_bit_accessors! { target: nr34; TRIGGER, LENGTH_ENABLE }
-    field_bit_accessors! { target: nr44; TRIGGER, LENGTH_ENABLE }
+    /// applies the DC-blocking high-pass filter to a single channel sample
+    /// removes the DC offset that the unsigned DAC outputs would otherwise leave
+    #[inline(always)]
+    fn high_pass(&mut self, channel: usize, sample: f32) -> f32 {
+        let output = sample - self.filter_diff[channel];
+        self.filter_diff[channel] = sample - (sample - self.filter_diff[channel]) * self.filter_rate;
+        output
+    }
 
-    bit_accessors! { target: nr43; LFSR_WIDTH }
+    fn mix(&mut self) -> (i16, i16) {
+        let ch1_vol = if self.sweep_pulse.enabled {
+            self.sweep_pulse
+                .get_sample(self.sweep_pulse.envelope_state.volume)
+        } else {
+            0
+        };
 
-    pub fn is_active(&self) -> bool { self.nr52 & AUDIO_ON_OFF != 0 }
+        let ch2_vol = if self.pulse.enabled {
+            self.pulse.get_sample(self.pulse.envelope_state.volume)
+        } else {
+            0
+        };
+
+        let ch3_vol = if self.wave.enabled {
+            self.wave.get_sample()
+        } else {
+            0
+        };
+
+        let ch4_vol = if self.noise.enabled {
+            self.noise.get_sample(self.noise.envelope_state.volume)
+        } else {
+            0
+        };
+
+        let mut left = 0i32;
+        let mut right = 0i32;
+
+        if self.ch1_left() {
+            left += ch1_vol as i32;
+        }
+        if self.ch1_right() {
+            right += ch1_vol as i32;
+        }
+
+        if self.ch2_left() {
+            left += ch2_vol as i32;
+        }
+        if self.ch2_right() {
+            right += ch2_vol as i32;
+        }
+
+        if self.ch3_left() {
+            left += ch3_vol as i32;
+        }
+        if self.ch3_right() {
+            right += ch3_vol as i32;
+        }
+
+        if self.ch4_left() {
+            left += ch4_vol as i32;
+        }
+        if self.ch4_right() {
+            right += ch4_vol as i32;
+        }
+
+        // raw sum is 0..=60 per side; after master volume (1..=8) and the
+        // high-pass filter the signal sits around 0 with peaks near +-240,
+        // so ~130x fills i16 without routinely clipping
+        const OUTPUT_GAIN: f32 = 130.0;
+
+        let left = (left * self.get_master_volume_left()) as f32;
+        let right = (right * self.get_master_volume_right()) as f32;
+
+        let left = self.high_pass(0, left) * OUTPUT_GAIN;
+        let right = self.high_pass(1, right) * OUTPUT_GAIN;
+
+        let left = left.clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+        let right = right.clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+
+        (left, right)
+    }
+
+    fn sync_envelope(&mut self) {
+        self.sweep_pulse.envelope_state.trigger(self.sweep_pulse.envelope);
+        self.pulse.envelope_state.trigger(self.pulse.envelope);
+        self.noise.envelope_state.trigger(self.noise.envelope);
+    }
 }
 
 impl Accessible<u16> for Apu {
     fn read(&self, address: u16) -> u8 {
         match address {
-            NR10 => self.nr10,
-            NR11 => self.nr11,
-            NR12 => self.nr12,
-            NR13 => self.nr13,
-            NR14 => self.nr14,
+            NR10..=NR14 => self.sweep_pulse.read(address),
+            NR21..=NR24 => self.pulse.read(address),
+            NR30..=NR34 => self.wave.read(address),
+            NR41..=NR44 => self.noise.read(address),
 
-            NR21 => self.nr21,
-            NR22 => self.nr22,
-            NR23 => self.nr23,
-            NR24 => self.nr24,
-            NR30 => self.nr30,
-            NR31 => self.nr31,
-            NR32 => self.nr32,
-            NR33 => self.nr33,
-            NR34 => self.nr34,
-
-            NR41 => self.nr41,
-            NR42 => self.nr42,
-            NR43 => self.nr43,
-            NR44 => self.nr44,
-            NR50 => self.nr50,
-            NR51 => self.nr51,
-            NR52 => self.nr52,
-            addr @ 0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize],
-
-            0xFF15 | 0xFF1F | 0xFF27..=0xFF2F => {
-                println!("Reads to unimplemented Apu register {address:04X} return 0xFF");
-                0xFF
+            NR50 => self.master_volume,
+            NR51 => self.sound_panning,
+            NR52 => {
+                (self.master_control & AUDIO_ON_OFF)
+                    | 0x70
+                    | self.noise.is_enabled()
+                    | self.wave.is_enabled()
+                    | self.pulse.is_enabled()
+                    | self.sweep_pulse.is_enabled()
             }
-            _ => unreachable!(
-                "Apu: read of address {address:04X} should have been handled by other components"
-            ),
+
+            WAVE_RAM_START..=WAVE_RAM_END => self.wave.wave_ram[(address - WAVE_RAM_START) as usize],
+
+            _ => 0xFF,
         }
     }
 
     fn write(&mut self, address: u16, value: u8) {
-        match address {
-            NR10 => self.nr10 = value,
-            NR11 => self.nr11 = value,
-            NR12 => self.nr12 = value,
-            NR13 => self.nr13 = value,
-            NR14 => self.nr14 = value,
-            0xFF15 => {} // println!("Writes in unused Apu memory range are ignored, {address:04X}"),
-            NR21 => self.nr21 = value,
-            NR22 => self.nr22 = value,
-            NR23 => self.nr23 = value,
-            NR24 => self.nr24 = value,
-            NR30 => self.nr30 = value,
-            NR31 => self.nr31 = value,
-            NR32 => self.nr32 = value,
-            NR33 => self.nr33 = value,
-            NR34 => self.nr34 = value,
-            0xFF1F => {} // println!("Writes in unused Apu memory range are ignored, {address:04X}"),
-            NR41 => self.nr41 = value,
-            NR42 => self.nr42 = value,
-            NR43 => self.nr43 = value,
-            NR44 => self.nr44 = value,
-            NR50 => self.nr50 = value,
-            NR51 => self.nr51 = value,
-            // audio master control, if turning off audio, disable all channels
-            NR52 => self.nr52 = (value & AUDIO_ON_OFF) | (self.nr52 & 0x7F),
-            0xFF27..=0xFF2F => {} // println!("Writes in unused Apu memory range are ignored, {address:04X}"),
-            addr @ 0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize] = value,
+        // When APU is off, ignore writes to all registers except NR52, wave RAM,
+        // and length timer registers (DMG behavior: NR11, NR21, NR31, NR41 are writable when off)
+        if !self.is_active() && address != NR52 && !(WAVE_RAM_START..=WAVE_RAM_END).contains(&address) {
+            match address {
+                NR11 => self.sweep_pulse.length.counter = 64 - (value & 0x3F) as u16,
+                NR21 => self.pulse.length.counter = 64 - (value & 0x3F) as u16,
+                NR31 => self.wave.length.counter = 256 - value as u16,
+                NR41 => self.noise.length.counter = 64 - (value & 0x3F) as u16,
+                _ => {}
+            }
+            return;
+        }
 
-            _ => unreachable!(
-                "Apu: write of address {address:04X} should have been handled by other components"
-            ),
+        let even_step = self.frame_sequencer.is_multiple_of(2);
+
+        match address {
+            NR10..=NR14 => self.sweep_pulse.write(address, value, even_step),
+            NR21..=NR24 => self.pulse.write(address, value, even_step),
+            NR30..=NR34 => self.wave.write(address, value, even_step),
+            NR41..=NR44 => self.noise.write(address, value, even_step),
+
+            NR50 => self.master_volume = value,
+            NR51 => self.sound_panning = value,
+            NR52 => {
+                let was_active = self.audio_on_off();
+                let now_active = value & AUDIO_ON_OFF != 0;
+
+                if !was_active && now_active {
+                    //start at step 7 so the first tick wraps to step 0 (length clock),
+                    // matching hardware behavior where power-on offsets the next frame time by 8192 T-cycles.
+                    self.frame_sequencer = 7;
+
+                    self.cycles = 0;
+                    self.sync_envelope();
+                }
+                // clear all registers NR10-NR51 when APU is turned off
+                else if was_active && !now_active {
+                    self.sweep_pulse.clear_registers();
+                    self.pulse.clear_registers();
+                    self.wave.clear_registers();
+                    self.noise.clear_registers();
+                    self.master_volume = 0;
+                    self.sound_panning = 0;
+
+                    // on DMG, length counters are preserved across power off/on
+                }
+
+                self.master_control = value & AUDIO_ON_OFF;
+            }
+
+            WAVE_RAM_START..=WAVE_RAM_END => self.wave.wave_ram[(address - WAVE_RAM_START) as usize] = value,
+            _ => {}
         }
     }
 }

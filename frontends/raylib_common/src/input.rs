@@ -21,31 +21,31 @@ pub trait ToInputState {
 
 #[derive(Debug, Clone)]
 pub struct InputKeyTriggers {
-    pub up: [KeyboardKey; 2],
-    pub down: [KeyboardKey; 2],
-    pub left: [KeyboardKey; 2],
-    pub right: [KeyboardKey; 2],
-    pub a: [KeyboardKey; 2],
-    pub b: [KeyboardKey; 2],
-    pub start: [KeyboardKey; 2],
-    pub select: [KeyboardKey; 2],
-    pub escape: [KeyboardKey; 2],
-    pub speed_up: [KeyboardKey; 2],
+    pub up: Box<[KeyboardKey]>,
+    pub down: Box<[KeyboardKey]>,
+    pub left: Box<[KeyboardKey]>,
+    pub right: Box<[KeyboardKey]>,
+    pub a: Box<[KeyboardKey]>,
+    pub b: Box<[KeyboardKey]>,
+    pub start: Box<[KeyboardKey]>,
+    pub select: Box<[KeyboardKey]>,
+    pub escape: Box<[KeyboardKey]>,
+    pub speed_up: Box<[KeyboardKey]>,
 }
 
 impl Default for InputKeyTriggers {
     fn default() -> Self {
         Self {
-            up: [KeyboardKey::KEY_W, KeyboardKey::KEY_UP],
-            down: [KeyboardKey::KEY_S, KeyboardKey::KEY_DOWN],
-            left: [KeyboardKey::KEY_A, KeyboardKey::KEY_LEFT],
-            right: [KeyboardKey::KEY_D, KeyboardKey::KEY_RIGHT],
-            a: [KeyboardKey::KEY_J, KeyboardKey::KEY_ENTER],
-            b: [KeyboardKey::KEY_K, KeyboardKey::KEY_C],
-            start: [KeyboardKey::KEY_L, KeyboardKey::KEY_X],
-            select: [KeyboardKey::KEY_SEMICOLON, KeyboardKey::KEY_Z],
-            escape: [KeyboardKey::KEY_ESCAPE, KeyboardKey::KEY_BACKSPACE],
-            speed_up: [KeyboardKey::KEY_LEFT_SHIFT, KeyboardKey::KEY_SPACE],
+            up: [KeyboardKey::KEY_W, KeyboardKey::KEY_UP].into(),
+            down: [KeyboardKey::KEY_S, KeyboardKey::KEY_DOWN].into(),
+            left: [KeyboardKey::KEY_A, KeyboardKey::KEY_LEFT].into(),
+            right: [KeyboardKey::KEY_D, KeyboardKey::KEY_RIGHT].into(),
+            a: [KeyboardKey::KEY_J, KeyboardKey::KEY_Z].into(),
+            b: [KeyboardKey::KEY_K, KeyboardKey::KEY_C].into(),
+            start: [KeyboardKey::KEY_L, KeyboardKey::KEY_X].into(),
+            select: [KeyboardKey::KEY_SEMICOLON, KeyboardKey::KEY_Z].into(),
+            escape: [KeyboardKey::KEY_ESCAPE].into(),
+            speed_up: [KeyboardKey::KEY_LEFT_SHIFT].into(),
         }
     }
 }
