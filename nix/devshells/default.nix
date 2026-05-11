@@ -22,6 +22,10 @@
     rustToolchain
     cargo-flamegraph
     perf
+    curl
+    git
+    gnutar
+    xz
   ];
 in {
   x11 = pkgs.callPackage ./x11.nix {

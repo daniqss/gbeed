@@ -1,3 +1,4 @@
+use alloc::{boxed::Box, vec::Vec};
 mod mbc0;
 mod mbc1;
 mod mbc2;

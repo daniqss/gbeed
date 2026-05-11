@@ -11,13 +11,13 @@ use crate::{
 };
 
 // TODO: not expose individual instructions
-pub use instructions::{Instruction, Len, Nop};
+pub use instructions::{Instruction, InstructionError, Len, Nop};
 use instructions::{JumpCondition as JC, *};
 pub use registers::{Register8 as R8, Register16 as R16};
 
-use std::fmt::{self, Display, Formatter};
+use core::fmt::{self, Display, Formatter};
 
-pub type FetchResult = std::result::Result<InstructionBox, InstructionError>;
+pub type FetchResult = core::result::Result<InstructionBox, InstructionError>;
 
 pub const FREQUENCY: u32 = 4_194_304;
 
@@ -97,37 +97,23 @@ impl Cpu {
         self.halted = AFTER_BOOT_CPU.halted;
     }
 
-    pub fn step(gb: &mut Dmg) -> Option<InstructionBox> {
+    pub fn step(gb: &mut Dmg) -> Result<Option<InstructionBox>, InstructionError> {
         // check if is neccessatry to handle interrupts before executing the instruction
         if Cpu::handle_interrupts(gb) {
             // 5 Mcycles = 2 NOP + 3 ...
             gb.cpu.cycles = gb.cpu.cycles.wrapping_add(5);
-            return None;
+            return Ok(None);
         }
 
         if gb.cpu.halted {
             gb.cpu.cycles = gb.cpu.cycles.wrapping_add(4);
-            return None;
+            return Ok(None);
         }
 
         let opcode = gb.read(gb.cpu.pc);
 
-        let mut instruction = match Cpu::fetch(gb, opcode) {
-            Ok(instr) => instr,
-            Err(e) => {
-                eprintln!("Error fetching instruction at {:04X}: {}", gb.cpu.pc, e);
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                return None;
-            }
-        };
-
-        let effect = match instruction.exec(gb) {
-            Ok(effect) => effect,
-            Err(e) => {
-                eprintln!("Error executing instruction at {:04X}: {}", gb.cpu.pc, e);
-                return None;
-            }
-        };
+        let mut instruction = Cpu::fetch(gb, opcode)?;
+        let effect = instruction.exec(gb)?;
 
         gb.cpu.cycles = gb.cpu.cycles.wrapping_add(effect.cycles as usize);
         gb.cpu.pc = match effect.len {
@@ -136,7 +122,7 @@ impl Cpu {
         };
         effect.flags.apply(&mut gb.cpu.f);
 
-        Some(instruction)
+        Ok(Some(instruction))
     }
 
     fn handle_interrupts(gb: &mut Dmg) -> bool {

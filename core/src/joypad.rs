@@ -115,8 +115,8 @@ impl Accessible<u16> for Joypad {
     }
 }
 
-impl std::fmt::Display for Joypad {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Joypad {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut buttons = Vec::with_capacity(10);
         if self.input & PRESS_RIGHT == 0 {
             buttons.push("Right");

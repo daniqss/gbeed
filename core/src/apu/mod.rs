@@ -375,7 +375,6 @@ impl Accessible<u16> for Apu {
                     self.sound_panning = 0;
 
                     // on DMG, length counters are preserved across power off/on
-                    // (envelope is already cleared by clear_registers)
                 }
 
                 self.master_control = value & AUDIO_ON_OFF;

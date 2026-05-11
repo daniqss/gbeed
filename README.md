@@ -3,7 +3,8 @@ DMG Game Boy emulator for embedded devices. This project aims to provide a simpl
 
 This project consists of the emulator core and two emulator frontends made with [raylib](https://www.raylib.com/), that deals with graphics, input and audio.
 The [`console`](./frontends/console/) frontend is meant to be used in a Raspberry Pi Zero with a small display (using the raylib DRM backend).
-The [`debugger`](./frontends/debugger/) frontend is meant to be used in a normal Linux graphical session, both X11 and Wayland, or in [the browser](https://daniqss.github.io/gbeed/) thanks to the WASM build.
+The [`debugger`](./frontends/debugger/) frontend is meant to be used in a normal Linux graphical session, both X11 and Wayland, or in [the browser](https://daniqss.github.io/gbeed/) thanks to the WASM build
+
 
 ![gbeed](./assets/game_collage.png)
 
@@ -55,12 +56,11 @@ DRM support is tested in Intel, AMD and Broadcom iGPUs. In Nvidia (specifically 
 The recommended hardware to use the `console` frontend is the **Raspberry Pi Zero 2 W**, as its `aarch64` architecture has full NixOS support, allowing us to easily provide a ready-to-use SD card image (see [raspberry-pi-zero-2-sd-image](#how-to-build-a-raspberry-pi-zero-2-sd-image)).
 The original **Raspberry Pi Zero** (`armv6l`) is also supported, but only via a manually cross-compiled binary. NixOS does not support `armv6l` as a hosted system, so there is no managed image for it. Device setup must be done manually (see [armv6l build](#how-to-build-for-armv6l-alpine-linux)).
 
-
 ### How to build a Raspberry Pi Zero 2 SD image
 The easiest way to run gbeed in a console format is on a Raspberry Pi Zero 2 W. This project offers a ready-to-use NixOS SD image that boots directly into gbeed — no installer, no manual setup.
 
 #### Download a pre-built image
-Pre-built images are available on the [Releases](https://github.com/daniqss/gbeed/releases) page. Download `gbeed02.img.zst` from the latest release.
+Pre-built images are (will be) available on the [Releases](https://github.com/daniqss/gbeed/releases) page. Download `gbeed02.img.zst` from the latest release.
 
 #### Build from source
 You can also build the image yourself (requires an `aarch64-linux` host):
@@ -98,7 +98,7 @@ For PPU testing, gbeed passes [dmg-acid2](https://github.com/mattcurrie/dmg-acid
 
 To run the tests, you can use just:
 ```sh
-just test
+just test --workspace
 ```
 
 The boot rom test needs a valid dmg boot rom file to run in the project root, named `dmg_boot.bin`

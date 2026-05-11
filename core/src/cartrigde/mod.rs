@@ -31,8 +31,8 @@ pub enum CartridgeError {
     IncorrectGlobalChecksum(u16, u16),
 }
 
-impl std::fmt::Display for CartridgeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for CartridgeError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             CartridgeError::InvalidRomSize(size, message) => write!(
                 f,
@@ -69,7 +69,7 @@ impl std::fmt::Display for CartridgeError {
     }
 }
 
-pub type CartridgeResult<T> = std::result::Result<T, CartridgeError>;
+pub type CartridgeResult<T> = core::result::Result<T, CartridgeError>;
 
 pub struct Cartridge {
     pub header: CartridgeHeader,
@@ -77,8 +77,8 @@ pub struct Cartridge {
     mbc: Box<dyn MemoryBankController>,
 }
 
-impl std::fmt::Debug for Cartridge {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for Cartridge {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Cartridge").field("header", &self.header).finish()
     }
 }
@@ -186,6 +186,6 @@ impl Accessible<u16> for Cartridge {
     }
 }
 
-impl std::fmt::Display for Cartridge {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { writeln!(f, "{}", self.header) }
+impl core::fmt::Display for Cartridge {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { writeln!(f, "{}", self.header) }
 }

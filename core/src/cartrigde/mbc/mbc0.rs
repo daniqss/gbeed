@@ -1,4 +1,5 @@
-use std::mem::MaybeUninit;
+use alloc::{boxed::Box, vec::Vec};
+use core::mem::MaybeUninit;
 
 use crate::{
     BOOT_ROM_END, BOOT_ROM_START, EXTERNAL_RAM_SIZE, EXTERNAL_RAM_START, ROM_BANK00_SIZE, ROM_BANKNN_SIZE,
@@ -33,14 +34,14 @@ impl MemoryBankController for Mbc0 {
         // This way we avoid stack copy with compile time known size in heap allocation
         let rom: Box<[u8; MBC0_ROM_SIZE]> = unsafe {
             let mut boxed: Box<MaybeUninit<[u8; MBC0_ROM_SIZE]>> = Box::new(MaybeUninit::uninit());
-            std::ptr::copy_nonoverlapping(raw_rom.as_ptr(), boxed.as_mut_ptr() as *mut u8, MBC0_ROM_SIZE);
+            core::ptr::copy_nonoverlapping(raw_rom.as_ptr(), boxed.as_mut_ptr() as *mut u8, MBC0_ROM_SIZE);
             boxed.assume_init()
         };
 
         let ram: Option<Box<[u8; MBC0_RAM_SIZE]>> = match (features.has_ram, header.ram_size, save) {
             (true, RamSize::Ram8KB, Some(save_data)) => Some(unsafe {
                 let mut boxed: Box<MaybeUninit<[u8; MBC0_RAM_SIZE]>> = Box::new(MaybeUninit::uninit());
-                std::ptr::copy_nonoverlapping(
+                core::ptr::copy_nonoverlapping(
                     save_data.as_ptr(),
                     boxed.as_mut_ptr() as *mut u8,
                     MBC0_RAM_SIZE,

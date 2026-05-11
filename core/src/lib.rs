@@ -1,3 +1,10 @@
+#![no_std]
+
+extern crate alloc;
+
+#[cfg(any(feature = "std", test))]
+extern crate std;
+
 mod apu;
 mod cartrigde;
 pub mod controller;
@@ -16,7 +23,7 @@ pub use apu::{Apu, AudioPlayer, BUFFER_SIZE, DefaultAudioPlayer, SAMPLE_RATE, ST
 pub use cartrigde::Cartridge;
 pub use controller::{Controller, DefaultController};
 pub use cpu::{AFTER_BOOT_CPU, Cpu};
-pub use dmg::Dmg;
+pub use dmg::{Dmg, DmgError};
 pub use interrupts::Interrupt;
 pub use joypad::Joypad;
 pub use joypad::JoypadButton;
