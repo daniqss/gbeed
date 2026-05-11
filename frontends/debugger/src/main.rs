@@ -46,17 +46,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let (width, height, is_mobile) = get_platform_info();
 
-    let (mut rl, thread) = raylib::init()
+    let (rl, thread) = raylib::init()
         .size(width, height)
         .title("gbeed")
         .resizable()
         .build();
-    let audio = RaylibAudio::init_audio_device()?;
+
+    // leak to obtain 'static references
+    // these resources live for the whole program so it doens't really matter
+    let rl: &'static mut RaylibHandle = Box::leak(Box::new(rl));
+    let thread: &'static RaylibThread = Box::leak(Box::new(thread));
+    let audio: &'static RaylibAudio = Box::leak(Box::new(RaylibAudio::init_audio_device()?));
 
     rl.set_target_fps(60);
     rl.set_exit_key(None);
 
-    let mut app = EmulatorApp::new(&mut rl, &thread, &audio, boot_path, is_mobile);
+    let mut app = EmulatorApp::new(rl, thread, audio, boot_path, is_mobile);
 
     // load ROM if its provided via command line args
     if let Some(path) = game_path {
