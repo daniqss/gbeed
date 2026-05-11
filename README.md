@@ -60,7 +60,7 @@ The original **Raspberry Pi Zero** (`armv6l`) is also supported, but only via a 
 The easiest way to run gbeed in a console format is on a Raspberry Pi Zero 2 W. This project offers a ready-to-use NixOS SD image that boots directly into gbeed — no installer, no manual setup.
 
 #### Download a pre-built image
-Pre-built images are available on the [Releases](https://github.com/daniqss/gbeed/releases) page. Download `gbeed02.img.zst` from the latest release.
+Pre-built images are (will be) available on the [Releases](https://github.com/daniqss/gbeed/releases) page. Download `gbeed02.img.zst` from the latest release.
 
 #### Build from source
 You can also build the image yourself (requires an `aarch64-linux` host):
