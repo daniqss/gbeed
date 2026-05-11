@@ -38,7 +38,7 @@ mod sub;
 mod swap;
 mod xor;
 
-use std::fmt::Display;
+use core::fmt::Display;
 
 pub use adc::*;
 pub use add::*;
@@ -97,7 +97,7 @@ impl<T: Instruction + Copy + 'static> From<T> for InstructionBox {
 }
 
 impl Display for dyn Instruction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.disassembly())
     }
 }
@@ -156,8 +156,8 @@ pub enum InstructionError {
     MalformedInstruction,
 }
 
-impl std::fmt::Display for InstructionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for InstructionError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             InstructionError::UnusedOpcode(opcode, pc) => {
                 write!(f, "Unused opcode {:02X} at PC {:04X}", opcode, pc)
@@ -184,4 +184,7 @@ impl std::fmt::Display for InstructionError {
     }
 }
 
-pub type InstructionResult = std::result::Result<InstructionEffect, InstructionError>;
+pub type InstructionResult = core::result::Result<InstructionEffect, InstructionError>;
+
+#[cfg(feature = "std")]
+impl std::error::Error for InstructionError {}

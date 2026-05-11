@@ -21,9 +21,7 @@ impl DefaultSerialListener {
 }
 
 impl SerialListener for DefaultSerialListener {
-    fn on_transfer(&mut self, data: u8) {
-        println!("Serial transfer: {data:02X}");
-    }
+    fn on_transfer(&mut self, _data: u8) {}
 }
 
 /// # Serial Data Transfer
@@ -41,8 +39,8 @@ pub struct Serial {
     pub pending_data: Vec<u8>,
 }
 
-impl std::fmt::Debug for Serial {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for Serial {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "Serial {{ sb: {:#04X}, sc: {:#04X} }}", self.sb, self.sc)
     }
 }

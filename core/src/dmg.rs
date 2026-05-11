@@ -2,7 +2,7 @@ pub use crate::prelude::*;
 use crate::{
     Apu, Cartridge, Controller, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
     apu::{APU_REGISTER_END, APU_REGISTER_START},
-    cpu::{R8, R16},
+    cpu::{InstructionError, R8, R16},
     interrupts::{IE, IF},
     joypad::JOYP,
     memory::*,
@@ -13,6 +13,32 @@ use crate::{
 };
 
 const BANK_REGISTER: u16 = 0xFF50;
+
+#[derive(Debug)]
+pub enum DmgError {
+    Instruction(InstructionError),
+}
+
+impl From<InstructionError> for DmgError {
+    fn from(err: InstructionError) -> Self { DmgError::Instruction(err) }
+}
+
+impl core::fmt::Display for DmgError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            DmgError::Instruction(err) => write!(f, "Instruction error: {}", err),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for DmgError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            DmgError::Instruction(err) => Some(err),
+        }
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct Dmg {
@@ -54,20 +80,10 @@ impl Dmg {
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     /// Modifies the DMG state by executing one CPU instruction, and return the executed instruction
-    pub fn run<C: Controller>(&mut self, controller: &mut C) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run<C: Controller>(&mut self, controller: &mut C) -> Result<(), DmgError> {
         // one frame == 70224 T-cycles == 17556 M-cycles
         while self.cpu.cycles < 17556 {
-            let _instr = self.step(controller);
-
-            // println!(
-            //     "Executing instruction at {:04X} and {}: {}",
-            //     self.cpu.pc,
-            //     self.cpu.cycles,
-            //     match &_instr {
-            //         Some(instr) => format!("{}", instr),
-            //         None => "None".to_string(),
-            //     }
-            // );
+            self.step(controller)?;
         }
 
         self.cpu.cycles = 0;
@@ -75,18 +91,18 @@ impl Dmg {
         Ok(())
     }
 
-    pub fn step<C: Controller>(&mut self, controller: &mut C) -> Option<InstructionBox> {
+    pub fn step<C: Controller>(&mut self, controller: &mut C) -> Result<Option<InstructionBox>, DmgError> {
         let prev_cycles = self.cpu.cycles;
 
-        let instruction = Cpu::step(self);
+        let instruction = Cpu::step(self)?;
 
-        let delta = self.cpu.cycles.wrapping_sub(prev_cycles);
+        let delta = 4 * self.cpu.cycles.wrapping_sub(prev_cycles);
 
-        self.ppu.step(controller, delta * 4, &mut self.interrupt_flag);
-        self.timer.step(delta * 4, &mut self.interrupt_flag);
+        self.ppu.step(controller, delta, &mut self.interrupt_flag);
+        self.timer.step(delta, &mut self.interrupt_flag);
         self.serial.step(controller);
 
-        instruction
+        Ok(instruction)
     }
 }
 
@@ -201,7 +217,7 @@ impl Accessible<u16> for Dmg {
                 cgb::PCM12 => {}
                 cgb::PCM34 => {}
 
-                _ => eprintln!("Writes to unimplemented IO register {:04X} are ignored", address),
+                _ => {}
             },
 
             HRAM_START..=HRAM_END => self.memory.hram[(address - HRAM_START) as usize] = value,
