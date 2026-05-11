@@ -19,6 +19,8 @@ use std::fmt::{self, Display, Formatter};
 
 pub type FetchResult = std::result::Result<InstructionBox, InstructionError>;
 
+pub const FREQUENCY: u32 = 4_194_304;
+
 pub const AFTER_BOOT_CPU: Cpu = Cpu {
     a: 0x01,
     f: 0xB0,

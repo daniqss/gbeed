@@ -1,6 +1,6 @@
 use gbeed_core::prelude::*;
 use gbeed_core::{
-    AudioPlayer, Controller, Ppu, Renderer, SAMPLE_RATE, STEREO_BUFFER_SIZE, SerialListener,
+    AudioPlayer, BUFFER_SIZE, Controller, Ppu, Renderer, SAMPLE_RATE, SerialListener,
     prelude::DMG_SCREEN_WIDTH,
 };
 use gbeed_raylib_common::{Texture, color::DMG_CLASSIC_PALETTE, settings::SpeedUpMultiplier};
@@ -23,7 +23,7 @@ pub struct DebuggerController<'a> {
     pub scroll_y: i32,
 
     sample_idx: usize,
-    audio_buffer: Box<[i16; STEREO_BUFFER_SIZE]>,
+    audio_buffer: Box<[i16; BUFFER_SIZE]>,
     audio_stream: AudioStream<'a>,
 
     pub speed_up_multiplier: SpeedUpMultiplier,
@@ -35,6 +35,10 @@ pub struct DebuggerController<'a> {
 
 impl<'a> DebuggerController<'a> {
     pub fn new(rl: &'a mut RaylibHandle, thread: &'a RaylibThread, audio: &'a RaylibAudio) -> Self {
+        // Match raylib's internal subbuffer size to our flush size so
+        // UpdateAudioStream never has to reject a chunk for being "too many frames"
+        audio.set_audio_stream_buffer_size_default(BUFFER_SIZE as i32);
+
         let audio_stream = audio.new_audio_stream(SAMPLE_RATE, 16, 1);
         audio_stream.play();
 
@@ -50,7 +54,7 @@ impl<'a> DebuggerController<'a> {
             scroll_y: 0,
 
             sample_idx: 0,
-            audio_buffer: Box::new([0; STEREO_BUFFER_SIZE]),
+            audio_buffer: Box::new([0; BUFFER_SIZE]),
             audio_stream,
 
             speed_up_multiplier: SpeedUpMultiplier::OneAndHalf,
@@ -112,18 +116,25 @@ impl AudioPlayer for DebuggerController<'_> {
     fn playing_stereo(&self) -> bool { false }
 
     fn push_sample(&mut self, left: i16, right: i16) {
-        self.audio_buffer[self.sample_idx] = left;
-        self.audio_buffer[self.sample_idx + 1] = right;
-        self.sample_idx = (self.sample_idx + 2) % STEREO_BUFFER_SIZE;
+        // drop new samples when the buffer is full instead of wrapping
+        if self.sample_idx >= BUFFER_SIZE {
+            return;
+        }
+
+        // let the audio mono for now
+        let mono = ((left as i32 + right as i32) / 2) as i16;
+        self.audio_buffer[self.sample_idx] = mono;
+        self.sample_idx += 1;
     }
 
     fn flush_buffer(&mut self) {
-        while self.audio_stream.is_processed() && self.sample_idx > 0 {
-            if let Err(e) = self.audio_stream.update(&self.audio_buffer[..self.sample_idx]) {
-                eprintln!("update error: {e}");
-            }
-            self.sample_idx = 0;
+        if self.sample_idx == 0 || !self.audio_stream.is_processed() {
+            return;
         }
+        if let Err(e) = self.audio_stream.update(&self.audio_buffer[..self.sample_idx]) {
+            eprintln!("update error: {e}");
+        }
+        self.sample_idx = 0;
     }
 }
 

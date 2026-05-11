@@ -8,7 +8,7 @@ use envelope::Envelope;
 use length_counter::LengthCounter;
 pub use player::*;
 
-use crate::prelude::*;
+use crate::{cpu, prelude::*};
 
 mem_range!(APU_REGISTER, 0xFF10, 0xFF3F);
 
@@ -50,14 +50,13 @@ const CH3_ON_FLAG: u8 = 0x04;
 const CH2_ON_FLAG: u8 = 0x02;
 const CH1_ON_FLAG: u8 = 0x01;
 
-// const CHANNEL_DIVISORS: [u32; 8] = [8, 16, 32, 48, 64, 80, 96, 112];
-
-// pub const FRAME_SEQUENCER_RATE: u32 = 512;
-pub const CPU_FREQ: u32 = 4_194_304;
-
 pub const SAMPLE_RATE: u32 = 44100;
 pub const BUFFER_SIZE: usize = 4096;
 pub const STEREO_BUFFER_SIZE: usize = BUFFER_SIZE * 2;
+
+/// The base rate for the filter, this is used to calculate the
+/// filter rate based on the clock frequency and the sampling rate.
+const FILTER_RATE_BASE: f64 = 0.999958;
 
 #[derive(Debug)]
 pub struct Apu {
@@ -91,6 +90,10 @@ pub struct Apu {
     cycles: u32,
 
     sample_counter: u32,
+
+    /// Per-channel state for the DC-blocking high-pass filter ([left, right]).
+    filter_diff: [f32; 2],
+    filter_rate: f32,
 }
 
 impl Default for Apu {
@@ -114,12 +117,19 @@ impl Apu {
             cycles: 0,
 
             sample_counter: 0,
+
+            filter_diff: [0.0; 2],
+            filter_rate: FILTER_RATE_BASE.powf(cpu::FREQUENCY as f64 / SAMPLE_RATE as f64) as f32,
         }
     }
+
+    #[inline(always)]
     pub fn is_active(&self) -> bool { self.master_control & AUDIO_ON_OFF != 0 }
 
+    #[inline(always)]
     fn get_master_volume_left(&self) -> i32 { ((self.master_volume >> 4) & 0x07) as i32 + 1 }
 
+    #[inline(always)]
     fn get_master_volume_right(&self) -> i32 { (self.master_volume & 0x07) as i32 + 1 }
 
     bit_accessors!(target: master_control; AUDIO_ON_OFF, CH1_ON_FLAG, CH2_ON_FLAG, CH3_ON_FLAG, CH4_ON_FLAG);
@@ -139,8 +149,8 @@ impl Apu {
             self.noise.tick();
 
             self.sample_counter += SAMPLE_RATE;
-            if self.sample_counter >= CPU_FREQ {
-                self.sample_counter -= CPU_FREQ;
+            if self.sample_counter >= cpu::FREQUENCY {
+                self.sample_counter -= cpu::FREQUENCY;
                 let (left, right) = self.mix();
 
                 player.push_sample(left, right);
@@ -204,7 +214,16 @@ impl Apu {
             .tick(self.noise.envelope, self.noise.enabled);
     }
 
-    fn mix(&self) -> (i16, i16) {
+    /// applies the DC-blocking high-pass filter to a single channel sample
+    /// removes the DC offset that the unsigned DAC outputs would otherwise leave
+    #[inline(always)]
+    fn high_pass(&mut self, channel: usize, sample: f32) -> f32 {
+        let output = sample - self.filter_diff[channel];
+        self.filter_diff[channel] = sample - (sample - self.filter_diff[channel]) * self.filter_rate;
+        output
+    }
+
+    fn mix(&mut self) -> (i16, i16) {
         let ch1_vol = if self.sweep_pulse.enabled {
             self.sweep_pulse
                 .get_sample(self.sweep_pulse.envelope_state.volume)
@@ -261,13 +280,21 @@ impl Apu {
             right += ch4_vol as i32;
         }
 
-        left = left * self.get_master_volume_left() * 60;
-        right = right * self.get_master_volume_right() * 60;
+        // raw sum is 0..=60 per side; after master volume (1..=8) and the
+        // high-pass filter the signal sits around 0 with peaks near +-240,
+        // so ~130x fills i16 without routinely clipping
+        const OUTPUT_GAIN: f32 = 130.0;
 
-        left = left.clamp(i16::MIN as i32, i16::MAX as i32);
-        right = right.clamp(i16::MIN as i32, i16::MAX as i32);
+        let left = (left * self.get_master_volume_left()) as f32;
+        let right = (right * self.get_master_volume_right()) as f32;
 
-        (left as i16, right as i16)
+        let left = self.high_pass(0, left) * OUTPUT_GAIN;
+        let right = self.high_pass(1, right) * OUTPUT_GAIN;
+
+        let left = left.clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+        let right = right.clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+
+        (left, right)
     }
 
     fn sync_envelope(&mut self) {

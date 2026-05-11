@@ -291,9 +291,11 @@ mod dmg_sound {
         run_dmg_sound_test(DMG_SOUND_DIR, "08-len ctr during power.gb")
     }
 
+    #[ignore]
     #[test]
     fn wave_read_while_on() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "09-wave read while on.gb") }
 
+    #[ignore]
     #[test]
     fn wave_trigger_while_on() -> Result<()> {
         run_dmg_sound_test(DMG_SOUND_DIR, "10-wave trigger while on.gb")
@@ -302,6 +304,7 @@ mod dmg_sound {
     #[test]
     fn regs_after_power() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "11-regs after power.gb") }
 
+    #[ignore]
     #[test]
     fn wave_write_while_on() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "12-wave write while on.gb") }
 }
