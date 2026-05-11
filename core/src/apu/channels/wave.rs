@@ -1,3 +1,4 @@
+use super::{LengthCounter, handle_control_write};
 use crate::apu::*;
 use crate::prelude::*;
 
@@ -33,6 +34,8 @@ pub struct Wave {
     pub timer: u16,
     // from 0 to 31
     pub sample_idx: usize,
+    pub wave_ram_accessible: bool,
+    pub length: LengthCounter,
 }
 
 impl Wave {
@@ -49,6 +52,8 @@ impl Wave {
             enabled: false,
             timer: 0,
             sample_idx: 0,
+            wave_ram_accessible: false,
+            length: LengthCounter::new(256),
         }
     }
 
@@ -83,7 +88,7 @@ impl Wave {
         }
     }
 
-    pub fn write(&mut self, addr: u16, value: u8) {
+    pub fn write(&mut self, addr: u16, value: u8, even_step: bool) {
         match addr {
             NR30 => {
                 self.dac_enable = (value & 0x80) == 0x80;
@@ -93,14 +98,26 @@ impl Wave {
                     self.enabled = false;
                 }
             }
-            NR31 => self.length_timer = value,
+            NR31 => {
+                self.length.counter = 256 - value as u16;
+                self.length_timer = value;
+            }
             NR32 => self.output_level = (value & 0x60) >> 5,
             NR33 => self.period_low = value,
             NR34 => {
+                let was_length_enabled = self.period_high & 0x40 != 0;
                 if value & 0x80 != 0 {
                     self.trigger();
                 }
                 self.period_high = value;
+                handle_control_write(
+                    &mut self.length,
+                    &mut self.enabled,
+                    None,
+                    was_length_enabled,
+                    value,
+                    even_step,
+                );
             }
             WAVE_RAM_START..=WAVE_RAM_END => self.wave_ram[(addr - WAVE_RAM_START) as usize] = value,
 
@@ -111,6 +128,21 @@ impl Wave {
     }
 
     fn trigger(&mut self) {
+        // DMG retrigger corruption: if channel is already active and the frequency
+        // timer is about to expire, the wave RAM gets corrupted
+        if self.enabled && self.timer <= 2 {
+            let byte_pos = self.sample_idx / 2;
+            if byte_pos < 4 {
+                self.wave_ram[0] = self.wave_ram[byte_pos];
+            } else {
+                // Copy the 4-byte aligned block to the start of wave RAM
+                let aligned = byte_pos & !3;
+                for i in 0..4 {
+                    self.wave_ram[i] = self.wave_ram[aligned + i];
+                }
+            }
+        }
+
         if self.dac_enable {
             self.enabled = true;
         }
@@ -166,6 +198,9 @@ impl Wave {
             let period = self.get_period();
             self.timer = (2048 - period) * 2;
             self.sample_idx = (self.sample_idx + 1) % 32;
+            self.wave_ram_accessible = true;
+        } else {
+            self.wave_ram_accessible = false;
         }
     }
 }

@@ -1,3 +1,4 @@
+use super::{Envelope, LengthCounter, handle_control_write};
 use crate::apu::*;
 
 #[derive(Debug, Default)]
@@ -13,7 +14,7 @@ pub struct Noise {
 
     /// controls the frequency and randomness of the noise output
     /// - bit 7-4: clock shift
-    /// - bit 3: lfsr width (0 = 15-bit, 1 = 7-bit)
+    /// - bit 3: lfsr width (0 = 15 bit, 1 = 7 bit)
     /// - bit 2-0: clock divider (0 is treated as 0.5)
     pub frequency: u8,
 
@@ -24,9 +25,9 @@ pub struct Noise {
 
     pub enabled: bool,
     pub timer: u32,
-    pub current_volume: u8,
-    pub env_timer: u8,
-    /// linear feedback shift register (15-bit or 7-bit depending on nr43 bit 3)
+    pub envelope_state: Envelope,
+    pub length: LengthCounter,
+    /// linear feedback shift register (15 bit or 7 bit depending on nr43 bit 3)
     pub lfsr: u16,
 }
 
@@ -40,8 +41,8 @@ impl Noise {
 
             enabled: false,
             timer: 0,
-            current_volume: 0,
-            env_timer: 0,
+            envelope_state: Envelope::default(),
+            length: LengthCounter::new(64),
             lfsr: 0,
         }
     }
@@ -54,6 +55,7 @@ impl Noise {
         self.frequency = 0;
         self.control = 0;
         self.enabled = false;
+        self.envelope_state.clear();
     }
 
     pub fn read(&self, addr: u16) -> u8 {
@@ -67,9 +69,12 @@ impl Noise {
         }
     }
 
-    pub fn write(&mut self, addr: u16, value: u8) {
+    pub fn write(&mut self, addr: u16, value: u8, even_step: bool) {
         match addr {
-            NR41 => self.length_timer = value & 0x3F,
+            NR41 => {
+                self.length.counter = 64 - (value & 0x3F) as u16;
+                self.length_timer = value & 0x3F;
+            }
             NR42 => {
                 self.envelope = value;
                 // if bits 3-7 are 0, dac turns off
@@ -79,10 +84,20 @@ impl Noise {
             }
             NR43 => self.frequency = value,
             NR44 => {
+                let was_length_enabled = self.control & 0x40 != 0;
                 self.control = value;
                 if value & 0x80 != 0 {
                     self.trigger();
                 }
+                let env_reg = self.envelope;
+                handle_control_write(
+                    &mut self.length,
+                    &mut self.enabled,
+                    Some((&mut self.envelope_state, env_reg)),
+                    was_length_enabled,
+                    value,
+                    even_step,
+                );
             }
             _ => {}
         }
@@ -113,8 +128,7 @@ impl Noise {
         self.timer = self.get_period();
 
         // reset volume and envelope
-        self.current_volume = (self.envelope & 0xF0) >> 4;
-        self.env_timer = self.envelope & 0x07;
+        self.envelope_state.trigger(self.envelope);
 
         // reset lfsr (all bits set to 1)
         self.lfsr = 0x7FFF;

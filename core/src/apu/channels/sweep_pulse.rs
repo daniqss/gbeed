@@ -1,4 +1,4 @@
-use super::DUTY_TABLE;
+use super::{DUTY_TABLE, Envelope, LengthCounter, handle_control_write};
 use crate::apu::*;
 
 #[derive(Debug, Default)]
@@ -31,8 +31,8 @@ pub struct SweepPulse {
     pub timer: u16,
     /// from 0 to 7 (the waveform is 8 samples long)
     pub duty_step: u8,
-    pub current_volume: u8,
-    pub env_timer: u8,
+    pub envelope_state: Envelope,
+    pub length: LengthCounter,
     pub sweep_timer: u8,
     /// internal flag: set if pace > 0 or shift > 0 at trigger time
     pub sweep_enabled: bool,
@@ -55,8 +55,8 @@ impl SweepPulse {
             enabled: false,
             timer: 0,
             duty_step: 0,
-            current_volume: 0,
-            env_timer: 0,
+            envelope_state: Envelope::default(),
+            length: LengthCounter::new(64),
             sweep_timer: 0,
             sweep_enabled: false,
             shadow_period: 0,
@@ -74,6 +74,7 @@ impl SweepPulse {
         self.period_low = 0;
         self.period_high = 0;
         self.enabled = false;
+        self.envelope_state.clear();
         self.sweep_enabled = false;
         self.sweep_negate_used = false;
     }
@@ -90,7 +91,7 @@ impl SweepPulse {
         }
     }
 
-    pub fn write(&mut self, addr: u16, value: u8) {
+    pub fn write(&mut self, addr: u16, value: u8, even_step: bool) {
         match addr {
             NR10 => {
                 // if negate mode was used and is now cleared, disable the channel
@@ -100,6 +101,7 @@ impl SweepPulse {
                 self.sweep = value;
             }
             NR11 => {
+                self.length.counter = 64 - (value & 0x3F) as u16;
                 self.wave_duty = (value & 0xC0) >> 6;
                 self.length_timer = value & 0x3F;
             }
@@ -112,10 +114,20 @@ impl SweepPulse {
             }
             NR13 => self.period_low = value,
             NR14 => {
+                let was_length_enabled = self.period_high & 0x40 != 0;
                 self.period_high = value;
                 if value & 0x80 != 0 {
                     self.trigger();
                 }
+                let env_reg = self.envelope;
+                handle_control_write(
+                    &mut self.length,
+                    &mut self.enabled,
+                    Some((&mut self.envelope_state, env_reg)),
+                    was_length_enabled,
+                    value,
+                    even_step,
+                );
             }
             _ => {}
         }
@@ -138,8 +150,7 @@ impl SweepPulse {
         self.timer = (2048 - period) * 4;
 
         // reset volume and envelope
-        self.current_volume = (self.envelope & 0xF0) >> 4;
-        self.env_timer = self.envelope & 0x07;
+        self.envelope_state.trigger(self.envelope);
 
         // reset sweep
         let sweep_pace = (self.sweep & 0x70) >> 4;

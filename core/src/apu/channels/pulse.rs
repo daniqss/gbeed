@@ -1,4 +1,4 @@
-use super::DUTY_TABLE;
+use super::{DUTY_TABLE, Envelope, LengthCounter, handle_control_write};
 use crate::apu::*;
 
 #[derive(Debug, Default)]
@@ -28,8 +28,8 @@ pub struct Pulse {
     pub timer: u16,
     /// from 0 to 7 (the waveform is 8 samples long)
     pub duty_step: u8,
-    pub current_volume: u8,
-    pub env_timer: u8,
+    pub envelope_state: Envelope,
+    pub length: LengthCounter,
 }
 
 impl Pulse {
@@ -44,8 +44,8 @@ impl Pulse {
             enabled: false,
             timer: 0,
             duty_step: 0,
-            current_volume: 0,
-            env_timer: 0,
+            envelope_state: Envelope::default(),
+            length: LengthCounter::new(64),
         }
     }
 
@@ -58,6 +58,7 @@ impl Pulse {
         self.period_low = 0;
         self.period_high = 0;
         self.enabled = false;
+        self.envelope_state.clear();
     }
 
     pub fn read(&self, addr: u16) -> u8 {
@@ -71,9 +72,10 @@ impl Pulse {
         }
     }
 
-    pub fn write(&mut self, addr: u16, value: u8) {
+    pub fn write(&mut self, addr: u16, value: u8, even_step: bool) {
         match addr {
             NR21 => {
+                self.length.counter = 64 - (value & 0x3F) as u16;
                 self.wave_duty = (value & 0xC0) >> 6;
                 self.length_timer = value & 0x3F;
             }
@@ -86,10 +88,20 @@ impl Pulse {
             }
             NR23 => self.period_low = value,
             NR24 => {
+                let was_length_enabled = self.period_high & 0x40 != 0;
                 self.period_high = value;
                 if value & 0x80 != 0 {
                     self.trigger();
                 }
+                let env_reg = self.envelope;
+                handle_control_write(
+                    &mut self.length,
+                    &mut self.enabled,
+                    Some((&mut self.envelope_state, env_reg)),
+                    was_length_enabled,
+                    value,
+                    even_step,
+                );
             }
             _ => {}
         }
@@ -111,8 +123,7 @@ impl Pulse {
         self.timer = (2048 - period) * 4;
 
         // reset volume and envelope
-        self.current_volume = (self.envelope & 0xF0) >> 4;
-        self.env_timer = self.envelope & 0x07;
+        self.envelope_state.trigger(self.envelope);
     }
 
     /// returns the channel's enable bit of audio master control

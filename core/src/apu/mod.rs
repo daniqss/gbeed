@@ -1,7 +1,11 @@
 mod channels;
+mod envelope;
+mod length_counter;
 mod player;
 
-pub use channels::*;
+use channels::*;
+use envelope::Envelope;
+use length_counter::LengthCounter;
 pub use player::*;
 
 use crate::prelude::*;
@@ -86,19 +90,6 @@ pub struct Apu {
     frame_sequencer: u8,
     cycles: u32,
 
-    length_counter_ch1: u16,
-    length_counter_ch2: u16,
-    length_counter_ch3: u16,
-    length_counter_ch4: u16,
-
-    envelope_volume_ch1: u8,
-    envelope_volume_ch2: u8,
-    envelope_volume_ch4: u8,
-
-    envelope_timer_ch1: u8,
-    envelope_timer_ch2: u8,
-    envelope_timer_ch4: u8,
-
     sample_counter: u32,
 }
 
@@ -121,19 +112,6 @@ impl Apu {
 
             frame_sequencer: 0,
             cycles: 0,
-
-            length_counter_ch1: 64,
-            length_counter_ch2: 64,
-            length_counter_ch3: 256,
-            length_counter_ch4: 64,
-
-            envelope_volume_ch1: 0,
-            envelope_volume_ch2: 0,
-            envelope_volume_ch4: 0,
-
-            envelope_timer_ch1: 0,
-            envelope_timer_ch2: 0,
-            envelope_timer_ch4: 0,
 
             sample_counter: 0,
         }
@@ -200,105 +178,42 @@ impl Apu {
     }
 
     fn tick_length(&mut self) {
-        if self.sweep_pulse.period_high_length_enable() && self.length_counter_ch1 > 0 {
-            self.length_counter_ch1 -= 1;
-            if self.length_counter_ch1 == 0 {
-                self.sweep_pulse.enabled = false;
-            }
+        if self.sweep_pulse.period_high_length_enable() && self.sweep_pulse.length.clock() {
+            self.sweep_pulse.enabled = false;
         }
-
-        if self.pulse.period_high_length_enable() && self.length_counter_ch2 > 0 {
-            self.length_counter_ch2 -= 1;
-            if self.length_counter_ch2 == 0 {
-                self.pulse.enabled = false;
-            }
+        if self.pulse.period_high_length_enable() && self.pulse.length.clock() {
+            self.pulse.enabled = false;
         }
-
-        if self.wave.period_high_length_enable() && self.length_counter_ch3 > 0 {
-            self.length_counter_ch3 -= 1;
-            if self.length_counter_ch3 == 0 {
-                self.wave.enabled = false;
-            }
+        if self.wave.period_high_length_enable() && self.wave.length.clock() {
+            self.wave.enabled = false;
         }
-        if self.noise.control_length_enable() && self.length_counter_ch4 > 0 {
-            self.length_counter_ch4 -= 1;
-            if self.length_counter_ch4 == 0 {
-                self.noise.enabled = false;
-            }
+        if self.noise.control_length_enable() && self.noise.length.clock() {
+            self.noise.enabled = false;
         }
     }
 
     fn tick_envelope(&mut self) {
-        if self.sweep_pulse.enabled {
-            if self.envelope_timer_ch1 > 0 {
-                self.envelope_timer_ch1 -= 1;
-            }
-            if self.envelope_timer_ch1 == 0 {
-                let envelope = self.sweep_pulse.envelope;
-                let pace = envelope & 0x07;
-                let direction = (envelope >> 3) & 0x01;
-
-                if pace > 0 {
-                    if direction == 0 && self.envelope_volume_ch1 > 0 {
-                        self.envelope_volume_ch1 -= 1;
-                    } else if direction == 1 && self.envelope_volume_ch1 < 15 {
-                        self.envelope_volume_ch1 += 1;
-                    }
-                }
-                self.envelope_timer_ch1 = if pace > 0 { pace } else { 8 };
-            }
-        }
-
-        if self.pulse.enabled {
-            if self.envelope_timer_ch2 > 0 {
-                self.envelope_timer_ch2 -= 1;
-            }
-            if self.envelope_timer_ch2 == 0 {
-                let envelope = self.pulse.envelope;
-                let pace = envelope & 0x07;
-                let direction = (envelope >> 3) & 0x01;
-
-                if pace > 0 {
-                    if direction == 0 && self.envelope_volume_ch2 > 0 {
-                        self.envelope_volume_ch2 -= 1;
-                    } else if direction == 1 && self.envelope_volume_ch2 < 15 {
-                        self.envelope_volume_ch2 += 1;
-                    }
-                }
-                self.envelope_timer_ch2 = if pace > 0 { pace } else { 8 };
-            }
-        }
-
-        if self.noise.enabled {
-            if self.envelope_timer_ch4 > 0 {
-                self.envelope_timer_ch4 -= 1;
-            }
-            if self.envelope_timer_ch4 == 0 {
-                let envelope = self.noise.envelope;
-                let pace = envelope & 0x07;
-                let direction = (envelope >> 3) & 0x01;
-
-                if pace > 0 {
-                    if direction == 0 && self.envelope_volume_ch4 > 0 {
-                        self.envelope_volume_ch4 -= 1;
-                    } else if direction == 1 && self.envelope_volume_ch4 < 15 {
-                        self.envelope_volume_ch4 += 1;
-                    }
-                }
-                self.envelope_timer_ch4 = if pace > 0 { pace } else { 8 };
-            }
-        }
+        self.sweep_pulse
+            .envelope_state
+            .tick(self.sweep_pulse.envelope, self.sweep_pulse.enabled);
+        self.pulse
+            .envelope_state
+            .tick(self.pulse.envelope, self.pulse.enabled);
+        self.noise
+            .envelope_state
+            .tick(self.noise.envelope, self.noise.enabled);
     }
 
     fn mix(&self) -> (i16, i16) {
         let ch1_vol = if self.sweep_pulse.enabled {
-            self.sweep_pulse.get_sample(self.envelope_volume_ch1)
+            self.sweep_pulse
+                .get_sample(self.sweep_pulse.envelope_state.volume)
         } else {
             0
         };
 
         let ch2_vol = if self.pulse.enabled {
-            self.pulse.get_sample(self.envelope_volume_ch2)
+            self.pulse.get_sample(self.pulse.envelope_state.volume)
         } else {
             0
         };
@@ -310,7 +225,7 @@ impl Apu {
         };
 
         let ch4_vol = if self.noise.enabled {
-            self.noise.get_sample(self.envelope_volume_ch4)
+            self.noise.get_sample(self.noise.envelope_state.volume)
         } else {
             0
         };
@@ -355,54 +270,10 @@ impl Apu {
         (left as i16, right as i16)
     }
 
-    fn clock_length_ch1(&mut self) {
-        if self.length_counter_ch1 > 0 {
-            self.length_counter_ch1 -= 1;
-            if self.length_counter_ch1 == 0 {
-                self.sweep_pulse.enabled = false;
-            }
-        }
-    }
-
-    fn clock_length_ch2(&mut self) {
-        if self.length_counter_ch2 > 0 {
-            self.length_counter_ch2 -= 1;
-            if self.length_counter_ch2 == 0 {
-                self.pulse.enabled = false;
-            }
-        }
-    }
-
-    fn clock_length_ch3(&mut self) {
-        if self.length_counter_ch3 > 0 {
-            self.length_counter_ch3 -= 1;
-            if self.length_counter_ch3 == 0 {
-                self.wave.enabled = false;
-            }
-        }
-    }
-
-    fn clock_length_ch4(&mut self) {
-        if self.length_counter_ch4 > 0 {
-            self.length_counter_ch4 -= 1;
-            if self.length_counter_ch4 == 0 {
-                self.noise.enabled = false;
-            }
-        }
-    }
-
     fn sync_envelope(&mut self) {
-        let env1 = self.sweep_pulse.envelope;
-        self.envelope_volume_ch1 = (env1 >> 4) & 0x0F;
-        self.envelope_timer_ch1 = env1 & 0x07;
-
-        let env2 = self.pulse.envelope;
-        self.envelope_volume_ch2 = (env2 >> 4) & 0x0F;
-        self.envelope_timer_ch2 = env2 & 0x07;
-
-        let env4 = self.noise.envelope;
-        self.envelope_volume_ch4 = (env4 >> 4) & 0x0F;
-        self.envelope_timer_ch4 = env4 & 0x07;
+        self.sweep_pulse.envelope_state.trigger(self.sweep_pulse.envelope);
+        self.pulse.envelope_state.trigger(self.pulse.envelope);
+        self.noise.envelope_state.trigger(self.noise.envelope);
     }
 }
 
@@ -432,132 +303,26 @@ impl Accessible<u16> for Apu {
     }
 
     fn write(&mut self, address: u16, value: u8) {
-        // When APU is off, ignore writes to all registers except NR52 and wave RAM
+        // When APU is off, ignore writes to all registers except NR52, wave RAM,
+        // and length timer registers (DMG behavior: NR11, NR21, NR31, NR41 are writable when off)
         if !self.is_active() && address != NR52 && !(WAVE_RAM_START..=WAVE_RAM_END).contains(&address) {
+            match address {
+                NR11 => self.sweep_pulse.length.counter = 64 - (value & 0x3F) as u16,
+                NR21 => self.pulse.length.counter = 64 - (value & 0x3F) as u16,
+                NR31 => self.wave.length.counter = 256 - value as u16,
+                NR41 => self.noise.length.counter = 64 - (value & 0x3F) as u16,
+                _ => {}
+            }
             return;
         }
 
+        let even_step = self.frame_sequencer.is_multiple_of(2);
+
         match address {
-            NR10..=NR14 => {
-                if address == NR11 {
-                    self.length_counter_ch1 = 64 - (value & 0x3F) as u16;
-                }
-                if address == NR14 {
-                    let was_length_enabled = self.sweep_pulse.period_high & 0x40 != 0;
-                    self.sweep_pulse.write(address, value);
-                    let is_length_enabled = value & 0x40 != 0;
-                    let even_step = self.frame_sequencer.is_multiple_of(2);
-
-                    // extra clock on length enable transition (0 -> 1) at even step
-                    if !was_length_enabled && is_length_enabled && even_step {
-                        self.clock_length_ch1();
-                    }
-
-                    if value & 0x80 != 0 {
-                        let was_frozen = self.length_counter_ch1 == 0;
-                        if was_frozen {
-                            self.length_counter_ch1 = 64;
-                        }
-                        self.envelope_volume_ch1 = (self.sweep_pulse.envelope & 0xF0) >> 4;
-                        self.envelope_timer_ch1 = self.sweep_pulse.envelope & 0x07;
-
-                        // Extra clock when trigger unfreezes length (was 0 -> max) with enable at even step
-                        if was_frozen && is_length_enabled && even_step {
-                            self.clock_length_ch1();
-                        }
-                    }
-                } else {
-                    self.sweep_pulse.write(address, value);
-                }
-            }
-            NR21..=NR24 => {
-                if address == NR21 {
-                    self.length_counter_ch2 = 64 - (value & 0x3F) as u16;
-                }
-                if address == NR24 {
-                    let was_length_enabled = self.pulse.period_high & 0x40 != 0;
-                    self.pulse.write(address, value);
-                    let is_length_enabled = value & 0x40 != 0;
-                    let even_step = self.frame_sequencer.is_multiple_of(2);
-
-                    if !was_length_enabled && is_length_enabled && even_step {
-                        self.clock_length_ch2();
-                    }
-
-                    if value & 0x80 != 0 {
-                        let was_frozen = self.length_counter_ch2 == 0;
-                        if was_frozen {
-                            self.length_counter_ch2 = 64;
-                        }
-                        self.envelope_volume_ch2 = (self.pulse.envelope & 0xF0) >> 4;
-                        self.envelope_timer_ch2 = self.pulse.envelope & 0x07;
-
-                        if was_frozen && is_length_enabled && even_step {
-                            self.clock_length_ch2();
-                        }
-                    }
-                } else {
-                    self.pulse.write(address, value);
-                }
-            }
-            NR30..=NR34 => {
-                if address == NR31 {
-                    self.length_counter_ch3 = 256 - value as u16;
-                }
-                if address == NR34 {
-                    let was_length_enabled = self.wave.period_high & 0x40 != 0;
-                    self.wave.write(address, value);
-                    let is_length_enabled = value & 0x40 != 0;
-                    let even_step = self.frame_sequencer.is_multiple_of(2);
-
-                    if !was_length_enabled && is_length_enabled && even_step {
-                        self.clock_length_ch3();
-                    }
-
-                    if value & 0x80 != 0 {
-                        let was_frozen = self.length_counter_ch3 == 0;
-                        if was_frozen {
-                            self.length_counter_ch3 = 256;
-                        }
-
-                        if was_frozen && is_length_enabled && even_step {
-                            self.clock_length_ch3();
-                        }
-                    }
-                } else {
-                    self.wave.write(address, value);
-                }
-            }
-            NR41..=NR44 => {
-                if address == NR41 {
-                    self.length_counter_ch4 = 64 - (value & 0x3F) as u16;
-                }
-                if address == NR44 {
-                    let was_length_enabled = self.noise.control & 0x40 != 0;
-                    self.noise.write(address, value);
-                    let is_length_enabled = value & 0x40 != 0;
-                    let even_step = self.frame_sequencer.is_multiple_of(2);
-
-                    if !was_length_enabled && is_length_enabled && even_step {
-                        self.clock_length_ch4();
-                    }
-
-                    if value & 0x80 != 0 {
-                        let was_frozen = self.length_counter_ch4 == 0;
-                        if was_frozen {
-                            self.length_counter_ch4 = 64;
-                        }
-                        self.envelope_volume_ch4 = (self.noise.envelope & 0xF0) >> 4;
-                        self.envelope_timer_ch4 = self.noise.envelope & 0x07;
-
-                        if was_frozen && is_length_enabled && even_step {
-                            self.clock_length_ch4();
-                        }
-                    }
-                } else {
-                    self.noise.write(address, value);
-                }
-            }
+            NR10..=NR14 => self.sweep_pulse.write(address, value, even_step),
+            NR21..=NR24 => self.pulse.write(address, value, even_step),
+            NR30..=NR34 => self.wave.write(address, value, even_step),
+            NR41..=NR44 => self.noise.write(address, value, even_step),
 
             NR50 => self.master_volume = value,
             NR51 => self.sound_panning = value,
@@ -583,19 +348,13 @@ impl Accessible<u16> for Apu {
                     self.sound_panning = 0;
 
                     // on DMG, length counters are preserved across power off/on
-                    self.envelope_volume_ch1 = 0;
-                    self.envelope_volume_ch2 = 0;
-                    self.envelope_volume_ch4 = 0;
-                    self.envelope_timer_ch1 = 0;
-                    self.envelope_timer_ch2 = 0;
-                    self.envelope_timer_ch4 = 0;
+                    // (envelope is already cleared by clear_registers)
                 }
 
                 self.master_control = value & AUDIO_ON_OFF;
             }
 
             WAVE_RAM_START..=WAVE_RAM_END => self.wave.wave_ram[(address - WAVE_RAM_START) as usize] = value,
-
             _ => {}
         }
     }
