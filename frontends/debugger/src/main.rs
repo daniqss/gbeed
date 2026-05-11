@@ -51,11 +51,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .title("gbeed")
         .resizable()
         .build();
+    let audio = RaylibAudio::init_audio_device()?;
 
     rl.set_target_fps(60);
     rl.set_exit_key(None);
 
-    let mut app = EmulatorApp::new(rl, thread, boot_path, is_mobile);
+    let mut app = EmulatorApp::new(&mut rl, &thread, &audio, boot_path, is_mobile);
 
     // load ROM if its provided via command line args
     if let Some(path) = game_path {
@@ -112,21 +113,27 @@ fn get_platform_info() -> (i32, i32, bool) {
 }
 
 #[repr(C)]
-pub struct EmulatorApp {
+pub struct EmulatorApp<'a> {
     gb: Option<Dmg>,
-    controller: DebuggerController,
+    controller: DebuggerController<'a>,
     save_path: Option<PathBuf>,
     boot_rom: Option<Vec<u8>>,
     state: EmulatorState,
     layout: Layout,
 }
 
-impl EmulatorApp {
-    pub fn new(rl: RaylibHandle, thread: RaylibThread, boot_path: Option<String>, is_mobile: bool) -> Self {
+impl<'a> EmulatorApp<'a> {
+    pub fn new(
+        rl: &'a mut RaylibHandle,
+        thread: &'a RaylibThread,
+        audio: &'a RaylibAudio,
+        boot_path: Option<String>,
+        is_mobile: bool,
+    ) -> Self {
         let boot_rom = boot_path.and_then(|path| fs::read(path).ok());
         let (sw, sh) = (rl.get_screen_width(), rl.get_screen_height());
         let layout = Layout::new(sw, sh, is_mobile);
-        let controller = DebuggerController::new(rl, thread);
+        let controller = DebuggerController::new(rl, thread, audio);
         let mut scene = WaitingFileScene::new();
         scene.update_layout(sw, sh);
         let state = EmulatorState::WaitingFile(scene);
@@ -178,7 +185,7 @@ impl EmulatorApp {
         web::hide_open_rom_button();
 
         Ok(EmulatorState::Emulation(EmulationScene::new(
-            self.layout.clone(),
+            self.layout,
             title,
             region,
         )))
@@ -223,7 +230,7 @@ impl EmulatorApp {
         let state = &self.state;
         let controller = &mut self.controller;
 
-        controller.rl.draw(&controller.thread, |mut d| {
+        controller.rl.draw(controller.thread, |mut d| {
             d.clear_background(BACKGROUND);
 
             match state {

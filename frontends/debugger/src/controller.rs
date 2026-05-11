@@ -1,4 +1,8 @@
 use gbeed_core::prelude::*;
+use gbeed_core::{
+    AudioPlayer, BUFFER_SIZE, Controller, Ppu, Renderer, SAMPLE_RATE, SerialListener,
+    prelude::DMG_SCREEN_WIDTH,
+};
 use gbeed_raylib_common::{Texture, color::DMG_CLASSIC_PALETTE, settings::SpeedUpMultiplier};
 use raylib::prelude::*;
 
@@ -11,47 +15,58 @@ pub const TILE_TEXTURE_HEIGHT: i32 = TILES_PER_COLUMN * TILE_PIXEL_SIZE;
 pub const TILE_DISPLAY_WIDTH: i32 = TILE_TEXTURE_WIDTH * TILE_DISPLAY_SCALE;
 pub const TILE_DISPLAY_HEIGHT: i32 = TILE_TEXTURE_HEIGHT * TILE_DISPLAY_SCALE;
 
-pub struct DebuggerController {
+pub struct DebuggerController<'a> {
     pub screen_texture: Texture,
     pub tile_textures: [Texture; 3],
     pub bg_map_texture: Texture,
-
     pub scroll_x: i32,
     pub scroll_y: i32,
 
+    sample_idx: usize,
+    audio_buffer: Box<[i16; BUFFER_SIZE]>,
+    audio_stream: AudioStream<'a>,
+
     pub speed_up_multiplier: SpeedUpMultiplier,
 
-    pub rl: RaylibHandle,
-    pub thread: RaylibThread,
+    pub rl: &'a mut RaylibHandle,
+    pub thread: &'a RaylibThread,
+    _audio: &'a RaylibAudio,
 }
 
-impl DebuggerController {
-    pub fn new(mut rl: RaylibHandle, thread: RaylibThread) -> Self {
-        Self {
-            screen_texture: Texture::new(
-                &mut rl,
-                &thread,
-                DMG_SCREEN_WIDTH as i32,
-                DMG_SCREEN_HEIGHT as i32,
-            ),
-            tile_textures: [
-                Texture::new(&mut rl, &thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
-                Texture::new(&mut rl, &thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
-                Texture::new(&mut rl, &thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
-            ],
-            bg_map_texture: Texture::new(&mut rl, &thread, 256, 256),
+impl<'a> DebuggerController<'a> {
+    pub fn new(rl: &'a mut RaylibHandle, thread: &'a RaylibThread, audio: &'a RaylibAudio) -> Self {
+        // Match raylib's internal subbuffer size to our flush size so
+        // UpdateAudioStream never has to reject a chunk for being "too many frames"
+        audio.set_audio_stream_buffer_size_default(BUFFER_SIZE as i32);
 
+        let audio_stream = audio.new_audio_stream(SAMPLE_RATE, 16, 1);
+        audio_stream.play();
+
+        Self {
+            screen_texture: Texture::new(rl, thread, DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32),
+            tile_textures: [
+                Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
+                Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
+                Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
+            ],
+            bg_map_texture: Texture::new(rl, thread, 256, 256),
             scroll_x: 0,
             scroll_y: 0,
+
+            sample_idx: 0,
+            audio_buffer: Box::new([0; BUFFER_SIZE]),
+            audio_stream,
+
             speed_up_multiplier: SpeedUpMultiplier::OneAndHalf,
 
             rl,
             thread,
+            _audio: audio,
         }
     }
 }
 
-impl Renderer for DebuggerController {
+impl Renderer for DebuggerController<'_> {
     fn read_pixel(&self, x: usize, y: usize) -> u32 {
         let index = (y * DMG_SCREEN_WIDTH + x) * 3;
 
@@ -89,13 +104,39 @@ impl Renderer for DebuggerController {
     }
 }
 
-impl SerialListener for DebuggerController {
+impl SerialListener for DebuggerController<'_> {
     fn on_transfer(&mut self, data: u8) {
         println!("through serial port -> {data:04X}");
     }
 }
 
-impl Controller for DebuggerController {}
+impl Controller for DebuggerController<'_> {}
+
+impl AudioPlayer for DebuggerController<'_> {
+    fn playing_stereo(&self) -> bool { false }
+
+    fn push_sample(&mut self, left: i16, right: i16) {
+        // drop new samples when the buffer is full instead of wrapping
+        if self.sample_idx >= BUFFER_SIZE {
+            return;
+        }
+
+        // let the audio mono for now
+        let mono = ((left as i32 + right as i32) / 2) as i16;
+        self.audio_buffer[self.sample_idx] = mono;
+        self.sample_idx += 1;
+    }
+
+    fn flush_buffer(&mut self) {
+        if self.sample_idx == 0 || !self.audio_stream.is_processed() {
+            return;
+        }
+        if let Err(e) = self.audio_stream.update(&self.audio_buffer[..self.sample_idx]) {
+            eprintln!("update error: {e}");
+        }
+        self.sample_idx = 0;
+    }
+}
 
 pub fn update_bg_map(
     texture: &mut Texture,

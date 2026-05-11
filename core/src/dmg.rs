@@ -1,6 +1,7 @@
+use crate::apu::Apu;
 pub use crate::prelude::*;
 use crate::{
-    Apu, Cartridge, Controller, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
+    Cartridge, Controller, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
     apu::{APU_REGISTER_END, APU_REGISTER_START},
     cpu::{InstructionError, R8, R16},
     interrupts::{IE, IF},
@@ -87,6 +88,7 @@ impl Dmg {
         }
 
         self.cpu.cycles = 0;
+        controller.flush_buffer();
 
         Ok(())
     }
@@ -96,11 +98,13 @@ impl Dmg {
 
         let instruction = Cpu::step(self)?;
 
-        let delta = 4 * self.cpu.cycles.wrapping_sub(prev_cycles);
+        let delta = self.cpu.cycles.wrapping_sub(prev_cycles) * 4;
+
 
         self.ppu.step(controller, delta, &mut self.interrupt_flag);
         self.timer.step(delta, &mut self.interrupt_flag);
         self.serial.step(controller);
+        self.apu.step(controller, delta);
 
         Ok(instruction)
     }
@@ -119,13 +123,7 @@ impl Accessible<u16> for Dmg {
             }
             OAM_START..=OAM_END => self.ppu.read(address),
 
-            NOT_USABLE_START..=NOT_USABLE_END => {
-                // eprintln!(
-                //     "Reads to prohibited memory region [{}, {}] with address {:04X} return 0xFF",
-                //     NOT_USABLE_START, NOT_USABLE_END, address
-                // );
-                0xFF
-            }
+            NOT_USABLE_START..=NOT_USABLE_END => 0xFF
 
             IO_REGISTERS_START..=IO_REGISTERS_END => match address {
                 JOYP => self.joypad.read(address),
@@ -139,10 +137,7 @@ impl Accessible<u16> for Dmg {
 
                 BANK_REGISTER => self.bank,
 
-                _ => {
-                    // eprintln!("Reads to unimplemented IO register {:04X} return 0xFF", address);
-                    0xFF
-                }
+                _ => 0xFF
             },
             HRAM_START..=HRAM_END => self.memory.hram[(address - HRAM_START) as usize],
             IE => self.interrupt_enable.0,
@@ -163,12 +158,7 @@ impl Accessible<u16> for Dmg {
             }
             OAM_START..=OAM_END => self.ppu.write(address, value),
 
-            NOT_USABLE_START..=NOT_USABLE_END => {
-                // eprintln!(
-                //     "Writes to prohibited memory region [{}, {}] with address {:04X} are ignored",
-                //     NOT_USABLE_START, NOT_USABLE_END, address
-                // ),
-            }
+            NOT_USABLE_START..=NOT_USABLE_END => {}
 
             IO_REGISTERS_START..=IO_REGISTERS_END => match address {
                 JOYP => self.joypad.write(address, value),
