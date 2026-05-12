@@ -1,18 +1,67 @@
 \chapter{Introdución}
 \label{chap:introducion}
 
-\lettrine{P}{rimer} capítulo da memoria, onde xeralmente se exporán as
-liñas mestras do trballo, os obxectivos, etc. Incluimos un par de
-exemplos de citas~\cite{ErlangBook,ErlangWebBook} e de referencias
-internas (sección \ref{sec:mostra}, páxina \pageref{sec:mostra}).
+% \lettrine{P}{rimer} capítulo da memoria, onde xeralmente se exporán as
+% liñas mestras do trballo, os obxectivos, etc. Incluimos un par de
+% exemplos de citas~\cite{ErlangBook,ErlangWebBook} e de referencias
+% internas (sección \ref{sec:mostra}, páxina \pageref{sec:mostra}).
 
-\Blindtext
+\section{Contexto e motivación}
+\label{sec:contexto}
 
-\section{Sección de mostra}
-\label{sec:mostra}
 
-\Blindtext
+\lettrine{A}{} familia de consolas Game Boy é unha das máis populares e exitosas da historia dos videoxogos. Ata 2020 seguiuse producindo hardware capaz de executar de forma nativa xogos da familia Advance, a Nintendo 3DS.
+O seu percorrido e éxito é polo tanto longo e a súa influencia na industria dos videoxogos e na cultura popular é indiscutible.
 
-\subsection{Subsección de mostra}
+\vspace{1em}
+A pesar da fin do seu ciclo de vida comercial, esta consola e os seus xogos seguen sendo relevantes para unha grande comunidade de afeccionados e desenvolvedores.
+Por exemplo, séguense a lanzar xogos non oficiais comerciais como o JETT RIDER Mini Hero, un xogo para PC e Game Boy que conseguiu un enorme éxito na súa campaña de kickstarter,
+que quintiplicou a súa meta inicial de financiamento\cite{jettriderminihero}.
 
-\Blindtext
+\vspace{1em}
+Para as demandas da situación actual do desenvolvemento de videoxogos para esta plataforma e para a preservación da súa herdanza cultural a ferramenta principal é a emulación.
+A emulación é unha técnica que permite a execución de software deseñado para unha plataforma nunha plataforma diferente, mediante a creación dun software que simula o comportamento do hardware orixinal.
+No caso da Game Boy a emulación é completa, xa que a emulación non se limita a realizar unha emulación dunha parte do hardware, senón que todos os compoñentes do sistema son emulados.
+Existen unha gran cantidade de emuladores de Game Boy, para diferentes plataformas e con diferentes características, tanto propietarios como libres e de código aberto.
+Todos estes emuladores emplegan como base documental a gran cantidade de documentación producida pola comunidade a través da análise do hardware mediante enxeñería inversa.
+
+\vspace{1em}
+Grazas a este traballo de documentación e enxeñería inversa da comunidade,
+o desenvolvemento dun emulador de Game Boy é unha tarefa abordable que combina retos de baixo nivel
+con conceptos transversais da arquitectura de computadores.
+Esta combinación convérteo nun exercicio especialmente axeitado tanto para a aprendizaxe como para a experimentación con sistemas reais.
+
+\vspace{1em}
+Neste contexto, o presente traballo formúlase cun dobre obxectivo.
+Por unha banda, perségue unha finalidade didáctica:
+servir como medio para afondar de xeito práctico no funcionamento interno da consola e nos principios da emulación,
+documentando as decisións de deseño tomadas ao longo do desenvolvemento.
+Por outra banda, propón unha finalidade técnica: ofrecer unha solución en forma de librería poida ser integrada de forma doada en distintos contextos,
+con especial atención á súa execución en sistemas embebidos,
+permitindo o seu uso en contornas con recursos limitados.
+
+\section{Obxectivos concretos}
+\label{sec:obxectivos}
+
+Para acadar os obxectivos xerais expostos e acadar unha solución axeitada definíronse os seguintes obxectivos concretos:
+
+\begin{itemize}
+    \item Desenvolver un emulador do modelo orixinal de Game Boy, o DMG-01 (Dot Matrix Game).
+    \item Testear os seus compoñentes fundamentais contra un conxunto de probas de referencia amplamente usado pola comunidade.
+    \item Garantir o seu correcto funcionamento nos xogos máis populares da consola, usando unha mostra representativa de cartuchos con diferentes características de hardware.
+    \item Deseñar e desenvolver unha interfaz axeitada para o seu uso en contornos embebidos.
+    \item Compilar e optimizar o proxecto para asegurar a súa correcta execución en contornas de recursos limitados.
+\end{itemize}
+
+\section{Estructura da memoria}
+\label{sec:estructura}
+Esta memoria organízase nos seguintes capítulos:
+
+\begin{enumerate}
+    \item \textbf{Introdución}: contextualízase o proxecto, expóñense os seus obxectivos e detállase a estrutura. 
+    \item \textbf{Estado da arte}: expoñerase o estado da emulación de Game Boy e da súa comunidade de desenvolvedores,  
+    \item \textbf{Arquitectura da consola}: describirase a arquitectura da consola, os seus compoñentes e o seu funcionamento.
+    \item \textbf{Desenvolvemento do emulador}: detallarase o proceso de desenvolvemento do emulador, as decisións de deseño tomadas e os retos afrontados.
+    \item \textbf{Probas e validación}: describirase o proceso de testeo e validación do emulador, os resultados obtidos.
+    \item \textbf{Conclusión e traballo futuro}: expoñeranse o aprendizaxe adquirido durante o desenvolvemento do proxecto e a súa relación co grao. Abordarase o liñas de traballo futuro para a continuación do desenvolvemento.
+\end{enumerate}
