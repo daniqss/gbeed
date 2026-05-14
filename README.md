@@ -54,7 +54,7 @@ DRM support is tested in Intel, AMD and Broadcom iGPUs. In Nvidia (specifically 
 
 ### Recommended hardware
 The recommended hardware to use the `console` frontend is the **Raspberry Pi Zero 2 W**, as its `aarch64` architecture has full NixOS support, allowing us to easily provide a ready-to-use SD card image (see [raspberry-pi-zero-2-sd-image](#how-to-build-a-raspberry-pi-zero-2-sd-image)).
-The original **Raspberry Pi Zero** (`armv6l`) is also supported, but only via a manually cross-compiled binary. NixOS does not support `armv6l` as a hosted system, so there is no managed image for it. Device setup must be done manually (see [armv6l build](#how-to-build-for-armv6l-alpine-linux)).
+The original **Raspberry Pi Zero** (`armv6l`) is also supported, but only via a manually cross-compiled binary. NixOS does not support `armv6l` as a hosted system, so there is no managed image for it. Device setup must be done manually (see [Alpine armv6l build](#how-to-build-for-armv6l-alpine-linux) or [Debian armv6l build](#how-to-build-for-armv6l-debian-linux)).
 
 ### How to build a Raspberry Pi Zero 2 SD image
 The easiest way to run gbeed in a console format is on a Raspberry Pi Zero 2 W. This project offers a ready-to-use NixOS SD image that boots directly into gbeed — no installer, no manual setup.
@@ -78,17 +78,29 @@ On first boot, the system starts directly into `gbeed`. ROMs should be placed at
 If more build customization is wanted, cloning the repository, modifying [the `gbeed02` host configuration](./nix/hosts/gbeed02.nix) and building the `installerImage` target will produce a custom image, and should not require intense compilation thanks to nixos-raspberrypi cachix.
 
 ### How to build for armv6l Alpine Linux
-The easiest way to build the project for armv6l is through cross-compilation on x86_64/aarch64. This is done via a podman or docker container and qemu using  the provided `Dockerfile.cross`. This provides a fully isolated build environment.
+The easiest way to build the project for armv6l is through cross-compilation on x86_64/aarch64. This is done via a podman or docker container and qemu using the provided `Dockerfile.cross.alpine`. This provides a fully isolated build environment.
 
 You can easily do this with `just`:
 ```sh
-just crossbuild
+just cross-build-alpine
 ```
 
 This will:
 1. Install the `arm` binfmt if needed.
 2. Build the project inside an `arm32v6/alpine` container.
-3. Extract the resulting binary as `./gbeed-armv6l`.
+3. Extract the resulting binary as `./gbeed`.
+
+### How to build for armv6l Debian Linux
+A Debian Bookworm build is also available, using native cross-compilation (no qemu emulation) via the provided `Dockerfile.cross.debian`. This is significantly faster than the Alpine build, producing a binary linked against glibc instead of musl.
+
+You can easily do this with `just`:
+```sh
+just cross-build-debian
+```
+
+This will:
+1. Build the project inside a Debian Bookworm container using the `arm-unknown-linux-gnueabihf` Rust target.
+2. Extract the resulting binary as `./gbeed`.
 
 
 ## Tests
