@@ -9,3 +9,10 @@ std = []
 
 [dependencies]
 paste = "1.0.15"
+
+[dev-dependencies]
+criterion = { version = "0.8.2", features = ["html_reports"] }
+
+[[bench]]
+name = "cpu_bench"
+harness = false

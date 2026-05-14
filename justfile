@@ -1,5 +1,8 @@
 default: run
 
+# persist bench results in benches directory
+export CRITERION_HOME := justfile_directory() / "core" / "benches" / "results"
+
 build *ARGS:
     cargo build --features "${DISPLAY_FEATURES}" {{ARGS}}
 
@@ -29,6 +32,17 @@ fetch-test-roms:
 
 flamegraph *ARGS:
     cargo flamegraph --profile bench --features "${DISPLAY_FEATURES}" -p gbeed-console {{ARGS}}
+
+bench *ARGS: fetch-test-roms
+    cargo bench -p gbeed-core --bench cpu_bench -- {{ARGS}}
+
+# save current results as a named baseline
+bench-save NAME: fetch-test-roms
+    cargo bench -p gbeed-core --bench cpu_bench -- --save-baseline {{NAME}}
+
+# compare current results against a previously saved baseline
+bench-compare NAME: fetch-test-roms
+    cargo bench -p gbeed-core --bench cpu_bench -- --baseline {{NAME}}
 
 web-build:
     RUSTFLAGS="-C panic=unwind" cargo build --target wasm32-unknown-emscripten -p gbeed-debugger --release

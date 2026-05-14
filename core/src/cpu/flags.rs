@@ -5,6 +5,24 @@ pub const SUBTRACTION_FLAG_MASK: u8 = 0b0100_0000;
 pub const HALF_CARRY_FLAG_MASK: u8 = 0b0010_0000;
 pub const CARRY_FLAG_MASK: u8 = 0b0001_0000;
 
+#[inline(always)]
+pub fn check_zero(result: u8) -> bool { result == 0 }
+
+#[inline(always)]
+pub fn check_overflow_hc(result: u8, old: u8) -> bool { (result & 0x0F) < (old & 0x0F) }
+/// Check borrow in bit 4
+#[inline(always)]
+pub fn check_borrow_hc(old: u8, substrahend: u8) -> bool { (old & 0x0F) < (substrahend & 0x0F) }
+
+#[inline(always)]
+pub fn check_overflow_cy(result: u8, old: u8) -> bool { result < old }
+
+#[inline(always)]
+pub fn check_overflow_hc16(result: u16, old: u16) -> bool { (result & 0x0FFF) < (old & 0x0FFF) }
+
+#[inline(always)]
+pub fn check_overflow_cy16(result: u16, old: u16) -> bool { result < old }
+
 #[derive(Debug, PartialEq)]
 pub struct Flags {
     pub z: Option<bool>,
@@ -55,20 +73,6 @@ impl Flags {
     }
 }
 
-#[inline]
-pub fn check_zero(result: u8) -> bool { result == 0 }
+// pub trait LazyFlags {
 
-#[inline]
-pub fn check_overflow_hc(result: u8, old: u8) -> bool { (result & 0x0F) < (old & 0x0F) }
-/// Check borrow in bit 4
-#[inline]
-pub fn check_borrow_hc(old: u8, substrahend: u8) -> bool { (old & 0x0F) < (substrahend & 0x0F) }
-
-#[inline]
-pub fn check_overflow_cy(result: u8, old: u8) -> bool { result < old }
-
-#[inline]
-pub fn check_overflow_hc16(result: u16, old: u16) -> bool { (result & 0x0FFF) < (old & 0x0FFF) }
-
-#[inline]
-pub fn check_overflow_cy16(result: u16, old: u16) -> bool { result < old }
+// }

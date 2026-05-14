@@ -91,9 +91,7 @@ pub trait Instruction {
 }
 
 impl<T: Instruction + Copy + 'static> From<T> for InstructionBox {
-    fn from(val: T) -> Self {
-        InstructionBox::new(val)
-    }
+    fn from(val: T) -> Self { InstructionBox::new(val) }
 }
 
 impl Display for dyn Instruction {
@@ -116,6 +114,7 @@ pub struct InstructionEffect {
     pub cycles: u8,
     pub len: Len,
     pub flags: Flags,
+    // pub flags: Option<LazyFlags>,
 }
 
 impl InstructionEffect {

@@ -19,9 +19,13 @@
     just
     cmake
     clang
+
     rustToolchain
+
     cargo-flamegraph
     perf
+    gnuplot
+
     curl
     git
     gnutar
