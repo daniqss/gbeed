@@ -1,0 +1,55 @@
+use crate::{
+    cpu::{
+        R8,
+        flags::Flags,
+        instructions::{Instruction, InstructionEffect, InstructionResult},
+    },
+    prelude::*,
+};
+
+fn swap_u8_flags(result: u8) -> Flags {
+    Flags {
+        z: Some(result == 0),
+        n: Some(false),
+        h: Some(false),
+        c: Some(false),
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct SwapR8 {
+    dst: R8,
+}
+
+impl SwapR8 {
+    pub fn new(dst: R8) -> StaticBox<Self> { StaticBox::new(Self { dst }) }
+}
+
+impl Instruction for SwapR8 {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        let r8 = gb.read(self.dst);
+        let result = r8.rotate_right(4);
+        gb.write(self.dst, result);
+
+        Ok(InstructionEffect::new(self.info(), swap_u8_flags(result)))
+    }
+    fn info(&self) -> (u8, u8) { (2, 2) }
+    fn disassembly(&self) -> String { format!("swap {}", self.dst) }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct SwapPointedByHL;
+impl SwapPointedByHL {
+    pub fn new() -> StaticBox<Self> { StaticBox::new(Self) }
+}
+impl Instruction for SwapPointedByHL {
+    fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+        let n8 = gb.read(gb.cpu.hl());
+        let result = n8.rotate_right(4);
+        gb.write(gb.cpu.hl(), result);
+
+        Ok(InstructionEffect::new(self.info(), swap_u8_flags(result)))
+    }
+    fn info(&self) -> (u8, u8) { (4, 2) }
+    fn disassembly(&self) -> String { "swap [hl]".to_string() }
+}

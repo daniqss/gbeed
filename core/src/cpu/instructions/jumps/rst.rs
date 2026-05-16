@@ -14,7 +14,7 @@ pub struct Rst {
 }
 
 impl Rst {
-    pub fn new(vec: u8) -> Self { Self { vec } }
+    pub fn new(vec: u8) -> StaticBox<Self> { StaticBox::new(Self { vec }) }
 }
 
 impl Instruction for Rst {

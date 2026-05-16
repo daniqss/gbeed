@@ -11,7 +11,7 @@ use crate::{
 pub struct Reti;
 
 impl Reti {
-    pub fn new() -> Self { Self }
+    pub fn new() -> StaticBox<Self> { StaticBox::new(Self) }
 }
 
 impl Instruction for Reti {

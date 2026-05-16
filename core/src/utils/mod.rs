@@ -1,7 +1,9 @@
 mod instruction_box;
 pub mod macros;
+mod static_box;
 
 pub use instruction_box::*;
+pub use static_box::*;
 
 /// Convert little-endian u8 pair to u16
 #[inline(always)]

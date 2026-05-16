@@ -1,86 +1,26 @@
-mod adc;
-mod add;
-mod and;
-mod bit;
-mod ccf;
-mod cp;
-mod cpl;
-mod daa;
-mod dec;
-mod di;
-mod ei;
-mod halt;
-mod inc;
+mod arithmetic;
+mod bitflag;
+mod bitshift;
+mod bitwise;
+mod carry_related;
+mod interrupt_related;
 mod jumps;
-mod ld;
-mod ldh;
-mod nop;
-mod or;
-mod pop;
-mod push;
-mod res;
-mod rl;
-mod rla;
-mod rlc;
-mod rlca;
-mod rr;
-mod rra;
-mod rrc;
-mod rrca;
-mod sbc;
-mod scf;
-mod set;
-mod sla;
-mod sra;
-mod srl;
-mod stop;
-mod sub;
-mod swap;
-mod xor;
+mod loads;
+mod misc;
 
 use core::fmt::Display;
 
-pub use adc::*;
-pub use add::*;
-pub use and::*;
-pub use bit::*;
-pub use ccf::Ccf;
-pub use cp::*;
-pub use cpl::Cpl;
-pub use daa::Daa;
-pub use dec::*;
-pub use di::Di;
-pub use ei::Ei;
-pub use halt::Halt;
-pub use inc::*;
+pub use arithmetic::*;
+pub use bitflag::*;
+pub use bitshift::*;
+pub use bitwise::*;
+pub use carry_related::*;
+pub use interrupt_related::*;
 pub use jumps::*;
-pub use ld::*;
-pub use ldh::*;
-pub use nop::Nop;
-pub use or::*;
-pub use pop::Pop;
-pub use push::Push;
-pub use res::*;
-pub use rl::*;
-pub use rla::Rla;
-pub use rlc::*;
-pub use rlca::Rlca;
-pub use rr::*;
-pub use rra::Rra;
-pub use rrc::*;
-pub use rrca::Rrca;
-pub use sbc::*;
-pub use scf::Scf;
-pub use set::*;
-pub use sla::*;
-pub use sra::*;
-pub use srl::*;
-pub use stop::Stop;
-pub use sub::*;
-pub use swap::*;
-pub use xor::*;
+pub use loads::*;
+pub use misc::*;
 
-use crate::{cpu::flags::Flags, prelude::*};
+use crate::{cpu::flags::Flags, impl_static_box_from, prelude::*};
 
 /// Represents a CPU instruction.
 /// The instruction can be executed and can provide its disassembly representation
@@ -90,9 +30,7 @@ pub trait Instruction {
     fn disassembly(&self) -> String;
 }
 
-impl<T: Instruction + Copy + 'static> From<T> for InstructionBox {
-    fn from(val: T) -> Self { InstructionBox::new(val) }
-}
+impl_static_box_from!(Instruction);
 
 impl Display for dyn Instruction {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

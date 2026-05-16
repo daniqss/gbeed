@@ -11,5 +11,5 @@ pub use crate::joypad::{Joypad, JoypadButton};
 pub use crate::memory::{Accessible, Accessible16};
 pub use crate::ppu::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH, Ppu, Renderer};
 pub use crate::serial::SerialListener;
-pub use crate::utils::{self, InstructionBox};
+pub use crate::utils::{self, StaticBox};
 pub use crate::{bit_accessors, controller, field_bit_accessors, flag_methods, mem_range, reg16};

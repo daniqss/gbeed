@@ -1,3 +1,5 @@
+use crate::impl_static_box_from;
+
 /// # Flag masks
 /// The F register use its 4 most significant bits to store information about the result of the previous operation
 pub const ZERO_FLAG_MASK: u8 = 0b1000_0000;
@@ -73,6 +75,6 @@ impl Flags {
     }
 }
 
-// pub trait LazyFlags {
+pub trait LazyFlags {}
 
-// }
+impl_static_box_from!(LazyFlags);

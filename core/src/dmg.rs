@@ -1,4 +1,3 @@
-use crate::apu::Apu;
 pub use crate::prelude::*;
 use crate::{
     Cartridge, Controller, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
@@ -12,6 +11,7 @@ use crate::{
     timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
     utils::{high, low, to_u16},
 };
+use crate::{apu::Apu, cpu::Instruction};
 
 const BANK_REGISTER: u16 = 0xFF50;
 
@@ -93,7 +93,10 @@ impl Dmg {
         Ok(())
     }
 
-    pub fn step<C: Controller>(&mut self, controller: &mut C) -> Result<Option<InstructionBox>, DmgError> {
+    pub fn step<C: Controller>(
+        &mut self,
+        controller: &mut C,
+    ) -> Result<Option<StaticBox<dyn Instruction>>, DmgError> {
         let prev_cycles = self.cpu.cycles;
 
         let instruction = Cpu::step(self)?;

@@ -17,7 +17,7 @@ pub use registers::{Register8 as R8, Register16 as R16};
 
 use core::fmt::{self, Display, Formatter};
 
-pub type FetchResult = core::result::Result<InstructionBox, InstructionError>;
+pub type FetchResult = core::result::Result<StaticBox<dyn Instruction>, InstructionError>;
 
 pub const FREQUENCY: u32 = 4_194_304;
 
@@ -97,7 +97,7 @@ impl Cpu {
         self.halted = AFTER_BOOT_CPU.halted;
     }
 
-    pub fn step(gb: &mut Dmg) -> Result<Option<InstructionBox>, InstructionError> {
+    pub fn step(gb: &mut Dmg) -> Result<Option<StaticBox<dyn Instruction>>, InstructionError> {
         // check if is neccessatry to handle interrupts before executing the instruction
         if Cpu::handle_interrupts(gb) {
             // 5 Mcycles = 2 NOP + 3 ...
@@ -110,9 +110,9 @@ impl Cpu {
             return Ok(None);
         }
 
-        let opcode = gb.read(gb.cpu.pc);
+        let opcode = Cpu::fetch(gb);
 
-        let mut instruction = Cpu::fetch(gb, opcode)?;
+        let mut instruction = Cpu::decode(gb, opcode)?;
         let effect = instruction.exec(gb)?;
 
         gb.cpu.cycles = gb.cpu.cycles.wrapping_add(effect.cycles as usize);
@@ -170,12 +170,14 @@ impl Cpu {
         gb.cpu.pc = service_routine_addr;
     }
 
-    /// Execute instruction based on the opcode.
+    fn fetch(gb: &mut Dmg) -> u8 { gb.read(gb.cpu.pc) }
+
+    /// Decode instruction based on the opcode.
     /// Return a result with the effect of the instruction or an instruction error (e.g unused opcode)
-    pub fn fetch(gb: &mut Dmg, opcode: u8) -> FetchResult {
+    pub fn decode(gb: &mut Dmg, opcode: u8) -> FetchResult {
         let cpu = &gb.cpu;
 
-        let instruction: InstructionBox = match opcode {
+        let instruction: StaticBox<dyn Instruction> = match opcode {
             0x00 => Nop::new().into(),
             0x01 => LdR16Imm16::new(R16::BC, gb.load(cpu.pc.wrapping_add(1))).into(),
             0x02 => LdPointedByR16A::new(R16::BC).into(),
@@ -445,7 +447,7 @@ impl Cpu {
         let bit = (cb_opcode & 0x38) >> 3;
         let cpu = &gb.cpu;
 
-        let instruction: InstructionBox = match cb_opcode {
+        let instruction: StaticBox<dyn Instruction> = match cb_opcode {
             0x00 => RlcR8::new(R8::B).into(),
             0x01 => RlcR8::new(R8::C).into(),
             0x02 => RlcR8::new(R8::D).into(),

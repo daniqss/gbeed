@@ -13,7 +13,7 @@ pub struct Ret {
 }
 
 impl Ret {
-    pub fn new(jc: JumpCondition) -> Self { Self { jc } }
+    pub fn new(jc: JumpCondition) -> StaticBox<Self> { StaticBox::new(Self { jc }) }
 }
 
 impl Instruction for Ret {

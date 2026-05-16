@@ -17,7 +17,7 @@ pub struct Jr {
 }
 
 impl Jr {
-    pub fn new(jc: JumpCondition, offset: u8) -> Self { Self { jc, offset } }
+    pub fn new(jc: JumpCondition, offset: u8) -> StaticBox<Self> { StaticBox::new(Self { jc, offset }) }
 }
 
 impl Instruction for Jr {
