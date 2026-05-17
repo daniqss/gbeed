@@ -79,7 +79,7 @@ mod test {
         gb.write(pc + 1, e8);
 
         // zero flag is not set, so it should jump
-        gb.cpu.f = !ZERO_FLAG_MASK;
+        gb.cpu.set_f(!ZERO_FLAG_MASK);
 
         let mut instr = Jr::new(JC::NotZero(gb.cpu.not_zero()), e8);
         let result = instr.exec(&mut gb).unwrap();
@@ -101,7 +101,7 @@ mod test {
         let e8: u8 = 0x64;
         gb.write(pc + 1, e8);
         // carry is not set, so it should not jump
-        gb.cpu.f = !CARRY_FLAG_MASK;
+        gb.cpu.set_f(!CARRY_FLAG_MASK);
 
         let mut instr = Jr::new(JC::Carry(gb.cpu.carry()), e8);
         let result = instr.exec(&mut gb).unwrap();

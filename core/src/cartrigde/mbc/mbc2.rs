@@ -1,4 +1,3 @@
-use alloc::{boxed::Box, vec::Vec};
 use crate::{
     BOOT_ROM_END, BOOT_ROM_START, ROM_BANK00_END, ROM_BANK00_START, ROM_BANKNN_END, ROM_BANKNN_SIZE,
     ROM_BANKNN_START,
@@ -6,6 +5,7 @@ use crate::{
         CartridgeError, CartridgeResult, RomSize, features::CartridgeFeatures, header::CartridgeHeader,
     },
 };
+use alloc::{boxed::Box, vec::Vec};
 
 use super::MemoryBankController;
 

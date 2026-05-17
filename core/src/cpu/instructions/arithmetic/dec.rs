@@ -1,22 +1,15 @@
 use crate::{
     cpu::{
         R8, R16,
-        flags::{LazyFlags, check_borrow_hc, check_zero},
+        flags::{
+            HALF_CARRY_FLAG_MASK, LazyFlags, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK, check_borrow_hc,
+            check_zero,
+        },
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     memory::Accessible,
     prelude::*,
 };
-
-#[inline(always)]
-fn dec_u8_flags(old: u8, result: u8) -> Flags {
-    Flags {
-        z: Some(check_zero(result)),
-        n: Some(true),
-        h: Some(check_borrow_hc(old, 1)),
-        c: None,
-    }
-}
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct DecR8 {
@@ -32,7 +25,10 @@ impl Instruction for DecR8 {
         let result = r8.wrapping_sub(1);
         gb.write(self.dst, result);
 
-        Ok(InstructionEffect::new(self.info(), dec_u8_flags(r8, result)))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(DecU8Flags::new(r8, result).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { format!("dec {}", self.dst) }
@@ -50,7 +46,10 @@ impl Instruction for DecPointedByHL {
         let result = n8.wrapping_sub(1);
         gb.write(gb.cpu.hl(), result);
 
-        Ok(InstructionEffect::new(self.info(), dec_u8_flags(n8, result)))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(DecU8Flags::new(n8, result).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (3, 1) }
     fn disassembly(&self) -> String { "dec [hl]".to_string() }
@@ -91,4 +90,22 @@ impl Instruction for DecStackPointer {
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { "dec sp".to_string() }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct DecU8Flags {
+    old: u8,
+    result: u8,
+}
+
+impl DecU8Flags {
+    fn new(old: u8, result: u8) -> StaticBox<Self> { StaticBox::new(Self { old, result }) }
+}
+
+impl LazyFlags for DecU8Flags {
+    fn updated_flags(&self) -> u8 { ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK }
+
+    fn zero(&self) -> bool { check_zero(self.result) }
+    fn subtraction(&self) -> bool { true }
+    fn half_carry(&self) -> bool { check_borrow_hc(self.old, 1) }
 }

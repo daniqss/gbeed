@@ -1,7 +1,10 @@
 use crate::{
     cpu::{
         R8, R16,
-        flags::{LazyFlags, check_overflow_cy, check_overflow_hc},
+        flags::{
+            CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, LazyFlags, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK,
+            check_overflow_cy, check_overflow_hc,
+        },
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
@@ -368,18 +371,35 @@ impl Instruction for LdHLSPPlusImm8 {
         let result = sp.wrapping_add(self.e8 as i16 as u16);
         gb.store(R16::HL, result);
 
-        let flags = Flags {
-            z: Some(false),
-            n: Some(false),
-            h: Some(check_overflow_hc(utils::low(result), utils::low(sp))),
-            c: Some(check_overflow_cy(utils::low(result), utils::low(sp))),
-        };
-
-        Ok(InstructionEffect::new(self.info(), flags))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(LdHLSPPlusImm8Flags::new(utils::low(result), utils::low(sp)).into()),
+        ))
     }
 
     fn info(&self) -> (u8, u8) { (3, 2) }
     fn disassembly(&self) -> String { format!("ld hl,sp{:+}", self.e8) }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct LdHLSPPlusImm8Flags {
+    new_low: u8,
+    old_low: u8,
+}
+
+impl LdHLSPPlusImm8Flags {
+    fn new(new_low: u8, old_low: u8) -> StaticBox<Self> { StaticBox::new(Self { new_low, old_low }) }
+}
+
+impl LazyFlags for LdHLSPPlusImm8Flags {
+    fn updated_flags(&self) -> u8 {
+        ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK
+    }
+
+    fn zero(&self) -> bool { false }
+    fn subtraction(&self) -> bool { false }
+    fn half_carry(&self) -> bool { check_overflow_hc(self.new_low, self.old_low) }
+    fn carry(&self) -> bool { check_overflow_cy(self.new_low, self.old_low) }
 }
 
 /// LD SP, HL

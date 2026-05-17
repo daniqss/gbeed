@@ -1,7 +1,10 @@
 use crate::{
     cpu::{
         R8,
-        flags::{LazyFlags, check_borrow_hc, check_zero},
+        flags::{
+            CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, LazyFlags, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK,
+            check_borrow_hc, check_zero,
+        },
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
@@ -9,16 +12,6 @@ use crate::{
 
 #[inline(always)]
 fn sub(subtrahend: u8, old_a: u8) -> u8 { old_a.wrapping_sub(subtrahend) }
-
-#[inline(always)]
-fn sub_flags(result: u8, old_a: u8, subtrahend: u8) -> Flags {
-    Flags {
-        z: Some(check_zero(result)),
-        n: Some(true),
-        h: Some(check_borrow_hc(old_a, subtrahend)),
-        c: Some(old_a < subtrahend),
-    }
-}
 
 /// Subtraction instruction
 /// Subtracts the value of the wanted register from register A
@@ -36,7 +29,7 @@ impl Instruction for SubR8 {
         gb.cpu.a = sub(subtrahend, old_a);
         Ok(InstructionEffect::new(
             self.info(),
-            sub_flags(gb.cpu.a, old_a, subtrahend),
+            Some(SubFlags::new(gb.cpu.a, old_a, subtrahend).into()),
         ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
@@ -57,7 +50,7 @@ impl Instruction for SubPointedByHL {
         gb.cpu.a = sub(subtrahend, old_a);
         Ok(InstructionEffect::new(
             self.info(),
-            sub_flags(gb.cpu.a, old_a, subtrahend),
+            Some(SubFlags::new(gb.cpu.a, old_a, subtrahend).into()),
         ))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
@@ -79,17 +72,43 @@ impl Instruction for SubImm8 {
         gb.cpu.a = sub(self.val, old_a);
         Ok(InstructionEffect::new(
             self.info(),
-            sub_flags(gb.cpu.a, old_a, self.val),
+            Some(SubFlags::new(gb.cpu.a, old_a, self.val).into()),
         ))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }
     fn disassembly(&self) -> String { format!("sub a,${:02X}", self.val) }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct SubFlags {
+    result: u8,
+    old_a: u8,
+    subtrahend: u8,
+}
+
+impl SubFlags {
+    fn new(result: u8, old_a: u8, subtrahend: u8) -> StaticBox<Self> {
+        StaticBox::new(Self {
+            result,
+            old_a,
+            subtrahend,
+        })
+    }
+}
+
+impl LazyFlags for SubFlags {
+    fn updated_flags(&self) -> u8 {
+        ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK
+    }
+
+    fn zero(&self) -> bool { check_zero(self.result) }
+    fn subtraction(&self) -> bool { true }
+    fn half_carry(&self) -> bool { check_borrow_hc(self.old_a, self.subtrahend) }
+    fn carry(&self) -> bool { self.old_a < self.subtrahend }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::cpu::flags::Flags;
-
     use super::*;
 
     #[test]
@@ -103,15 +122,11 @@ mod tests {
 
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len(), 2);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(true),
-                n: Some(true),
-                h: Some(false),
-                c: Some(false),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(flags.zero());
+        assert!(flags.subtraction());
+        assert!(!flags.half_carry());
+        assert!(!flags.carry());
     }
 
     #[test]
@@ -126,15 +141,11 @@ mod tests {
         assert_eq!(gb.cpu.a, 0x0F);
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len(), 1);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(false),
-                n: Some(true),
-                h: Some(true),
-                c: Some(false),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(!flags.zero());
+        assert!(flags.subtraction());
+        assert!(flags.half_carry());
+        assert!(!flags.carry());
     }
 
     #[test]
@@ -151,14 +162,10 @@ mod tests {
         assert_eq!(gb.cpu.a, 0xF0);
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len(), 1);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(false),
-                n: Some(true),
-                h: Some(false),
-                c: Some(true),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(!flags.zero());
+        assert!(flags.subtraction());
+        assert!(!flags.half_carry());
+        assert!(flags.carry());
     }
 }

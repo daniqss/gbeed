@@ -1,21 +1,14 @@
 use crate::{
     cpu::{
         R8, R16,
-        flags::{LazyFlags, check_overflow_hc, check_zero},
+        flags::{
+            HALF_CARRY_FLAG_MASK, LazyFlags, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK, check_overflow_hc,
+            check_zero,
+        },
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };
-
-#[inline(always)]
-fn inc_u8_flags(old: u8, result: u8) -> Flags {
-    Flags {
-        z: Some(check_zero(result)),
-        n: Some(false),
-        h: Some(check_overflow_hc(result, old)),
-        c: None,
-    }
-}
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct IncR8 {
@@ -31,7 +24,10 @@ impl Instruction for IncR8 {
         let result = r8.wrapping_add(1);
         gb.write(self.dst, result);
 
-        Ok(InstructionEffect::new(self.info(), inc_u8_flags(r8, result)))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(IncU8Flags::new(r8, result).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { format!("inc {}", self.dst) }
@@ -49,7 +45,10 @@ impl Instruction for IncPointedByHL {
         let result = n8.wrapping_add(1);
         gb.write(gb.cpu.hl(), result);
 
-        Ok(InstructionEffect::new(self.info(), inc_u8_flags(n8, result)))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(IncU8Flags::new(n8, result).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (3, 1) }
     fn disassembly(&self) -> String { "inc [hl]".to_string() }
@@ -89,4 +88,22 @@ impl Instruction for IncStackPointer {
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { "inc sp".to_string() }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct IncU8Flags {
+    old: u8,
+    result: u8,
+}
+
+impl IncU8Flags {
+    fn new(old: u8, result: u8) -> StaticBox<Self> { StaticBox::new(Self { old, result }) }
+}
+
+impl LazyFlags for IncU8Flags {
+    fn updated_flags(&self) -> u8 { ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK }
+
+    fn zero(&self) -> bool { check_zero(self.result) }
+    fn subtraction(&self) -> bool { false }
+    fn half_carry(&self) -> bool { check_overflow_hc(self.result, self.old) }
 }

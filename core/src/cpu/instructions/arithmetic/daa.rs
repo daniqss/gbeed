@@ -1,5 +1,8 @@
 use crate::{
-    cpu::instructions::{Instruction, InstructionEffect, InstructionResult},
+    cpu::{
+        flags::{CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, LazyFlags, ZERO_FLAG_MASK, check_zero},
+        instructions::{Instruction, InstructionEffect, InstructionResult},
+    },
     prelude::*,
 };
 
@@ -37,15 +40,32 @@ impl Instruction for Daa {
             gb.cpu.a = gb.cpu.a.wrapping_add(adjustment);
         }
 
-        let flags = Flags {
-            z: Some(gb.cpu.a == 0),
-            n: None,
-            h: Some(false),
-            c: if carry { Some(true) } else { None },
-        };
-
-        Ok(InstructionEffect::new(self.info(), flags))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(DaaFlags::new(gb.cpu.a, carry).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { "daa".to_string() }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct DaaFlags {
+    result: u8,
+    carry: bool,
+}
+
+impl DaaFlags {
+    fn new(result: u8, carry: bool) -> StaticBox<Self> { StaticBox::new(Self { result, carry }) }
+}
+
+impl LazyFlags for DaaFlags {
+    fn updated_flags(&self) -> u8 {
+        let base = ZERO_FLAG_MASK | HALF_CARRY_FLAG_MASK;
+        if self.carry { base | CARRY_FLAG_MASK } else { base }
+    }
+
+    fn zero(&self) -> bool { check_zero(self.result) }
+    fn half_carry(&self) -> bool { false }
+    fn carry(&self) -> bool { true }
 }

@@ -1,21 +1,11 @@
 use crate::{
     cpu::{
         R8,
-        flags::{LazyFlags, check_zero},
+        flags::{ALL_FLAGS_MASK, LazyFlags, check_zero},
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };
-
-#[inline(always)]
-fn or_u8_flags(result: u8) -> Flags {
-    Flags {
-        z: Some(check_zero(result)),
-        n: Some(false),
-        h: Some(false),
-        c: Some(false),
-    }
-}
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct OrR8 {
@@ -28,7 +18,10 @@ impl Instruction for OrR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let n8 = gb.read(self.src);
         gb.cpu.a |= n8;
-        Ok(InstructionEffect::new(self.info(), or_u8_flags(gb.cpu.a)))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(OrFlags::new(gb.cpu.a).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { format!("or {}", self.src) }
@@ -43,7 +36,10 @@ impl Instruction for OrPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let n8 = gb.read(gb.cpu.hl());
         gb.cpu.a |= n8;
-        Ok(InstructionEffect::new(self.info(), or_u8_flags(gb.cpu.a)))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(OrFlags::new(gb.cpu.a).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { "or [hl]".to_string() }
@@ -59,8 +55,29 @@ impl OrImm8 {
 impl Instruction for OrImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.a |= self.val;
-        Ok(InstructionEffect::new(self.info(), or_u8_flags(gb.cpu.a)))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(OrFlags::new(gb.cpu.a).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }
     fn disassembly(&self) -> String { format!("or ${:02X}", self.val) }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct OrFlags {
+    result: u8,
+}
+
+impl OrFlags {
+    fn new(result: u8) -> StaticBox<Self> { StaticBox::new(Self { result }) }
+}
+
+impl LazyFlags for OrFlags {
+    fn updated_flags(&self) -> u8 { ALL_FLAGS_MASK }
+
+    fn zero(&self) -> bool { check_zero(self.result) }
+    fn subtraction(&self) -> bool { false }
+    fn half_carry(&self) -> bool { false }
+    fn carry(&self) -> bool { false }
 }

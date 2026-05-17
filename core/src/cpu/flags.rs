@@ -42,32 +42,3 @@ pub trait LazyFlags: core::fmt::Debug {
 }
 
 impl_static_box!(LazyFlags);
-
-#[derive(Debug, Clone, Copy)]
-pub struct ConstantFlags {
-    zero: bool,
-    subtraction: bool,
-    half_carry: bool,
-    carry: bool,
-    byte: u8,
-}
-
-impl ConstantFlags {
-    pub fn new(byte: u8) -> Self {
-        Self {
-            zero: byte & ZERO_FLAG_MASK != 0,
-            subtraction: byte & SUBTRACTION_FLAG_MASK != 0,
-            half_carry: byte & HALF_CARRY_FLAG_MASK != 0,
-            carry: byte & CARRY_FLAG_MASK != 0,
-            byte,
-        }
-    }
-}
-
-impl LazyFlags for ConstantFlags {
-    fn zero(&self) -> bool { self.zero }
-    fn subtraction(&self) -> bool { self.subtraction }
-    fn half_carry(&self) -> bool { self.half_carry }
-    fn carry(&self) -> bool { self.carry }
-    fn updated_flags(&self) -> u8 { self.byte & ALL_FLAGS_MASK }
-}

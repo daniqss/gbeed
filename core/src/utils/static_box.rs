@@ -78,13 +78,7 @@ impl<T: ?Sized, const N: usize> DerefMut for StaticBox<T, N> {
 }
 
 impl<T: ?Sized, const N: usize> Clone for StaticBox<T, N> {
-    fn clone(&self) -> Self {
-        Self {
-            data: self.data,
-            vtable: self.vtable,
-            _phantom: PhantomData,
-        }
-    }
+    fn clone(&self) -> Self { *self }
 }
 impl<T: ?Sized, const N: usize> Copy for StaticBox<T, N> {}
 

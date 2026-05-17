@@ -31,7 +31,7 @@ impl Push {
 impl Instruction for Push {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let src = match self.src {
-            R16::AF => (gb.cpu.f & 0b1111_0000, gb.cpu.a),
+            R16::AF => (gb.cpu.f() & 0b1111_0000, gb.cpu.a),
             _ => utils::to_u8(gb.load(self.src)),
         };
 
@@ -60,7 +60,7 @@ mod tests {
     #[test]
     fn test_push_af() {
         let mut gb = Dmg::default();
-        gb.cpu.f = ZERO_FLAG_MASK | CARRY_FLAG_MASK | 1;
+        gb.cpu.set_f(ZERO_FLAG_MASK | CARRY_FLAG_MASK | 1);
         gb.cpu.a = 1;
         gb.cpu.sp = 0xFFA0;
 
@@ -73,7 +73,7 @@ mod tests {
         assert_eq!(gb.read(gb.cpu.sp), ZERO_FLAG_MASK | CARRY_FLAG_MASK);
         assert_eq!(gb.read(gb.cpu.sp + 1), gb.cpu.a);
         assert_eq!(gb.cpu.sp, 0xFFA0 - 2);
-        assert_eq!(effect.flags, None);
+        assert!(effect.flags.is_none());
     }
 
     #[test]
@@ -92,6 +92,6 @@ mod tests {
         assert_eq!(gb.read(gb.cpu.sp), gb.cpu.c);
         assert_eq!(gb.read(gb.cpu.sp + 1), gb.cpu.b);
         assert_eq!(gb.cpu.sp, 0xFFA0 - 2);
-        assert_eq!(effect.flags, None);
+        assert!(effect.flags.is_none());
     }
 }

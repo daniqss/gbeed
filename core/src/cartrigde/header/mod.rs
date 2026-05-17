@@ -1,4 +1,9 @@
-use alloc::{format, string::{String, ToString}, vec, vec::Vec};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 mod license;
 mod ram;
 mod rom;

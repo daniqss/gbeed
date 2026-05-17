@@ -86,7 +86,7 @@ mod test {
     fn test_jump_with_jc() {
         let mut gb = Dmg::default();
         gb.cpu.pc = 0xC000;
-        gb.cpu.f = ZERO_FLAG_MASK;
+        gb.cpu.set_f(ZERO_FLAG_MASK);
         gb.store(gb.cpu.pc + 1, 0x200);
 
         let mut instr = JpToImm16::new(JC::Zero(gb.cpu.zero()), gb.load(gb.cpu.pc + 1));
@@ -102,7 +102,7 @@ mod test {
         let mut gb = Dmg::default();
         gb.cpu.pc = 0xC000;
         // carry is set, so it should not jump
-        gb.cpu.f = CARRY_FLAG_MASK;
+        gb.cpu.set_f(CARRY_FLAG_MASK);
         gb.store(gb.cpu.pc + 1, 0x200);
 
         let mut instr = JpToImm16::new(JC::NotCarry(gb.cpu.not_carry()), gb.load(gb.cpu.pc + 1));

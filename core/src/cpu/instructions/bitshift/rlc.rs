@@ -1,21 +1,14 @@
 use crate::{
     cpu::{
         R8,
-        flags::{LazyFlags, check_zero},
+        flags::{
+            CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, LazyFlags, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK,
+            check_zero,
+        },
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };
-
-#[inline(always)]
-fn rlc_flags(result: u8, dst: u8) -> Flags {
-    Flags {
-        z: Some(check_zero(result)),
-        n: Some(false),
-        h: Some(false),
-        c: Some(dst & 0b1000_0000 != 0),
-    }
-}
 
 #[inline(always)]
 fn rlc(value: u8) -> u8 { value.rotate_left(1) }
@@ -38,10 +31,12 @@ impl Instruction for RlcR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let r8 = gb.read(self.dst);
         let result = rlc(r8);
-        let flags = rlc_flags(result, r8);
         gb.write(self.dst, result);
 
-        Ok(InstructionEffect::new(self.info(), flags))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(RlcFlags::new(result, r8).into()),
+        ))
     }
 
     fn info(&self) -> (u8, u8) { (2, 2) }
@@ -59,24 +54,44 @@ impl Instruction for RlcPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let val = gb.read(gb.cpu.hl());
         let result = rlc(val);
-        let flags = rlc_flags(result, val);
         gb.write(gb.cpu.hl(), result);
 
-        Ok(InstructionEffect::new(self.info(), flags))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(RlcFlags::new(result, val).into()),
+        ))
     }
 
     fn info(&self) -> (u8, u8) { (4, 2) }
     fn disassembly(&self) -> String { "rlc [hl]".to_string() }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct RlcFlags {
+    result: u8,
+    dst: u8,
+}
+
+impl RlcFlags {
+    fn new(result: u8, dst: u8) -> StaticBox<Self> { StaticBox::new(Self { result, dst }) }
+}
+
+impl LazyFlags for RlcFlags {
+    fn updated_flags(&self) -> u8 {
+        ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK
+    }
+
+    fn zero(&self) -> bool { check_zero(self.result) }
+    fn subtraction(&self) -> bool { false }
+    fn half_carry(&self) -> bool { false }
+    fn carry(&self) -> bool { self.dst & 0b1000_0000 != 0 }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{
-        Accessible,
-        cpu::{R8, flags::Flags},
-    };
-
     use super::*;
+
+    use crate::{Accessible, cpu::R8};
 
     #[test]
     fn test_rlc_no_carry() {
@@ -89,15 +104,11 @@ mod tests {
 
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len(), 2);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(false),
-                n: Some(false),
-                h: Some(false),
-                c: Some(true),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(!flags.zero());
+        assert!(!flags.subtraction());
+        assert!(!flags.half_carry());
+        assert!(flags.carry());
     }
 
     #[test]
@@ -114,14 +125,10 @@ mod tests {
 
         assert_eq!(result.cycles, 4);
         assert_eq!(result.len(), 2);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(false),
-                n: Some(false),
-                h: Some(false),
-                c: Some(false),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(!flags.zero());
+        assert!(!flags.subtraction());
+        assert!(!flags.half_carry());
+        assert!(!flags.carry());
     }
 }

@@ -1,21 +1,14 @@
 use crate::{
     cpu::{
         R8,
-        flags::{LazyFlags, check_borrow_hc, check_zero},
+        flags::{
+            CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, LazyFlags, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK,
+            check_borrow_hc, check_zero,
+        },
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };
-
-#[inline(always)]
-fn cp_flags(result: u8, a: u8, subtrahend: u8, did_borrow: bool) -> Flags {
-    Flags {
-        z: Some(check_zero(result)),
-        n: Some(true),
-        h: Some(check_borrow_hc(a, subtrahend)),
-        c: Some(did_borrow),
-    }
-}
 
 /// ComPare instruction
 /// Compare the value in register A with the given target
@@ -30,11 +23,12 @@ impl CpR8 {
 impl Instruction for CpR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let subtrahend = gb.read(self.src);
-        let (result, did_borrow) = gb.cpu.a.overflowing_sub(subtrahend);
+        let a = gb.cpu.a;
+        let result = a.wrapping_sub(subtrahend);
 
         Ok(InstructionEffect::new(
             self.info(),
-            cp_flags(result, gb.cpu.a, subtrahend, did_borrow),
+            Some(CpFlags::new(result, a, subtrahend).into()),
         ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
@@ -49,11 +43,12 @@ impl CpPointedByHL {
 impl Instruction for CpPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let subtrahend = gb.read(gb.cpu.hl());
-        let (result, did_borrow) = gb.cpu.a.overflowing_sub(subtrahend);
+        let a = gb.cpu.a;
+        let result = a.wrapping_sub(subtrahend);
 
         Ok(InstructionEffect::new(
             self.info(),
-            cp_flags(result, gb.cpu.a, subtrahend, did_borrow),
+            Some(CpFlags::new(result, a, subtrahend).into()),
         ))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
@@ -70,13 +65,42 @@ impl CpImm8 {
 impl Instruction for CpImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let subtrahend = self.val;
-        let (result, did_borrow) = gb.cpu.a.overflowing_sub(subtrahend);
+        let a = gb.cpu.a;
+        let result = a.wrapping_sub(subtrahend);
 
         Ok(InstructionEffect::new(
             self.info(),
-            cp_flags(result, gb.cpu.a, subtrahend, did_borrow),
+            Some(CpFlags::new(result, a, subtrahend).into()),
         ))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }
     fn disassembly(&self) -> String { format!("cp ${:02X}", self.val) }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct CpFlags {
+    result: u8,
+    a: u8,
+    subtrahend: u8,
+}
+
+impl CpFlags {
+    fn new(result: u8, a: u8, subtrahend: u8) -> StaticBox<Self> {
+        StaticBox::new(Self {
+            result,
+            a,
+            subtrahend,
+        })
+    }
+}
+
+impl LazyFlags for CpFlags {
+    fn updated_flags(&self) -> u8 {
+        ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK
+    }
+
+    fn zero(&self) -> bool { check_zero(self.result) }
+    fn subtraction(&self) -> bool { true }
+    fn half_carry(&self) -> bool { check_borrow_hc(self.a, self.subtrahend) }
+    fn carry(&self) -> bool { self.a < self.subtrahend }
 }

@@ -13,6 +13,46 @@ use crate::{
     utils::{from_u16, high, low, to_u16},
 };
 
+macro_rules! flag_methods {
+    (
+        $(
+            $name:ident => $mask:ident
+        ),+ $(,)?
+    ) => {
+        paste::paste! {
+            $(
+                #[inline(always)]
+                pub fn $name(&mut self) -> bool {
+                    if let Some(lazy) = self.[<lazy_ $name>].take() {
+                        let v = lazy.$name();
+                        self.set_flag_bit($mask, v);
+                        v
+                    } else {
+                        self.f_cache & $mask != 0
+                    }
+                }
+
+                #[inline(always)]
+                pub fn [<not_ $name>](&mut self) -> bool { !self.$name() }
+
+                #[inline(always)]
+                #[allow(dead_code)]
+                pub fn [<set_ $name>](&mut self) {
+                    self.[<lazy_ $name>] = None;
+                    self.f_cache |= $mask;
+                }
+
+                #[inline(always)]
+                #[allow(dead_code)]
+                pub fn [<clear_ $name>](&mut self) {
+                    self.[<lazy_ $name>] = None;
+                    self.f_cache &= !$mask;
+                }
+            )*
+        }
+    };
+}
+
 // TODO: not expose individual instructions
 pub use instructions::{Instruction, InstructionError, Len, Nop};
 use instructions::{JumpCondition as JC, *};
@@ -26,7 +66,7 @@ pub const FREQUENCY: u32 = 4_194_304;
 
 pub const AFTER_BOOT_CPU: Cpu = Cpu {
     a: 0x01,
-    f: 0xB0,
+    f_cache: 0xB0,
     b: 0x00,
     c: 0x13,
     d: 0x00,
@@ -52,7 +92,7 @@ pub const AFTER_BOOT_CPU: Cpu = Cpu {
 #[derive(Debug, Default)]
 pub struct Cpu {
     pub a: u8,
-    f: u8,
+    f_cache: u8,
     pub b: u8,
     pub c: u8,
     pub d: u8,
@@ -88,11 +128,11 @@ impl Cpu {
         self.subtraction();
         self.half_carry();
         self.carry();
-        self.f
+        self.f_cache
     }
 
-    pub fn set_f(&mut self, v: u8) {
-        self.f = v & ALL_FLAGS_MASK;
+    pub fn set_f(&mut self, val: u8) {
+        self.f_cache = val & ALL_FLAGS_MASK;
         self.lazy_zero = None;
         self.lazy_subtraction = None;
         self.lazy_half_carry = None;
@@ -110,63 +150,25 @@ impl Cpu {
     reg16!(de, set_de, d, e);
     reg16!(hl, set_hl, h, l);
 
-    // flags methods
-    pub fn zero(&mut self) -> bool {
-        if let Some(lazy) = self.lazy_zero.take() {
-            let v = lazy.zero();
-            self.set_flag_bit(ZERO_FLAG_MASK, v);
-            v
-        } else {
-            self.f & ZERO_FLAG_MASK != 0
-        }
+    flag_methods! {
+        zero => ZERO_FLAG_MASK,
+        subtraction => SUBTRACTION_FLAG_MASK,
+        half_carry => HALF_CARRY_FLAG_MASK,
+        carry => CARRY_FLAG_MASK,
     }
-    pub fn not_zero(&mut self) -> bool { !self.zero() }
-
-    pub fn subtraction(&mut self) -> bool {
-        if let Some(lazy) = self.lazy_subtraction.take() {
-            let v = lazy.subtraction();
-            self.set_flag_bit(SUBTRACTION_FLAG_MASK, v);
-            v
-        } else {
-            self.f & SUBTRACTION_FLAG_MASK != 0
-        }
-    }
-    pub fn not_subtraction(&mut self) -> bool { !self.subtraction() }
-
-    pub fn carry(&mut self) -> bool {
-        if let Some(lazy) = self.lazy_carry.take() {
-            let v = lazy.carry();
-            self.set_flag_bit(CARRY_FLAG_MASK, v);
-            v
-        } else {
-            self.f & CARRY_FLAG_MASK != 0
-        }
-    }
-    pub fn not_carry(&mut self) -> bool { !self.carry() }
-
-    pub fn half_carry(&mut self) -> bool {
-        if let Some(lazy) = self.lazy_half_carry.take() {
-            let v = lazy.half_carry();
-            self.set_flag_bit(HALF_CARRY_FLAG_MASK, v);
-            v
-        } else {
-            self.f & HALF_CARRY_FLAG_MASK != 0
-        }
-    }
-    pub fn not_half_carry(&mut self) -> bool { !self.half_carry() }
 
     #[inline]
     fn set_flag_bit(&mut self, mask: u8, val: bool) {
         if val {
-            self.f |= mask;
+            self.f_cache |= mask;
         } else {
-            self.f &= !mask;
+            self.f_cache &= !mask;
         }
     }
 
     pub fn reset(&mut self) {
         self.a = AFTER_BOOT_CPU.a;
-        self.f = AFTER_BOOT_CPU.f;
+        self.f_cache = AFTER_BOOT_CPU.f_cache;
         self.b = AFTER_BOOT_CPU.b;
         self.c = AFTER_BOOT_CPU.c;
         self.d = AFTER_BOOT_CPU.d;
@@ -664,7 +666,17 @@ impl Display for Cpu {
         write!(
             f,
             "a: {:02X} f: {:02X} b: {:02X} c: {:02X} d: {:02X} e: {:02X} h: {:02X} l: {:02X} pc: {:04X} sp: {:04X}, cycles: {}",
-            self.a, self.f, self.b, self.c, self.d, self.e, self.h, self.l, self.pc, self.sp, self.cycles
+            self.a,
+            self.f_cache,
+            self.b,
+            self.c,
+            self.d,
+            self.e,
+            self.h,
+            self.l,
+            self.pc,
+            self.sp,
+            self.cycles
         )
     }
 }

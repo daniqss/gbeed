@@ -62,9 +62,13 @@ impl core::ops::DerefMut for InstructionBox {
 }
 
 impl core::fmt::Display for InstructionBox {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { core::fmt::Display::fmt(&**self, f) }
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Display::fmt(&**self, f)
+    }
 }
 
 impl core::fmt::Debug for InstructionBox {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { write!(f, "{}", self.disassembly()) }
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.disassembly())
+    }
 }

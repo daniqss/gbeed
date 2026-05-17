@@ -2,7 +2,8 @@ use crate::{
     cpu::{
         R8, R16,
         flags::{
-            Flags, check_overflow_cy, check_overflow_cy16, check_overflow_hc, check_overflow_hc16, check_zero,
+            CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, LazyFlags, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK,
+            check_overflow_cy, check_overflow_cy16, check_overflow_hc, check_overflow_hc16, check_zero,
         },
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
@@ -20,16 +21,6 @@ fn add_u16(gb: &mut Dmg, addend: u16) -> u16 {
     result
 }
 
-#[inline(always)]
-fn add_u8_flags(result: u8, old_a: u8) -> Flags {
-    Flags {
-        z: Some(check_zero(result)),
-        n: Some(false),
-        h: Some(check_overflow_hc(result, old_a)),
-        c: Some(check_overflow_cy(result, old_a)),
-    }
-}
-
 #[derive(Debug, Default, Clone, Copy)]
 pub struct AddAR8 {
     src: R8,
@@ -41,7 +32,11 @@ impl Instruction for AddAR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let old_a = gb.cpu.a;
         gb.cpu.a = add_u8(gb.read(self.src), old_a);
-        Ok(InstructionEffect::new(self.info(), add_u8_flags(gb.cpu.a, old_a)))
+
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(AddU8Flags::new(gb.cpu.a, old_a).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { format!("add a,{}", self.src) }
@@ -56,7 +51,11 @@ impl Instruction for AddAPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let old_a = gb.cpu.a;
         gb.cpu.a = add_u8(gb.read(gb.cpu.hl()), old_a);
-        Ok(InstructionEffect::new(self.info(), add_u8_flags(gb.cpu.a, old_a)))
+
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(AddU8Flags::new(gb.cpu.a, old_a).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { "add a,[hl]".to_string() }
@@ -73,7 +72,11 @@ impl Instruction for AddImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let old_a = gb.cpu.a;
         gb.cpu.a = add_u8(self.val, old_a);
-        Ok(InstructionEffect::new(self.info(), add_u8_flags(gb.cpu.a, old_a)))
+
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(AddU8Flags::new(gb.cpu.a, old_a).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }
     fn disassembly(&self) -> String { format!("add a,${:02X}", self.val) }
@@ -83,22 +86,21 @@ impl Instruction for AddImm8 {
 pub struct AddR16 {
     src: R16,
 }
+
 impl AddR16 {
     pub fn new(src: R16) -> StaticBox<Self> { StaticBox::new(Self { src }) }
 }
+
 impl Instruction for AddR16 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let old_hl = gb.cpu.hl();
         let val = gb.load(self.src);
         let result = add_u16(gb, val);
 
-        let flags = Flags {
-            z: None,
-            n: Some(false),
-            h: Some(check_overflow_hc16(result, old_hl)),
-            c: Some(check_overflow_cy16(result, old_hl)),
-        };
-        Ok(InstructionEffect::new(self.info(), flags))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(AddU16Flags::new(result, old_hl).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { format!("add hl,{}", self.src) }
@@ -115,13 +117,10 @@ impl Instruction for AddHLSP {
         let val = gb.cpu.sp;
         let result = add_u16(gb, val);
 
-        let flags = Flags {
-            z: None,
-            n: Some(false),
-            h: Some(check_overflow_hc16(result, old_hl)),
-            c: Some(check_overflow_cy16(result, old_hl)),
-        };
-        Ok(InstructionEffect::new(self.info(), flags))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(AddU16Flags::new(result, old_hl).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { "add hl,sp".to_string() }
@@ -139,16 +138,73 @@ impl Instruction for AddSPImm8 {
         let old_sp = gb.cpu.sp;
         gb.cpu.sp = old_sp.wrapping_add(self.val as u16);
 
-        let flags = Flags {
-            z: Some(false),
-            n: Some(false),
-            h: Some(check_overflow_hc(utils::low(gb.cpu.sp), utils::low(old_sp))),
-            c: Some(check_overflow_cy(utils::low(gb.cpu.sp), utils::low(old_sp))),
-        };
-        Ok(InstructionEffect::new(self.info(), flags))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(AddSPImm8Flags::new(utils::low(gb.cpu.sp), utils::low(old_sp)).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (4, 2) }
     fn disassembly(&self) -> String { format!("add sp,{:+}", self.val) }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct AddU8Flags {
+    result: u8,
+    old_a: u8,
+}
+
+impl AddU8Flags {
+    fn new(result: u8, old_a: u8) -> StaticBox<Self> { StaticBox::new(Self { result, old_a }) }
+}
+
+impl LazyFlags for AddU8Flags {
+    fn updated_flags(&self) -> u8 {
+        ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK
+    }
+
+    fn zero(&self) -> bool { check_zero(self.result) }
+    fn subtraction(&self) -> bool { false }
+    fn half_carry(&self) -> bool { check_overflow_hc(self.result, self.old_a) }
+    fn carry(&self) -> bool { check_overflow_cy(self.result, self.old_a) }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct AddU16Flags {
+    result: u16,
+    old_hl: u16,
+}
+
+impl AddU16Flags {
+    fn new(result: u16, old_hl: u16) -> StaticBox<Self> { StaticBox::new(Self { result, old_hl }) }
+}
+
+impl LazyFlags for AddU16Flags {
+    fn updated_flags(&self) -> u8 { SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK }
+
+    fn subtraction(&self) -> bool { false }
+    fn half_carry(&self) -> bool { check_overflow_hc16(self.result, self.old_hl) }
+    fn carry(&self) -> bool { check_overflow_cy16(self.result, self.old_hl) }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct AddSPImm8Flags {
+    new_low: u8,
+    old_low: u8,
+}
+
+impl AddSPImm8Flags {
+    fn new(new_low: u8, old_low: u8) -> StaticBox<Self> { StaticBox::new(Self { new_low, old_low }) }
+}
+
+impl LazyFlags for AddSPImm8Flags {
+    fn updated_flags(&self) -> u8 {
+        ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK
+    }
+
+    fn zero(&self) -> bool { false }
+    fn subtraction(&self) -> bool { false }
+    fn half_carry(&self) -> bool { check_overflow_hc(self.new_low, self.old_low) }
+    fn carry(&self) -> bool { check_overflow_cy(self.new_low, self.old_low) }
 }
 
 #[cfg(test)]
@@ -162,64 +218,64 @@ mod tests {
 
         dmg.store(R16::HL, 0x0000);
         dmg.cpu.sp = 0x0001;
-        dmg.cpu.f = 0;
-        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        dmg.cpu.set_f(0);
+        let flags = add_sp.exec(&mut dmg).unwrap().flags.unwrap();
         assert_eq!(dmg.load(R16::HL), 0x0001);
-        assert!(!dmg.cpu.half_carry());
-        assert!(!dmg.cpu.carry());
+        assert!(!flags.half_carry());
+        assert!(!flags.carry());
 
         dmg.store(R16::HL, 0x0FFF);
         dmg.cpu.sp = 0x0001;
-        dmg.cpu.f = 0;
-        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        dmg.cpu.set_f(0);
+        let flags = add_sp.exec(&mut dmg).unwrap().flags.unwrap();
         assert_eq!(dmg.load(R16::HL), 0x1000);
-        assert!(dmg.cpu.half_carry());
-        assert!(!dmg.cpu.carry());
+        assert!(flags.half_carry());
+        assert!(!flags.carry());
 
         // carry and half Carry
         dmg.store(R16::HL, 0xFFFF);
         dmg.cpu.sp = 0x0001;
-        dmg.cpu.f = 0;
-        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        dmg.cpu.set_f(0);
+        let flags = add_sp.exec(&mut dmg).unwrap().flags.unwrap();
         assert_eq!(dmg.load(R16::HL), 0x0000);
-        assert!(dmg.cpu.half_carry());
-        assert!(dmg.cpu.carry());
+        assert!(flags.half_carry());
+        assert!(flags.carry());
 
         // half Carry with 0x0800 + 0x0800
         dmg.store(R16::HL, 0x0800);
         dmg.cpu.sp = 0x0800;
-        dmg.cpu.f = 0;
-        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        dmg.cpu.set_f(0);
+        let flags = add_sp.exec(&mut dmg).unwrap().flags.unwrap();
         assert_eq!(dmg.load(R16::HL), 0x1000);
-        assert!(dmg.cpu.half_carry());
-        assert!(!dmg.cpu.carry());
+        assert!(flags.half_carry());
+        assert!(!flags.carry());
 
         // carry with 0x8000 + 0x8000
         dmg.store(R16::HL, 0x8000);
         dmg.cpu.sp = 0x8000;
-        dmg.cpu.f = 0;
-        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        dmg.cpu.set_f(0);
+        let flags = add_sp.exec(&mut dmg).unwrap().flags.unwrap();
         assert_eq!(dmg.load(R16::HL), 0x0000);
-        assert!(!dmg.cpu.half_carry());
-        assert!(dmg.cpu.carry());
+        assert!(!flags.half_carry());
+        assert!(flags.carry());
 
         // half carry edge case
         dmg.store(R16::HL, 0x0F80);
         dmg.cpu.sp = 0x0080;
-        dmg.cpu.f = 0;
-        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        dmg.cpu.set_f(0);
+        let flags = add_sp.exec(&mut dmg).unwrap().flags.unwrap();
         assert_eq!(dmg.load(R16::HL), 0x1000);
-        assert!(dmg.cpu.half_carry());
-        assert!(!dmg.cpu.carry());
+        assert!(flags.half_carry());
+        assert!(!flags.carry());
 
         // high bit addition
         dmg.store(R16::HL, 0x0001);
         dmg.cpu.sp = 0xFFFF;
-        dmg.cpu.f = 0;
-        add_sp.exec(&mut dmg).unwrap().flags.apply(&mut dmg.cpu.f);
+        dmg.cpu.set_f(0);
+        let flags = add_sp.exec(&mut dmg).unwrap().flags.unwrap();
         assert_eq!(dmg.load(R16::HL), 0x0000);
         // 0x001 + 0xFFF = 0x1000. 1+F=16. H=1.
-        assert!(dmg.cpu.half_carry());
-        assert!(dmg.cpu.carry());
+        assert!(flags.half_carry());
+        assert!(flags.carry());
     }
 }

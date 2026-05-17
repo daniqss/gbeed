@@ -1,30 +1,14 @@
 use crate::{
     cpu::{
         R8,
-        flags::{LazyFlags, check_zero},
+        flags::{
+            CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, LazyFlags, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK,
+            check_zero,
+        },
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };
-
-#[inline(always)]
-fn sbc(gb: &mut Dmg, val: u8) -> Flags {
-    let old_a = gb.cpu.a;
-    let carry = if gb.cpu.carry() { 1 } else { 0 };
-
-    let result = old_a.wrapping_sub(val).wrapping_sub(carry);
-    gb.cpu.a = result;
-
-    let h_check = (old_a & 0xF) < (val & 0xF) + carry;
-    let c_check = (old_a as u16) < (val as u16) + (carry as u16);
-
-    Flags {
-        z: Some(check_zero(result)),
-        n: Some(true),
-        h: Some(h_check),
-        c: Some(c_check),
-    }
-}
 
 /// Subtraction with carry instruction
 /// Subtracts the value of the wanted register from register A, and the carry flag
@@ -38,8 +22,17 @@ impl SbcR8 {
 impl Instruction for SbcR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let val = gb.read(self.src);
-        let flags = sbc(gb, val);
-        Ok(InstructionEffect::new(self.info(), flags))
+
+        let old_a = gb.cpu.a;
+        let carry_in: u8 = if gb.cpu.carry() { 1 } else { 0 };
+
+        let result = old_a.wrapping_sub(val).wrapping_sub(carry_in);
+        gb.cpu.a = result;
+
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(SbcFlags::new(result, old_a, val, carry_in).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { format!("sbc a,{}", self.src) }
@@ -55,8 +48,17 @@ impl SbcPointedByHL {
 impl Instruction for SbcPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let val = gb.read(gb.cpu.hl());
-        let flags = sbc(gb, val);
-        Ok(InstructionEffect::new(self.info(), flags))
+
+        let old_a = gb.cpu.a;
+        let carry_in: u8 = if gb.cpu.carry() { 1 } else { 0 };
+
+        let result = old_a.wrapping_sub(val).wrapping_sub(carry_in);
+        gb.cpu.a = result;
+
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(SbcFlags::new(result, old_a, val, carry_in).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { "sbc a,[hl]".to_string() }
@@ -73,11 +75,49 @@ impl SbcImm8 {
 }
 impl Instruction for SbcImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let flags = sbc(gb, self.n8);
-        Ok(InstructionEffect::new(self.info(), flags))
+        let old_a = gb.cpu.a;
+        let carry_in: u8 = if gb.cpu.carry() { 1 } else { 0 };
+
+        let result = old_a.wrapping_sub(self.n8).wrapping_sub(carry_in);
+        gb.cpu.a = result;
+
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(SbcFlags::new(result, old_a, self.n8, carry_in).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }
     fn disassembly(&self) -> String { format!("sbc a,${:02X}", self.n8) }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct SbcFlags {
+    result: u8,
+    old_a: u8,
+    val: u8,
+    carry_in: u8,
+}
+
+impl SbcFlags {
+    fn new(result: u8, old_a: u8, val: u8, carry_in: u8) -> StaticBox<Self> {
+        StaticBox::new(Self {
+            result,
+            old_a,
+            val,
+            carry_in,
+        })
+    }
+}
+
+impl LazyFlags for SbcFlags {
+    fn updated_flags(&self) -> u8 {
+        ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK
+    }
+
+    fn zero(&self) -> bool { check_zero(self.result) }
+    fn subtraction(&self) -> bool { true }
+    fn half_carry(&self) -> bool { (self.old_a & 0xF) < (self.val & 0xF) + self.carry_in }
+    fn carry(&self) -> bool { (self.old_a as u16) < (self.val as u16) + (self.carry_in as u16) }
 }
 
 #[cfg(test)]
@@ -96,15 +136,11 @@ mod tests {
 
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len(), 2);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(true),
-                n: Some(true),
-                h: Some(false),
-                c: Some(false),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(flags.zero());
+        assert!(flags.subtraction());
+        assert!(!flags.half_carry());
+        assert!(!flags.carry());
     }
 
     #[test]
@@ -120,15 +156,11 @@ mod tests {
         assert_eq!(gb.cpu.a, 0b0000_1101);
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len(), 1);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(false),
-                n: Some(true),
-                h: Some(true),
-                c: Some(false),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(!flags.zero());
+        assert!(flags.subtraction());
+        assert!(flags.half_carry());
+        assert!(!flags.carry());
     }
 
     #[test]
@@ -138,7 +170,7 @@ mod tests {
         gb.write(0xC020, 0x20);
         gb.cpu.h = 0xC0;
         gb.cpu.l = 0x20;
-        gb.write(R8::F, 0);
+        gb.cpu.clear_carry();
 
         let mut instr = SbcPointedByHL::new();
         let result = instr.exec(&mut gb).unwrap();
@@ -146,15 +178,11 @@ mod tests {
         assert_eq!(gb.cpu.a, 0xF0);
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len(), 1);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(false),
-                n: Some(true),
-                h: Some(false),
-                c: Some(true),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(!flags.zero());
+        assert!(flags.subtraction());
+        assert!(!flags.half_carry());
+        assert!(flags.carry());
     }
 
     #[test]
@@ -170,15 +198,11 @@ mod tests {
         assert_eq!(gb.cpu.a, 6);
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len(), 1);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(false),
-                n: Some(true),
-                h: Some(false),
-                c: Some(false),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(!flags.zero());
+        assert!(flags.subtraction());
+        assert!(!flags.half_carry());
+        assert!(!flags.carry());
 
         gb.cpu.a = 5;
         gb.cpu.set_carry();
@@ -188,14 +212,10 @@ mod tests {
         assert_eq!(gb.cpu.a, 255);
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len(), 2);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(false),
-                n: Some(true),
-                h: Some(true),
-                c: Some(true),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(!flags.zero());
+        assert!(flags.subtraction());
+        assert!(flags.half_carry());
+        assert!(flags.carry());
     }
 }

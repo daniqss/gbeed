@@ -64,7 +64,7 @@ mod tests {
 
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len(), 2);
-        assert_eq!(result.flags, None);
+        assert!(result.flags.is_none());
     }
 
     #[test]
@@ -80,6 +80,6 @@ mod tests {
 
         assert_eq!(result.cycles, 4);
         assert_eq!(result.len(), 2);
-        assert_eq!(result.flags, None);
+        assert!(result.flags.is_none());
     }
 }

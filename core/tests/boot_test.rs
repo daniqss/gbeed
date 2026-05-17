@@ -40,7 +40,7 @@ fn test_disassembly_boot() -> Result<(), Box<dyn std::error::Error>> {
         // finish initing ram
         if gb.cpu.pc == 0x000C && !init_ram {
             println!("Cpu after initing RAM: {}", gb.cpu);
-            assert_eq!(gb.cpu.f, 0xA0);
+            assert_eq!(gb.cpu.f(), 0xA0);
             assert_eq!(gb.cpu.h, 0x7F);
             assert_eq!(gb.cpu.l, 0xFF);
             assert_eq!(gb.cpu.sp, 0xFFFE);

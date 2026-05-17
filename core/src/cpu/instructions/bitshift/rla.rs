@@ -1,20 +1,10 @@
 use crate::{
     cpu::{
-        
+        flags::{CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, LazyFlags, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };
-
-#[inline(always)]
-fn rla_flags(dst: u8) -> Flags {
-    Flags {
-        z: Some(false),
-        n: Some(false),
-        h: Some(false),
-        c: Some(dst & 0b1000_0000 != 0),
-    }
-}
 
 #[inline(always)]
 fn rla(value: u8, carry: bool) -> u8 { (value << 1) | if carry { 1 } else { 0 } }
@@ -35,21 +25,41 @@ impl Rla {
 
 impl Instruction for Rla {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let result = rla(gb.cpu.a, self.carry);
-        let flags = rla_flags(gb.cpu.a);
-        gb.cpu.a = result;
+        let dst = gb.cpu.a;
+        gb.cpu.a = rla(dst, self.carry);
 
-        Ok(InstructionEffect::new(self.info(), flags))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(RlaFlags::new(dst).into()),
+        ))
     }
 
     fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { "rla".to_string() }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct RlaFlags {
+    dst: u8,
+}
+
+impl RlaFlags {
+    fn new(dst: u8) -> StaticBox<Self> { StaticBox::new(Self { dst }) }
+}
+
+impl LazyFlags for RlaFlags {
+    fn updated_flags(&self) -> u8 {
+        ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK
+    }
+
+    fn zero(&self) -> bool { false }
+    fn subtraction(&self) -> bool { false }
+    fn half_carry(&self) -> bool { false }
+    fn carry(&self) -> bool { self.dst & 0b1000_0000 != 0 }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::cpu::flags::Flags;
-
     use super::*;
 
     #[test]
@@ -63,15 +73,11 @@ mod tests {
 
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len(), 1);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(false),
-                n: Some(false),
-                h: Some(false),
-                c: Some(true),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(!flags.zero());
+        assert!(!flags.subtraction());
+        assert!(!flags.half_carry());
+        assert!(flags.carry());
     }
 
     #[test]
@@ -86,14 +92,10 @@ mod tests {
 
         assert_eq!(result.cycles, 1);
         assert_eq!(result.len(), 1);
-        assert_eq!(
-            result.flags,
-            Flags {
-                z: Some(false),
-                n: Some(false),
-                h: Some(false),
-                c: Some(false),
-            }
-        );
+        let flags = result.flags.unwrap();
+        assert!(!flags.zero());
+        assert!(!flags.subtraction());
+        assert!(!flags.half_carry());
+        assert!(!flags.carry());
     }
 }

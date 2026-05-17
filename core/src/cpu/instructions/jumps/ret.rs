@@ -74,7 +74,7 @@ mod tests {
         let sp = 0xFFFC;
         gb.cpu.sp = sp;
         gb.store(sp, ret_addr);
-        gb.cpu.f = ZERO_FLAG_MASK; // Set Zero flag
+        gb.cpu.set_f(ZERO_FLAG_MASK);
 
         let mut instr = Ret::new(JC::Zero(gb.cpu.zero()));
         let result = instr.exec(&mut gb).unwrap();
@@ -91,7 +91,7 @@ mod tests {
         gb.cpu.pc = pc;
         let sp = 0xFFFC;
         gb.cpu.sp = sp;
-        gb.cpu.f = 0; // Clear Zero flag
+        gb.cpu.set_f(0);
 
         let mut instr = Ret::new(JC::Zero(gb.cpu.zero()));
         let result = instr.exec(&mut gb).unwrap();

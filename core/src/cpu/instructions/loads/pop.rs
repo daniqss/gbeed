@@ -1,24 +1,10 @@
 use crate::{
     cpu::{
         R16,
-        flags::{CARRY_FLAG_MASK, Flags, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };
-
-#[inline(always)]
-fn flags_pop(dst: R16, src: u16) -> Flags {
-    match dst {
-        R16::AF => Flags {
-            z: Some(utils::low(src) & ZERO_FLAG_MASK != 0),
-            n: Some(utils::low(src) & SUBTRACTION_FLAG_MASK != 0),
-            h: Some(utils::low(src) & HALF_CARRY_FLAG_MASK != 0),
-            c: Some(utils::low(src) & CARRY_FLAG_MASK != 0),
-        },
-        _ => None,
-    }
-}
 
 /// Pop a 16 bit register from the stack.
 /// Should behave like the following non-real instructions (for AF register, but its the same for the other 16 bit registers):
@@ -46,7 +32,7 @@ impl Instruction for Pop {
         // increment stack pointer by 2, one for each byte popped
         gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
 
-        Ok(InstructionEffect::new(self.info(), flags_pop(self.dst, src)))
+        Ok(InstructionEffect::new(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (3, 1) }
     fn disassembly(&self) -> String { format!("pop {}", self.dst) }
@@ -56,10 +42,12 @@ impl Instruction for Pop {
 mod tests {
     use super::*;
 
+    use crate::cpu::flags::{CARRY_FLAG_MASK, ZERO_FLAG_MASK};
+
     #[test]
     fn test_pop_to_af() {
         let mut gb = Dmg::default();
-        gb.cpu.f = 0;
+        gb.cpu.set_f(0);
         gb.cpu.a = 0;
         gb.cpu.sp = 0xC000;
 
@@ -71,27 +59,13 @@ mod tests {
         let effect = instr.exec(&mut gb).unwrap();
 
         assert_eq!(gb.cpu.a, 1);
-        assert_eq!(gb.cpu.f, ZERO_FLAG_MASK | CARRY_FLAG_MASK);
+        assert!(gb.cpu.zero());
+        assert!(!gb.cpu.subtraction());
+        assert!(!gb.cpu.half_carry());
+        assert!(gb.cpu.carry());
         assert_eq!(gb.cpu.sp, 0xC002);
         assert_eq!(effect.cycles, 3);
         assert_eq!(effect.len(), 1);
-        assert_eq!(
-            effect.flags,
-            Flags {
-                z: Some(true),
-                n: Some(false),
-                h: Some(false),
-                c: Some(true),
-            }
-        );
-        assert_eq!(
-            effect.flags,
-            Flags {
-                z: Some(gb.cpu.f & ZERO_FLAG_MASK != 0),
-                n: Some(gb.cpu.f & SUBTRACTION_FLAG_MASK != 0),
-                h: Some(gb.cpu.f & HALF_CARRY_FLAG_MASK != 0),
-                c: Some(gb.cpu.f & CARRY_FLAG_MASK != 0),
-            }
-        );
+        assert!(effect.flags.is_none());
     }
 }
