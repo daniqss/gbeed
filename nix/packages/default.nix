@@ -17,6 +17,9 @@ in let
   debugger = pkgs.callPackage ./debugger.nix platformArgs;
 in {
   inherit console debugger;
+
+  scripts.benchCompare = pkgs.callPackage ./bench-compare {};
+
   debugger-wayland = debugger.override {withWayland = true;};
   default = console;
 }

@@ -1,6 +1,8 @@
 {
   pkgs,
   commonPackages,
+  commonEnvs,
+  commonShellHook,
   platformPackages,
   platformFeatures,
   outputs,
@@ -9,12 +11,15 @@
 pkgs.mkShell {
   inputsFrom = [outputs.packages.${system}.console];
   packages = commonPackages;
+  shellHook = commonShellHook;
 
-  env = {
-    DISPLAY_FEATURES = pkgs.lib.concatStringsSep " " platformFeatures;
-    RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
-    LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
-    NIX_CFLAGS_COMPILE = "-I${pkgs.libdrm.dev}/include/libdrm";
-    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath platformPackages;
-  };
+  env =
+    commonEnvs
+    // {
+      DISPLAY_FEATURES = pkgs.lib.concatStringsSep " " platformFeatures;
+      RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+      LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+      NIX_CFLAGS_COMPILE = "-I${pkgs.libdrm.dev}/include/libdrm";
+      LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath platformPackages;
+    };
 }
