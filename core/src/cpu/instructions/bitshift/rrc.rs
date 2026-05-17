@@ -1,7 +1,7 @@
 use crate::{
     cpu::{
         R8,
-        flags::{Flags, check_zero},
+        flags::{LazyFlags, check_zero},
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,

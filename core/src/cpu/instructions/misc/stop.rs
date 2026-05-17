@@ -1,8 +1,5 @@
 use crate::{
-    cpu::{
-        flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult},
-    },
+    cpu::instructions::{Instruction, InstructionEffect, InstructionResult},
     prelude::*,
 };
 
@@ -18,9 +15,7 @@ impl Stop {
 }
 
 impl Instruction for Stop {
-    fn exec(&mut self, _: &mut Dmg) -> InstructionResult {
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
-    }
+    fn exec(&mut self, _: &mut Dmg) -> InstructionResult { Ok(InstructionEffect::new(self.info(), None)) }
     fn info(&self) -> (u8, u8) { (1, 2) }
     fn disassembly(&self) -> String { "stop".to_string() }
 }

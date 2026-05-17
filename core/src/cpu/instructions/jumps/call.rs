@@ -1,8 +1,5 @@
 use crate::{
-    cpu::{
-        flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
-    },
+    cpu::instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
     prelude::*,
 };
 
@@ -21,7 +18,7 @@ impl Call {
 impl Instruction for Call {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         if !self.jc.should_jump() {
-            return Ok(InstructionEffect::new(self.info(), Flags::none()));
+            return Ok(InstructionEffect::new(self.info(), None));
         }
 
         let return_addr = gb.cpu.pc.wrapping_add(3);
@@ -35,7 +32,7 @@ impl Instruction for Call {
 
         gb.cpu.pc = self.n16;
 
-        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+        Ok(InstructionEffect::with_jump(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { if !self.jc.should_jump() { (3, 3) } else { (6, 3) } }

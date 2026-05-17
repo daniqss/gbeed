@@ -163,7 +163,7 @@ impl Cartridge {
 }
 
 impl Accessible<u16> for Cartridge {
-    fn read(&self, address: u16) -> u8 {
+    fn read(&mut self, address: u16) -> u8 {
         match address {
             ROM_BANK00_START..=ROM_BANKNN_END => self.mbc.read_rom(address),
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.mbc.read_ram(address),

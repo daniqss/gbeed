@@ -609,7 +609,7 @@ impl Ppu {
 }
 
 impl Accessible<u16> for Ppu {
-    fn read(&self, address: u16) -> u8 {
+    fn read(&mut self, address: u16) -> u8 {
         match address {
             VRAM_START..=VRAM_END => self.vram[(address - VRAM_START) as usize],
             OAM_START..=OAM_END => self.oam_ram[(address - OAM_START) as usize],

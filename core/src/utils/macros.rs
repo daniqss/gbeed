@@ -69,43 +69,6 @@ macro_rules! field_bit_accessors {
 }
 
 #[macro_export]
-macro_rules! flag_methods {
-    (
-        $(
-            $name:ident => $mask:ident
-        ),+ $(,)?
-    ) => {
-        paste::paste! {
-            $(
-                #[inline(always)]
-                #[allow(dead_code)]
-                pub fn $name(&self) -> bool {
-                    self.f & $mask != 0
-                }
-
-                #[inline(always)]
-                #[allow(dead_code)]
-                pub fn [<not_ $name>](&self) -> bool {
-                    self.f & $mask == 0
-                }
-
-                #[inline(always)]
-                #[allow(dead_code)]
-                pub fn [<set_ $name>](&mut self) {
-                    self.f |= $mask
-                }
-
-                #[inline(always)]
-                #[allow(dead_code)]
-                pub fn [<clear_ $name>](&mut self) {
-                    self.f &= !$mask
-                }
-            )*
-        }
-    };
-}
-
-#[macro_export]
 macro_rules! reg16 {
     (
         $get:ident, $set:ident,

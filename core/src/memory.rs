@@ -43,12 +43,12 @@ pub fn is_high_address(address: u16) -> bool { (IO_REGISTERS_START..=ADDRESABLE_
 /// This trait allows to read and write from Dmg and its components, indexing it with a memory address
 /// without the limitations of operators overloading traits
 pub trait Accessible<Address8> {
-    fn read(&self, address: Address8) -> u8;
+    fn read(&mut self, address: Address8) -> u8;
     fn write(&mut self, address: Address8, value: u8);
 }
 
 pub trait Accessible16<Address16, Address8>: Accessible<Address8> {
-    fn load(&self, address: Address16) -> u16;
+    fn load(&mut self, address: Address16) -> u16;
     fn store(&mut self, address: Address16, value: u16);
 }
 

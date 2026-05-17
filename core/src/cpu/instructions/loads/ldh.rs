@@ -1,9 +1,6 @@
 use crate::{
     IO_REGISTERS_START,
-    cpu::{
-        flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult},
-    },
+    cpu::instructions::{Instruction, InstructionEffect, InstructionResult},
     prelude::*,
 };
 
@@ -26,7 +23,7 @@ impl Instruction for LdhImm8A {
         let addr = IO_REGISTERS_START + (self.addr_offset as u16);
         gb.write(addr, gb.cpu.a);
 
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (3, 2) }
@@ -52,7 +49,7 @@ impl Instruction for LdhCA {
         let addr = IO_REGISTERS_START + (gb.cpu.c as u16);
         gb.write(addr, gb.cpu.a);
 
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
@@ -78,7 +75,7 @@ impl Instruction for LdhAImm8 {
         let addr = IO_REGISTERS_START + (self.addr_offset as u16);
         gb.cpu.a = gb.read(addr);
 
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (3, 2) }
@@ -104,7 +101,7 @@ impl Instruction for LdhAC {
         let addr = IO_REGISTERS_START + (gb.cpu.c as u16);
         gb.cpu.a = gb.read(addr);
 
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }

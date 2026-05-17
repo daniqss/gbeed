@@ -68,7 +68,7 @@ impl Serial {
 }
 
 impl Accessible<u16> for Serial {
-    fn read(&self, address: u16) -> u8 {
+    fn read(&mut self, address: u16) -> u8 {
         match address {
             SB => self.sb,
             SC => self.sc | 0x7E,

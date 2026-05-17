@@ -1,8 +1,5 @@
 use crate::{
-    cpu::{
-        flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
-    },
+    cpu::instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
     prelude::*,
 };
 
@@ -37,9 +34,9 @@ impl Instruction for Jr {
                 gb.cpu.pc.wrapping_add(self.offset as u16)
             };
             gb.cpu.pc = result;
-            Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+            Ok(InstructionEffect::with_jump(self.info(), None))
         } else {
-            Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+            Ok(InstructionEffect::with_jump(self.info(), None))
         }
     }
     fn info(&self) -> (u8, u8) { if self.jc.should_jump() { (3, 2) } else { (2, 2) } }

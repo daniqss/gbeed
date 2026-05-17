@@ -1,7 +1,7 @@
 use crate::{
     cpu::{
         R8, R16,
-        flags::{Flags, check_borrow_hc, check_zero},
+        flags::{LazyFlags, check_borrow_hc, check_zero},
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     memory::Accessible,
@@ -70,7 +70,7 @@ impl Instruction for DecR16 {
         let result = r16.wrapping_sub(1);
         gb.store(self.dst, result);
 
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { format!("dec {}", self.dst) }
@@ -87,7 +87,7 @@ impl Instruction for DecStackPointer {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.sp = gb.cpu.sp.wrapping_sub(1);
 
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { "dec sp".to_string() }

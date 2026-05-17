@@ -1,4 +1,4 @@
-use crate::impl_static_box_from;
+use crate::impl_static_box;
 
 /// # Flag masks
 /// The F register use its 4 most significant bits to store information about the result of the previous operation
@@ -6,6 +6,9 @@ pub const ZERO_FLAG_MASK: u8 = 0b1000_0000;
 pub const SUBTRACTION_FLAG_MASK: u8 = 0b0100_0000;
 pub const HALF_CARRY_FLAG_MASK: u8 = 0b0010_0000;
 pub const CARRY_FLAG_MASK: u8 = 0b0001_0000;
+
+pub const ALL_FLAGS_MASK: u8 =
+    ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK | CARRY_FLAG_MASK;
 
 #[inline(always)]
 pub fn check_zero(result: u8) -> bool { result == 0 }
@@ -25,56 +28,46 @@ pub fn check_overflow_hc16(result: u16, old: u16) -> bool { (result & 0x0FFF) < 
 #[inline(always)]
 pub fn check_overflow_cy16(result: u16, old: u16) -> bool { result < old }
 
-#[derive(Debug, PartialEq)]
-pub struct Flags {
-    pub z: Option<bool>,
-    pub n: Option<bool>,
-    pub h: Option<bool>,
-    pub c: Option<bool>,
+/// # Lazy Flags
+/// A trait that can be implemented by instructions to compute flags lazily, only when they are needed.
+/// Instructions will return their `LazyFlags` implementation in their `InstructionEffect`
+/// The flags will be computed when the CPU needs to read them, for example during a conditional jump.
+pub trait LazyFlags: core::fmt::Debug {
+    fn zero(&self) -> bool { false }
+    fn subtraction(&self) -> bool { false }
+    fn half_carry(&self) -> bool { false }
+    fn carry(&self) -> bool { false }
+
+    fn updated_flags(&self) -> u8;
 }
 
-impl Flags {
-    pub fn none() -> Self {
+impl_static_box!(LazyFlags);
+
+#[derive(Debug, Clone, Copy)]
+pub struct ConstantFlags {
+    zero: bool,
+    subtraction: bool,
+    half_carry: bool,
+    carry: bool,
+    byte: u8,
+}
+
+impl ConstantFlags {
+    pub fn new(byte: u8) -> Self {
         Self {
-            z: None,
-            n: None,
-            h: None,
-            c: None,
-        }
-    }
-
-    pub fn apply(self, f: &mut u8) {
-        if let Some(z) = self.z {
-            if z {
-                *f |= ZERO_FLAG_MASK;
-            } else {
-                *f &= !ZERO_FLAG_MASK;
-            }
-        }
-        if let Some(n) = self.n {
-            if n {
-                *f |= SUBTRACTION_FLAG_MASK;
-            } else {
-                *f &= !SUBTRACTION_FLAG_MASK;
-            }
-        }
-        if let Some(h) = self.h {
-            if h {
-                *f |= HALF_CARRY_FLAG_MASK;
-            } else {
-                *f &= !HALF_CARRY_FLAG_MASK;
-            }
-        }
-        if let Some(c) = self.c {
-            if c {
-                *f |= CARRY_FLAG_MASK;
-            } else {
-                *f &= !CARRY_FLAG_MASK;
-            }
+            zero: byte & ZERO_FLAG_MASK != 0,
+            subtraction: byte & SUBTRACTION_FLAG_MASK != 0,
+            half_carry: byte & HALF_CARRY_FLAG_MASK != 0,
+            carry: byte & CARRY_FLAG_MASK != 0,
+            byte,
         }
     }
 }
 
-pub trait LazyFlags {}
-
-impl_static_box_from!(LazyFlags);
+impl LazyFlags for ConstantFlags {
+    fn zero(&self) -> bool { self.zero }
+    fn subtraction(&self) -> bool { self.subtraction }
+    fn half_carry(&self) -> bool { self.half_carry }
+    fn carry(&self) -> bool { self.carry }
+    fn updated_flags(&self) -> u8 { self.byte & ALL_FLAGS_MASK }
+}

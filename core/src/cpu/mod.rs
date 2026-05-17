@@ -3,7 +3,10 @@ mod instructions;
 mod registers;
 
 use crate::{
-    cpu::flags::{CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK},
+    cpu::flags::{
+        ALL_FLAGS_MASK, CARRY_FLAG_MASK, HALF_CARRY_FLAG_MASK, LazyFlags, SUBTRACTION_FLAG_MASK,
+        ZERO_FLAG_MASK,
+    },
     dmg::Dmg,
     interrupts::{JOYPAD_INTERRUPT, LCD_STAT_INTERRUPT, SERIAL_INTERRUPT, TIMER_INTERRUPT, VBLANK_INTERRUPT},
     prelude::*,
@@ -35,16 +38,21 @@ pub const AFTER_BOOT_CPU: Cpu = Cpu {
     cycles: 44441,
     ime: false,
     halted: false,
+
+    lazy_zero: None,
+    lazy_subtraction: None,
+    lazy_half_carry: None,
+    lazy_carry: None,
 };
 
 /// # CPU
 /// Gameboy CPU, with a mix of Intel 8080 and Zilog Z80 features and instruction set, the Sharp LR35902.
 /// Most of its register are 8-bits ones, that are commonly used as pairs to perform 16-bits operations.
 /// The only 16-bits registers are the stack pointer (SP) and the program counter (PC).
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default)]
 pub struct Cpu {
     pub a: u8,
-    pub f: u8,
+    f: u8,
     pub b: u8,
     pub c: u8,
     pub d: u8,
@@ -58,6 +66,11 @@ pub struct Cpu {
     pub cycles: usize,
     pub ime: bool,
     pub halted: bool,
+
+    lazy_zero: Option<StaticBox<dyn LazyFlags>>,
+    lazy_subtraction: Option<StaticBox<dyn LazyFlags>>,
+    lazy_half_carry: Option<StaticBox<dyn LazyFlags>>,
+    lazy_carry: Option<StaticBox<dyn LazyFlags>>,
 }
 
 impl Cpu {
@@ -69,16 +82,86 @@ impl Cpu {
         }
     }
 
-    reg16!(af, set_af, a, f);
+    // register methods
+    pub fn f(&mut self) -> u8 {
+        self.zero();
+        self.subtraction();
+        self.half_carry();
+        self.carry();
+        self.f
+    }
+
+    pub fn set_f(&mut self, v: u8) {
+        self.f = v & ALL_FLAGS_MASK;
+        self.lazy_zero = None;
+        self.lazy_subtraction = None;
+        self.lazy_half_carry = None;
+        self.lazy_carry = None;
+    }
+
+    pub fn af(&mut self) -> u16 { u16::from_be_bytes([self.a, self.f()]) }
+    pub fn set_af(&mut self, v: u16) {
+        let [a, f] = v.to_be_bytes();
+        self.a = a;
+        self.set_f(f);
+    }
+
     reg16!(bc, set_bc, b, c);
     reg16!(de, set_de, d, e);
     reg16!(hl, set_hl, h, l);
 
-    flag_methods! {
-        carry => CARRY_FLAG_MASK,
-        zero => ZERO_FLAG_MASK,
-        subtraction => SUBTRACTION_FLAG_MASK,
-        half_carry => HALF_CARRY_FLAG_MASK,
+    // flags methods
+    pub fn zero(&mut self) -> bool {
+        if let Some(lazy) = self.lazy_zero.take() {
+            let v = lazy.zero();
+            self.set_flag_bit(ZERO_FLAG_MASK, v);
+            v
+        } else {
+            self.f & ZERO_FLAG_MASK != 0
+        }
+    }
+    pub fn not_zero(&mut self) -> bool { !self.zero() }
+
+    pub fn subtraction(&mut self) -> bool {
+        if let Some(lazy) = self.lazy_subtraction.take() {
+            let v = lazy.subtraction();
+            self.set_flag_bit(SUBTRACTION_FLAG_MASK, v);
+            v
+        } else {
+            self.f & SUBTRACTION_FLAG_MASK != 0
+        }
+    }
+    pub fn not_subtraction(&mut self) -> bool { !self.subtraction() }
+
+    pub fn carry(&mut self) -> bool {
+        if let Some(lazy) = self.lazy_carry.take() {
+            let v = lazy.carry();
+            self.set_flag_bit(CARRY_FLAG_MASK, v);
+            v
+        } else {
+            self.f & CARRY_FLAG_MASK != 0
+        }
+    }
+    pub fn not_carry(&mut self) -> bool { !self.carry() }
+
+    pub fn half_carry(&mut self) -> bool {
+        if let Some(lazy) = self.lazy_half_carry.take() {
+            let v = lazy.half_carry();
+            self.set_flag_bit(HALF_CARRY_FLAG_MASK, v);
+            v
+        } else {
+            self.f & HALF_CARRY_FLAG_MASK != 0
+        }
+    }
+    pub fn not_half_carry(&mut self) -> bool { !self.half_carry() }
+
+    #[inline]
+    fn set_flag_bit(&mut self, mask: u8, val: bool) {
+        if val {
+            self.f |= mask;
+        } else {
+            self.f &= !mask;
+        }
     }
 
     pub fn reset(&mut self) {
@@ -120,8 +203,23 @@ impl Cpu {
             Len::Jump(_) => gb.cpu.pc,
             Len::AddLen(len) => gb.cpu.pc.wrapping_add(len as u16),
         };
-        effect.flags.apply(&mut gb.cpu.f);
 
+        if let Some(lazy) = effect.flags {
+            let updates = lazy.updated_flags();
+            if updates & ZERO_FLAG_MASK != 0 {
+                gb.cpu.lazy_zero = Some(lazy);
+            }
+            if updates & SUBTRACTION_FLAG_MASK != 0 {
+                gb.cpu.lazy_subtraction = Some(lazy);
+            }
+            if updates & HALF_CARRY_FLAG_MASK != 0 {
+                gb.cpu.lazy_half_carry = Some(lazy);
+            }
+            if updates & CARRY_FLAG_MASK != 0 {
+                gb.cpu.lazy_carry = Some(lazy);
+            }
+            // necesitas Copy en StaticBox<dyn LazyFlags> para esto
+        }
         Ok(Some(instruction))
     }
 
@@ -170,78 +268,81 @@ impl Cpu {
         gb.cpu.pc = service_routine_addr;
     }
 
+    #[inline(always)]
     fn fetch(gb: &mut Dmg) -> u8 { gb.read(gb.cpu.pc) }
 
     /// Decode instruction based on the opcode.
     /// Return a result with the effect of the instruction or an instruction error (e.g unused opcode)
     pub fn decode(gb: &mut Dmg, opcode: u8) -> FetchResult {
-        let cpu = &gb.cpu;
-
         let instruction: StaticBox<dyn Instruction> = match opcode {
             0x00 => Nop::new().into(),
-            0x01 => LdR16Imm16::new(R16::BC, gb.load(cpu.pc.wrapping_add(1))).into(),
+            0x01 => LdR16Imm16::new(R16::BC, gb.load(gb.cpu.pc.wrapping_add(1))).into(),
             0x02 => LdPointedByR16A::new(R16::BC).into(),
             0x03 => IncR16::new(R16::BC).into(),
             0x04 => IncR8::new(R8::B).into(),
             0x05 => DecR8::new(R8::B).into(),
-            0x06 => LdR8Imm8::new(R8::B, gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x06 => LdR8Imm8::new(R8::B, gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0x07 => Rlca::new().into(),
-            0x08 => LdImm16SP::new(gb.load(cpu.pc.wrapping_add(1))).into(),
+            0x08 => LdImm16SP::new(gb.load(gb.cpu.pc.wrapping_add(1))).into(),
             0x09 => AddR16::new(R16::BC).into(),
             0x0A => LdAPointedByR16::new(R16::BC).into(),
             0x0B => DecR16::new(R16::BC).into(),
             0x0C => IncR8::new(R8::C).into(),
             0x0D => DecR8::new(R8::C).into(),
-            0x0E => LdR8Imm8::new(R8::C, gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x0E => LdR8Imm8::new(R8::C, gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0x0F => Rrca::new().into(),
             0x10 => Stop::new().into(),
-            0x11 => LdR16Imm16::new(R16::DE, gb.load(cpu.pc.wrapping_add(1))).into(),
+            0x11 => LdR16Imm16::new(R16::DE, gb.load(gb.cpu.pc.wrapping_add(1))).into(),
             0x12 => LdPointedByR16A::new(R16::DE).into(),
             0x13 => IncR16::new(R16::DE).into(),
             0x14 => IncR8::new(R8::D).into(),
             0x15 => DecR8::new(R8::D).into(),
-            0x16 => LdR8Imm8::new(R8::D, gb.read(cpu.pc.wrapping_add(1))).into(),
-            0x17 => Rla::new(cpu.carry()).into(),
-            0x18 => Jr::new(JC::None, gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x16 => LdR8Imm8::new(R8::D, gb.read(gb.cpu.pc.wrapping_add(1))).into(),
+            0x17 => Rla::new(gb.cpu.carry()).into(),
+            0x18 => Jr::new(JC::None, gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0x19 => AddR16::new(R16::DE).into(),
             0x1A => LdAPointedByR16::new(R16::DE).into(),
             0x1B => DecR16::new(R16::DE).into(),
             0x1C => IncR8::new(R8::E).into(),
             0x1D => DecR8::new(R8::E).into(),
-            0x1E => LdR8Imm8::new(R8::E, gb.read(cpu.pc.wrapping_add(1))).into(),
-            0x1F => Rra::new(cpu.carry()).into(),
-            0x20 => Jr::new(JC::NotZero(cpu.not_zero()), gb.read(cpu.pc.wrapping_add(1))).into(),
-            0x21 => LdR16Imm16::new(R16::HL, gb.load(cpu.pc.wrapping_add(1))).into(),
+            0x1E => LdR8Imm8::new(R8::E, gb.read(gb.cpu.pc.wrapping_add(1))).into(),
+            0x1F => Rra::new(gb.cpu.carry()).into(),
+            0x20 => Jr::new(JC::NotZero(gb.cpu.not_zero()), gb.read(gb.cpu.pc.wrapping_add(1))).into(),
+            0x21 => LdR16Imm16::new(R16::HL, gb.load(gb.cpu.pc.wrapping_add(1))).into(),
             0x22 => LdPointedByHLIncA::new().into(),
             0x23 => IncR16::new(R16::HL).into(),
             0x24 => IncR8::new(R8::H).into(),
             0x25 => DecR8::new(R8::H).into(),
-            0x26 => LdR8Imm8::new(R8::H, gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x26 => LdR8Imm8::new(R8::H, gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0x27 => Daa::new().into(),
-            0x28 => Jr::new(JC::Zero(cpu.zero()), gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x28 => Jr::new(JC::Zero(gb.cpu.zero()), gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0x29 => AddR16::new(R16::HL).into(),
             0x2A => LdAPointedByHLInc::new().into(),
             0x2b => DecR16::new(R16::HL).into(),
             0x2C => IncR8::new(R8::L).into(),
             0x2D => DecR8::new(R8::L).into(),
-            0x2E => LdR8Imm8::new(R8::L, gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x2E => LdR8Imm8::new(R8::L, gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0x2F => Cpl::new().into(),
-            0x30 => Jr::new(JC::NotCarry(cpu.not_carry()), gb.read(cpu.pc.wrapping_add(1))).into(),
-            0x31 => LdSPImm16::new(gb.load(cpu.pc.wrapping_add(1))).into(),
+            0x30 => Jr::new(
+                JC::NotCarry(gb.cpu.not_carry()),
+                gb.read(gb.cpu.pc.wrapping_add(1)),
+            )
+            .into(),
+            0x31 => LdSPImm16::new(gb.load(gb.cpu.pc.wrapping_add(1))).into(),
             0x32 => LdPointedByHLDecA::new().into(),
             0x33 => IncStackPointer::new().into(),
             0x34 => IncPointedByHL::new().into(),
             0x35 => DecPointedByHL::new().into(),
-            0x36 => LdPointedByHLImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x36 => LdPointedByHLImm8::new(gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0x37 => Scf::new().into(),
-            0x38 => Jr::new(JC::Carry(cpu.carry()), gb.read(cpu.pc.wrapping_add(1))).into(),
+            0x38 => Jr::new(JC::Carry(gb.cpu.carry()), gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0x39 => AddHLSP::new().into(),
             0x3A => LdAPointedByHLDec::new().into(),
             0x3B => DecStackPointer::new().into(),
             0x3C => IncR8::new(R8::A).into(),
             0x3D => DecR8::new(R8::A).into(),
-            0x3E => LdR8Imm8::new(R8::A, gb.read(cpu.pc.wrapping_add(1))).into(),
-            0x3F => Ccf::new(cpu.carry()).into(),
+            0x3E => LdR8Imm8::new(R8::A, gb.read(gb.cpu.pc.wrapping_add(1))).into(),
+            0x3F => Ccf::new(gb.cpu.carry()).into(),
             0x40 => LdR8R8::new(R8::B, R8::B).into(),
             0x41 => LdR8R8::new(R8::B, R8::C).into(),
             0x42 => LdR8R8::new(R8::B, R8::D).into(),
@@ -370,72 +471,80 @@ impl Cpu {
             0xBD => CpR8::new(R8::L).into(),
             0xBE => CpPointedByHL::new().into(),
             0xBF => CpR8::new(R8::A).into(),
-            0xC0 => Ret::new(JC::NotZero(cpu.not_zero())).into(),
+            0xC0 => Ret::new(JC::NotZero(gb.cpu.not_zero())).into(),
             0xC1 => Pop::new(R16::BC).into(),
-            0xC2 => JpToImm16::new(JC::NotZero(cpu.not_zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xC3 => JpToImm16::new(JC::None, gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xC4 => Call::new(JC::NotZero(cpu.not_zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xC2 => JpToImm16::new(JC::NotZero(gb.cpu.not_zero()), gb.load(gb.cpu.pc.wrapping_add(1))).into(),
+            0xC3 => JpToImm16::new(JC::None, gb.load(gb.cpu.pc.wrapping_add(1))).into(),
+            0xC4 => Call::new(JC::NotZero(gb.cpu.not_zero()), gb.load(gb.cpu.pc.wrapping_add(1))).into(),
             0xC5 => Push::new(R16::BC).into(),
-            0xC6 => AddImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+            0xC6 => AddImm8::new(gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0xC7 => Rst::new(0x00).into(),
-            0xC8 => Ret::new(JC::Zero(cpu.zero())).into(),
+            0xC8 => Ret::new(JC::Zero(gb.cpu.zero())).into(),
             0xC9 => Ret::new(JC::None).into(),
-            0xCA => JpToImm16::new(JC::Zero(cpu.zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xCA => JpToImm16::new(JC::Zero(gb.cpu.zero()), gb.load(gb.cpu.pc.wrapping_add(1))).into(),
             0xCB => {
-                let cb_opcode = gb.read(cpu.pc.wrapping_add(1));
+                let cb_opcode = gb.read(gb.cpu.pc.wrapping_add(1));
                 Cpu::fetch_cb(gb, cb_opcode)?
             }
-            0xCC => Call::new(JC::Zero(cpu.zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xCD => Call::new(JC::None, gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xCE => AdcImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+            0xCC => Call::new(JC::Zero(gb.cpu.zero()), gb.load(gb.cpu.pc.wrapping_add(1))).into(),
+            0xCD => Call::new(JC::None, gb.load(gb.cpu.pc.wrapping_add(1))).into(),
+            0xCE => AdcImm8::new(gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0xCF => Rst::new(0x08).into(),
-            0xD0 => Ret::new(JC::NotCarry(cpu.not_carry())).into(),
+            0xD0 => Ret::new(JC::NotCarry(gb.cpu.not_carry())).into(),
             0xD1 => Pop::new(R16::DE).into(),
-            0xD2 => JpToImm16::new(JC::NotCarry(cpu.not_carry()), gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xD3 => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
-            0xD4 => Call::new(JC::NotCarry(cpu.not_carry()), gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xD2 => JpToImm16::new(
+                JC::NotCarry(gb.cpu.not_carry()),
+                gb.load(gb.cpu.pc.wrapping_add(1)),
+            )
+            .into(),
+            0xD3 => return Err(InstructionError::UnusedOpcode(opcode, gb.cpu.pc)),
+            0xD4 => Call::new(
+                JC::NotCarry(gb.cpu.not_carry()),
+                gb.load(gb.cpu.pc.wrapping_add(1)),
+            )
+            .into(),
             0xD5 => Push::new(R16::DE).into(),
-            0xD6 => SubImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+            0xD6 => SubImm8::new(gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0xD7 => Rst::new(0x10).into(),
-            0xD8 => Ret::new(JC::Carry(cpu.carry())).into(),
+            0xD8 => Ret::new(JC::Carry(gb.cpu.carry())).into(),
             0xD9 => Reti::new().into(),
-            0xDA => JpToImm16::new(JC::Carry(cpu.carry()), gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xDB => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
-            0xDC => Call::new(JC::Carry(cpu.carry()), gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xDD => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
-            0xDE => SbcImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+            0xDA => JpToImm16::new(JC::Carry(gb.cpu.carry()), gb.load(gb.cpu.pc.wrapping_add(1))).into(),
+            0xDB => return Err(InstructionError::UnusedOpcode(opcode, gb.cpu.pc)),
+            0xDC => Call::new(JC::Carry(gb.cpu.carry()), gb.load(gb.cpu.pc.wrapping_add(1))).into(),
+            0xDD => return Err(InstructionError::UnusedOpcode(opcode, gb.cpu.pc)),
+            0xDE => SbcImm8::new(gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0xDF => Rst::new(0x18).into(),
-            0xE0 => LdhImm8A::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+            0xE0 => LdhImm8A::new(gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0xE1 => Pop::new(R16::HL).into(),
             0xE2 => LdhCA::new().into(),
-            0xE3 => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
-            0xE4 => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
+            0xE3 => return Err(InstructionError::UnusedOpcode(opcode, gb.cpu.pc)),
+            0xE4 => return Err(InstructionError::UnusedOpcode(opcode, gb.cpu.pc)),
             0xE5 => Push::new(R16::HL).into(),
-            0xE6 => AndImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+            0xE6 => AndImm8::new(gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0xE7 => Rst::new(0x20).into(),
-            0xE8 => AddSPImm8::new(gb.read(cpu.pc.wrapping_add(1)) as i8).into(),
-            0xE9 => JpToHL::new(cpu.hl()).into(),
-            0xEA => LdPointedByImm16A::new(gb.load(cpu.pc.wrapping_add(1))).into(),
-            0xEB => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
-            0xEC => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
-            0xED => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
-            0xEE => XorImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+            0xE8 => AddSPImm8::new(gb.read(gb.cpu.pc.wrapping_add(1)) as i8).into(),
+            0xE9 => JpToHL::new(gb.cpu.hl()).into(),
+            0xEA => LdPointedByImm16A::new(gb.load(gb.cpu.pc.wrapping_add(1))).into(),
+            0xEB => return Err(InstructionError::UnusedOpcode(opcode, gb.cpu.pc)),
+            0xEC => return Err(InstructionError::UnusedOpcode(opcode, gb.cpu.pc)),
+            0xED => return Err(InstructionError::UnusedOpcode(opcode, gb.cpu.pc)),
+            0xEE => XorImm8::new(gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0xEF => Rst::new(0x28).into(),
-            0xF0 => LdhAImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+            0xF0 => LdhAImm8::new(gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0xF1 => Pop::new(R16::AF).into(),
             0xF2 => LdhAC::new().into(),
             0xF3 => Di::new().into(),
-            0xF4 => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
+            0xF4 => return Err(InstructionError::UnusedOpcode(opcode, gb.cpu.pc)),
             0xF5 => Push::new(R16::AF).into(),
-            0xF6 => OrImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+            0xF6 => OrImm8::new(gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0xF7 => Rst::new(0x30).into(),
-            0xF8 => LdHLSPPlusImm8::new(gb.read(cpu.pc.wrapping_add(1)) as i8).into(),
+            0xF8 => LdHLSPPlusImm8::new(gb.read(gb.cpu.pc.wrapping_add(1)) as i8).into(),
             0xF9 => LdSPHL::new().into(),
-            0xFA => LdAPointedByImm16::new(gb.load(cpu.pc.wrapping_add(1))).into(),
+            0xFA => LdAPointedByImm16::new(gb.load(gb.cpu.pc.wrapping_add(1))).into(),
             0xFB => Ei::new().into(),
-            0xFC => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
-            0xFD => return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
-            0xFE => CpImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+            0xFC => return Err(InstructionError::UnusedOpcode(opcode, gb.cpu.pc)),
+            0xFD => return Err(InstructionError::UnusedOpcode(opcode, gb.cpu.pc)),
+            0xFE => CpImm8::new(gb.read(gb.cpu.pc.wrapping_add(1))).into(),
             0xFF => Rst::new(0x38).into(),
         };
 
@@ -445,7 +554,6 @@ impl Cpu {
     fn fetch_cb(gb: &mut Dmg, cb_opcode: u8) -> FetchResult {
         // used bit in res, set and bit instructions
         let bit = (cb_opcode & 0x38) >> 3;
-        let cpu = &gb.cpu;
 
         let instruction: StaticBox<dyn Instruction> = match cb_opcode {
             0x00 => RlcR8::new(R8::B).into(),
@@ -521,7 +629,7 @@ impl Cpu {
                 5 => BitR8::new(bit, R8::L).into(),
                 6 => BitPointedByHL::new(bit).into(),
                 7 => BitR8::new(bit, R8::A).into(),
-                _ => return Err(InstructionError::OutOfRangeCBOpcode(cb_opcode, cpu.pc)),
+                _ => return Err(InstructionError::OutOfRangeCBOpcode(cb_opcode, gb.cpu.pc)),
             },
             0x80..=0xBF => match cb_opcode & 0x07 {
                 0 => ResR8::new(bit, R8::B).into(),

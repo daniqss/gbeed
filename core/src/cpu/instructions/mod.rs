@@ -20,7 +20,7 @@ pub use jumps::*;
 pub use loads::*;
 pub use misc::*;
 
-use crate::{cpu::flags::Flags, impl_static_box_from, prelude::*};
+use crate::{cpu::flags::LazyFlags, impl_static_box, prelude::*};
 
 /// Represents a CPU instruction.
 /// The instruction can be executed and can provide its disassembly representation
@@ -30,7 +30,7 @@ pub trait Instruction {
     fn disassembly(&self) -> String;
 }
 
-impl_static_box_from!(Instruction);
+impl_static_box!(Instruction);
 
 impl Display for dyn Instruction {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -47,30 +47,28 @@ pub enum Len {
 
 /// Effect of executing a instruction
 /// Instructions also "effect" their operands but those are represented as parameters using references
-#[derive(Debug)]
 pub struct InstructionEffect {
     pub cycles: u8,
     pub len: Len,
-    pub flags: Flags,
-    // pub flags: Option<LazyFlags>,
+    pub flags: Option<StaticBox<dyn LazyFlags>>,
 }
 
 impl InstructionEffect {
-    pub fn new(info: (u8, u8), flags: Flags) -> Self {
+    pub fn new(info: (u8, u8), lazy_flags: Option<StaticBox<dyn LazyFlags>>) -> Self {
         let (cycles, len) = info;
         Self {
             cycles,
             len: Len::AddLen(len),
-            flags,
+            flags: lazy_flags,
         }
     }
 
-    pub fn with_jump(info: (u8, u8), flags: Flags) -> Self {
+    pub fn with_jump(info: (u8, u8), lazy_flags: Option<StaticBox<dyn LazyFlags>>) -> Self {
         let (cycles, len) = info;
         Self {
             cycles,
             len: Len::Jump(len),
-            flags,
+            flags: lazy_flags,
         }
     }
 

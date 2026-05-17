@@ -1,7 +1,6 @@
 use crate::{
     cpu::{
         R8,
-        flags::Flags,
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
@@ -22,7 +21,7 @@ impl Instruction for ResR8 {
         let result = r8 & !(1 << self.bit);
         gb.write(self.dst, result);
 
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }
     fn disassembly(&self) -> String { format!("res {}, {}", self.bit, self.dst) }
@@ -41,7 +40,7 @@ impl Instruction for ResPointedByHL {
         let result = val & !(1 << self.bit);
         gb.write(gb.cpu.hl(), result);
 
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (4, 2) }
     fn disassembly(&self) -> String { format!("res {}, [hl]", self.bit) }
@@ -65,7 +64,7 @@ mod tests {
 
         assert_eq!(result.cycles, 2);
         assert_eq!(result.len(), 2);
-        assert_eq!(result.flags, Flags::none());
+        assert_eq!(result.flags, None);
     }
 
     #[test]
@@ -81,6 +80,6 @@ mod tests {
 
         assert_eq!(result.cycles, 4);
         assert_eq!(result.len(), 2);
-        assert_eq!(result.flags, Flags::none());
+        assert_eq!(result.flags, None);
     }
 }

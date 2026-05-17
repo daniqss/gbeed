@@ -101,7 +101,7 @@ impl Default for Timer {
 }
 
 impl Accessible<u16> for Timer {
-    fn read(&self, address: u16) -> u8 {
+    fn read(&mut self, address: u16) -> u8 {
         match address {
             DIV => (self.internal_counter >> 8) as u8,
             TIMA => self.tima,

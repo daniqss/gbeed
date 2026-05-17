@@ -305,7 +305,7 @@ impl Apu {
 }
 
 impl Accessible<u16> for Apu {
-    fn read(&self, address: u16) -> u8 {
+    fn read(&mut self, address: u16) -> u8 {
         match address {
             NR10..=NR14 => self.sweep_pulse.read(address),
             NR21..=NR24 => self.pulse.read(address),

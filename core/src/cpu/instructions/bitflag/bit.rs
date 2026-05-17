@@ -1,26 +1,13 @@
 use crate::{
     cpu::{
         R8,
-        flags::{Flags, check_zero},
+        flags::{HALF_CARRY_FLAG_MASK, LazyFlags, SUBTRACTION_FLAG_MASK, ZERO_FLAG_MASK, check_zero},
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
 };
 
-#[inline(always)]
-fn bit_flags(test_bit: u8) -> Flags {
-    Flags {
-        z: Some(check_zero(test_bit)),
-        n: Some(false),
-        h: Some(true),
-        c: None,
-    }
-}
-
-#[inline(always)]
-fn test_bit(value: u8, bit: u8) -> u8 { value & (1 << bit) }
-
-// /// Test bit u3 for a 8 bit register
+/// Test bit u3 for a 8 bit register
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BitR8 {
     target: R8,
@@ -33,9 +20,11 @@ impl BitR8 {
 impl Instruction for BitR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let r8 = gb.read(self.target);
-        let test_bit = test_bit(r8, self.bit);
 
-        Ok(InstructionEffect::new(self.info(), bit_flags(test_bit)))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(BitFlags::new(self.bit, r8).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (2, 2) }
     fn disassembly(&self) -> String { format!("bit {}, {}", self.bit, self.target) }
@@ -52,10 +41,30 @@ impl BitPointedByHL {
 impl Instruction for BitPointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let n8 = gb.read(gb.cpu.hl());
-        let test_bit = test_bit(n8, self.bit);
 
-        Ok(InstructionEffect::new(self.info(), bit_flags(test_bit)))
+        Ok(InstructionEffect::new(
+            self.info(),
+            Some(BitFlags::new(self.bit, n8).into()),
+        ))
     }
     fn info(&self) -> (u8, u8) { (3, 2) }
     fn disassembly(&self) -> String { format!("bit {}, [hl]", self.bit) }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct BitFlags {
+    bit: u8,
+    imm8: u8,
+}
+
+impl BitFlags {
+    fn new(bit: u8, imm8: u8) -> StaticBox<Self> { StaticBox::new(Self { bit, imm8 }) }
+}
+
+impl LazyFlags for BitFlags {
+    fn updated_flags(&self) -> u8 { ZERO_FLAG_MASK | SUBTRACTION_FLAG_MASK | HALF_CARRY_FLAG_MASK }
+
+    fn zero(&self) -> bool { check_zero(self.imm8 & (1 << self.bit)) }
+    fn subtraction(&self) -> bool { false }
+    fn half_carry(&self) -> bool { true }
 }

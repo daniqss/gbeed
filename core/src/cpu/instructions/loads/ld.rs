@@ -1,7 +1,7 @@
 use crate::{
     cpu::{
         R8, R16,
-        flags::{Flags, check_overflow_cy, check_overflow_hc},
+        flags::{LazyFlags, check_overflow_cy, check_overflow_hc},
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
@@ -23,7 +23,7 @@ impl Instruction for LdR8R8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let val = gb.read(self.src);
         gb.write(self.dst, val);
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (1, 1) }
@@ -45,7 +45,7 @@ impl LdR8Imm8 {
 impl Instruction for LdR8Imm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.write(self.dst, self.val);
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 2) }
@@ -67,7 +67,7 @@ impl LdR16Imm16 {
 impl Instruction for LdR16Imm16 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.store(self.dst, self.val);
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (3, 3) }
@@ -88,7 +88,7 @@ impl LdSPImm16 {
 impl Instruction for LdSPImm16 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.sp = self.val;
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (3, 3) }
@@ -110,7 +110,7 @@ impl Instruction for LdPointedByHLR8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let val = gb.read(self.src);
         gb.write(gb.cpu.hl(), val);
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
@@ -131,7 +131,7 @@ impl LdPointedByHLImm8 {
 impl Instruction for LdPointedByHLImm8 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.write(gb.cpu.hl(), self.val);
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (3, 2) }
@@ -153,7 +153,7 @@ impl Instruction for LdR8PointedByHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let val = gb.read(gb.cpu.hl());
         gb.write(self.dst, val);
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
@@ -175,7 +175,7 @@ impl Instruction for LdPointedByR16A {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let addr = gb.load(self.dst);
         gb.write(addr, gb.cpu.a);
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
@@ -196,7 +196,7 @@ impl LdPointedByImm16A {
 impl Instruction for LdPointedByImm16A {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.write(self.addr, gb.cpu.a);
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (4, 3) }
@@ -218,7 +218,7 @@ impl Instruction for LdAPointedByR16 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         let addr = gb.load(self.src);
         gb.cpu.a = gb.read(addr);
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
@@ -239,7 +239,7 @@ impl LdAPointedByImm16 {
 impl Instruction for LdAPointedByImm16 {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.a = gb.read(self.addr);
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (4, 3) }
@@ -260,7 +260,7 @@ impl Instruction for LdPointedByHLIncA {
         let hl = gb.cpu.hl();
         gb.write(hl, gb.cpu.a);
         gb.store(R16::HL, hl.wrapping_add(1));
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
@@ -281,7 +281,7 @@ impl Instruction for LdPointedByHLDecA {
         let hl = gb.cpu.hl();
         gb.write(hl, gb.cpu.a);
         gb.store(R16::HL, hl.wrapping_sub(1));
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
@@ -302,7 +302,7 @@ impl Instruction for LdAPointedByHLInc {
         let hl = gb.cpu.hl();
         gb.cpu.a = gb.read(hl);
         gb.store(R16::HL, hl.wrapping_add(1));
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
@@ -323,7 +323,7 @@ impl Instruction for LdAPointedByHLDec {
         let hl = gb.cpu.hl();
         gb.cpu.a = gb.read(hl);
         gb.store(R16::HL, hl.wrapping_sub(1));
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
@@ -344,7 +344,7 @@ impl LdImm16SP {
 impl Instruction for LdImm16SP {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.store(self.addr, gb.cpu.sp);
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (5, 3) }
@@ -394,7 +394,7 @@ impl LdSPHL {
 impl Instruction for LdSPHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.sp = gb.cpu.hl();
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }

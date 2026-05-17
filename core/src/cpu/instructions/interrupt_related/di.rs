@@ -1,8 +1,5 @@
 use crate::{
-    cpu::{
-        flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult},
-    },
+    cpu::instructions::{Instruction, InstructionEffect, InstructionResult},
     prelude::*,
 };
 
@@ -17,7 +14,7 @@ impl Di {
 impl Instruction for Di {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.ime = false;
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { "di".to_string() }

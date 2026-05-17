@@ -113,7 +113,7 @@ impl Dmg {
 }
 
 impl Accessible<u16> for Dmg {
-    fn read(&self, address: u16) -> u8 {
+    fn read(&mut self, address: u16) -> u8 {
         match address {
             ROM_BANK00_START..=ROM_BANKNN_END => self.cartridge.read(address),
             VRAM_START..=VRAM_END => self.ppu.read(address),
@@ -219,7 +219,7 @@ impl Accessible<u16> for Dmg {
 }
 
 impl Accessible16<u16, u16> for Dmg {
-    fn load(&self, address: u16) -> u16 { to_u16(self.read(address), self.read(address.wrapping_add(1))) }
+    fn load(&mut self, address: u16) -> u16 { to_u16(self.read(address), self.read(address.wrapping_add(1))) }
 
     fn store(&mut self, address: u16, value: u16) {
         self.write(address, low(value));
@@ -228,10 +228,10 @@ impl Accessible16<u16, u16> for Dmg {
 }
 
 impl Accessible<R8> for Dmg {
-    fn read(&self, address: R8) -> u8 {
+    fn read(&mut self, address: R8) -> u8 {
         match address {
             R8::A => self.cpu.a,
-            R8::F => self.cpu.f,
+            R8::F => self.cpu.f(),
             R8::B => self.cpu.b,
             R8::C => self.cpu.c,
             R8::D => self.cpu.d,
@@ -244,7 +244,7 @@ impl Accessible<R8> for Dmg {
     fn write(&mut self, address: R8, value: u8) {
         match address {
             R8::A => self.cpu.a = value,
-            R8::F => self.cpu.f = value & 0xF0,
+            R8::F => self.cpu.set_f(value & 0xF0),
             R8::B => self.cpu.b = value,
             R8::C => self.cpu.c = value,
             R8::D => self.cpu.d = value,
@@ -256,7 +256,7 @@ impl Accessible<R8> for Dmg {
 }
 
 impl Accessible16<R16, R8> for Dmg {
-    fn load(&self, address: R16) -> u16 {
+    fn load(&mut self, address: R16) -> u16 {
         match address {
             R16::AF => self.cpu.af(),
             R16::BC => self.cpu.bc(),

@@ -1,8 +1,5 @@
 use crate::{
-    cpu::{
-        flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
-    },
+    cpu::instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
     prelude::*,
 };
 
@@ -19,14 +16,14 @@ impl Ret {
 impl Instruction for Ret {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         if !self.jc.should_jump() {
-            return Ok(InstructionEffect::new(self.info(), Flags::none()));
+            return Ok(InstructionEffect::new(self.info(), None));
         }
 
         let return_addr = gb.load(gb.cpu.sp);
         gb.cpu.pc = return_addr;
         gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
 
-        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+        Ok(InstructionEffect::with_jump(self.info(), None))
     }
 
     fn info(&self) -> (u8, u8) {

@@ -1,7 +1,7 @@
 use crate::{
     cpu::{
         R8, R16,
-        flags::{Flags, check_overflow_hc, check_zero},
+        flags::{LazyFlags, check_overflow_hc, check_zero},
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
@@ -69,7 +69,7 @@ impl Instruction for IncR16 {
         let result = r16.wrapping_add(1);
         gb.store(self.dst, result);
 
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { format!("inc {}", self.dst) }
@@ -85,7 +85,7 @@ impl Instruction for IncStackPointer {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.sp = gb.cpu.sp.wrapping_add(1);
 
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
     fn disassembly(&self) -> String { "inc sp".to_string() }

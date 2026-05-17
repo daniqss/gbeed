@@ -1,8 +1,5 @@
 use crate::{
-    cpu::{
-        flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
-    },
+    cpu::instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
     prelude::*,
 };
 
@@ -21,9 +18,9 @@ impl Instruction for JpToImm16 {
         let should_jump = self.jc.should_jump();
         if should_jump {
             gb.cpu.pc = self.addr;
-            Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+            Ok(InstructionEffect::with_jump(self.info(), None))
         } else {
-            Ok(InstructionEffect::new(self.info(), Flags::none()))
+            Ok(InstructionEffect::new(self.info(), None))
         }
     }
     fn info(&self) -> (u8, u8) { if self.jc.should_jump() { (4, 3) } else { (3, 3) } }
@@ -42,7 +39,7 @@ impl JpToHL {
 impl Instruction for JpToHL {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
         gb.cpu.pc = self.addr;
-        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+        Ok(InstructionEffect::with_jump(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
     fn disassembly(&self) -> String { "jp [hl]".to_string() }

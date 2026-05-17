@@ -1,7 +1,6 @@
 use crate::{
     cpu::{
         R16,
-        flags::Flags,
         instructions::{Instruction, InstructionEffect, InstructionResult},
     },
     prelude::*,
@@ -46,7 +45,7 @@ impl Instruction for Push {
         // gb.cpu.sp = gb.cpu.sp.wrapping_sub(2);
         // gb.store(gb.cpu.sp, src);
 
-        Ok(InstructionEffect::new(self.info(), Flags::none()))
+        Ok(InstructionEffect::new(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (4, 1) }
     fn disassembly(&self) -> String { format!("push {}", self.src) }
@@ -74,7 +73,7 @@ mod tests {
         assert_eq!(gb.read(gb.cpu.sp), ZERO_FLAG_MASK | CARRY_FLAG_MASK);
         assert_eq!(gb.read(gb.cpu.sp + 1), gb.cpu.a);
         assert_eq!(gb.cpu.sp, 0xFFA0 - 2);
-        assert_eq!(effect.flags, Flags::none());
+        assert_eq!(effect.flags, None);
     }
 
     #[test]
@@ -93,6 +92,6 @@ mod tests {
         assert_eq!(gb.read(gb.cpu.sp), gb.cpu.c);
         assert_eq!(gb.read(gb.cpu.sp + 1), gb.cpu.b);
         assert_eq!(gb.cpu.sp, 0xFFA0 - 2);
-        assert_eq!(effect.flags, Flags::none());
+        assert_eq!(effect.flags, None);
     }
 }

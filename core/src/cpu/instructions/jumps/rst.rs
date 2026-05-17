@@ -1,8 +1,5 @@
 use crate::{
-    cpu::{
-        flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
-    },
+    cpu::instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
     prelude::*,
 };
 
@@ -33,7 +30,7 @@ impl Instruction for Rst {
         // implicit jump to called address
         gb.cpu.pc = self.vec as u16;
 
-        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+        Ok(InstructionEffect::with_jump(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (4, 1) }
     fn disassembly(&self) -> String { format!("rst ${:02X}", self.vec) }

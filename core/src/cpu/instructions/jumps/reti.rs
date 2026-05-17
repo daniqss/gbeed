@@ -1,8 +1,5 @@
 use crate::{
-    cpu::{
-        flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult},
-    },
+    cpu::instructions::{Instruction, InstructionEffect, InstructionResult},
     prelude::*,
 };
 
@@ -22,7 +19,7 @@ impl Instruction for Reti {
         gb.cpu.pc = return_addr;
         gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
 
-        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+        Ok(InstructionEffect::with_jump(self.info(), None))
     }
     fn info(&self) -> (u8, u8) { (4, 1) }
     fn disassembly(&self) -> String { "reti".to_string() }

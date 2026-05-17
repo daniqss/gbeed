@@ -1,8 +1,5 @@
 use crate::{
-    cpu::{
-        flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult},
-    },
+    cpu::instructions::{Instruction, InstructionEffect, InstructionResult},
     prelude::*,
 };
 

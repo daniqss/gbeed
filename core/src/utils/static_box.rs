@@ -3,6 +3,7 @@ use core::ops::{Deref, DerefMut};
 
 /// # Static Box
 /// Container for values that allows to store them in a single type
+#[derive(Debug)]
 pub struct StaticBox<T: ?Sized, const N: usize = 1> {
     data: [u32; N],
     vtable: *const (),
@@ -76,8 +77,20 @@ impl<T: ?Sized, const N: usize> DerefMut for StaticBox<T, N> {
     }
 }
 
+impl<T: ?Sized, const N: usize> Clone for StaticBox<T, N> {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data,
+            vtable: self.vtable,
+            _phantom: PhantomData,
+        }
+    }
+}
+impl<T: ?Sized, const N: usize> Copy for StaticBox<T, N> {}
+
 #[macro_export]
-macro_rules! impl_static_box_from {
+macro_rules! impl_static_box {
+    // from implementation for a specific trait
     ($trait:path) => {
         impl<V: $trait + Copy + 'static, const N: usize> From<$crate::utils::StaticBox<V, N>>
             for $crate::utils::StaticBox<dyn $trait, N>
@@ -89,6 +102,15 @@ macro_rules! impl_static_box_from {
                         core::mem::transmute::<&dyn $trait, _>(val_ref as &dyn $trait);
                     $crate::utils::StaticBox::__from_raw_parts(sb.into_data(), vtable)
                 }
+            }
+        }
+    };
+
+    // debug implementation for StaticBox
+    () => {
+        impl<T: ?Sized, const N: usize> core::fmt::Debug for StaticBox<T, N> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                write!(f, "StaticBox {{ data: {:?} }}", self.data)
             }
         }
     };

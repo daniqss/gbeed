@@ -16,7 +16,7 @@ fn flags_pop(dst: R16, src: u16) -> Flags {
             h: Some(utils::low(src) & HALF_CARRY_FLAG_MASK != 0),
             c: Some(utils::low(src) & CARRY_FLAG_MASK != 0),
         },
-        _ => Flags::none(),
+        _ => None,
     }
 }
 

@@ -79,7 +79,7 @@ impl Joypad {
 }
 
 impl Accessible<u16> for Joypad {
-    fn read(&self, address: u16) -> u8 {
+    fn read(&mut self, address: u16) -> u8 {
         match address {
             JOYP => {
                 // input is high by default, no buttons pressed
