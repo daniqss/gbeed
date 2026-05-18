@@ -155,6 +155,7 @@ impl Noise {
         }
     }
 
+    #[inline]
     pub fn get_sample(&self, volume: u8) -> i16 {
         if !self.enabled {
             return 0;
@@ -163,22 +164,43 @@ impl Noise {
         if self.lfsr & 0x01 == 0 { volume as i16 } else { 0 }
     }
 
-    pub fn tick(&mut self) {
-        if self.timer == u32::MAX {
+    pub fn tick(&mut self, n: u32) {
+        if n == 0 || self.timer == u32::MAX {
             return;
         }
 
-        if self.timer > 0 {
-            self.timer -= 1;
-        }
+        let mut remaining = n;
 
         if self.timer == 0 {
-            self.timer = self.get_period();
+            let period = self.get_period();
+            self.timer = period;
             self.clock_lfsr();
+            if period == u32::MAX {
+                return;
+            }
+            remaining -= 1;
+            if remaining == 0 {
+                return;
+            }
+        }
+
+        while remaining > 0 {
+            if remaining < self.timer {
+                self.timer -= remaining;
+                return;
+            }
+            remaining -= self.timer;
+            let period = self.get_period();
+            self.timer = period;
+            self.clock_lfsr();
+            if period == u32::MAX {
+                return;
+            }
         }
     }
 
     /// clocks the lfsr and shifts a new bit in based on xor of bits 0 and 1
+    #[inline]
     fn clock_lfsr(&mut self) {
         let feedback = self.lfsr & 0x01 ^ (self.lfsr >> 1) & 0x01;
 
