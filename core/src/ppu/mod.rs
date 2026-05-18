@@ -249,6 +249,7 @@ impl Ppu {
     // -------------------------------------------------
     // 10 lines   |             VBlank
 
+    #[inline(never)]
     pub fn step<R: Renderer>(&mut self, renderer: &mut R, delta: usize, interrupt_flag: &mut Interrupt) {
         if !self.lcd_display_enable() {
             return;

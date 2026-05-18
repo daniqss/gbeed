@@ -1,3 +1,5 @@
+cargo-features = ["profile-rustflags"]
+
 [workspace]
 resolver = "2"
 members = [
@@ -17,8 +19,16 @@ panic = "abort"
 strip = true
 overflow-checks = false
 
+
 [profile.bench]
 inherits = "release"
-debug = true
-lto = "thin"
+debug = "line-tables-only"
 strip = false
+lto = "thin"
+codegen-units = 16
+split-debuginfo = "unpacked"
+rustflags = ["-Cforce-frame-pointers=yes", "-Cforce-unwind-tables=yes"]
+
+[profile.bench.package."*"]
+debug = "line-tables-only"
+

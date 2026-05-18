@@ -126,45 +126,52 @@ impl Apu {
     #[inline(always)]
     pub fn is_active(&self) -> bool { self.master_control & AUDIO_ON_OFF != 0 }
 
-    #[inline(always)]
-    fn get_master_volume_left(&self) -> i32 { ((self.master_volume >> 4) & 0x07) as i32 + 1 }
-
-    #[inline(always)]
-    fn get_master_volume_right(&self) -> i32 { (self.master_volume & 0x07) as i32 + 1 }
-
     bit_accessors!(target: master_control; AUDIO_ON_OFF, CH1_ON_FLAG, CH2_ON_FLAG, CH3_ON_FLAG, CH4_ON_FLAG);
     bit_accessors!(target: sound_panning; CH1_LEFT, CH2_LEFT, CH3_LEFT, CH4_LEFT, CH1_RIGHT, CH2_RIGHT, CH3_RIGHT, CH4_RIGHT);
 
+    #[inline(never)]
     pub fn step<P: AudioPlayer>(&mut self, player: &mut P, delta: usize) {
         if !self.is_active() {
             return;
         }
 
-        let total_cycles = delta as u32;
+        let mut remaining = delta as u32;
 
-        for _ in 0..total_cycles {
-            self.sweep_pulse.tick();
-            self.pulse.tick();
-            self.wave.tick();
-            self.noise.tick();
+        // process the requested cycles in chunks bounded by the next sample emission or the next frame sequencer tick.
+        // this avoids running the per-cycle inner loop
+        while remaining > 0 {
+            // cycles until next sample emission (sample_counter += SAMPLE_RATE per cycle, emits when >= FREQUENCY)
+            let cycles_to_sample = (cpu::FREQUENCY - self.sample_counter).div_ceil(SAMPLE_RATE);
 
-            self.sample_counter += SAMPLE_RATE;
+            // cycles until next frame sequencer step
+            let cycles_to_fs = 8192 - self.cycles;
+            let chunk = remaining.min(cycles_to_sample).min(cycles_to_fs);
+
+            // new ticks implementation is equivalent to running the old tick() `chunk` times
+            // but more efficient for large `chunk` sizes since it avoids branching and other per tick overhead.
+            // in the common case where the apu timer periods are much larger than the chunk size,
+            // this will be branchless and with constant time O(1) rather than O(n).
+            self.sweep_pulse.tick(chunk);
+            self.pulse.tick(chunk);
+            self.wave.tick(chunk);
+            self.noise.tick(chunk);
+
+            self.sample_counter += chunk * SAMPLE_RATE;
+            self.cycles += chunk;
+            remaining -= chunk;
+
             if self.sample_counter >= cpu::FREQUENCY {
                 self.sample_counter -= cpu::FREQUENCY;
                 let (left, right) = self.mix();
-
                 player.push_sample(left, right);
             }
 
-            self.cycles += 1;
             if self.cycles >= 8192 {
                 self.cycles -= 8192;
-                self.frame_sequencer = (self.frame_sequencer + 1) % 8;
+                self.frame_sequencer = (self.frame_sequencer + 1) & 7;
                 self.tick_frame_sequencer();
             }
         }
-
-        // player.flush_buffer();
     }
 
     /// ticks the frame sequencer, which controls the frequency of sound updates
@@ -218,75 +225,46 @@ impl Apu {
     /// removes the DC offset that the unsigned DAC outputs would otherwise leave
     #[inline(always)]
     fn high_pass(&mut self, channel: usize, sample: f32) -> f32 {
-        let output = sample - self.filter_diff[channel];
-        self.filter_diff[channel] = sample - (sample - self.filter_diff[channel]) * self.filter_rate;
+        let diff = self.filter_diff[channel];
+        let output = sample - diff;
+        self.filter_diff[channel] = sample - output * self.filter_rate;
         output
     }
 
+    #[inline]
     fn mix(&mut self) -> (i16, i16) {
-        let ch1_vol = if self.sweep_pulse.enabled {
-            self.sweep_pulse
-                .get_sample(self.sweep_pulse.envelope_state.volume)
-        } else {
-            0
-        };
+        let ch1_vol = self
+            .sweep_pulse
+            .get_sample(self.sweep_pulse.envelope_state.volume) as i32;
+        let ch2_vol = self.pulse.get_sample(self.pulse.envelope_state.volume) as i32;
+        let ch3_vol = self.wave.get_sample() as i32;
+        let ch4_vol = self.noise.get_sample(self.noise.envelope_state.volume) as i32;
 
-        let ch2_vol = if self.pulse.enabled {
-            self.pulse.get_sample(self.pulse.envelope_state.volume)
-        } else {
-            0
-        };
+        // per channel masks to select whether the channel contributes to the left and right output respectively
+        // changing branching to a masked sum operation
+        let pan = self.sound_panning as i32;
+        let l1 = -(pan & 1);
+        let l2 = -((pan >> 1) & 1);
+        let l3 = -((pan >> 2) & 1);
+        let l4 = -((pan >> 3) & 1);
+        let r1 = -((pan >> 4) & 1);
+        let r2 = -((pan >> 5) & 1);
+        let r3 = -((pan >> 6) & 1);
+        let r4 = -((pan >> 7) & 1);
 
-        let ch3_vol = if self.wave.enabled {
-            self.wave.get_sample()
-        } else {
-            0
-        };
-
-        let ch4_vol = if self.noise.enabled {
-            self.noise.get_sample(self.noise.envelope_state.volume)
-        } else {
-            0
-        };
-
-        let mut left = 0i32;
-        let mut right = 0i32;
-
-        if self.ch1_left() {
-            left += ch1_vol as i32;
-        }
-        if self.ch1_right() {
-            right += ch1_vol as i32;
-        }
-
-        if self.ch2_left() {
-            left += ch2_vol as i32;
-        }
-        if self.ch2_right() {
-            right += ch2_vol as i32;
-        }
-
-        if self.ch3_left() {
-            left += ch3_vol as i32;
-        }
-        if self.ch3_right() {
-            right += ch3_vol as i32;
-        }
-
-        if self.ch4_left() {
-            left += ch4_vol as i32;
-        }
-        if self.ch4_right() {
-            right += ch4_vol as i32;
-        }
+        let left = (ch1_vol & l1) + (ch2_vol & l2) + (ch3_vol & l3) + (ch4_vol & l4);
+        let right = (ch1_vol & r1) + (ch2_vol & r2) + (ch3_vol & r3) + (ch4_vol & r4);
 
         // raw sum is 0..=60 per side; after master volume (1..=8) and the
         // high-pass filter the signal sits around 0 with peaks near +-240,
         // so ~130x fills i16 without routinely clipping
         const OUTPUT_GAIN: f32 = 130.0;
 
-        let left = (left * self.get_master_volume_left()) as f32;
-        let right = (right * self.get_master_volume_right()) as f32;
+        let mv_left = ((self.master_volume >> 4) & 0x07) as i32 + 1;
+        let mv_right = (self.master_volume & 0x07) as i32 + 1;
+
+        let left = (left * mv_left) as f32;
+        let right = (right * mv_right) as f32;
 
         let left = self.high_pass(0, left) * OUTPUT_GAIN;
         let right = self.high_pass(1, right) * OUTPUT_GAIN;
