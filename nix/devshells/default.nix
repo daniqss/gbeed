@@ -44,7 +44,7 @@ in let
     platformPackages = lib.drmPackages pkgs;
   };
   wasm = pkgs.callPackage ./wasm.nix {inherit rustToolchain;};
-  latex = pkgs.callPackage ./latex.nix {};
+  latex = pkgs.callPackage ./latex.nix {inherit commonPackages;};
 in {
   inherit x11 wayland drm wasm latex;
   default = x11;

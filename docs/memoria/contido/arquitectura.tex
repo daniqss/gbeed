@@ -1,0 +1,128 @@
+\chapter{Arquitectura da consola}
+\label{chap:arquitectura}
+
+\lettrine{N}{este} capítulo describiremos os diferentes compoñentes hardware da consola,
+a súa interacción e o mapa de memoria que emprega.
+Ademáis explicarase o rol doutros compoñentes fundamentais para o seu funcionamento que son implementados
+non polo hardware da consola, senón polos seus cartuchos.
+A comprensión destes compoñentes é necesaria para entender o funcionamento da consola para unha posterior
+implementación en forma de software de emulación.
+
+\section{Visión xeral da arquitectura}
+
+A maior parte de funcionalidades da consola é implementada nun só \acrfull{soc}.
+A pesar de ser nomeado como \acrfull{cpu}, por exemplo no seu encapsulado,
+este chip ademais da propia \acrshort{cpu} inclúe varias memorias e diferentes periféricos, ocupando
+a \acrshort{cpu} sóamente unha pequena porción do silicio.
+
+\begin{figure}[hp!]
+  \centering
+  \begin{subfigure}[c]{0.35\textwidth}
+    \includegraphics[width=\textwidth]{imaxes/motherboard_original.png}
+    \caption{Placa base orixinal}
+    \label{fig:motherboard-original}
+  \end{subfigure}
+  \hspace{0.02\textwidth}
+  \begin{subfigure}[c]{0.35\textwidth}
+    \includegraphics[width=\textwidth]{imaxes/motherboard_marked.png}
+    \caption{Compoñentes principais sinalados}
+    \label{fig:motherboard-marked}
+  \end{subfigure}
+  \caption{Placa base da Game Boy (\acrshort{dmg}), na que se aprecian o \acrshort{soc} (DMG CPU), a \acrshort{ram} e a \acrshort{vram} \cite{GekkioDatabaseDMGMainboard}}
+  \label{fig:gameboy-motherboard}
+\end{figure}
+
+Dentro do \acrshort{soc} conviven a \acrshort{cpu}, a unidade de procesamento de píxeles (\acrshort{ppu}), a unidade de
+procesamento de audio (\acrshort{apu}), os temporizadores, o controlador do joypad e o contralador de interrupcións.
+Ademais conta con varias memorias, como a Boot \acrshort{rom}, a \acrfull{hram} e a \acrfull{oam}.
+
+A Boot \acrshort{rom} é o primeiro programa que se executa ao acender a consola.
+O seu cometido e preparar o sistema para a execución do programa principal provido polo cartucho.
+Para iso inicializa varias zonas de memoria e rexistros dos periféricos.
+Visualmente, amosa por pantalla unha sinxela animación co logotipo de Nintendo desplazandose ata 
+o medio da pantalla e reproduce un son característico. Esta animación cumple tamén unha
+función de proteción antipiratería.
+Os xogos comerciais e validados por Nintendo requerían incluir na cabeceira da súa \acrshort{rom} unha copia
+do logo de Nintendo. Durante a execución da Boot \acrshort{rom} realízase unha comparación entre os assets
+atopados aquí e os do cartucho. Se a comparación falla, a consola queda bloqueada e sen executar o xogo.
+Este mecanismo foi usado por Nintendo para controlar que xogos permitían ser executados na súa consola.
+Os distribuidores de cartuchos non autorizados afrontaban unha dobre penalización, xa que ao ter que incluir
+o logo de Nintendo caían nunha dobre infracción: infracción de marca rexistrada e infracción dos dereitos de autor.
+
+Fóra do \acrshort{soc} sitúanse a memoria de traballo (\acrshort{wram}), a memoria de vídeo (\acrshort{vram}) e
+a propia \acrshort{rom} do cartucho, que poden incluír ademais hardware adicional (véxase
+sección~\ref{sec:mbc}). A figura~\ref{fig:diagrama-arch} amosa a relación entre estes
+compoñentes.
+
+\begin{figure}[hp!]
+  \centering
+  \includegraphics[width=0.60\textwidth]{imaxes/arch_diagram.png}
+  \caption{Diagrama da arquitectura da Game Boy \cite{CopettiGameBoy}}
+  \label{fig:diagrama-arch}
+\end{figure}
+
+
+\subsection{Buses e topoloxía}
+
+A comunicación entre a \acrshort{cpu} e o resto de compoñentes realízase a través dun único bus de
+datos de 8 bits e un bus de direccións de 16 bits, o que permite enderezar ata 64\,KiB
+de espazo. Este espazo non está ocupado unicamente por memoria: nel mapéanse tamén os
+rexistros de control dos diferentes periféricos, polo que un mesmo acceso de lectura ou
+escritura pode dirixirse á \acrshort{ram}, á \acrshort{vram}, á \acrshort{rom} do cartucho ou a calquera rexistro de E/S
+en función da dirección.
+
+
+Por estar todos os compoñentes pendurados do mesmo bus, certos accesos entran en
+conflito. O caso máis representativo é o acceso á \acrshort{vram} e á \acrshort{oam} por parte da \acrshort{ppu}: mentres
+a \acrshort{ppu} está a debuxar unha liña, a \acrshort{cpu} non pode acceder a esas memorias e calquera
+lectura devolve \texttt{0xFF}.
+
+\section{Mapa de memoria}
+mapa mapa mapita danacol
+
+\subsection{ROM}
+
+\subsection{Entrada/saída mapeada en memoria}
+
+
+
+\section{Unidade central de procesamento}
+% comparativa intel 8080 e z80
+
+% especulación sobre que cpu realmente leva: z80(no), sharp LR35902 ou sharp SM83
+
+\begin{figure}[hp!]
+  \centering
+  \includegraphics[width=0.50\textwidth]{imaxes/cpu_comparation.png}
+  \caption{Comparativa da \acrshort{cpu} \cite{UltimateGameBoyTalk}}
+  \label{fig:cpu-comparation}
+\end{figure}
+
+\subsection{Conxunto de instrucións}
+\subsection{Interrupcións}
+
+
+
+
+\section{Unidade de procesamento de píxeles}
+
+\subsection{Modos de funcionamento}
+\subsection{Background, window e objects}
+
+\section{Controladores de bancos de memoria}
+\label{sec:mbc}
+
+\subsection{Hardware adicional implementado nos cartuchos}
+
+% non propiamente hardware da consola pero fundamental no seu funcionamento
+
+\section{Joypad}
+% comentar q los bits estan invertidos
+\section{Temporizadores e rexistros de división}
+
+\section{Unidade de procesamento de audio}
+
+
+
+
+

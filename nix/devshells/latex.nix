@@ -1,9 +1,10 @@
 {
   mkShell,
   texliveFull,
+  commonPackages,
 }:
 mkShell {
-  buildInputs = [texliveFull];
+  buildInputs = [texliveFull commonPackages];
 
   env = {
     LATEXMKOPTS = "-xelatex";
