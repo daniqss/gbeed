@@ -28,7 +28,7 @@ fetch-test-roms:
     fi
 
 flamegraph *ARGS:
-    cargo flamegraph --profile bench --features "${DISPLAY_FEATURES}" -p gbeed-console {{ARGS}}
+    RUSTFLAGS="-Cforce-frame-pointers=yes -Cforce-unwind-tables=yes" cargo flamegraph --profile bench --features "${DISPLAY_FEATURES}" -p gbeed-console {{ARGS}}
 
 web-build:
     RUSTFLAGS="-C panic=unwind" cargo build --target wasm32-unknown-emscripten -p gbeed-debugger --release
@@ -47,7 +47,7 @@ web-run:
 
 cross-build-alpine:
     sudo podman run --rm --privileged docker.io/tonistiigi/binfmt --install arm
-    podman build --platform linux/arm/v6 -f Dockerfile.cross -t gbeed-armv6l .
+    podman build --platform linux/arm/v6 -f Dockerfile.cross.alpine -t gbeed-armv6l .
     podman create --name gbeed-armv6l-tmp gbeed-armv6l
     podman cp gbeed-armv6l-tmp:/app/target/release/gbeed ./gbeed
     podman rm gbeed-armv6l-tmp
@@ -58,4 +58,4 @@ cross-build-debian:
     podman create --name gbeed-armv6l-debian-tmp gbeed-armv6l-debian
     podman cp gbeed-armv6l-debian-tmp:/app/target/arm-unknown-linux-gnueabihf/release/gbeed ./gbeed
     podman rm gbeed-armv6l-debian-tmp
-    @echo "Release binary for armv6l (Debian Bookworm) generated at ./gbeed"
+    @echo "Release binary for armv6l (glibc 2.28, Debian Buster / Raspbian) generated at ./gbeed"

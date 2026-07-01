@@ -1,4 +1,4 @@
-FROM dockcross/linux-armv6
+FROM dockcross/linux-armv6-lts
 
 ENV PATH="/opt/rustup/cargo/bin:${PATH}"
 RUN rustup target add arm-unknown-linux-gnueabihf
