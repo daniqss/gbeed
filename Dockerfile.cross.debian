@@ -1,4 +1,4 @@
-FROM dockcross/linux-armv6-lts
+FROM dockcross/linux-armv6
 
 ENV PATH="/opt/rustup/cargo/bin:${PATH}"
 RUN rustup target add arm-unknown-linux-gnueabihf
@@ -11,27 +11,31 @@ RUN mkdir -p /opt/rustup/cargo && printf \
 # linker only needs valid symbol tables; actual implementations come from RPi OS at runtime.
 RUN dpkg --add-architecture armhf && apt-get update && apt-get install -y --no-install-recommends \
     llvm libclang-dev \
-    libgles2-mesa-dev libdrm-dev libasound2-dev libgbm-dev \
-    libgles2-mesa-dev:armhf libdrm-dev:armhf libasound2-dev:armhf libgbm-dev:armhf libglvnd-dev:armhf \
+    libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+    libxext-dev libxrender-dev libxfixes-dev libxcb1-dev \
+    libgl1-mesa-dev libasound2-dev \
+    libx11-dev:armhf libxrandr-dev:armhf libxinerama-dev:armhf libxcursor-dev:armhf libxi-dev:armhf \
+    libxext-dev:armhf libxrender-dev:armhf libxfixes-dev:armhf libxcb1-dev:armhf \
+    libgl1-mesa-dev:armhf libasound2-dev:armhf \
     && SYSROOT=/usr/xcc/armv6-unknown-linux-gnueabihf/armv6-unknown-linux-gnueabihf/sysroot \
     && mkdir -p $SYSROOT/usr/include $SYSROOT/usr/lib \
 
-    && for dir in GLES2 GLES3 EGL KHR; do \
-        [ -d /usr/include/$dir ] && cp -rn /usr/include/$dir $SYSROOT/usr/include/ || true; done \
-    && [ -d /usr/include/libdrm ] && cp -rn /usr/include/libdrm $SYSROOT/usr/include/ \
-    && ln -sf libdrm $SYSROOT/usr/include/drm \
-    && cp -n /usr/include/libdrm/*.h $SYSROOT/usr/include/ \
-    && for f in xf86drm.h xf86drmMode.h drm.h drm_fourcc.h drm_mode.h drm_sarea.h; do \
-        [ -f /usr/include/$f ] && cp -f /usr/include/$f $SYSROOT/usr/include/ || true; done \
-    && [ -d /usr/include/alsa ]  && cp -rn /usr/include/alsa $SYSROOT/usr/include/ \
-    && [ -f /usr/include/gbm.h ] && cp -f  /usr/include/gbm.h $SYSROOT/usr/include/ \
+    && [ -d /usr/include/X11 ] && cp -rn /usr/include/X11 $SYSROOT/usr/include/ \
+    && [ -d /usr/include/GL ] && cp -rn /usr/include/GL $SYSROOT/usr/include/ \
+    && ( [ -d /usr/include/xcb ] && cp -rn /usr/include/xcb $SYSROOT/usr/include/ || true ) \
+    && [ -d /usr/include/alsa ] && cp -rn /usr/include/alsa $SYSROOT/usr/include/ \
 
-    && cp -P /usr/lib/arm-linux-gnueabihf/libGLESv2.so*    $SYSROOT/usr/lib/ \
-    && cp -P /usr/lib/arm-linux-gnueabihf/libGLdispatch.so* $SYSROOT/usr/lib/ \
-    && cp -P /usr/lib/arm-linux-gnueabihf/libEGL.so*        $SYSROOT/usr/lib/ \
-    && cp -P /usr/lib/arm-linux-gnueabihf/libdrm.so*        $SYSROOT/usr/lib/ \
-    && cp -P /usr/lib/arm-linux-gnueabihf/libasound.so*     $SYSROOT/usr/lib/ \
-    && cp -P /usr/lib/arm-linux-gnueabihf/libgbm.so*        $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libX11.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libGL.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXrandr.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXinerama.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXcursor.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXi.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXext.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXrender.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXfixes.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libxcb.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libasound.so* $SYSROOT/usr/lib/ \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PKG_CONFIG_ALLOW_CROSS=1
@@ -56,7 +60,7 @@ RUN mkdir -p frontends/raylib_common/src && echo "" > frontends/raylib_common/sr
 
 # LIBCLANG_PATH resolved at runtime, llvm version varies by base image
 RUN export LIBCLANG_PATH=$(llvm-config --libdir) && \
-    cargo build --release --target arm-unknown-linux-gnueabihf --features "raylib/drm raylib/opengl_es_20" || true
+    cargo build --release --target arm-unknown-linux-gnueabihf || true
 
 COPY core/src core/src
 COPY frontends frontends
@@ -65,4 +69,4 @@ COPY frontends frontends
 RUN touch core/src/lib.rs frontends/console/src/main.rs frontends/debugger/src/main.rs frontends/raylib_common/src/lib.rs
 
 RUN export LIBCLANG_PATH=$(llvm-config --libdir) && \
-    cargo build --release --target arm-unknown-linux-gnueabihf --features "raylib/drm raylib/opengl_es_20"
+    cargo build --release --target arm-unknown-linux-gnueabihf
