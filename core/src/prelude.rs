@@ -1,3 +1,9 @@
+pub use alloc::boxed::Box;
+pub use alloc::format;
+pub use alloc::string::{String, ToString};
+pub use alloc::vec;
+pub use alloc::vec::Vec;
+
 pub use crate::cartrigde::Cartridge;
 pub use crate::controller::Controller;
 pub use crate::dmg::Dmg;

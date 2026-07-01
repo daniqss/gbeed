@@ -1,0 +1,272 @@
+use super::{DUTY_TABLE, Envelope, LengthCounter, handle_control_write};
+use crate::apu::*;
+
+#[derive(Debug, Default)]
+pub struct SweepPulse {
+    /// controls ch1's period sweep functionality
+    pub sweep: u8,
+
+    /// wave duty, controls the output waveform
+    pub wave_duty: u8,
+
+    /// initial length timer (write only)
+    pub length_timer: u8,
+
+    /// controls the initial volume, envelope direction and sweep pace
+    /// - bit 7-4: initial volume
+    /// - bit 3: envelope direction (0 = decrease, 1 = increase)
+    /// - bit 2-0: sweep pace
+    pub envelope: u8,
+
+    /// eight first bits of the period value
+    pub period_low: u8,
+
+    /// last three bits of the period value and control bits
+    /// - bit 7: trigger (write only)
+    /// - bit 6: length enable (read/write)
+    /// - bit 2-0: period high
+    pub period_high: u8,
+
+    pub enabled: bool,
+    pub timer: u16,
+    /// from 0 to 7 (the waveform is 8 samples long)
+    pub duty_step: u8,
+    pub envelope_state: Envelope,
+    pub length: LengthCounter,
+    pub sweep_timer: u8,
+    /// internal flag: set if pace > 0 or shift > 0 at trigger time
+    pub sweep_enabled: bool,
+    /// internal shadow period used by the sweep
+    pub shadow_period: u16,
+    /// set when a sweep calculation is performed in negate mode
+    pub sweep_negate_used: bool,
+}
+
+impl SweepPulse {
+    pub fn new() -> Self {
+        Self {
+            sweep: 0x80,
+            wave_duty: 0xBF,
+            length_timer: 0xF3,
+            envelope: 0,
+            period_low: 0,
+            period_high: 0xBF,
+
+            enabled: false,
+            timer: 0,
+            duty_step: 0,
+            envelope_state: Envelope::default(),
+            length: LengthCounter::new(64),
+            sweep_timer: 0,
+            sweep_enabled: false,
+            shadow_period: 0,
+            sweep_negate_used: false,
+        }
+    }
+
+    field_bit_accessors!(target: period_high; TRIGGER, LENGTH_ENABLE);
+
+    pub fn clear_registers(&mut self) {
+        self.sweep = 0;
+        self.wave_duty = 0;
+        self.length_timer = 0;
+        self.envelope = 0;
+        self.period_low = 0;
+        self.period_high = 0;
+        self.enabled = false;
+        self.envelope_state.clear();
+        self.sweep_enabled = false;
+        self.sweep_negate_used = false;
+    }
+
+    pub fn read(&self, addr: u16) -> u8 {
+        match addr {
+            NR10 => self.sweep | 0x80,
+            NR11 => (self.wave_duty << 6) | 0x3F,
+            NR12 => self.envelope,
+            NR13 => 0xFF,
+            NR14 => (self.period_high & 0x40) | 0xBF,
+
+            _ => 0xFF,
+        }
+    }
+
+    pub fn write(&mut self, addr: u16, value: u8, even_step: bool) {
+        match addr {
+            NR10 => {
+                // if negate mode was used and is now cleared, disable the channel
+                if self.sweep_negate_used && (value & 0x08) == 0 {
+                    self.enabled = false;
+                }
+                self.sweep = value;
+            }
+            NR11 => {
+                self.length.counter = 64 - (value & 0x3F) as u16;
+                self.wave_duty = (value & 0xC0) >> 6;
+                self.length_timer = value & 0x3F;
+            }
+            NR12 => {
+                self.envelope = value;
+                // if bits 3-7 are 0, dac turns off
+                if value & 0xF8 == 0 {
+                    self.enabled = false;
+                }
+            }
+            NR13 => self.period_low = value,
+            NR14 => {
+                let was_length_enabled = self.period_high & 0x40 != 0;
+                self.period_high = value;
+                if value & 0x80 != 0 {
+                    self.trigger();
+                }
+                let env_reg = self.envelope;
+                handle_control_write(
+                    &mut self.length,
+                    &mut self.enabled,
+                    Some((&mut self.envelope_state, env_reg)),
+                    was_length_enabled,
+                    value,
+                    even_step,
+                );
+            }
+            _ => {}
+        }
+    }
+
+    fn trigger(&mut self) {
+        // only activates if dac is on (nr12 bits 3-7 != 0)
+        if self.envelope & 0xF8 != 0 {
+            self.enabled = true;
+        }
+
+        // reset length timer if expired
+        if self.length_timer == 0 {
+            self.length_timer = 64;
+        }
+
+        // reset period and timer
+        let period = self.get_period();
+        self.shadow_period = period;
+        self.timer = (2048 - period) * 4;
+
+        // reset volume and envelope
+        self.envelope_state.trigger(self.envelope);
+
+        // reset sweep
+        let sweep_pace = (self.sweep & 0x70) >> 4;
+        let sweep_step = self.sweep & 0x07;
+        self.sweep_timer = if sweep_pace > 0 { sweep_pace } else { 8 };
+        self.sweep_enabled = sweep_pace > 0 || sweep_step > 0;
+        self.sweep_negate_used = false;
+
+        // if sweep shift is not 0, an initial overflow check is made (no update)
+        if sweep_step > 0 {
+            self.calculate_sweep(false);
+        }
+    }
+
+    /// returns the channel's enable bit of audio master control
+    #[inline(always)]
+    pub fn is_enabled(&self) -> u8 {
+        if self.enabled && (self.envelope & 0xF8 != 0) {
+            0x01
+        } else {
+            0
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
+
+    #[inline]
+    pub fn get_sample(&self, volume: u8) -> i16 {
+        if !self.enabled {
+            return 0;
+        }
+
+        let duty_pattern = DUTY_TABLE[(self.wave_duty & 0x03) as usize];
+        if duty_pattern[(self.duty_step & 0x07) as usize] == 1 {
+            volume as i16
+        } else {
+            0
+        }
+    }
+
+    pub fn tick(&mut self, n: u32) {
+        if n == 0 {
+            return;
+        }
+        let period_ticks = ((2048 - self.get_period()) as u32) * 4;
+        let mut t = self.timer as u32;
+        let mut remaining = n;
+
+        if t == 0 {
+            t = period_ticks;
+            self.duty_step = (self.duty_step + 1) & 7;
+            remaining -= 1;
+            if remaining == 0 {
+                self.timer = t as u16;
+                return;
+            }
+        }
+
+        if remaining < t {
+            self.timer = (t - remaining) as u16;
+            return;
+        }
+
+        remaining -= t;
+        self.duty_step = (self.duty_step + 1) & 7;
+
+        let advances = remaining / period_ticks;
+        let leftover = remaining % period_ticks;
+        if advances > 0 {
+            self.duty_step = self.duty_step.wrapping_add(advances as u8) & 7;
+        }
+        self.timer = if leftover == 0 {
+            period_ticks as u16
+        } else {
+            (period_ticks - leftover) as u16
+        };
+    }
+
+    /// period sweep logic (nr10)
+    pub fn calculate_sweep(&mut self, update: bool) {
+        let step = self.sweep & 0x07;
+        let negate = (self.sweep & 0x08) != 0;
+        let new_period = self.shadow_period >> step;
+
+        let new_period = if negate {
+            self.sweep_negate_used = true;
+            self.shadow_period.wrapping_sub(new_period)
+        } else {
+            self.shadow_period.wrapping_add(new_period)
+        };
+
+        // overflow check
+        if new_period > 0x7FF {
+            self.enabled = false;
+        } else if step > 0 && update {
+            // write back to registers
+            self.shadow_period = new_period;
+            self.period_low = (new_period & 0xFF) as u8;
+            self.period_high = (self.period_high & 0xF8) | ((new_period >> 8) & 0x07) as u8;
+
+            // re-check overflow immediately after updating
+            self.calculate_sweep(false);
+        }
+    }
+
+    pub fn tick_sweep(&mut self) {
+        if self.sweep_timer > 0 {
+            self.sweep_timer -= 1;
+        }
+        if self.sweep_timer == 0 {
+            let pace = (self.sweep >> 4) & 0x07;
+            self.sweep_timer = if pace > 0 { pace } else { 8 };
+            if self.sweep_enabled && pace > 0 {
+                self.calculate_sweep(true);
+            }
+        }
+    }
+}

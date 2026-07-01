@@ -1,8 +1,9 @@
+use crate::apu::Apu;
 pub use crate::prelude::*;
 use crate::{
-    Apu, Cartridge, Controller, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
+    Cartridge, Controller, Cpu, Interrupt, Joypad, Ppu, Serial, Timer,
     apu::{APU_REGISTER_END, APU_REGISTER_START},
-    cpu::{R8, R16},
+    cpu::{InstructionError, R8, R16},
     interrupts::{IE, IF},
     joypad::JOYP,
     memory::*,
@@ -13,6 +14,32 @@ use crate::{
 };
 
 const BANK_REGISTER: u16 = 0xFF50;
+
+#[derive(Debug)]
+pub enum DmgError {
+    Instruction(InstructionError),
+}
+
+impl From<InstructionError> for DmgError {
+    fn from(err: InstructionError) -> Self { DmgError::Instruction(err) }
+}
+
+impl core::fmt::Display for DmgError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            DmgError::Instruction(err) => write!(f, "Instruction error: {}", err),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for DmgError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            DmgError::Instruction(err) => Some(err),
+        }
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct Dmg {
@@ -54,39 +81,31 @@ impl Dmg {
     pub fn reset(&mut self) { self.cpu.reset(); }
 
     /// Modifies the DMG state by executing one CPU instruction, and return the executed instruction
-    pub fn run<C: Controller>(&mut self, controller: &mut C) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run<C: Controller>(&mut self, controller: &mut C) -> Result<(), DmgError> {
         // one frame == 70224 T-cycles == 17556 M-cycles
         while self.cpu.cycles < 17556 {
-            let _instr = self.step(controller);
-
-            // println!(
-            //     "Executing instruction at {:04X} and {}: {}",
-            //     self.cpu.pc,
-            //     self.cpu.cycles,
-            //     match &_instr {
-            //         Some(instr) => format!("{}", instr),
-            //         None => "None".to_string(),
-            //     }
-            // );
+            self.step(controller)?;
         }
 
         self.cpu.cycles = 0;
+        controller.flush_buffer();
 
         Ok(())
     }
 
-    pub fn step<C: Controller>(&mut self, controller: &mut C) -> Option<InstructionBox> {
+    pub fn step<C: Controller>(&mut self, controller: &mut C) -> Result<Option<InstructionBox>, DmgError> {
         let prev_cycles = self.cpu.cycles;
 
-        let instruction = Cpu::step(self);
+        let instruction = Cpu::step(self)?;
 
-        let delta = self.cpu.cycles.wrapping_sub(prev_cycles);
+        let delta = self.cpu.cycles.wrapping_sub(prev_cycles) * 4;
 
-        self.ppu.step(controller, delta * 4, &mut self.interrupt_flag);
-        self.timer.step(delta * 4, &mut self.interrupt_flag);
+        self.ppu.step(controller, delta, &mut self.interrupt_flag);
+        self.timer.step(delta, &mut self.interrupt_flag);
         self.serial.step(controller);
+        self.apu.step(controller, delta);
 
-        instruction
+        Ok(instruction)
     }
 }
 
@@ -103,13 +122,7 @@ impl Accessible<u16> for Dmg {
             }
             OAM_START..=OAM_END => self.ppu.read(address),
 
-            NOT_USABLE_START..=NOT_USABLE_END => {
-                // eprintln!(
-                //     "Reads to prohibited memory region [{}, {}] with address {:04X} return 0xFF",
-                //     NOT_USABLE_START, NOT_USABLE_END, address
-                // );
-                0xFF
-            }
+            NOT_USABLE_START..=NOT_USABLE_END => 0xFF,
 
             IO_REGISTERS_START..=IO_REGISTERS_END => match address {
                 JOYP => self.joypad.read(address),
@@ -123,10 +136,7 @@ impl Accessible<u16> for Dmg {
 
                 BANK_REGISTER => self.bank,
 
-                _ => {
-                    // eprintln!("Reads to unimplemented IO register {:04X} return 0xFF", address);
-                    0xFF
-                }
+                _ => 0xFF,
             },
             HRAM_START..=HRAM_END => self.memory.hram[(address - HRAM_START) as usize],
             IE => self.interrupt_enable.0,
@@ -147,12 +157,7 @@ impl Accessible<u16> for Dmg {
             }
             OAM_START..=OAM_END => self.ppu.write(address, value),
 
-            NOT_USABLE_START..=NOT_USABLE_END => {
-                // eprintln!(
-                //     "Writes to prohibited memory region [{}, {}] with address {:04X} are ignored",
-                //     NOT_USABLE_START, NOT_USABLE_END, address
-                // ),
-            }
+            NOT_USABLE_START..=NOT_USABLE_END => {}
 
             IO_REGISTERS_START..=IO_REGISTERS_END => match address {
                 JOYP => self.joypad.write(address, value),
@@ -201,7 +206,7 @@ impl Accessible<u16> for Dmg {
                 cgb::PCM12 => {}
                 cgb::PCM34 => {}
 
-                _ => eprintln!("Writes to unimplemented IO register {:04X} are ignored", address),
+                _ => {}
             },
 
             HRAM_START..=HRAM_END => self.memory.hram[(address - HRAM_START) as usize] = value,

@@ -1,0 +1,193 @@
+use super::{DUTY_TABLE, Envelope, LengthCounter, handle_control_write};
+use crate::apu::*;
+
+#[derive(Debug, Default)]
+pub struct Pulse {
+    /// wave duty, controls the output waveform
+    pub wave_duty: u8,
+
+    /// initial length timer (write only)
+    pub length_timer: u8,
+
+    /// controls the initial volume, envelope direction and sweep pace
+    /// - bit 7-4: initial volume
+    /// - bit 3: envelope direction (0 = decrease, 1 = increase)
+    /// - bit 2-0: sweep pace
+    pub envelope: u8,
+
+    /// eight first bits of the period value
+    pub period_low: u8,
+
+    /// last three bits of the period value and control bits
+    /// - bit 7: trigger (write only)
+    /// - bit 6: length enable (read/write)
+    /// - bit 2-0: period high
+    pub period_high: u8,
+
+    pub enabled: bool,
+    pub timer: u16,
+    /// from 0 to 7 (the waveform is 8 samples long)
+    pub duty_step: u8,
+    pub envelope_state: Envelope,
+    pub length: LengthCounter,
+}
+
+impl Pulse {
+    pub fn new() -> Self {
+        Self {
+            wave_duty: 0x3F,
+            length_timer: 0,
+            envelope: 0,
+            period_low: 0,
+            period_high: 0xBF,
+
+            enabled: false,
+            timer: 0,
+            duty_step: 0,
+            envelope_state: Envelope::default(),
+            length: LengthCounter::new(64),
+        }
+    }
+
+    pub fn tick(&mut self, n: u32) {
+        if n == 0 {
+            return;
+        }
+        let period_ticks = ((2048 - self.get_period()) as u32) * 4;
+        let mut t = self.timer as u32;
+        let mut remaining = n;
+
+        if t == 0 {
+            t = period_ticks;
+            self.duty_step = (self.duty_step + 1) & 7;
+            remaining -= 1;
+            if remaining == 0 {
+                self.timer = t as u16;
+                return;
+            }
+        }
+
+        if remaining < t {
+            self.timer = (t - remaining) as u16;
+            return;
+        }
+
+        remaining -= t;
+        self.duty_step = (self.duty_step + 1) & 7;
+
+        let advances = remaining / period_ticks;
+        let leftover = remaining % period_ticks;
+        if advances > 0 {
+            self.duty_step = self.duty_step.wrapping_add(advances as u8) & 7;
+        }
+        self.timer = if leftover == 0 {
+            period_ticks as u16
+        } else {
+            (period_ticks - leftover) as u16
+        };
+    }
+
+    field_bit_accessors!(target: period_high; TRIGGER, LENGTH_ENABLE);
+
+    pub fn clear_registers(&mut self) {
+        self.wave_duty = 0;
+        self.length_timer = 0;
+        self.envelope = 0;
+        self.period_low = 0;
+        self.period_high = 0;
+        self.enabled = false;
+        self.envelope_state.clear();
+    }
+
+    pub fn read(&self, addr: u16) -> u8 {
+        match addr {
+            NR21 => (self.wave_duty << 6) | 0x3F,
+            NR22 => self.envelope,
+            NR23 => 0xFF,
+            NR24 => (self.period_high & 0x40) | 0xBF,
+
+            _ => 0xFF,
+        }
+    }
+
+    pub fn write(&mut self, addr: u16, value: u8, even_step: bool) {
+        match addr {
+            NR21 => {
+                self.length.counter = 64 - (value & 0x3F) as u16;
+                self.wave_duty = (value & 0xC0) >> 6;
+                self.length_timer = value & 0x3F;
+            }
+            NR22 => {
+                self.envelope = value;
+                // if bits 3-7 are 0, dac turns off
+                if value & 0xF8 == 0 {
+                    self.enabled = false;
+                }
+            }
+            NR23 => self.period_low = value,
+            NR24 => {
+                let was_length_enabled = self.period_high & 0x40 != 0;
+                self.period_high = value;
+                if value & 0x80 != 0 {
+                    self.trigger();
+                }
+                let env_reg = self.envelope;
+                handle_control_write(
+                    &mut self.length,
+                    &mut self.enabled,
+                    Some((&mut self.envelope_state, env_reg)),
+                    was_length_enabled,
+                    value,
+                    even_step,
+                );
+            }
+            _ => {}
+        }
+    }
+
+    fn trigger(&mut self) {
+        // only activates if dac is on (nr22 bits 3-7 != 0)
+        if self.envelope & 0xF8 != 0 {
+            self.enabled = true;
+        }
+
+        // reset length timer if expired
+        if self.length_timer == 0 {
+            self.length_timer = 64;
+        }
+
+        // reset period and timer
+        let period = self.get_period();
+        self.timer = (2048 - period) * 4;
+
+        // reset volume and envelope
+        self.envelope_state.trigger(self.envelope);
+    }
+
+    /// returns the channel's enable bit of audio master control
+    #[inline(always)]
+    pub fn is_enabled(&self) -> u8 {
+        if self.enabled && (self.envelope & 0xF8 != 0) {
+            0x02
+        } else {
+            0
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
+
+    #[inline]
+    pub fn get_sample(&self, volume: u8) -> i16 {
+        if !self.enabled {
+            return 0;
+        }
+
+        let duty_pattern = DUTY_TABLE[(self.wave_duty & 0x03) as usize];
+        if duty_pattern[(self.duty_step & 0x07) as usize] == 1 {
+            volume as i16
+        } else {
+            0
+        }
+    }
+}

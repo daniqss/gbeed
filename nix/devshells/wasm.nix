@@ -23,7 +23,7 @@ pkgs.mkShell {
       "-sWASM=1"
       "-sSTACK_SIZE=2097152"
       "-sGL_ENABLE_GET_PROC_ADDRESS=1"
-      "-sEXPORTED_RUNTIME_METHODS=FS,HEAPU8,ccall,cwrap"
+      "-sEXPORTED_RUNTIME_METHODS=FS,HEAPU8,HEAPF32,ccall,cwrap"
     ];
   };
 }

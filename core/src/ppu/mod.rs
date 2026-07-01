@@ -119,8 +119,8 @@ impl Default for Ppu {
     fn default() -> Self { Self::new() }
 }
 
-impl std::fmt::Debug for Ppu {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for Ppu {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "Ppu {{ dots: {}, frames: {}, lcd_control: {:#04X}, lcd_status: {:#04X}, scroll_y: {}, scroll_x: {}, ly: {}, lyc: {}, dma: {}, bg_palette: {:#04X}, obj0_palette: {:#04X}, obj1_palette: {:#04X}, wy: {}, wx: {} }}",
@@ -249,6 +249,7 @@ impl Ppu {
     // -------------------------------------------------
     // 10 lines   |             VBlank
 
+    #[inline(never)]
     pub fn step<R: Renderer>(&mut self, renderer: &mut R, delta: usize, interrupt_flag: &mut Interrupt) {
         if !self.lcd_display_enable() {
             return;

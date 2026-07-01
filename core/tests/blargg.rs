@@ -1,4 +1,6 @@
-use gbeed_core::{Controller, DefaultRenderer, Ppu, Renderer, SerialListener, prelude::*};
+use gbeed_core::{
+    AudioPlayer, Controller, DefaultAudioPlayer, DefaultRenderer, Ppu, Renderer, SerialListener, prelude::*,
+};
 use std::{fs, path::Path};
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -32,7 +34,7 @@ impl BlarggListener {
 
 impl SerialListener for BlarggListener {
     fn on_transfer(&mut self, data: u8) {
-        print!("{}", data as char);
+        // print!("{}", data as char);
 
         self.received_data.push(data as char);
 
@@ -45,7 +47,7 @@ impl SerialListener for BlarggListener {
                 self.received_data.iter().collect::<String>()
             );
 
-            println!("ROM name received: {}", self.rom_name.iter().collect::<String>());
+        // println!("ROM name received: {}", self.rom_name.iter().collect::<String>());
         } else if self.received_data.len() == self.rom_name.len() + self.separator.len() {
             let separator_start = self.rom_name.len();
             let separator_end = separator_start + self.separator.len();
@@ -76,7 +78,66 @@ impl SerialListener for BlarggListener {
     }
 }
 
-controller!(BlarggController, BlarggListener, DefaultRenderer);
+controller!(
+    BlarggController,
+    BlarggListener,
+    DefaultRenderer,
+    DefaultAudioPlayer
+);
+
+fn run_dmg_sound_test(rom_dir: &str, rom_name: &str) -> Result<()> {
+    const STATUS_ADDR: u16 = 0xA000;
+    const SIG_ADDR: u16 = 0xA001;
+    const TEXT_ADDR: u16 = 0xA004;
+    const RUNNING: u8 = 0x80;
+    // one minute at 60 fps
+    const TIMEOUT_FRAMES: u32 = 3600;
+
+    let rom_path = format!("{}/{}", rom_dir, rom_name);
+    let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
+    let cartridge = Cartridge::new(&rom, None).map_err(|e| format!("Failed to create cartridge: {e}"))?;
+    let mut controller = BlarggController {
+        listener: BlarggListener::new(rom_name),
+        renderer: DefaultRenderer::new(),
+        audio_player: DefaultAudioPlayer::new(),
+    };
+    let mut gb = Dmg::new(cartridge, None);
+
+    for frame in 0..TIMEOUT_FRAMES {
+        gb.run(&mut controller)?;
+
+        let sig = [gb.read(SIG_ADDR), gb.read(SIG_ADDR + 1), gb.read(SIG_ADDR + 2)];
+        if sig != [0xDE, 0xB0, 0x61] {
+            continue;
+        }
+
+        let status = gb.read(STATUS_ADDR);
+        if status == RUNNING {
+            continue;
+        }
+
+        let mut text = String::new();
+        let mut addr = TEXT_ADDR;
+        loop {
+            let c = gb.read(addr);
+            if c == 0 {
+                break;
+            }
+            text.push(c as char);
+            addr = addr.wrapping_add(1);
+        }
+
+        assert_eq!(
+            status, 0,
+            "Test failed (code {}) after {} frames:\n{}",
+            status, frame, text
+        );
+
+        return Ok(());
+    }
+
+    panic!("Test timed out after {} frames", TIMEOUT_FRAMES);
+}
 
 fn run_blargg_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let rom_path = format!("{}/{}", rom_dir, rom_name);
@@ -87,6 +148,7 @@ fn run_blargg_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let mut controller = BlarggController {
         listener,
         renderer: DefaultRenderer::new(),
+        audio_player: DefaultAudioPlayer::new(),
     };
     let mut gb = Dmg::new(cartridge, None);
 
@@ -193,4 +255,56 @@ mod mem_timing {
     #[ignore]
     #[test]
     fn modify_timing() -> Result<()> { run_blargg_test(MEM_TIMING_DIR, "03-modify_timing.gb") }
+}
+
+#[cfg(test)]
+mod dmg_sound {
+    use super::*;
+
+    const DMG_SOUND_DIR: &str = "../gb-test-roms/dmg_sound/rom_singles";
+
+    #[test]
+    fn registers() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "01-registers.gb") }
+
+    #[test]
+    fn len_ctr() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "02-len ctr.gb") }
+
+    #[test]
+    fn trigger() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "03-trigger.gb") }
+
+    #[test]
+    fn sweep() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "04-sweep.gb") }
+
+    #[test]
+    fn sweep_details() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "05-sweep details.gb") }
+
+    #[test]
+    fn overflow_on_trigger() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "06-overflow on trigger.gb") }
+
+    #[test]
+    fn len_sweep_period_sync() -> Result<()> {
+        run_dmg_sound_test(DMG_SOUND_DIR, "07-len sweep period sync.gb")
+    }
+
+    #[test]
+    fn len_ctr_during_power() -> Result<()> {
+        run_dmg_sound_test(DMG_SOUND_DIR, "08-len ctr during power.gb")
+    }
+
+    #[ignore]
+    #[test]
+    fn wave_read_while_on() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "09-wave read while on.gb") }
+
+    #[ignore]
+    #[test]
+    fn wave_trigger_while_on() -> Result<()> {
+        run_dmg_sound_test(DMG_SOUND_DIR, "10-wave trigger while on.gb")
+    }
+
+    #[test]
+    fn regs_after_power() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "11-regs after power.gb") }
+
+    #[ignore]
+    #[test]
+    fn wave_write_while_on() -> Result<()> { run_dmg_sound_test(DMG_SOUND_DIR, "12-wave write while on.gb") }
 }

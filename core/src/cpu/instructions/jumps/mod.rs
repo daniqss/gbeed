@@ -5,7 +5,7 @@ mod ret;
 mod reti;
 mod rst;
 
-use std::fmt::Display;
+use core::fmt::Display;
 
 pub use call::Call;
 pub use jp::JpToHL;
@@ -43,7 +43,7 @@ impl JumpCondition {
 }
 
 impl Display for JumpCondition {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             JumpCondition::Zero(_) => write!(f, "z,"),
             JumpCondition::NotZero(_) => write!(f, "nz,"),

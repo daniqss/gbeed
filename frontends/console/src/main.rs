@@ -3,10 +3,7 @@ mod scenes;
 mod utils;
 
 use gbeed_core::prelude::*;
-use gbeed_raylib_common::{
-    Texture, color,
-    settings::{SpeedUpMode, SpeedUpMultiplier, TargetedFps},
-};
+use gbeed_raylib_common::{Texture, color, settings::SpeedUpMultiplier};
 use raylib::prelude::*;
 use std::path::PathBuf;
 
@@ -14,22 +11,17 @@ use crate::controller::ConsoleController;
 use crate::scenes::{EmulatorState, SelectionMenuState};
 use crate::utils::layout::{SCREEN_HEIGHT, SCREEN_WIDTH, draw_footer, draw_header};
 
-struct EmulatorApp {
+struct EmulatorApp<'a> {
     state: EmulatorState,
     gb: Option<Dmg>,
     rom_path: Option<PathBuf>,
     save_path: Option<PathBuf>,
-    controller: ConsoleController,
+    controller: ConsoleController<'a>,
 }
 
-impl EmulatorApp {
-    pub fn new(mut rl: RaylibHandle, thread: RaylibThread) -> Self {
-        let screen = Texture::new(
-            &mut rl,
-            &thread,
-            DMG_SCREEN_WIDTH as i32,
-            DMG_SCREEN_HEIGHT as i32,
-        );
+impl<'a> EmulatorApp<'a> {
+    pub fn new(rl: &'a mut RaylibHandle, thread: &'a RaylibThread, audio: &'a RaylibAudio) -> Self {
+        let screen = Texture::new(rl, thread, DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32);
 
         let palette = color::Palette::default();
 
@@ -39,18 +31,7 @@ impl EmulatorApp {
             rom_path: None,
             save_path: None,
 
-            controller: ConsoleController {
-                screen,
-                palette,
-                palette_color: palette.get_palette_color(),
-                speed_up_mode: SpeedUpMode::default(),
-                speed_up_multiplier: SpeedUpMultiplier::default(),
-                targeted_fps: TargetedFps::default(),
-                draw_debug_info: false,
-
-                rl,
-                thread,
-            },
+            controller: ConsoleController::new(rl, thread, audio, screen, palette),
         }
     }
 
@@ -64,7 +45,7 @@ impl EmulatorApp {
 
         let next_state = match &mut self.state {
             EmulatorState::SelectionMenu(state) => state.update(
-                &self.controller.rl,
+                self.controller.rl,
                 dt,
                 &mut self.rom_path,
                 &mut self.gb,
@@ -77,7 +58,7 @@ impl EmulatorApp {
                 &mut self.save_path,
                 &mut self.controller,
             )?,
-            EmulatorState::GameMenu(state) => state.update(&self.controller.rl, dt, &self.gb),
+            EmulatorState::GameMenu(state) => state.update(self.controller.rl, dt, &self.gb),
             EmulatorState::SettingsMenu(state) => state.update(dt, self.gb.as_ref(), &mut self.controller),
 
             // emulator should have already been closed at this point
@@ -152,10 +133,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .size(SCREEN_WIDTH, SCREEN_HEIGHT)
         .title("gbeed")
         .build();
-    rl.set_target_fps(30);
+    let audio = RaylibAudio::init_audio_device()?;
+
+    rl.set_target_fps(60);
     rl.set_exit_key(None);
 
-    let mut app = EmulatorApp::new(rl, thread);
+    let mut app = EmulatorApp::new(&mut rl, &thread, &audio);
 
     while !app.should_close() {
         app.update()?;
