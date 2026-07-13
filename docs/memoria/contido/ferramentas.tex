@@ -1,0 +1,50 @@
+\chapter{Conclusións}
+\label{chap:conclusions}
+
+\lettrine{N}{este} capítulo falarase das diferentes tecnoloxias e ferramentas empregadas para o desenvolvemento do traballo.
+
+\section{Rust como linguaxe de programación}
+Rust é unha linguaxe de programacion creada por pepito de los palotes en 2008. a idea desta nova linguaxe aparece
+tras un accidente de ascensor debido a un error de memoria. O seu buscaba crear una solucion q permitise ter una linguaxe rapida e eficiente
+capaz de rendir en entornos de programacion embebida ou de sistemas onde se usa principalmente C ou C++, pero aforrando errores tipicos de seguridade 
+na xestion da memoria q é comun nas linguaxes anteriormente citadas.
+Para acadar isto sen necesidade de empregar recolectores de memoria, demasiado custosos en programas onde o rendemento é un requisito critico
+empregase o modelo de pertenencia ou ownership.
+% explicacion de ownership, variable dona, borrowing RAII e smart pointers, cunha pequena comparacion con C++ (moderno e antiguo)
+% uso de unsafe para tecnicas complexas q o compilador nonn poida predecir, pero permitindo manter a localidade das zonas peligrosas
+
+Para implemntar este modelo de uso da memoria empregase un subsistema do compilador de rust, o borrow checker
+% tempos de vida, mellora respecto dos analizadores estaticos e boas practicas (como smart pointers) insertas nas semanticas da linguaxe
+
+Ademais do seu innovador modelo de xestion de memoria, Rust busca ser unha linguaxe comodo e moderna,
+empregando ergonomias e caracteristicas propias de linguaxes funcionais, como ocaml
+% primer compilador en ocaml antes de self hosted,
+% bloques que devolven valores e pattern matching, pero ser obligar nin ter q facer explicitos os bloques imperativos
+% sistema de tipos duros, con sum types e genericos verdadeiros (non plantillas nin preprocesador)
+% implicacions do sistema de tipos na xestion da memoria (falar de lifetimes aqui)
+
+% metaprogramacion potente, inconveniente de ter q utilizar unha sublinguaxe
+
+% miniconclusion: linguaxe complexo pero god moita expresividade
+
+\subsection{Raylib como librería de graficos??}
+Raylib é unha librería creada por Raysan5 para crear videoxogos de forma sinxela.
+% traballou en EA? e creo a libreria no entorno docente para poder ensinar a estudantes de videoxogos con pouca experiencia en programacion.
+% interfaz sinxela sen necesidade dun motor grande e complexo.
+
+% multiplataforma, targetea todos os OS usando opengl, sistemas embebidos ou outro tipo de sistemas con software renderer e a web gracias a WASM
+% e consolas con cores da comunidade, como nintendo 64
+% ten poucas dependencias dependendo da plataforma, e miniaudio para audio. 
+
+% foto da arquitectura
+
+\subsection{Outras tecnoloxías e ferramentas}
+ - Nix: shells de desarrollo para diferentes entornos, para manter as dependendias do proxecto de forma declarativa. ademais da imaxe
+ - docker: para crosscompilacion a alpine e debian
+ - just: como make vamos
+
+
+
+
+
+

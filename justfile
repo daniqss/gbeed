@@ -13,13 +13,9 @@ test *ARGS: fetch-test-roms
     cargo test --features "${DISPLAY_FEATURES}" {{ARGS}}
 
 clean:
-    #!/usr/bin/env bash
-    set -eu
     cargo clean
-    cd docs/memoria
-    rm -f *.acn *.acr *.alg *.bbl *.blg *.fdb_latexmk *.fls *.glg *.glo *.gls *.log *.out *.lot *.lof *.pdf *.toc *.xdv *.ist
-    rm -f anexos/*.aux contido/*.aux portada/*.aux *.aux
-    cd ../..
+    cd docs/memoria && rm -f *.acn *.acr *.alg *.bbl *.blg *.fdb_latexmk *.fls *.glg *.glo *.gls *.log *.out *.lot *.lof *.pdf *.toc *.xdv *.ist
+    cd docs/memoria && rm -f anexos/*.aux contido/*.aux portada/*.aux *.aux
 
 fetch-test-roms:
     #!/usr/bin/env bash
