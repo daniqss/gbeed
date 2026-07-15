@@ -1,0 +1,42 @@
+\chapter{Desenvolvemento do emulador}
+\label{chap:implementacion}
+
+\lettrine{N}{este} capítulo detallarase o proceso de desenvolvemento do emulador,
+as decisións de deseño tomadas e os retos afrontados durante a implementación
+dos diferentes compoñentes descritos no capítulo~\ref{chap:arquitectura}.
+
+\section{Requisitos e restricións}
+% requisitos da libreria: precision, portabilidade, no_std, sen dependencias
+% restricions impostas polas contornas embebidas: memoria, cpu, sen SO
+
+\section{Deseño da librería e da súa API}
+% organizacion en crates/modulos
+% interfaz publica: como se integra o core noutros frontends
+% decision de deseño: core independente de plataforma, frontends aparte
+
+\section{Implementación dos compoñentes}
+
+\subsection{CPU}
+% decodificacion de instrucions, timing por ciclos
+% interrupcions
+
+\subsection{PPU}
+% modos, renderizado por scanline ou por pixel
+
+\subsection{Controladores de bancos de memoria}
+% mbc1, mbc3, mbc5... cales se implementaron e por que
+
+\subsection{Temporizadores}
+
+\subsection{Joypad}
+
+\section{Interfaz para sistemas embebidos}
+% deseño da interfaz para contornos embebidos, no_std
+% framebuffer, entrada, audio
+
+\section{Frontends de referencia}
+% frontend de escritorio con raylib
+% frontend embebido
+
+\section{Optimización para contornas de recursos limitados}
+% perfilado, tamaño do binario, optimizacions de compilacion

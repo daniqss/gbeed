@@ -92,42 +92,165 @@ notablemente grazas á súa estratexia de posicionamento no mercado portatil % c
 \section{Escena da emulación de GameBoy}
 
 \subsection{Emulación en xeral}
-% emulacion como concepto
-% diferentes tipos de emulacion, completa, solo userspace sin kernel ni graficos, emulacion parcial
-% acelerada por hardware, jit compilation 
-% mencion a dolphin y fex y alguna cosa mas
-% pequena mencion a decompilacion, https://www.shipofharkinian.com/ and https://github.com/TwilitRealm/dusklight
-% recompilacion estatica
-% https://github.com/N64Recomp/N64Recomp, https://github.com/hedge-dev/XenonRecomp, 
+A emulación é a técnica que permite executar software deseñado para unha plataforma nunha plataforma diferente,
+replicando mediante software o comportamento do hardware orixinal: o procesador
+, a memoria e dos periféricos da máquina orixinal de xeito que se consigue un funcionamento equivalente ao da máquina orixinal.
+
+Non todos os emuladores abordan este problema co mesmo alcance.
+Na emulación completa, ou emulación de sistema, replícase a totalidade do hardware da máquina obxectivo,
+dende o procesador ata o hardware gráfico e de son.
+É a aproximación habitual na emulación de consolas, e tamén a que segue este traballo.
+Noutros contextos abonda cunha emulación parcial.
+
+O caso máis representativo é QEMU % \cite{qemu}
+, que ofrece os dous alcances: no seu modo de sistema emula unha máquina completa,
+capaz de arrancar un sistema operativo enteiro,
+mentres que no seu modo de usuario executa binarios doutra arquitectura
+sobre o kernel nativo, emulando unicamente o espazo de usuario.
+
+Esta segunda aproximación é a que segue FEX~\cite{fexemu},
+que permite executar binarios x86 e x86-64 sobre sistemas GNU/Linux con procesadores ARM64:
+as chamadas ao sistema trasládanse directamente ao kernel nativo,
+e as librarías gráficas poden substituírse por implementacións nativas,
+evitando así ter que emular hardware ningún.
+Unha solución similar é Rosetta 2~\cite{rosetta2},
+desenvolvida por Apple para facilitar a transición de macOS aos seus procesadores ARM64,
+que traduce as aplicacións x86-64 a código nativo no momento da súa instalación,
+recorrendo á tradución dinámica só cando é imprescindible.
+
+En canto á execución do código emulado, a aproximación máis sinxela é a interpretación,
+na que o emulador decodifica e executa as instrucións do programa unha a unha.
+Para plataformas máis potentes esta técnica resulta insuficiente,
+e recórrese á compilación \textit{just-in-time} (JIT)~\cite{jit},
+que traduce bloques de código da máquina emulada a código nativo durante a execución.
+Os bloques traducidos gárdanse nunha caché de código,
+de xeito que cada bloque só se traduce a primeira vez que se executa
+e as seguintes execucións reutilizan directamente a versión nativa,
+amortizando así o custo da tradución no código que se executa con máis frecuencia.
+
+Algo semellante sucede co hardware gráfico.
+Nas consolas máis sinxelas este emúlase por software,
+empregando a GPU do sistema anfitrión unicamente para presentar a imaxe final,
+pero nas máquinas con hardware 3D as ordes de debuxado do xogo
+tradúcense a chamadas de APIs gráficas modernas,
+sendo a GPU real quen realiza o traballo de renderización.
+Esta tradución esixe xerar e compilar durante a execución shaders equivalentes
+a cada configuración do pipeline gráfico orixinal,
+un proceso custoso que provoca paróns perceptibles durante o xogo,
+polo que os emuladores manteñen tamén unha caché de shaders,
+persistida en disco entre sesións, para que cada shader só se compile unha vez.
+Un exemplo representativo destas técnicas é Dolphin~\cite{Dolphin},
+emulador de GameCube e Wii, que combina un compilador JIT de PowerPC a código nativo
+coa emulación do pipeline gráfico da consola sobre a GPU.
+Ademais da caché de shaders, este emulador introduciu os \textit{ubershaders}~\cite{DolphinUbershaders},
+shaders xenéricos que interpretan a configuración do pipeline na propia GPU,
+eliminando os paróns de compilación mesmo na primeira execución.
+
+Existen ademais alternativas á emulación que parten do mesmo labor de enxeñería inversa.
+A descompilación busca reconstruír o código fonte orixinal do xogo a partir do seu binario,
+o que permite despois compilalo de forma nativa para outras plataformas;
+proxectos como Ship of Harkinian~\cite{ShipofHarkinian}
+, port nativo de The Legend of Zelda: Ocarina of Time,
+ou Dusklight~\cite{Dusklight}
+nacen de descompilacións deste type.
+A recompilación estática, pola súa banda, traduce o binario orixinal unha única vez,
+antes da execución, a código para a plataforma de destino,
+sen necesidade de reconstruír o código fonte nin de manter un emulador en tempo de execución.
+Ferramentas como N64Recomp~\cite{N64Recomp}
+, para Nintendo 64, ou XenonRecomp~\cite{XenonRecomp}
+, para Xbox 360, permitiron a creación de ports nativos de xogos comerciais con melloras
+imposibles nun emulador tradicional, como maiores resolucións e taxas de refresco.
+É o caso de Zelda64Recomp~\cite{Zelda64Recomp}
+, construído sobre N64Recomp para portar The Legend of Zelda: Ocarina of Time,
+e de UnleashedRecomp~\cite{UnleashedRecomp}
+, construído sobre XenonRecomp para portar Sonic Unleashed.
 
 \subsection{Historia emuladores de Game Boy}
 
-% ingenieria inversa y labor de documentacion,
-% pandocs, https://github.com/Gekkio/gb-ctr, 
-% https://rgbds.gbdev.io/ y https://www.gbstudio.dev/ para desarrollo
+A emulación de Game Boy susténtase nun enorme labor de enxeñería inversa e documentación
+realizado pola comunidade ao longo de tres décadas, xa que Nintendo nunca publicou
+a documentación técnica oficial da consola.
+O documento de referencia son os Pan Docs % \cite{pandocs}
+, orixinados a mediados dos anos noventa e mantidos na actualidade pola comunidade gbdev,
+que describen o comportamento de todos os compoñentes do sistema.
+Complementándoos, o Game Boy: Complete Technical Reference % \cite{gbctr}
+de Joonas Javanainen documenta o hardware con precisión de ciclo,
+a partir de medicións sobre consolas reais.
+Este coñecemento acumulado deu lugar tamén a un ecosistema de desenvolvemento activo:
+RGBDS % \cite{rgbds}
+ofrece un ensamblador e enlazador completos para a creación de novos xogos,
+e GB Studio % \cite{gbstudio}
+permite desenvolvelos visualmente sen necesidade de programar,
+o que mantén viva a escena homebrew da consola.
 
-% ejemplos de emuladores
-% visualgameboy
-% NO$GBM
-% retroarch
-% mGBA, sameboy
-% mooneye
-% retroboy
+Os primeiros emuladores apareceron a mediados dos anos noventa,
+coa consola aínda á venda.
+Entre os pioneiros destacan Virtual GameBoy de Marat Fayzullin
+e NO\$GMB de Martin Korth, que xa incluía un completo depurador
+e cuxo autor foi ademais responsable da primeira versión dos Pan Docs.
+Na actualidade os emuladores máis relevantes son proxectos de código aberto
+cun forte foco na precisión:
+SameBoy % \cite{sameboy}
+, considerado un dos máis fieis ao hardware orixinal,
+e mGBA % \cite{mgba}
+, centrado na Game Boy Advance pero con soporte da familia orixinal,
+son os máis empregados, tanto de forma independente como integrados en RetroArch % \cite{retroarch}
+, un frontend multiplataforma que agrupa ducias de emuladores como núcleos intercambiables.
+Mención aparte merece Mooneye GB % \cite{mooneye}
+, tamén de Joonas Javanainen, desenvolvido como ferramenta de investigación do hardware
+e acompañado dunha suite de tests que se converteu nunha referencia
+para validar a precisión doutros emuladores.
 
-% https://github.com/arcanite24/gb-recompiled
-% complicacion frente a otras plataformas, debido a codigo automodificable y correr codigo de ram y eso
+As técnicas máis avanzadas descritas na sección anterior tiveron tamén
+os seus primeiros experimentos nesta plataforma,
+como gb-recompiled % \cite{gbrecompiled}
+, unha proba de concepto de recompilación estática de xogos de Game Boy.
+Porén, esta aproximación resulta aquí máis complicada que noutras plataformas:
+os xogos de Game Boy executan con frecuencia código dende a RAM
+e empregan código automodificable,
+o que impide traducir estaticamente todo o programa
+e obriga a manter un intérprete de apoio en tempo de execución.
 
 \section{Uso comercial de emuladores de Game Boy}
-% mucha gente juega a estas consolas en mobiles
-% hablar de delta en ios, myoldboy en android
-% emuladores de 3ds (gba nativo) y switch hechos por nintendo
+
+A propia Nintendo emprega a emulación para explotar comercialmente o seu catálogo clásico.
+A Consola Virtual da Nintendo 3DS ofrecía xogos de Game Boy e Game Boy Color
+executados sobre un emulador propio,
+mentres que os xogos de Game Boy Advance distribuídos nesa consola
+se executaban de forma nativa,
+aproveitando que o hardware da 3DS inclúe o das súas predecesoras Nintendo DS e Game Boy Advance.
+Na actualidade, o servizo Nintendo Switch Online inclúe catálogos de xogos
+de Game Boy e Game Boy Advance executados sobre emuladores desenvolvidos
+pola súa filial europea Nintendo European Research \& Development (NERD). % \cite{nso}
 
 \subsection{Consolas de emulación}
-% anbernic y otras...
-% principal utilidad es jugar juegos retro
-% habla poco porque son overkill, pueden emular mucho más q una gameboy
+Nos últimos anos consolidouse ademais un mercado de consolas portátiles
+dedicadas exclusivamente á emulación,
+con fabricantes como Anbernic, Miyoo ou Powkiddy % \cite{anbernic}
+que lanzan constantemente novos modelos cun formato que imita o das portátiles clásicas.
+Trátase de dispositivos con procesadores ARM e sistemas GNU/Linux ou Android
+que executan frontends como RetroArch, EmulationStation, iiSU ou CocoonFE;
+e cuxa principal utilidade é xogar comodamente a catálogos retro de múltiples plataformas.
+Dende o punto de vista da emulación de Game Boy non proporcionan ningunha vantaxe técnica, xa que
+o seu hardware é ordes de magnitude máis potente do necesario para emular esta consola,
+sendo capaces de emular sistemas máis complexos.
 
 \subsection{Emulación baseada en hardware}
-% Analogue Pocket, https://www.analogue.co/pocket
-% fpga
-% expensive pero acurate
+Unha aproximación radicalmente distinta á emulación por software
+é a reimplementación do hardware orixinal sobre unha \acrfull{fpga},
+un circuíto integrado reconfigurable que permite describir nunha \acrfull{hdl}
+o comportamento dos chips orixinais e executalo directamente en silicio.
+Fronte a un emulador por software, que reproduce o comportamento do sistema
+de forma secuencial, unha \acrshort{fpga} replica o paralelismo real do hardware,
+o que permite acadar unha precisión e unha latencia moi difíciles de igualar por software.
+
+O exemplo máis destacado no ámbito da Game Boy é a Analogue Pocket % \cite{analoguepocket}
+, unha consola portátil que reimplementa en \acrshort{fpga} o hardware das familias
+Game Boy e Game Boy Advance, entre outras portátiles clásicas,
+e que é compatible cos cartuchos e accesorios orixinais.
+A súa plataforma aberta, openFPGA, permite ademais á comunidade desenvolver
+núcleos para outros sistemas.
+A cambio, trátase dunha solución notablemente máis cara que calquera emulador por software,
+cun prezo de saída de 239,99 \$ USD,
+dirixida a un público que prioriza a fidelidade ao hardware orixinal fronte unha solución económica
+que permita xogar ao mesmo catálogo de xogos.
