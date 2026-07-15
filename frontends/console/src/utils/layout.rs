@@ -3,8 +3,13 @@ use raylib::prelude::*;
 
 use crate::scenes::EmulatorState;
 
-pub const SCREEN_WIDTH: i32 = 240;
-pub const SCREEN_HEIGHT: i32 = 240;
+#[cfg(feature = "gamepi13")]
+const GAMEPI13_FACTOR: i32 = 2;
+#[cfg(not(feature = "gamepi13"))]
+const GAMEPI13_FACTOR: i32 = 1;
+
+pub const SCREEN_WIDTH: i32 = 240 * GAMEPI13_FACTOR;
+pub const SCREEN_HEIGHT: i32 = 240 * GAMEPI13_FACTOR;
 
 pub const PADDING_X: i32 = 5;
 pub const PADDING_Y: i32 = 10;

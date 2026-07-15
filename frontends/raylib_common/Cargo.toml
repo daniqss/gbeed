@@ -7,4 +7,8 @@ edition = "2024"
 gbeed-core = { path = "../../core" }
 paste = "1.0.15"
 raylib = { git = "https://github.com/raylib-rs/raylib-rs", version = "5.7.0" }
+rpi-pal = { version = "0.22.3", optional = true }
+
+[features]
+gamepi13 = ["dep:rpi-pal"]
 
