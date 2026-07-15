@@ -7,7 +7,8 @@ The [`debugger`](./frontends/debugger/) frontend is meant to be used in a normal
 
 
 ![gbeed](./assets/game_collage.png)
-
+<!-- ![Using gbeed with Raspberry Pi Zero 2 W and GamePi13](./assets/gamepi13.png) -->
+<img src="./assets/gamepi13.png" alt="Using gbeed with Raspberry Pi Zero 2 W and GamePi13" width="300">
 
 ## Status
 ### Games
@@ -101,6 +102,11 @@ just cross-build-debian
 This will:
 1. Build the project inside a Debian Bookworm container using the `arm-unknown-linux-gnueabihf` Rust target.
 2. Extract the resulting binary as `./gbeed`.
+
+### How to run on a Waveshare GamePi13
+The [Waveshare GamePi13](https://www.waveshare.com/wiki/GamePi13) is a handheld Raspberry Pi with an SPI display and a PWM speaker, with no DRM/KMS device. gbeed can still boot straight into it on the raylib X11 backend, mirroring the framebuffer to the SPI panel with `fbcp` and routing audio to the speaker.
+
+Using the [Debian armv6l build](#how-to-build-for-armv6l-debian-linux), the full device setup (overlays, `config.txt`, tty1 autologin, X session and audio) is documented in [docs/deploy-gamepi13.md](./docs/deploy-gamepi13.md).
 
 
 ## Tests
