@@ -60,7 +60,7 @@ RUN mkdir -p frontends/raylib_common/src && echo "" > frontends/raylib_common/sr
 
 # LIBCLANG_PATH resolved at runtime, llvm version varies by base image
 RUN export LIBCLANG_PATH=$(llvm-config --libdir) && \
-    cargo build --release --target arm-unknown-linux-gnueabihf || true
+    cargo build --release --target arm-unknown-linux-gnueabihf -p gbeed-console --features gamepi13 || true
 
 COPY core/src core/src
 COPY frontends frontends
@@ -69,4 +69,4 @@ COPY frontends frontends
 RUN touch core/src/lib.rs frontends/console/src/main.rs frontends/debugger/src/main.rs frontends/raylib_common/src/lib.rs
 
 RUN export LIBCLANG_PATH=$(llvm-config --libdir) && \
-    cargo build --release --target arm-unknown-linux-gnueabihf
+    cargo build --release --target arm-unknown-linux-gnueabihf -p gbeed-console --features gamepi13

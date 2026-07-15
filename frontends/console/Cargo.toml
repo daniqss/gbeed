@@ -13,3 +13,6 @@ path = "src/main.rs"
 gbeed-core = { path = "../../core" }
 raylib = { git = "https://github.com/raylib-rs/raylib-rs", version = "5.7.0" }
 gbeed-raylib-common = { path = "../raylib_common" }
+
+[features]
+gamepi13 = ["gbeed-raylib-common/gamepi13"]

@@ -1,7 +1,8 @@
 use gbeed_core::prelude::*;
 use raylib::prelude::*;
-use std::fs;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::{fs, io};
 
 mod controller;
 mod scenes;
@@ -37,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "-h" | "--help" => {
                 print_help();
-                std::process::exit(0);
+                return Ok(());
             }
             _ => {}
         }
