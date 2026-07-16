@@ -128,6 +128,7 @@ dependencies = [
  "gbeed-core",
  "paste",
  "raylib",
+ "rpi-pal",
 ]
 
 [[package]]
@@ -317,6 +318,16 @@ name = "regex-syntax"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
+
+[[package]]
+name = "rpi-pal"
+version = "0.22.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6046c01c7ba983f1a2e22778f6b72c43109a787d426d132989b47d2434c1c36"
+dependencies = [
+ "libc",
+ "regex",
+]
 
 [[package]]
 name = "rustc-hash"

@@ -1,0 +1,72 @@
+FROM dockcross/linux-armv6
+
+ENV PATH="/opt/rustup/cargo/bin:${PATH}"
+RUN rustup target add arm-unknown-linux-gnueabihf
+
+# configure cargo to use the dockcross cross-linker
+RUN mkdir -p /opt/rustup/cargo && printf \
+    '[target.arm-unknown-linux-gnueabihf]\nlinker = "armv6-unknown-linux-gnueabihf-gcc"\n' \
+    > /opt/rustup/cargo/config.toml
+ 
+# linker only needs valid symbol tables; actual implementations come from RPi OS at runtime.
+RUN dpkg --add-architecture armhf && apt-get update && apt-get install -y --no-install-recommends \
+    llvm libclang-dev \
+    libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+    libxext-dev libxrender-dev libxfixes-dev libxcb1-dev \
+    libgl1-mesa-dev libasound2-dev \
+    libx11-dev:armhf libxrandr-dev:armhf libxinerama-dev:armhf libxcursor-dev:armhf libxi-dev:armhf \
+    libxext-dev:armhf libxrender-dev:armhf libxfixes-dev:armhf libxcb1-dev:armhf \
+    libgl1-mesa-dev:armhf libasound2-dev:armhf \
+    && SYSROOT=/usr/xcc/armv6-unknown-linux-gnueabihf/armv6-unknown-linux-gnueabihf/sysroot \
+    && mkdir -p $SYSROOT/usr/include $SYSROOT/usr/lib \
+
+    && [ -d /usr/include/X11 ] && cp -rn /usr/include/X11 $SYSROOT/usr/include/ \
+    && [ -d /usr/include/GL ] && cp -rn /usr/include/GL $SYSROOT/usr/include/ \
+    && ( [ -d /usr/include/xcb ] && cp -rn /usr/include/xcb $SYSROOT/usr/include/ || true ) \
+    && [ -d /usr/include/alsa ] && cp -rn /usr/include/alsa $SYSROOT/usr/include/ \
+
+    && cp -P /usr/lib/arm-linux-gnueabihf/libX11.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libGL.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXrandr.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXinerama.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXcursor.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXi.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXext.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXrender.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libXfixes.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libxcb.so* $SYSROOT/usr/lib/ \
+    && cp -P /usr/lib/arm-linux-gnueabihf/libasound.so* $SYSROOT/usr/lib/ \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PKG_CONFIG_ALLOW_CROSS=1
+# --allow-shlib-undefined its used to ignore unresolved transitive deps in the stub .so files
+# the real implementations are provided by Raspberry Pi OS at runtime.
+ENV RUSTFLAGS="-C target-cpu=arm1176jzf-s -C target-feature=+vfp2 -C link-arg=-Wl,--allow-shlib-undefined"
+
+WORKDIR /app
+
+# copy only the files needed to compile deps, to take advantage of Docker cache and avoid recompiling deps
+COPY Cargo.toml Cargo.lock ./
+COPY core/Cargo.toml core/Cargo.toml
+COPY frontends/console/Cargo.toml frontends/console/Cargo.toml
+COPY frontends/debugger/Cargo.toml frontends/debugger/Cargo.toml
+COPY frontends/raylib_common/Cargo.toml frontends/raylib_common/Cargo.toml
+COPY frontends/console/build.rs frontends/console/build.rs
+
+RUN mkdir -p core/src && echo "" > core/src/lib.rs
+RUN mkdir -p frontends/console/src && echo "fn main() {}" > frontends/console/src/main.rs
+RUN mkdir -p frontends/debugger/src && echo "fn main() {}" > frontends/debugger/src/main.rs
+RUN mkdir -p frontends/raylib_common/src && echo "" > frontends/raylib_common/src/lib.rs
+
+# LIBCLANG_PATH resolved at runtime, llvm version varies by base image
+RUN export LIBCLANG_PATH=$(llvm-config --libdir) && \
+    cargo build --release --target arm-unknown-linux-gnueabihf -p gbeed-console --features gamepi13 || true
+
+COPY core/src core/src
+COPY frontends frontends
+
+# touch the entry points to force recompilation
+RUN touch core/src/lib.rs frontends/console/src/main.rs frontends/debugger/src/main.rs frontends/raylib_common/src/lib.rs
+
+RUN export LIBCLANG_PATH=$(llvm-config --libdir) && \
+    cargo build --release --target arm-unknown-linux-gnueabihf -p gbeed-console --features gamepi13

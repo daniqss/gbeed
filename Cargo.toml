@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "core",
     "frontends/debugger",
@@ -17,8 +17,15 @@ panic = "abort"
 strip = true
 overflow-checks = false
 
+
 [profile.bench]
 inherits = "release"
-debug = true
-lto = "thin"
+debug = "line-tables-only"
 strip = false
+lto = "thin"
+codegen-units = 16
+split-debuginfo = "unpacked"
+
+[profile.bench.package."*"]
+debug = "line-tables-only"
+

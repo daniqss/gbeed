@@ -1,7 +1,7 @@
 .direnv/
 
 target/
-gbeed
+gbeed*
 dist/
 
 # nix symlink

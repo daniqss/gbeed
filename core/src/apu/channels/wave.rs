@@ -159,7 +159,7 @@ impl Wave {
     pub fn is_enabled(&self) -> u8 { if self.enabled && self.dac_enable { 0x04 } else { 0 } }
 
     #[inline(always)]
-    fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
+    pub fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
 
     #[inline(always)]
     fn get_output_level(&self, sample: u8) -> i16 {
@@ -173,14 +173,15 @@ impl Wave {
         }
     }
 
+    #[inline]
     pub fn get_sample(&self) -> i16 {
         if !self.enabled || !self.dac_enable {
             return 0;
         }
 
-        let sample = self.wave_ram[self.sample_idx / 2];
+        let sample = self.wave_ram[self.sample_idx >> 1];
 
-        let sample = if self.sample_idx.is_multiple_of(2) {
+        let sample = if self.sample_idx & 1 == 0 {
             sample >> 4
         } else {
             sample & 0x0F
@@ -189,18 +190,48 @@ impl Wave {
         self.get_output_level(sample)
     }
 
-    pub fn tick(&mut self) {
-        if self.timer > 0 {
-            self.timer -= 1;
+    pub fn tick(&mut self, n: u32) {
+        if n == 0 {
+            return;
+        }
+        let period_ticks = ((2048 - self.get_period()) as u32) * 2;
+        let mut t = self.timer as u32;
+        let mut remaining = n;
+        let mut reloaded = false;
+
+        if t == 0 {
+            t = period_ticks;
+            self.sample_idx = (self.sample_idx + 1) & 31;
+            reloaded = true;
+            remaining -= 1;
+            if remaining == 0 {
+                self.timer = t as u16;
+                self.wave_ram_accessible = reloaded;
+                return;
+            }
         }
 
-        if self.timer == 0 {
-            let period = self.get_period();
-            self.timer = (2048 - period) * 2;
-            self.sample_idx = (self.sample_idx + 1) % 32;
-            self.wave_ram_accessible = true;
-        } else {
-            self.wave_ram_accessible = false;
+        if remaining < t {
+            self.timer = (t - remaining) as u16;
+            self.wave_ram_accessible = reloaded;
+            return;
         }
+
+        remaining -= t;
+        self.sample_idx = (self.sample_idx + 1) & 31;
+        reloaded = true;
+
+        let advances = remaining / period_ticks;
+        let leftover = remaining % period_ticks;
+        if advances > 0 {
+            self.sample_idx = (self.sample_idx + advances as usize) & 31;
+        }
+        self.timer = if leftover == 0 {
+            period_ticks as u16
+        } else {
+            (period_ticks - leftover) as u16
+        };
+
+        self.wave_ram_accessible = leftover == 0 && reloaded;
     }
 }

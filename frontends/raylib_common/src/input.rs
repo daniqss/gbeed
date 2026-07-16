@@ -155,9 +155,121 @@ impl ToInputState for InputMouseTriggers {
     }
 }
 
-// sneak peek of future GPIO support
+#[cfg(feature = "gamepi13")]
+mod gpio {
+    use super::{InputState, ToInputState};
+    use raylib::prelude::RaylibHandle;
+    use rpi_pal::gpio::{Gpio, InputPin};
+    use std::sync::{Arc, OnceLock};
+
+    // BCM pin numbers from the GamePi13 manufacturer pinout
+    const PIN_UP: u8 = 5;
+    const PIN_DOWN: u8 = 6;
+    const PIN_LEFT: u8 = 16;
+    const PIN_RIGHT: u8 = 13;
+    const PIN_A: u8 = 21;
+    const PIN_B: u8 = 20;
+    const PIN_X: u8 = 15;
+    const PIN_Y: u8 = 12;
+    const PIN_L: u8 = 23;
+    const PIN_R: u8 = 14;
+    const PIN_START: u8 = 26;
+    const PIN_SELECT: u8 = 19;
+
+    #[derive(Debug)]
+    struct GpioPins {
+        up: InputPin,
+        down: InputPin,
+        left: InputPin,
+        right: InputPin,
+        a: InputPin,
+        b: InputPin,
+        x: InputPin,
+        y: InputPin,
+        l: InputPin,
+        r: InputPin,
+        start: InputPin,
+        select: InputPin,
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct InputGpioTriggers {
+        pins: Arc<GpioPins>,
+    }
+
+    impl InputGpioTriggers {
+        pub fn new() -> rpi_pal::gpio::Result<Self> {
+            let gpio = Gpio::new()?;
+            // buttons short the pin to ground, so pull-up and read active-low
+            let pin = |bcm: u8| gpio.get(bcm).map(|p| p.into_input_pullup());
+
+            Ok(Self {
+                pins: Arc::new(GpioPins {
+                    up: pin(PIN_UP)?,
+                    down: pin(PIN_DOWN)?,
+                    left: pin(PIN_LEFT)?,
+                    right: pin(PIN_RIGHT)?,
+                    a: pin(PIN_A)?,
+                    b: pin(PIN_B)?,
+                    x: pin(PIN_X)?,
+                    y: pin(PIN_Y)?,
+                    l: pin(PIN_L)?,
+                    r: pin(PIN_R)?,
+                    start: pin(PIN_START)?,
+                    select: pin(PIN_SELECT)?,
+                }),
+            })
+        }
+
+        /// Every scene builds its own `InputManager`, but the kernel only lets a
+        /// process claim each pin once, so all of them share this single instance
+        pub fn shared() -> Option<Self> {
+            static SHARED: OnceLock<Option<InputGpioTriggers>> = OnceLock::new();
+            SHARED
+                .get_or_init(|| {
+                    InputGpioTriggers::new()
+                        .inspect_err(|e| eprintln!("gamepi13: gpio input unavailable: {e}"))
+                        .ok()
+                })
+                .clone()
+        }
+    }
+
+    impl ToInputState for InputGpioTriggers {
+        fn to_input(&self, _rl: &RaylibHandle) -> InputState {
+            let pins = &self.pins;
+            InputState {
+                up: pins.up.is_low(),
+                down: pins.down.is_low(),
+                left: pins.left.is_low(),
+                right: pins.right.is_low(),
+                a: pins.a.is_low(),
+                b: pins.b.is_low(),
+                start: pins.start.is_low(),
+                select: pins.select.is_low(),
+                escape: pins.x.is_low() || pins.y.is_low(),
+                speed_up: pins.l.is_low() || pins.r.is_low(),
+            }
+        }
+    }
+}
+
+#[cfg(feature = "gamepi13")]
+pub use gpio::InputGpioTriggers;
+
+#[cfg(not(feature = "gamepi13"))]
 #[derive(Debug, Default, Copy, Clone)]
-pub struct _InputGpioTriggers {}
+pub struct InputGpioTriggers {}
+
+#[cfg(not(feature = "gamepi13"))]
+impl InputGpioTriggers {
+    pub fn shared() -> Option<Self> { None }
+}
+
+#[cfg(not(feature = "gamepi13"))]
+impl ToInputState for InputGpioTriggers {
+    fn to_input(&self, _rl: &RaylibHandle) -> InputState { InputState::default() }
+}
 
 impl InputState {
     pub fn merge(rl: &RaylibHandle, states: &[&dyn ToInputState]) -> InputState {
@@ -218,7 +330,7 @@ macro_rules! impl_input_methods {
 pub struct InputManager {
     pub key_triggers: InputKeyTriggers,
     pub mouse_triggers: Option<InputMouseTriggers>,
-    pub gpio_triggers: Option<_InputGpioTriggers>,
+    pub gpio_triggers: Option<InputGpioTriggers>,
     pub current: InputState,
     pub previous: InputState,
     pub repeat_timer: f32,
@@ -226,7 +338,7 @@ pub struct InputManager {
 }
 
 impl Default for InputManager {
-    fn default() -> Self { Self::new(0.08, None, None, None) }
+    fn default() -> Self { Self::new(0.08, None, None, InputGpioTriggers::shared()) }
 }
 
 impl InputManager {
@@ -234,7 +346,7 @@ impl InputManager {
         debounce: f32,
         key_triggers: Option<InputKeyTriggers>,
         mouse_triggers: Option<InputMouseTriggers>,
-        gpio_triggers: Option<_InputGpioTriggers>,
+        gpio_triggers: Option<InputGpioTriggers>,
     ) -> Self {
         Self {
             key_triggers: key_triggers.unwrap_or_default(),
@@ -275,21 +387,14 @@ impl InputManager {
     }
 
     fn get_input(&self, rl: &RaylibHandle) -> InputState {
-        let mut current = self.key_triggers.to_input(rl);
+        let mut sources: Vec<&dyn ToInputState> = vec![&self.key_triggers];
         if let Some(mouse) = &self.mouse_triggers {
-            let mouse_state = mouse.to_input(rl);
-            current.up |= mouse_state.up;
-            current.down |= mouse_state.down;
-            current.left |= mouse_state.left;
-            current.right |= mouse_state.right;
-            current.a |= mouse_state.a;
-            current.b |= mouse_state.b;
-            current.start |= mouse_state.start;
-            current.select |= mouse_state.select;
-            current.escape |= mouse_state.escape;
-            current.speed_up |= mouse_state.speed_up;
+            sources.push(mouse);
         }
-        current
+        if let Some(gpio) = &self.gpio_triggers {
+            sources.push(gpio);
+        }
+        InputState::merge(rl, &sources)
     }
 
     pub fn state(&self) -> InputState { self.current }

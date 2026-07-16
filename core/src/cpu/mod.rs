@@ -97,6 +97,7 @@ impl Cpu {
         self.halted = AFTER_BOOT_CPU.halted;
     }
 
+    #[inline(never)]
     pub fn step(gb: &mut Dmg) -> Result<Option<InstructionBox>, InstructionError> {
         // check if is neccessatry to handle interrupts before executing the instruction
         if Cpu::handle_interrupts(gb) {

@@ -176,8 +176,9 @@ impl SweepPulse {
     }
 
     #[inline(always)]
-    fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
+    pub fn get_period(&self) -> u16 { ((self.period_high as u16 & 0x07) << 8) | (self.period_low as u16) }
 
+    #[inline]
     pub fn get_sample(&self, volume: u8) -> i16 {
         if !self.enabled {
             return 0;
@@ -191,16 +192,42 @@ impl SweepPulse {
         }
     }
 
-    pub fn tick(&mut self) {
-        if self.timer > 0 {
-            self.timer -= 1;
+    pub fn tick(&mut self, n: u32) {
+        if n == 0 {
+            return;
+        }
+        let period_ticks = ((2048 - self.get_period()) as u32) * 4;
+        let mut t = self.timer as u32;
+        let mut remaining = n;
+
+        if t == 0 {
+            t = period_ticks;
+            self.duty_step = (self.duty_step + 1) & 7;
+            remaining -= 1;
+            if remaining == 0 {
+                self.timer = t as u16;
+                return;
+            }
         }
 
-        if self.timer == 0 {
-            let period = self.get_period();
-            self.timer = (2048 - period) * 4;
-            self.duty_step = (self.duty_step + 1) % 8;
+        if remaining < t {
+            self.timer = (t - remaining) as u16;
+            return;
         }
+
+        remaining -= t;
+        self.duty_step = (self.duty_step + 1) & 7;
+
+        let advances = remaining / period_ticks;
+        let leftover = remaining % period_ticks;
+        if advances > 0 {
+            self.duty_step = self.duty_step.wrapping_add(advances as u8) & 7;
+        }
+        self.timer = if leftover == 0 {
+            period_ticks as u16
+        } else {
+            (period_ticks - leftover) as u16
+        };
     }
 
     /// period sweep logic (nr10)
