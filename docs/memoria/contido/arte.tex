@@ -165,24 +165,36 @@ imposibles nun emulador tradicional, como maiores resolucións e taxas de refres
 e de UnleashedRecomp~\cite{UnleashedRecomp}
 , construído sobre XenonRecomp para portar Sonic Unleashed.
 
-\subsection{Historia emuladores de Game Boy}
-
+\subsection{A comunidade de desenvolvemento de Game Boy}
+\subsubsection{Enxeñería inversa e documentación}
 A emulación de Game Boy susténtase nun enorme labor de enxeñería inversa e documentación
 realizado pola comunidade ao longo de tres décadas, xa que Nintendo nunca publicou
 a documentación técnica oficial da consola.
 O documento de referencia son os Pan Docs % \cite{pandocs}
-, orixinados a mediados dos anos noventa e mantidos na actualidade pola comunidade gbdev,
-que describen o comportamento de todos os compoñentes do sistema.
+, orixinados a mediados dos anos noventa,
+migrados a formato Markdown en 2020 e mantidos dende entón nun repositorio aberto
+da comunidade gbdev en GitHub, que describen o comportamento de todos os compoñentes do sistema.
 Complementándoos, o Game Boy: Complete Technical Reference % \cite{gbctr}
-de Joonas Javanainen documenta o hardware con precisión de ciclo,
-a partir de medicións sobre consolas reais.
-Este coñecemento acumulado deu lugar tamén a un ecosistema de desenvolvemento activo:
+de Joonas Javanainen, coñecido na comunidade como Gekkio,
+documenta o hardware con precisión de ciclo a partir de medicións sobre consolas reais;
+trátase dun traballo aínda inacabado, de desenvolvemento aberto e publicado baixo licenza Creative Commons.
+
+\subsubsection{Ferramentas de desenvolvemento}
+Este coñecemento acumulado deu lugar tamén a un ecosistema de desenvolvemento activo.
 RGBDS % \cite{rgbds}
-ofrece un ensamblador e enlazador completos para a creación de novos xogos,
-e GB Studio % \cite{gbstudio}
-permite desenvolvelos visualmente sen necesidade de programar,
+, cuxas orixes se remontan a 1996 co ensamblador xAsm de Carsten Sørensen,
+ofrece hoxe un conxunto completo de ferramentas para a creación de novos xogos:
+rgbasm e rgblink, como ensamblador e enlazador; rgbfix, que axusta a cabeceira
+e a suma de comprobación da ROM; e rgbgfx, que converte imaxes en gráficos compatibles ca consola.
+GB Studio % \cite{gbstudio https://www.gbstudio.dev/pl/about }
+, creado por Chris Maltby a partir dun xogo feito para unha \textit{game jam} 
+e publicado en 2019,
+vai un paso máis aló e permite desenvolver xogos completos de xeito visual,
+mediante bloques de script e sen necesidade de programar,
+cun editor de música integrado e exportación directa a ficheiros ROM xogables,
 o que mantén viva a escena homebrew da consola.
 
+\subsubsection{Historia da emulación da consola}
 Os primeiros emuladores apareceron a mediados dos anos noventa,
 coa consola aínda á venda.
 Entre os pioneiros destacan Virtual GameBoy de Marat Fayzullin
@@ -212,7 +224,7 @@ o que impide traducir estaticamente todo o programa
 e obriga a manter un intérprete de apoio en tempo de execución.
 
 \section{Uso comercial de emuladores de Game Boy}
-
+\subsection{Emuladores oficiais de Nintendo}
 A propia Nintendo emprega a emulación para explotar comercialmente o seu catálogo clásico.
 A Consola Virtual da Nintendo 3DS ofrecía xogos de Game Boy e Game Boy Color
 executados sobre un emulador propio,
@@ -254,3 +266,51 @@ A cambio, trátase dunha solución notablemente máis cara que calquera emulador
 cun prezo de saída de 239,99 \$ USD,
 dirixida a un público que prioriza a fidelidade ao hardware orixinal fronte unha solución económica
 que permita xogar ao mesmo catálogo de xogos.
+
+\section{Posicionamento do proxecto}
+O acceso ao catálogo destas consolas é accesible ao público xeral,
+xa sendo mediante alternativas oficiais de Nintendo ou a través de un dos moitos
+emuladores dispoñibles para todas as plataformas.
+O que segue a ser un reto para os usuarios non técnicos e a posibilidade
+de xogar cunha experiencia de consola portátil óptima.
+
+Unha consola orixinal moitas veces non é unha opción óptima, é precisa de
+traballos de "modding" para axustala aos estandares de calidade que espera un xogador moderno.
+Neste respecto, o mod más popular é a instalación dunha pantalla retroiluminada con maior resolución,
+que permite xogar ca calidade de imaxe que se espera dunha consola moderna, ou a instalación 
+dunha batería recargable mediante un conector USB-C, que permite unha autonomía de varias horas
+sen necesidade de empregar pilas.
+
+Incluso sen ter en conta os custos destas modificacións, o maior problema é a inaludible
+escaseza do hardware orixinal, que co paso do tempo vai ir desaparecendo e subindo de prezo
+debido á súa condición de obxecto de coleccionismo.
+
+Como tamén se comentaba anteriormente, outras solucións como as consolas de 
+% Anbernic RG34XX ou analog son caras (e a primeira con mais cousas, non é unha experiencia "gameboy")
+% levar a calquera lado, flow llavero
+% https://es.aliexpress.com/item/1005012153168550.html?pdp_npi=6%40dis%21EUR%21107.32%2164.39%21%21%21809.96%21485.96%21%402151fca717839716521216728e0e53%2112000057643670287%21affd%21%21%21%211%210%21&dp=Cj0KCQjwguLSBhDLARIsAH-yPrFNBaf7WCxeoAEMqFcNJBA5i61r-NhAAmPRfdqJTlUy8UQA-NzgRLIaAmzEEALw_wcB&cn=esnew&gad_source=1&gad_campaignid=22637707836&gbraid=0AAAAA_6MiNPPwLniBzA0W6ksaoN1vubyM&gclid=Cj0KCQjwguLSBhDLARIsAH-yPrFNBaf7WCxeoAEMqFcNJBA5i61r-NhAAmPRfdqJTlUy8UQA-NzgRLIaAmzEEALw_wcB&aff_fcid=66fc3df109204859b6aeedf7ddfb93c0-1784243120850-01105-_oEmQFg2&aff_fsk=_oEmQFg2&aff_platform=api-new-product-query&sk=_oEmQFg2&aff_trace_key=66fc3df109204859b6aeedf7ddfb93c0-1784243120850-01105-_oEmQFg2&terminal_id=e38023c16d72404ba0e7ef31f31b3438&afSmartRedirect=y
+% ese flow
+% estes chollos estan ben, son caros alguns para o pouco hardware q necesitan
+% ainda asi, dependes de fabricante externo, non conservas porque este fabricante pode desaparecer
+
+% DIY con hardware barato e mais dispoñible
+% existen proxectos de emuladores de Game Boy en esp32 ou raspberry, pero non estan documentados nin
+% pensados para ser construídos por calquera, e moito menos para ser modificados ou mellorados.
+% SOLUCION
+% Este proxecto de emulador establece as bases para emulador para ser usado en varios contextos
+% EXEMPLOS 
+% exemplo software de este estilo
+% https://github.com/deltabeard/Peanut-GB (A very fast and portable Game Boy (DMG) emulator single header library written in C99.)
+% (espeficico pero menos ampliable ao ser)
+% https://www.youtube.com/watch?v=KWsbca9rGX0&t=204s
+% https://github.com/ohasanov-hbrw/ESP32-Gameboy
+% https://github.com/ducalex/retro-go
+
+% https://www.youtube.com/watch?v=-UoU_klG66A usando gamepi20 (mais caro e menos especifico)
+
+% e propon unha solucion con hardware barato e accesible para calquera
+% podendo usalo facilmente grazas a documentacion de como montalo
+% experiencia dedicada a gameboy pero ampliable polo usuario para outros fins
+% usando linux permite ampliar os usos do hardware facilmente, dispoñible para usuarios avanzados
+% q busquen mais q xogar a xogos de game boy
+% gooooood 
