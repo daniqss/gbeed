@@ -5,23 +5,26 @@ Este traballo estuda o desenvolvemento dun emulador da consola Game Boy orixinal
 Isto supón o deseño e a implementación dun intérprete do conxunto de instrucións do Sharp LR35902
 e do resto do hardware que permite o correcto funcionamento da consola,
 como a unidade de procesamento de píxeles (PPU) e os controladores de bancos de memoria (MBC).
-O obxectivo é crear un emulador multiplataforma e facilmente reusable, que permita ser integrado en sistemas embebidos.
-Para isto creouse un núcleo de emulación independente e dúas implementacións de interface de usuario,
-unha adicada a usarse nun dispositivo da familia Raspberry Pi Zero e outra adicada para 
-depuración en sesións gŕaficas completas e no navegador.
+O obxectivo é crear un emulador multiplataforma e facilmente reusable
+, que permita ser integrado en sistemas embebidos.
+Para isto creouse un núcleo de emulación independente e
+dúas implementacións de interface de usuario
+: unha adicada a depuración e outra con un formato consola.
+Esta última emprégase cunha Raspberry Pi Zero para ofertar unha experiencia de consola DIY.
+
 
   \vspace*{25pt}
   \begin{segundoresumo}
-This work studies the development of an emulator for the original Game Boy console.
-This involves the design and implementation of an instruction set interpreter
-for the Sharp LR35902 and the rest of the hardware that enables
-the proper functioning of the console,
-such as the Pixel Processing Unit (PPU) and the Memory Bank Controllers (MBC).
-The goal is to create a cross-platform and easily reusable emulator
-that can be integrated into embedded systems.
-For this purpose, an independent emulation core and two frontend implementations were created:
-one dedicated for use on a Raspberry Pi Zero family device,
-and another dedicated to debugging in full graphical sessions and in the browser.
+  This work studies the development of an emulator for the original Game Boy console.
+  This involves the design and implementation of an instruction set interpreter
+  for the Sharp LR35902 and the rest of the hardware that enables
+  the proper functioning of the console,
+  such as the Pixel Processing Unit (PPU) and the Memory Bank Controllers (MBC).
+  The goal is to create a cross-platform and easily reusable emulator
+  that can be integrated into embedded systems. To this end
+  , an independent emulation core and two user interface implementations were developed
+  : one dedicated to debugging and another with a console-style format.
+  The last one is used with a Raspberry Pi Zero to offer a DIY console experience.
   \end{segundoresumo}
 \vspace*{25pt}
 \input{portada/palabras_chave}
