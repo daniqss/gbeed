@@ -2,7 +2,7 @@
 \label{chap:ferramentas}
 
 \lettrine{N}{este} capítulo falarase das diferentes tecnoloxías e ferramentas empregadas para o desenvolvemento do traballo:
-a linguaxe de programación e o seu ecosistema, a librería gráfica empregada nos frontends
+a linguaxe de programación e o seu ecosistema, a librería gráfica empregada nas interfaces
 e as ferramentas que sosteñen o fluxo de traballo do proxecto.
 Pecharase o capítulo cunha xustificación da elección destas tecnoloxías
 en relación cos obxectivos do proxecto.
@@ -41,7 +41,7 @@ o \textit{borrow checker}.
 Este asocia a cada referencia un tempo de vida (\textit{lifetime})
 e comproba que ningunha referencia sobreviva ao valor ao que apunta
 nin incumpra as regras de exclusividade dos préstamos.
-Conceptualmente realiza unha labor semellante á dos analizadores estáticos empregados con C ou C++,
+Conceptualmente realiza un labor semellante ao dos analizadores estáticos empregados con C ou C++,
 pero incrustando as regras na semántica da linguaxe,
 facendo unha análise exhaustiva de forma obrigatoria en tempo de compilación,
 en lugar de ser unha ferramenta externa, opcional e baseada en heurísticas.
@@ -151,19 +151,20 @@ o que garante que todas as máquinas compilen exactamente o mesmo código.
 Cargo permite ademais organizar varios crates relacionados nun \textit{workspace} común,
 que comparte a resolución de dependencias e o directorio de compilación.
 Este proxecto está estruturado deste xeito,
-cun crate central co núcleo do emulador e crates separados para cada frontend,
+cun crate central co núcleo do emulador e crates separados para cada interface,
 como se detallará no capítulo~\ref{chap:implementacion}.
 
 O ecosistema complétase cunha serie de ferramentas oficiais e de terceiros.
 Cargo inclúe subcomandos para xestionar dependencias, crear proxectos e compilar e executar tanto os proxectos como as súas probas.
 Para outras tarefas, pódense incluír subcomandos externos, que permiten ampliar a funcionalidade de Cargo.
 
-\textit{rustfmt} e \textit{clippy} son o formatador e o linter oficiais, para manter un código limpo e con estilo consistente.
+\textit{rustfmt} e \textit{clippy} son o formatador e o \textit{linter} oficiais, para manter un código limpo e con estilo consistente.
 Neste proxecto tamén se usa \textit{cargo-flamegraph}, que permite dende a interface de Cargo xerar gráficos
 a partir dos datos obtidos empregando o perfilador \textit{perf} de Linux.
 
 \section{Raylib como librería gráfica}
 Raylib~\cite{Raylib}
+% cita entrevista eric leyendas y videojuegos?
 é unha librería escrita en C99 e creada por Ramon Santamaria (Raysan5) para crear videoxogos de forma sinxela.
 Naceu nunha contorna docente, como ferramenta para ensinar programación de videoxogos
 a estudantes con pouca experiencia previa en programación.
@@ -175,7 +176,7 @@ organizada en módulos independentes.
 O módulo central, rcore, xestiona as peculiaridades da plataforma empregada, como a creación da ventá,
 o contexto gráfico, a entrada e o bucle principal.
 Sobre el sitúanse os módulos de debuxado de formas, texturas, texto e modelos 3D,
-que non chaman directamente á API gráfica do sistema,
+que non chaman directamente á \acrshort{api} gráfica do sistema,
 senón a unha capa intermedia, rlgl,
 que abstrae as diferentes versións de OpenGL dispoñibles en cada plataforma.
 O audio xestiónao o módulo raudio, construído sobre miniaudio.
@@ -193,10 +194,10 @@ variando unicamente en función da plataforma de destino.
 Esta organización por capas é a que lle permite ser fortemente multiplataforma.
 Nos sistemas de escritorio, rcore delega a xestión da ventá, do contexto OpenGL e da entrada
 en GLFW~\cite{Glfw},
-unha librería multiplataforma que soporta Windows, macOS e Linux,
+unha librería multiplataforma compatible con Windows, macOS e Linux,
 tanto baixo X11 como baixo Wayland.
 Na web mantense a mesma interface:
-o compilador Emscripten proporciona unha implementación da API de GLFW sobre o navegador,
+o compilador Emscripten proporciona unha implementación da \acrshort{api} de GLFW sobre o navegador,
 na que a ventá pasa a ser un elemento \textit{canvas},
 a entrada tradúcese a eventos do DOM
 e as chamadas a OpenGL ES execútanse sobre WebGL,
@@ -212,7 +213,7 @@ polo que o mesmo código fonte pode dirixirse a calquera destas plataformas sen 
 Neste traballo a librería emprégase a través de raylib-rs~\cite{RaylibRs},
 o seu \textit{binding} para Rust, que expón estes backends como \textit{features} de cargo
 (por exemplo \texttt{raylib/wayland} ou \texttt{raylib/drm}),
-o que permite que os frontends do emulador compilen para escritorio, web e embebidos
+o que permite que as interfaces do emulador compilen para escritorio, web e embebidos
 a partir do mesmo código.
 
 \section{Outras ferramentas}
@@ -231,7 +232,7 @@ e son compartidos entre diferentes desenvolvedores con contornas diferentes.
 
 
 \subsection{Nix e as shells de desenvolvemento}
-Nix % \cite{nix}
+Nix~\cite{nix}
 é un xestor de paquetes declarativo centrado na reproducibilidade.
 Cada paquete descríbese como unha función pura das súas dependencias
 e instálase nunha ruta illada e inmutable,
@@ -312,14 +313,14 @@ unha consola portátil baseada na Raspberry Pi cuxa pantalla SPI carece de sopor
 
 \subsubsection{Compilación para a web con Emscripten}
 A versión web constrúese co obxectivo \texttt{wasm32-unknown-emscripten}.
-Emscripten % \cite{emscripten}
+Emscripten~\cite{emscripten}
 é unha cadea de ferramentas que compila código nativo a \acrshort{wasm}
 e xera dous artefactos: o módulo \acrshort{wasm} co código do programa
 e un ficheiro JavaScript de unión (\textit{glue code})
 que o carga no navegador e expón as funcións exportadas.
 
 O proceso automatízase cunha receita de just,
-que compila o frontend e copia os artefactos a un directorio de distribución
+que compila a interface e copia os artefactos a un directorio de distribución
 xunto cos ficheiros estáticos da páxina.
 A \acrshort{rom} pásase ao emulador a través do sistema de ficheiros virtual.
 Para probar en local sérvese a páxina co módulo \texttt{http.server} de Python.
@@ -334,7 +335,7 @@ e un proceso de desenvolvemento e despregue reproducible en todas esas plataform
 \subsection{Linguaxe de programación}
 Rust é a linguaxe que mellor cobre os dous primeiros requisitos á vez.
 As linguaxes tradicionais do ámbito, C e C++, ofrecen o mesmo rendemento.
-A pesar de neste traballo non se aproveitar a súa capacidade para programación concurrente,
+A pesar de que neste traballo non se aproveita a súa capacidade para a programación concorrente,
 as garantías de seguridade de memoria de Rust permiten un desenvolvemento despreocupado
 dos erros típicos de C e C++ que poden ser difíciles de detectar e depurar.
 O sistema de tipos e \textit{pattern matching} permite modelar con claridade e de forma
@@ -344,13 +345,13 @@ librando o programador de posibles erros de implementación grazas á comprobaci
 \subsection{Librería gráfica}
 Na parte gráfica, a alternativa natural sería SDL~\cite{Sdl}, madura e igualmente multiplataforma.
 Escolleuse raylib porque cobre vídeo, audio e entrada nunha única librería autocontida,
-cunha API máis sinxela, soportando unha grande cantidade de plataformas.
+cunha \acrshort{api} máis sinxela e compatible cunha grande cantidade de plataformas.
 
-En calquera caso, esta dependencia queda confinada nos frontends:
+En calquera caso, esta dependencia queda confinada nas interfaces de usuario:
 o núcleo do emulador non depende de raylib nin de ningunha outra librería.
-Deste xeito, crear outro frontend empregando outra librería para outro contexto diferente
+Deste xeito, crear outra interface de usuario empregando outra librería para outro contexto diferente
 é trivial. O desenvolvedor só tería que implementar as interfaces que demanda o emulador
-e xa podería adecuar o resto do frontend ás súas necesidades.
+e xa podería adecuar o resto da interface de usuario ás súas necesidades.
 
 As ferramentas restantes responden ao terceiro requisito.
 Nix garante que todas as contornas de desenvolvemento son idénticas e reproducibles,

@@ -1,32 +1,270 @@
 \chapter{Metodoloxía e planificación}
 \label{chap:metodoloxia}
 
-\lettrine{N}{este} capítulo describirase a metodoloxía de traballo seguida durante o desenvolvemento do proxecto,
-a súa planificación temporal e a estimación dos custos asociados.
+\lettrine{N}{este} capítulo describirase a metodoloxía de traballo que se decidiu seguir durante o desenvolvemento do proxecto,
+xustificando a decisión da metodoloxía incremental e iterativa aplicada.
+Tamén se comentará a súa planificación temporal e a estimación dos custos asociados.
 
 \section{Metodoloxía de desenvolvemento}
-% metodoloxia iterativa e incremental, por compoñentes da consola
-% cada iteracion: documentacion do compoñente, implementacion, testeo con test roms
+O desenvolvemento do emulador seguiu unha metodoloxía iterativa e incremental,
+na que o sistema se constrúe mediante unha sucesión de versións executables cada vez máis completas.
+En cada incremento incorpórase un novo compoñente da consola sobre unha base xa implementada e probada,
+de xeito que o emulador medra compoñente a compoñente ata reproducir o comportamento completo do hardware.
 
-\section{Control de versións}
-% git e github, ramas por funcionalidade
-% CI para correr os tests?
+Fronte ao modelo en cascada, no que as fases se suceden de forma estritamente secuencial
+e non se dispón dun produto executable ata o final do ciclo,
+este enfoque permite contar cun emulador parcial pero funcional dende as primeiras etapas.
+Isto facilita a detección temperá de erros e a corrección das decisións de deseño
+cando o seu custo aínda é reducido, en lugar de arrastralas ata as fases finais.
+
+A natureza do proxecto fai que esta metodoloxía resulte especialmente axeitada por dúas razóns principais:
+
+\begin{enumerate}
+    \item \textbf{Dependencia entre compoñentes}:
+    os compoñentes da consola, descritos no capítulo~\ref{chap:arquitectura},
+    están fortemente acoplados, e a implementación de cada un
+    require que os anteriores estean xa consolidados.
+    Así, tanto a unidade de procesamento gráfico como os controladores de memoria dos cartuchos
+    non se poden desenvolver nin validar sen un procesador capaz de executar código correctamente,
+    que actúa como base sobre a que se apoia o resto do sistema.
+    Un enfoque incremental permite completar e validar cada compoñente de forma illada
+    antes de abordar o seguinte, evitando que os erros se propaguen
+    e se confundan cos do compoñente que se está a desenvolver.
+
+    \item \textbf{Incerteza no deseño}:
+    aínda que un compoñente semelle completo e funcional,
+    a súa implementación pode agochar erros que só se manifestan
+    nun subconxunto reducido de xogos, e que non se detectan
+    ata executar ese software concreto.
+    Ademais, o forte acoplamento do hardware orixinal condiciona o deseño do código:
+    aínda que se procura manter os compoñentes o máis independentes posible,
+    co desenvolvemento xa avanzado pode descubrirse que un compoñente necesita
+    acceder a outro co que non se contaba no deseño inicial,
+    o que obriga a reestruturar unha arquitectura que xa se cría pechada.
+    O carácter iterativo permite xestionar esta incerteza de forma natural,
+    refinando tanto o deseño como as implementacións dos compoñentes xa existentes
+    a medida que aparecen estes erros e dependencias imprevistas.
+\end{enumerate}
+
+
+\subsection{Iteracións}
+O desenvolvemento realizouse en diferentes iteracións ata acadar un emulador funcional e completo.
+O criterio de elección das iteracións vén dado pola dependencia dos compoñentes entre si.
+As iteracións realizadas foron as seguintes:
+\begin{enumerate}
+    \item \textbf{Serialización da cabeceira da \acrshort{rom}}: interprétase e válidase a cabeceira do cartucho,
+    extraendo os metadatos que describen o xogo e o hardware que require, como o título,
+    o tipo de controlador de memoria ou o tamaño da \acrshort{rom} e da \acrshort{ram}.
+    \item \textbf{Organización do espazo de memoria}: modélase o mapa de memoria da consola,
+    distribuíndo as distintas rexións e definindo o bus a través do cal os compoñentes acceden a elas.
+    \item \textbf{Implementación do procesador}: impleméntase o conxunto de instrucións da \acrfull{cpu},
+    probando o seu comportamento mediante probas unitarias.
+    Válidase despois a decodificación correcta e o bucle de execución completo executando a boot \acrshort{rom}.
+    \item \textbf{Implementación da unidade gráfica}: desenvólvese a \acrfull{ppu} e válidase de novo coa boot \acrshort{rom},
+     xa que esta permite comprobar a xeración de fotogramas: 
+     o emulador debe reproducir correctamente a animación do logotipo ata 
+     alcanzar o enderezo \texttt{0x0100}, punto no que arranca o xogo.
+    \item \textbf{Primeira interface}: constrúese unha interface básica que permite visualizar
+    a saída do emulador e interactuar con el,
+    indispensable para probar de forma cómoda o resto de compoñentes.
+    \item \textbf{Temporizadores, mando e interrupcións}: impleméntanse o temporizador, 
+    os controis e o sistema de interrupcións. 
+    Compróbase o seu funcionamento contra as probas de \acrshort{cpu} de blargg
+    e conséguese executar os primeiros xogos sen controlador de bancos de memoria.
+    \item \textbf{Controladores de memoria}: impleméntanse os \acrfullpl{mbc}
+     máis empregados nos cartuchos, ampliando a compatibilidade a un gran número de xogos.
+     Válidanse coas probas de \acrshort{mbc} de mooneye.
+    \item \textbf{Depuración e optimización}: corríxense erros en xogos problemáticos, 
+    como Pokémon Pinball ou Pokémon Crystal, 
+    títulos de Game Boy Color retrocompatibles, 
+    e realízase un labor de perfilado e optimización ata acadar a execución 
+    a velocidade real nunha Raspberry Pi Zero na ampla variedade de títulos validados.
+    \item \textbf{Interface de estilo consola}: desenvólvese unha segunda interface,
+    orientado ao uso final, que ofrece unha experiencia de xogo cómoda semellante
+    á dunha consola portátil.
+    \item \textbf{Implementación do son}: impleméntase a \acrfull{apu},
+    validando a súa saída coas probas de son de blargg.
+    \item \textbf{Soporte para hardware embebido}: adáptase e documéntase o uso do emulador
+     na Raspberry Pi Zero e na pantalla GamePi13, integrándoo como un dispositivo final.
+\end{enumerate}
+
+
+
+\subsection{Estrutura de cada iteración}
+Para cada unha das iteracións enumeradas no apartado anterior,
+o desenvolvemento seguiu unha estrutura común dividida en catro fases:
+
+\begin{enumerate}
+  \item \textbf{Estudo}:
+  antes de escribir calquera liña de código, estúdase o que se vai desenvolver na iteración.
+  Nas iteracións adicadas á emulación isto supón estudar o compoñente de hardware que se vai emular,
+  apoiándose na documentación da comunidade descrita no capítulo~\ref{chap:arte},
+  principalmente os Pan Docs e o Game Boy: Complete Technical Reference,
+  para comprender o seu comportamento e a forma na que interactúa co resto do sistema.
+
+  \item \textbf{Análise da arquitectura}:
+  decídese como encaixar o novo traballo na base xa existente,
+  definindo as interfaces que ofrece e as dependencias que require dos compoñentes anteriores.
+  Nas iteracións de emulación revísase ademais o deseño previo,
+  xa que a incorporación dun novo compoñente pode obrigar a reestruturar partes que se crían pechadas,
+  tal e como se anticipou ao xustificar a incerteza no deseño.
+
+  \item \textbf{Implementación}:
+  tradúcese o deseño anterior a código, engadíndoo sobre a base consolidada
+  e adaptando, cando é necesario, os compoñentes xa existentes dos que depende.
+
+  \item \textbf{Validación}:
+  compróbase que o resultado se comporta como se espera.
+  Nas iteracións de emulación empréganse principalmente test \acrshort{rom} desenvolvidas pola comunidade,
+  que exercitan o compoñente de forma exhaustiva e informan dos erros atopados ou do seu éxito.
+\end{enumerate}
+
+
+
+\section{Análise de riscos}
+O desenvolvemento do traballo estivo suxeito a diversos
+riscos capaces de comprometer a súa planificación ou os seus obxectivos.
+Nesta sección identifícanse os máis relevantes, valorando para cada un o seu impacto
+sobre o proxecto e a súa probabilidade de ocorrencia, e definindo un plan de continxencia
+que permita reconducir o traballo no caso de que o risco chegue a materializarse.
+Esta análise recóllese na seguinte táboa~\ref{tab:riscos}.
+
+\begin{table}[htbp]
+  \centering
+  \setlength{\tabcolsep}{8pt}
+  \rowcolors{2}{white}{udcgray!25}
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.3cm}|>{\raggedright\arraybackslash}p{7cm}}
+    \rowcolor{udcpink!25}
+    \textbf{Risco} & \textbf{Impacto / Probabilidade} & \textbf{Plan de continxencia} \\\hline
+
+    Atrasos na planificación por erros imprevistos durante a emulación
+      & Medio / Alta
+      & Prescindir das funcionalidades non esenciais para a experiencia básica, principalmente o son,
+      deixando o seu desenvolvemento para un posible traballo futuro. \\
+
+    Imposibilidade de empregar a pantalla do dispositivo final
+      & Alto / Baixa
+      & Garantir e validar tanto a compilación como a execución correcta do emulador sobre un Linux embebido nunha Raspberry Pi Zero,
+      sen empregar un hardware específico para a súa presentación. \\
+
+    Incompatibilidade dos controladores da pantalla GamePi13 co backend \acrshort{drm}
+      & Medio / Alta
+      & Recorrer ao backend X11, máis pesado pero compatible cos controladores dispoñibles,
+      en lugar do backend \acrshort{drm}, máis lixeiro e moderno. \\
+
+  \end{tabular}
+  \caption{Principais riscos do proxecto coa súa valoración e o seu plan de continxencia.}
+  \label{tab:riscos}
+\end{table}
+
 
 \section{Planificación temporal}
+% TODO
 % fases do proxecto e diagrama temporal
 % desviacions respecto da planificacion inicial
+% diagrama de gant
 
 \section{Estimación de custos}
+Para a realización do proxecto foron requeridos unha serie de recursos,
+tanto hardware e software como humanos.
+Os seguintes apartados ofrecen estimacións dos custos asociados a cada tipo de recurso.
+Estas estimacións teñen caracter orientativo tomando como referencia os prezos actuais
+dos diferentes compoñentes hardware e seguindo referencias dos convenios sectoriais
+para a estimación de custos de recursos humanos.
 
 \subsection{Custos de hardware}
-% equipo de desenvolvemento
-% placas embebidas empregadas para probas
+Na seguinte táboa preséntanse os custos do hardware empregado durante o desenvolvemento
+e validación do proxecto. Como equipo principal empregouse un computador persoal portátil
+Slimbook Element 14" cun procesador Intel 5 120U con 10 núcleos/12 fíos e 8 GB de memoria \acrshort{ram}.
 
+
+\begin{table}[htbp]
+  \centering
+  \rowcolors{2}{white}{udcgray!25}
+  \begin{tabular}{l|r}
+  \rowcolor{udcpink!25}
+  \textbf{Compoñente} & \textbf{Custo (€)} \\\hline          % agora 880 porque usa ddr5
+  Portátil Slimbook Element 14"                           & 880,00 \\
+  Raspberry Pi Zero W                                     & 18,95 \\
+  Raspberry Pi Zero 2 W                                   & 19,95 \\
+  GamePi13                                                & 10,15 \\
+  Kit adaptador (HDMI--mini HDMI, USB--micro USB, GPIO)   & 4,95 \\
+  Tarxeta micro SD SanDisk Ultra 64\,GB                   & 19,99 \\\hline
+  \rowcolor{udcpink!25}
+  \textbf{Subtotal hardware}                                          & \textbf{933,99} \\
+  \end{tabular}
+  \caption{Custos do hardware empregado no desenvolvemento e validación do proxecto.}
+  \label{tab:custos-hardware}
+\end{table}
+
+\vspace{1em}
 \subsection{Custos de software}
-% todo software libre e gratuito
+Nesta sección non se inclúe gasto ningún debido a que todo o software empregado,
+tanto no desenvolvemento como na validación, é software libre e de código aberto, polo que non se
+requiriu ningún gasto na adquisición de licenzas.
+
 
 \subsection{Custos de recursos humanos}
-% horas de estudante + direccion do proxecto
+Para o cálculo do custo dos recursos humanos durante a realización do proxecto tomouse
+como referencia o XX Convenio colectivo nacional de empresas de enxeñaría~\cite{xxconvenio},
+marco sectorial aplicable ao desenvolvemento técnico realizado.
+
+O único desenvolvedor do proxecto é un estudante universitario próximo a rematar os seus
+estudos, sendo este Traballo de Fin de Grao o último paso para a obtención do título.
+Por este motivo resulta razoable asignarlle o nivel retributivo correspondente a unha
+persoa recentemente graduada. Escolleuse, polo tanto, o nivel
+salarial 2 do convenio, correspondente á categoría de Titulado de grao medio ou Graduado
+universitario. Segundo as táboas salariais para o ano 2024~\cite{xxconveniotablas2024},
+este nivel ten asignado un salario bruto anual de 22\,224,26\,€, resultado de sumar o
+salario base e o plus de convenio. A este importe hai que engadirlle as cotizacións á
+Seguridade Social a cargo da empresa, estimadas nun 30\,\% do salario bruto, para obter
+o custo empresarial real.
+
+O convenio fixa unha xornada ordinaria máxima de 1\,792 horas anuais, valor que se
+emprega como base para obter o custo por hora. Pola súa banda, a dedicación do
+desenvolvedor estimouse a partir dos 12 créditos ECTS asignados ao Traballo de Fin de
+Grao que, a razón de 25 horas por crédito, equivalen a 300 horas de traballo.
+
+O detalle do salario bruto, das cotizacións sociais a cargo da empresa e do custo total
+resultante recóllese na táboa~\ref{tab:custos-rrhh}.
+
+\begin{table}[htbp]
+  \centering
+  \rowcolors{2}{white}{udcgray!25}
+  \begin{tabular}{l|r}
+  \rowcolor{udcpink!25}
+  \textbf{Concepto} & \textbf{Valor} \\\hline
+  Nivel retributivo (XX convenio de enxeñaría)      & Nivel 2 \\
+  Salario bruto anual (2024)                        & 22\,224,26\,€ \\
+  Cotizacións sociais a cargo da empresa (30\,\%)   & 6\,667,28\,€ \\
+  Custo empresarial anual                           & 28\,891,54\,€ \\
+  Xornada ordinaria máxima anual                    & 1\,792\,h \\
+  Custo por hora                                    & 16,12\,€/h \\
+  Horas dedicadas (12 ECTS $\times$ 25\,h)          & 300\,h \\\hline
+  \rowcolor{udcpink!25}
+  \textbf{Custo total do desenvolvemento}           & \textbf{4\,836\,€} \\
+  \end{tabular}
+  \caption{Estimación do custo de recursos humanos do desenvolvemento do proxecto.}
+  \label{tab:custos-rrhh}
+\end{table}
 
 \subsection{Custo total estimado}
-% taboa resumo
+% taboa 
+A seguinte táboa~\ref{tab:custo-total} amosa un resumo co agregado dos custos estimados dos 
+diferentes recursos empregados durante o desenvolvemento do proxecto.
+
+\begin{table}[htbp]
+  \centering
+  \rowcolors{2}{white}{udcgray!25}
+  \begin{tabular}{l|r}
+  \rowcolor{udcpink!25}
+  \textbf{Tipo de recurso} & \textbf{Custo (€)} \\\hline
+  Hardware & 933,99 \\
+  Software & 0,00 \\
+  Recursos humanos & 4\,836,00 \\\hline
+  \rowcolor{udcpink!25}
+  \textbf{Custo total estimado} & \textbf{5\,770,00} \\
+  \end{tabular}
+  \caption{Resumo do custo total estimado do proxecto.}
+  \label{tab:custo-total}
+\end{table}

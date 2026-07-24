@@ -117,7 +117,7 @@ recorrendo á tradución dinámica só cando é imprescindible.
 En canto á execución do código emulado, a aproximación máis sinxela é a interpretación,
 na que o emulador decodifica e executa as instrucións do programa unha a unha.
 Para plataformas máis potentes esta técnica resulta insuficiente,
-e recórrese á compilación \textit{just-in-time} (JIT)~\cite{Jit},
+e recórrese á compilación \acrfull{jit}~\cite{Jit},
 que traduce bloques de código da máquina emulada a código nativo durante a execución.
 Os bloques traducidos gárdanse nunha caché de código,
 de xeito que cada bloque só se traduce a primeira vez que se executa
@@ -126,18 +126,18 @@ amortizando así o custo da tradución no código que se executa con máis frecu
 
 Algo semellante sucede co hardware gráfico.
 Nas consolas máis sinxelas este emúlase por software,
-empregando a GPU do sistema anfitrión unicamente para presentar a imaxe final,
+empregando a \acrfull{gpu} do sistema anfitrión unicamente para presentar a imaxe final,
 pero nas máquinas con hardware 3D as ordes de debuxado do xogo
-tradúcense a chamadas de APIs gráficas modernas,
-sendo a GPU real quen realiza o traballo de renderización.
+tradúcense a chamadas a \acrfullpl{api} gráficas modernas,
+sendo a \acrshort{gpu} real quen realiza o traballo de renderización.
 Esta tradución esixe xerar e compilar durante a execución shaders equivalentes
 a cada configuración do pipeline gráfico orixinal,
 un proceso custoso que provoca paróns perceptibles durante o xogo,
 polo que os emuladores manteñen tamén unha caché de shaders,
 persistida en disco entre sesións, para que cada shader só se compile unha vez.
 Un exemplo representativo destas técnicas é Dolphin~\cite{Dolphin},
-emulador de GameCube e Wii, que combina un compilador JIT de PowerPC a código nativo
-coa emulación do pipeline gráfico da consola sobre a GPU.
+emulador de GameCube e Wii, que combina un compilador \acrshort{jit} de PowerPC a código nativo
+coa emulación do pipeline gráfico da consola sobre a \acrshort{gpu}.
 Ademais da caché de shaders, este emulador introduciu os \textit{ubershaders}~\cite{DolphinUbershaders},
 shaders xenéricos que interpretan a configuración do pipeline na propia GPU,
 eliminando os paróns de compilación mesmo na primeira execución.
@@ -177,17 +177,17 @@ trátase dun traballo aínda inacabado, de desenvolvemento aberto e publicado ba
 
 \subsubsection{Ferramentas de desenvolvemento}
 Este coñecemento acumulado deu lugar tamén a un ecosistema de desenvolvemento activo.
-RGBDS,% \cite{rgbds}
+RGBDS~\cite{rgbds},
 cuxas orixes se remontan a 1996 co ensamblador xAsm de Carsten Sørensen,
 ofrece hoxe un conxunto completo de ferramentas para a creación de novos xogos:
 rgbasm e rgblink, como ensamblador e enlazador; rgbfix, que axusta a cabeceira
-e a suma de comprobación da ROM; e rgbgfx, que converte imaxes en gráficos compatibles coa consola.
+e a suma de comprobación da \acrfull{rom}; e rgbgfx, que converte imaxes en gráficos compatibles coa consola.
 GB Studio~\cite{gbstudio},
 creado por Chris Maltby a partir dun xogo feito para unha \textit{game jam}
 e publicado en 2019,
 vai un paso máis aló e permite desenvolver xogos completos de xeito visual,
 mediante bloques de script e sen necesidade de programar,
-cun editor de música integrado e exportación directa a ficheiros ROM xogables,
+cun editor de música integrado e exportación directa a ficheiros \acrshort{rom} xogables,
 o que mantén viva a escena \gls{homebrew} da consola.
 
 \subsubsection{Historia da emulación da consola}
@@ -201,9 +201,9 @@ cun forte foco na precisión:
 SameBoy~\cite{sameboy},
 considerado un dos máis fieis ao hardware orixinal,
 e mGBA~\cite{mgba},
-centrado na Game Boy Advance pero con soporte da familia orixinal,
+centrado na Game Boy Advance pero compatible coa familia orixinal,
 son os máis empregados, tanto de forma independente como integrados en RetroArch~\cite{retroarch},
-un frontend multiplataforma que agrupa ducias de emuladores como núcleos intercambiables.
+unha interface multiplataforma que agrupa ducias de emuladores como núcleos intercambiables.
 Mención aparte merece Mooneye GB~\cite{mooneye},
 tamén de Joonas Javanainen, desenvolvido como ferramenta de investigación do hardware
 e acompañado dunha suite de tests que se converteu nunha referencia
@@ -211,10 +211,10 @@ para validar a precisión doutros emuladores.
 
 As técnicas máis avanzadas descritas na sección anterior tiveron tamén
 os seus primeiros experimentos nesta plataforma,
-como gb-recompiled,% \cite{gbrecompiled}
+como gb-recompiled~\cite{gbrecompiled},
 unha proba de concepto de recompilación estática de xogos de Game Boy.
 Porén, esta aproximación resulta aquí máis complicada que noutras plataformas:
-os xogos de Game Boy executan con frecuencia código dende a RAM
+os xogos de Game Boy executan con frecuencia código dende a \acrfull{ram}
 e empregan código automodificable,
 o que impide traducir estaticamente todo o programa
 e obriga a manter un intérprete de apoio en tempo de execución.
@@ -229,7 +229,7 @@ se executaban de forma nativa,
 aproveitando que o hardware da 3DS inclúe o das súas predecesoras Nintendo DS e Game Boy Advance.
 Na actualidade, o servizo Nintendo Switch Online inclúe catálogos de xogos
 de Game Boy e Game Boy Advance executados sobre emuladores desenvolvidos
-pola súa filial europea Nintendo European Research \& Development (NERD)~\cite{nso}.
+pola súa filial europea \acrfull{nerd}~\cite{nso}.
 
 \subsection{Consolas de emulación}
 \label{subsec:consolas-emulacion}
@@ -238,7 +238,7 @@ dedicadas exclusivamente á emulación,
 con fabricantes como Anbernic, Miyoo ou Powkiddy~\cite{anbernic}
 que lanzan constantemente novos modelos cun formato que imita o das portátiles clásicas.
 Trátase de dispositivos con procesadores ARM e sistemas GNU/Linux ou Android
-que executan frontends como RetroArch, EmulationStation, iiSU ou CocoonFE,
+que executan interfaces como RetroArch, EmulationStation, iiSU ou CocoonFE,
 e cuxa principal utilidade é xogar comodamente a catálogos retro de múltiples plataformas.
 Dende o punto de vista da emulación de Game Boy non proporcionan ningunha vantaxe técnica, xa que
 o seu hardware é ordes de magnitude máis potente do necesario para emular esta consola,
@@ -248,7 +248,7 @@ Ademais destas últimas, pódense atopar en comercios en liña consolas feitas p
 cun formato chaveiro de tamaño máis reducido. Están pensadas especificamente para emular a familia Game Boy,
 conseguindo unha experiencia semellante á orixinal. O seu problema é o seu sistema pechado e propietario
 e a dependencia dos seus poucos fabricantes.
-Un exemplo disto é a Game Boy Mini, que se pode atopar en AliExpress por un prezo duns 60 \$ USD.% \cite{gameboymini}
+Un exemplo disto é a Game Boy Mini, que se pode atopar en AliExpress por un prezo duns 60 \$ USD~\cite{gameboymini}.
 % https://es.aliexpress.com/item/1005012153168550.html?spm=a2g0o.detail.pcDetailTopMoreOtherSeller.5.6127PDllPDll6c&gps-id=pcDetailTopMoreOtherSeller&scm=1007.40050.354490.0&scm_id=1007.40050.354490.0&scm-url=1007.40050.354490.0&pvid=a4c4f109-4fc0-4b9a-8443-319e3c43934b&_t=gps-id%3ApcDetailTopMoreOtherSeller%2Cscm-url%3A1007.40050.354490.0%2Cpvid%3Aa4c4f109-4fc0-4b9a-8443-319e3c43934b%2Ctpp_buckets%3A668%232846%238113%231998&pdp_ext_f=%7B%22order%22%3A%2214%22%2C%22spu_best_type%22%3A%22price%22%2C%22eval%22%3A%221%22%2C%22sceneId%22%3A%2230050%22%2C%22fromPage%22%3A%22recommend%22%7D&pdp_npi=6%40dis%21EUR%21107.32%2164.39%21%21%21812.42%21487.44%21%400b88ab8a17843088487882411e0e98%2112000057643670291%21rec%21ES%21%21ABX%211%210%21n_tag%3A-29910%3Bd%3A267f1a6b%3Bm03_new_user%3A-29895&utparam-url=scene%3ApcDetailTopMoreOtherSeller%7Cquery_from%3A%7Cx_object_id%3A1005012153168550%7C_p_origin_prod%3A
 
 \subsection{Emulación baseada en hardware}
@@ -261,7 +261,7 @@ Fronte a un emulador por software, que reproduce o comportamento do sistema
 de forma secuencial, unha \acrshort{fpga} replica o paralelismo real do hardware,
 o que permite acadar unha precisión e unha latencia moi difíciles de igualar por software.
 
-O exemplo máis destacado no ámbito da Game Boy é a Analogue Pocket,% \cite{analoguepocket}
+O exemplo máis destacado no ámbito da Game Boy é a Analogue Pocket~\cite{analoguepocket},
 unha consola portátil que reimplementa en \acrshort{fpga} o hardware das familias
 Game Boy e Game Boy Advance, entre outras portátiles clásicas,
 e que é compatible cos cartuchos e accesorios orixinais.
