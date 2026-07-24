@@ -67,10 +67,11 @@ As iteracións realizadas foron as seguintes:
     \item \textbf{Primeira interface}: constrúese unha interface básica que permite visualizar
     a saída do emulador e interactuar con el,
     indispensable para probar de forma cómoda o resto de compoñentes.
-    \item \textbf{Temporizadores, mando e interrupcións}: impleméntanse o temporizador, 
-    os controis e o sistema de interrupcións. 
-    Compróbase o seu funcionamento contra as probas de \acrshort{cpu} de blargg
-    e conséguese executar os primeiros xogos sen controlador de bancos de memoria.
+    \item \textbf{Temporizadores, mando, porto serie e interrupcións}: impleméntanse o temporizador, 
+    os controis, o sistema de interrupcións e o porto serie. Grazas a este último compoñente
+    puidose implementar un sistema para validar de forma automatizada o emulador 
+    contra varias suites de test.
+    Conséguese executar os primeiros xogos sen controlador de bancos de memoria.
     \item \textbf{Controladores de memoria}: impleméntanse os \acrfullpl{mbc}
      máis empregados nos cartuchos, ampliando a compatibilidade a un gran número de xogos.
      Válidanse coas probas de \acrshort{mbc} de mooneye.
@@ -87,7 +88,6 @@ As iteracións realizadas foron as seguintes:
     \item \textbf{Soporte para hardware embebido}: adáptase e documéntase o uso do emulador
      na Raspberry Pi Zero e na pantalla GamePi13, integrándoo como un dispositivo final.
 \end{enumerate}
-
 
 
 \subsection{Estrutura de cada iteración}
@@ -159,10 +159,64 @@ Esta análise recóllese na seguinte táboa~\ref{tab:riscos}.
 
 
 \section{Planificación temporal}
-% TODO
-% fases do proxecto e diagrama temporal
-% desviacions respecto da planificacion inicial
-% diagrama de gant
+As once iteracións descritas na sección anterior distribuíronse ao longo do período de
+desenvolvemento. Nin o ritmo de traballo foi uniforme nin as iteracións se
+sucederon de forma estritamente ordenada: o forte acoplamento entre os compoñentes,
+comentado ao xustificar a metodoloxía, provocou que varias iteracións se solapasen no
+tempo e que algunhas se retomasen máis adiante para rematalas.
+A figura~\ref{fig:gantt} amosa o cronoloxía de execución do proxecto.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{ganttchart}[
+      hgrid,
+      vgrid,
+      x unit=0.58cm,
+      y unit title=0.6cm,
+      y unit chart=0.52cm,
+      title height=1,
+      title label font=\footnotesize\bfseries,
+      bar/.style={fill=udcpink!75, draw=udcpink!90},
+      bar height=0.6,
+      bar label font=\small,
+    ]{1}{18}
+    \gantttitle{2025}{6}\gantttitle{2026}{12} \\
+    \gantttitle{Out.}{2}
+    \gantttitle{Nov.}{2}
+    \gantttitle{Dec.}{2}
+    \gantttitle{Xan.}{2}
+    \gantttitle{Feb.}{2}
+    \gantttitle{Mar.}{2}
+    \gantttitle{Abr.}{2}
+    \gantttitle{Mai.}{2}
+    \gantttitle{Xuñ.}{2} \\
+    \ganttbar{It. 1}{1}{1} \\
+    \ganttbar{It. 2}{1}{2} \\
+    \ganttbar{It. 3}{2}{5} \\
+    \ganttbar{It. 4}{4}{6} 
+    \ganttbar{It. 4}{9}{9} \\
+    \ganttbar{It. 5}{3}{6} \\
+    \ganttbar{It. 6}{9}{10} \\
+    \ganttbar{It. 7}{10}{11} \\
+    \ganttbar{It. 8}{11}{13} \\
+    \ganttbar{It. 9}{12}{13} \\
+    \ganttbar{It. 10}{14}{15} \\
+    \ganttbar{It. 11}{15}{16} \\
+    \ganttbar[bar/.append style={fill=udcgray!50, draw=udcgray}]{Documentación}{15}{18} \\
+      % \ganttbar[bar/.append style={fill=udcgray!50, draw=udcgray}]{}{16}{18} \\
+  \end{ganttchart}
+  \caption{Diagrama de Gantt do proxecto.}
+  \label{fig:gantt}
+\end{figure}
+
+En canto á planificación inicial, a principal desviación foi a maior duración 
+dalgunhas iteracións como a da implementación da \acrshort{ppu}, na que se materializou o
+risco de erros imprevistos anticipado na análise de riscos.
+Isto obrigou a solapar iteracións que se concibiran como secuenciais
+e a desprazar cara ao final do proxecto o desenvolvemento das funcionalidades non esenciais.
+Fronte ao plan de continxencia previsto,
+que contemplaba prescindir do son, este puido finalmente implementarse, aínda que na última
+fase do desenvolvemento.
 
 \section{Estimación de custos}
 Para a realización do proxecto foron requeridos unha serie de recursos,
