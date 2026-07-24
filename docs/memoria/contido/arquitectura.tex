@@ -3,7 +3,7 @@
 
 \lettrine{N}{este} capítulo describiremos os diferentes compoñentes hardware da consola,
 a súa interacción e o mapa de memoria que emprega.
-Ademáis explicarase o rol doutros compoñentes fundamentais para o seu funcionamento que son implementados
+Ademais explicarase o rol doutros compoñentes fundamentais para o seu funcionamento que son implementados
 non polo hardware da consola, senón polos seus cartuchos.
 A comprensión destes compoñentes é necesaria para entender o funcionamento da consola para unha posterior
 implementación en forma de software de emulación.
@@ -11,9 +11,9 @@ implementación en forma de software de emulación.
 \section{Visión xeral da arquitectura}
 
 A maior parte de funcionalidades da consola é implementada nun só \acrfull{soc}.
-A pesar de ser nomeado como \acrfull{cpu}, por exemplo no seu encapsulado,
+A pesar de ser nomeado como \acrshort{cpu}, por exemplo no seu encapsulado,
 este chip ademais da propia \acrshort{cpu} inclúe varias memorias e diferentes periféricos, ocupando
-a \acrshort{cpu} sóamente unha pequena porción do silicio.
+a \acrshort{cpu} soamente unha pequena porción do silicio.
 
 \begin{figure}[hp!]
   \centering
@@ -33,21 +33,21 @@ a \acrshort{cpu} sóamente unha pequena porción do silicio.
 \end{figure}
 
 Dentro do \acrshort{soc} conviven a \acrshort{cpu}, a unidade de procesamento de píxeles (\acrshort{ppu}), a unidade de
-procesamento de audio (\acrshort{apu}), os temporizadores, o controlador do joypad e o contralador de interrupcións.
+procesamento de audio (\acrshort{apu}), os temporizadores, o controlador do joypad e o controlador de interrupcións.
 Ademais conta con varias memorias, como a Boot \acrshort{rom}, a \acrfull{hram} e a \acrfull{oam}.
 
 A Boot \acrshort{rom} é o primeiro programa que se executa ao acender a consola.
-O seu cometido e preparar o sistema para a execución do programa principal provido polo cartucho.
+O seu cometido é preparar o sistema para a execución do programa principal provido polo cartucho.
 Para iso inicializa varias zonas de memoria e rexistros dos periféricos.
-Visualmente, amosa por pantalla unha sinxela animación co logotipo de Nintendo desplazandose ata 
-o medio da pantalla e reproduce un son característico. Esta animación cumple tamén unha
-función de proteción antipiratería.
-Os xogos comerciais e validados por Nintendo requerían incluir na cabeceira da súa \acrshort{rom} unha copia
-do logo de Nintendo. Durante a execución da Boot \acrshort{rom} realízase unha comparación entre os assets
+Visualmente, amosa por pantalla unha sinxela animación co logotipo de Nintendo desprazándose ata 
+o medio da pantalla e reproduce un son característico. Esta animación cumpre tamén unha
+función de protección antipiratería.
+Os xogos comerciais e validados por Nintendo requirían incluír na cabeceira da súa \acrshort{rom} unha copia
+do logo de Nintendo. Durante a execución da Boot \acrshort{rom} realízase unha comparación entre os recursos
 atopados aquí e os do cartucho. Se a comparación falla, a consola queda bloqueada e sen executar o xogo.
 Este mecanismo foi usado por Nintendo para controlar que xogos permitían ser executados na súa consola.
-Os distribuidores de cartuchos non autorizados afrontaban unha dobre penalización, xa que ao ter que incluir
-o logo de Nintendo caían nunha dobre infracción: infracción de marca rexistrada e infracción dos dereitos de autor.
+Os distribuidores de cartuchos non autorizados afrontaban unha dobre penalización, xa que ao ter que incluír
+o logo de Nintendo incorrían en dúas infraccións: a de marca rexistrada e a dos dereitos de autor.
 
 Fóra do \acrshort{soc} sitúanse a memoria de traballo (\acrshort{wram}), a memoria de vídeo (\acrshort{vram}) e
 a propia \acrshort{rom} do cartucho, que poden incluír ademais hardware adicional (véxase
