@@ -1,5 +1,9 @@
 default: run
 
+mod memoria 'docs/memoria'
+mod web 'frontends/debugger/static/web.just'
+mod cross 'cross/cross.just'
+
 build *ARGS:
     cargo build --features "${DISPLAY_FEATURES}" {{ARGS}}
 
@@ -14,8 +18,8 @@ test *ARGS: fetch-test-roms
 
 clean:
     cargo clean
-    cd docs/memoria && rm -f *.acn *.acr *.alg *.bbl *.blg *.fdb_latexmk *.fls *.glg *.glo *.gls *.log *.out *.lot *.lof *.pdf *.toc *.xdv *.ist
-    cd docs/memoria && rm -f anexos/*.aux contido/*.aux portada/*.aux *.aux
+    just web clean
+    just memoria clean
 
 fetch-test-roms:
     #!/usr/bin/env bash
@@ -35,32 +39,3 @@ fetch-test-roms:
 flamegraph *ARGS:
     RUSTFLAGS="-Cforce-frame-pointers=yes -Cforce-unwind-tables=yes" cargo flamegraph --profile bench --features "${DISPLAY_FEATURES}" -p gbeed-console {{ARGS}}
 
-web-build:
-    RUSTFLAGS="-C panic=unwind" cargo build --target wasm32-unknown-emscripten -p gbeed-debugger --release
-    mkdir -p dist
-    cp target/wasm32-unknown-emscripten/release/gbeed_debugger.wasm dist/
-    cp target/wasm32-unknown-emscripten/release/gbeed-debugger.js dist/
-    cp -r frontends/debugger/static/* dist/
-
-web-run:
-    cargo build --target wasm32-unknown-emscripten -p gbeed-debugger
-    mkdir -p dist
-    cp target/wasm32-unknown-emscripten/debug/gbeed_debugger.wasm dist/
-    cp target/wasm32-unknown-emscripten/debug/gbeed-debugger.js dist/
-    cp -r frontends/debugger/static/* dist/
-    python3 -m http.server 8080 --directory dist --bind 0.0.0.0
-
-cross-build-alpine:
-    sudo podman run --rm --privileged docker.io/tonistiigi/binfmt --install arm
-    podman build --platform linux/arm/v6 -f Dockerfile.cross.alpine -t gbeed-armv6l .
-    podman create --name gbeed-armv6l-tmp gbeed-armv6l
-    podman cp gbeed-armv6l-tmp:/app/target/release/gbeed ./gbeed-alpine
-    podman rm gbeed-armv6l-tmp
-    @echo "Release binary for armv6l (DRM/KMS backend, Alpine Linux) generated at ./gbeed-alpine"
-
-cross-build-debian:
-    podman build -f Dockerfile.cross.debian -t gbeed-armv6l-debian .
-    podman create --name gbeed-armv6l-debian-tmp gbeed-armv6l-debian
-    podman cp gbeed-armv6l-debian-tmp:/app/target/arm-unknown-linux-gnueabihf/release/gbeed ./gbeed-debian
-    podman rm gbeed-armv6l-debian-tmp
-    @echo "Release binary for armv6l (X11/GLFW backend, Debian Bookworm) generated at ./gbeed-debian"

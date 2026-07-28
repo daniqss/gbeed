@@ -38,7 +38,7 @@ pub const AFTER_BOOT_CPU: Cpu = Cpu {
 };
 
 /// # CPU
-/// Gameboy CPU, with a mix of Intel 8080 and Zilog Z80 features and instruction set, the Sharp LR35902.
+/// Gameboy CPU, with a mix of Intel 8080 and Zilog Z80 features and instruction set, the Sharp SM83.
 /// Most of its register are 8-bits ones, that are commonly used as pairs to perform 16-bits operations.
 /// The only 16-bits registers are the stack pointer (SP) and the program counter (PC).
 #[derive(Debug, Default, PartialEq)]

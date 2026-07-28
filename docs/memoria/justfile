@@ -1,0 +1,8 @@
+default: build
+
+build:
+    latexmk -xelatex memoria_tfg.tex
+
+clean:
+    rm -f *.acn *.acr *.alg *.aux *.bbl *.blg *.fdb_latexmk *.fls *.glg *.glo *.gls *.ist *.lof *.log *.lot *.out *.pdf *.toc *.xdv
+    rm -f anexos/*.aux contido/*.aux portada/*.aux

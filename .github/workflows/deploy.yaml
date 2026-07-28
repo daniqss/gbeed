@@ -1,4 +1,4 @@
-name: Deploy WASM build
+name: Deploy debugger and memoria
 
 on:
   push:
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-web:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -23,11 +23,60 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:
-          nix_path: nixpkgs=channel:nixos-25.11
+          nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Build WASM target
         run: |
-          nix develop .#wasm --command just web-build
+          nix develop .#wasm --command just web build
+
+      - name: Upload web bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: ./dist
+          if-no-files-found: error
+
+  build-memoria:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Build memoria
+        run: |
+          nix develop .#latex --command just memoria build
+
+      - name: Dump LaTeX log
+        if: always()
+        run: cat docs/memoria/memoria_tfg.log
+
+      - name: Upload memoria PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: memoria
+          path: docs/memoria/memoria_tfg.pdf
+          if-no-files-found: error
+
+  bundle:
+    needs: [build-web, build-memoria]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download web bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: ./dist
+
+      - name: Download memoria PDF
+        uses: actions/download-artifact@v4
+        with:
+          name: memoria
+          path: ./dist
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -35,10 +84,11 @@ jobs:
           path: ./dist
 
   deploy:
-    needs: build
+    needs: bundle
     runs-on: ubuntu-latest
     environment:
       name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

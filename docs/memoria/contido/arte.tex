@@ -16,7 +16,7 @@ a primeira xeración de Pokémon, que, sumando todas as súas versións, vendeu 
 Ao longo de máis de quince anos, Nintendo lanzou ata sete revisións de hardware
 dentro da familia Game Boy, que se resumen na táboa~\ref{tab:gb-modelos}.
 Os modelos agrúpanse en dúas familias: a orixinal (DMG, Pocket, Light e
-Color, todos baseados no procesador Sharp SM83, tamén designado LR35902) e a
+Color, todos baseados no \acrfull{soc} Sharp SM83) e a
 Game Boy Advance (GBA, SP e Micro, baseados no ARM7TDMI cun coprocesador Sharp
 SM83 que garante a compatibilidade cara atrás coa familia orixinal). Os prezos
 refírense ao lanzamento no mercado xaponés, primeiro mercado de todas estas consolas.
@@ -89,11 +89,10 @@ notablemente grazas á súa estratexia de posicionamento no mercado portátil~\c
 
 \subsection{Emulación en xeral}
 A emulación é a técnica que permite executar software deseñado para unha plataforma nunha plataforma diferente,
-replicando mediante software o comportamento do hardware orixinal —o procesador,
-a memoria e os periféricos da máquina orixinal— de xeito que se consigue un funcionamento equivalente ao dela.
+replicando mediante software o comportamento do hardware orixinal necesario de xeito que se consigue un funcionamento equivalente ao dela.
 
 Non todos os emuladores abordan este problema co mesmo alcance.
-Na emulación completa, ou emulación de sistema, replícase a totalidade do hardware da máquina obxectivo,
+Na emulación completa, replícase a totalidade do hardware da máquina obxectivo,
 dende o procesador ata o hardware gráfico e de son.
 É a aproximación habitual na emulación de consolas, e tamén a que segue este traballo.
 Noutros contextos abonda cunha emulación parcial.
@@ -170,6 +169,7 @@ O documento de referencia son os Pan Docs~\cite{pandocs},
 orixinados a mediados dos anos noventa,
 migrados a formato Markdown en 2020 e mantidos dende entón nun repositorio aberto
 da comunidade gbdev en GitHub, que describen o comportamento de todos os compoñentes do sistema.
+
 Complementándoos, o Game Boy: Complete Technical Reference~\cite{gbctr},
 de Joonas Javanainen, coñecido na comunidade como Gekkio,
 documenta o hardware con precisión de ciclo a partir de medicións sobre consolas reais;
@@ -182,13 +182,18 @@ cuxas orixes se remontan a 1996 co ensamblador xAsm de Carsten Sørensen,
 ofrece hoxe un conxunto completo de ferramentas para a creación de novos xogos:
 rgbasm e rgblink, como ensamblador e enlazador; rgbfix, que axusta a cabeceira
 e a suma de comprobación da \acrfull{rom}; e rgbgfx, que converte imaxes en gráficos compatibles coa consola.
+
 GB Studio~\cite{gbstudio},
 creado por Chris Maltby a partir dun xogo feito para unha \textit{game jam}
 e publicado en 2019,
 vai un paso máis aló e permite desenvolver xogos completos de xeito visual,
 mediante bloques de script e sen necesidade de programar,
-cun editor de música integrado e exportación directa a ficheiros \acrshort{rom} xogables,
-o que mantén viva a escena \gls{homebrew} da consola.
+cun editor de música integrado e exportación directa a ficheiros \acrshort{rom} xogables.
+
+% o que mantén viva a escena \gls{homebrew} da consola.
+Estes proxectos e outros similares manteñen viva a escena \gls{homebrew} da consola,
+o que permite que se sigan a crear novos xogos para a plataforma.
+
 
 \subsubsection{Historia da emulación da consola}
 Os primeiros emuladores apareceron a mediados dos anos noventa,
@@ -196,15 +201,19 @@ coa consola aínda á venda.
 Entre os pioneiros destacan Virtual GameBoy de Marat Fayzullin
 e NO\$GMB de Martin Korth, que xa incluía un completo depurador
 e cuxo autor foi ademais responsable da primeira versión dos Pan Docs.
-Na actualidade os emuladores máis relevantes son proxectos de código aberto
-cun forte foco na precisión:
-SameBoy~\cite{sameboy},
-considerado un dos máis fieis ao hardware orixinal,
-e mGBA~\cite{mgba},
-centrado na Game Boy Advance pero compatible coa familia orixinal,
-son os máis empregados, tanto de forma independente como integrados en RetroArch~\cite{retroarch},
+Na actualidade podemos atopar entre os emuladores máis relevantes proxectos de código aberto como os seguintes:
+\begin{}
+  \item SameBoy~\cite{sameboy}, que ofrece unha experiencia amigable e unha cantidade de características para os usuarios,
+  ademais de destacar por unha grande precisión de emulación. 
+  \item mGBA~\cite{mgba}, centrado na Game Boy Advance pero compatible coa familia orixinal, que naceu co obxectivo de ser
+  lixeiro e rápido para poder ser utilizado en microcomputadores como as Raspberry Pi, pero que a día de hoxe tamén
+  implementa unha gran cantidade de características cunha boa precisión.
+\end{}
+
+Tanto os anteriores como moitos poden ser empregados tanto de forma independente como integrados en RetroArch~\cite{retroarch},
 unha interface multiplataforma que agrupa ducias de emuladores como núcleos intercambiables.
-Mención aparte merece Mooneye GB~\cite{mooneye},
+
+Unha mención especial aparte merece Mooneye GB~\cite{mooneye},
 tamén de Joonas Javanainen, desenvolvido como ferramenta de investigación do hardware
 e acompañado dunha suite de tests que se converteu nunha referencia
 para validar a precisión doutros emuladores.
@@ -282,7 +291,7 @@ unha experiencia de consola portátil dedicada e óptima,
 equivalente á da máquina orixinal pero sen as súas limitacións.
 
 Unha consola orixinal raramente é xa unha opción óptima:
-require traballos de \gls{modding} para axustala aos estándares de calidade
+require traballos de \gls{modding} para arranxala e/ou axustala aos estándares de calidade
 que espera un xogador moderno.
 O mod máis habitual é a substitución da pantalla por unha retroiluminada de maior resolución,
 que permite xogar coa calidade de imaxe esperable dun dispositivo actual,
@@ -311,7 +320,7 @@ fronte ao obxectivo de xogar ao mesmo catálogo de forma económica.
 
 
 No extremo oposto dos proxectos descritos ata agora podemos atopar proxectos de bricolaxe
-que seguen a filosofía \acrfull{diy}.
+que seguen a filosofía \acrshort{diy}.
 Existen montaxes que emulan a Game Boy en microcontroladores como o ESP32,
 por exemplo ESP32-Gameboy~\cite{Esp32Gameboy}, que emprega o firmware retro-go~\cite{RetroGo},
 o cal agrupa varios emuladores sobre estas placas. O problema destes montaxes
@@ -328,9 +337,12 @@ e a construción de referencia toma como base un \acrfull{sbc} da familia Raspbe
 un compoñente amplamente dispoñible e de baixo custo.
 
 
-A diferenza dos proxectos de bricolaxe existentes,
-todo o proceso de montaxe e despregue está documentado.
-Ademais, o traballo distribúese baixo a licenza libre GNU GPLv2,
+A diferenza dos proxectos de bricolaxe existentes, nos que o firmware de emulación,
+a montaxe do hardware e a documentación adoitan proceder de proxectos independentes
+mantidos por separado, esta proposta aposta por un sistema operativo Linux de propósito xeral
+mantendo dende o núcleo de emulación ata o proceso completo
+de montaxe e despregue, documentado paso a paso, baixo o mesmo proxecto.
+Ademais, o traballo distribúese baixo a licenza libre GNU GPLv2~\cite{gplv2},
 de forma que calquera persoa poida construílo, usalo, estudalo, adaptalo e melloralo
 de acordo coas súas necesidades específicas.
 
