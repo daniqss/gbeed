@@ -1,0 +1,69 @@
+\chapter{Introdución}
+\label{chap:introducion}
+
+\section{Contexto e motivación}
+\label{sec:contexto}
+
+
+\lettrine{A}{} familia de consolas Game Boy é unha das máis populares e de maior éxito da historia dos videoxogos. Ata 2020 seguiuse producindo hardware capaz de executar de forma nativa xogos da familia Advance, a Nintendo 3DS.
+O seu percorrido e éxito son, polo tanto, longos, e a súa influencia na industria dos videoxogos e na cultura popular é indiscutible.
+
+\vspace{1em}
+A pesar da fin do seu ciclo de vida comercial, esta consola e os seus xogos seguen sendo relevantes para unha grande comunidade de afeccionados e desenvolvedores.
+Por exemplo, séguense a lanzar xogos non oficiais comerciais como o JETT RIDER Mini Hero, un xogo para PC e Game Boy que conseguiu un enorme éxito na súa campaña de Kickstarter,
+que quintuplicou a súa meta inicial de financiamento~\cite{jettriderminihero}.
+
+\vspace{1em}
+Para as demandas da situación actual do desenvolvemento de videoxogos para esta plataforma e para a preservación da súa herdanza cultural, a ferramenta principal é a emulación.
+A emulación é unha técnica que permite a execución de software deseñado para unha plataforma nunha plataforma diferente, mediante a creación dun software que simula o comportamento do hardware orixinal.
+No caso da Game Boy trátase de emulación completa, xa que non se limita a reproducir unha parte do hardware, senón que todos os compoñentes do sistema son emulados.
+Existe unha gran cantidade de emuladores de Game Boy, para diferentes plataformas e con diferentes características, tanto propietarios como libres e de código aberto.
+Todos estes emuladores empregan como base documental a gran cantidade de documentación producida pola comunidade a través da análise do hardware mediante enxeñería inversa.
+
+\vspace{1em}
+Grazas a este formidable traballo da comunidade,
+o desenvolvemento dun emulador de Game Boy é unha tarefa abordable que combina retos de baixo nivel
+con conceptos transversais da arquitectura de computadores.
+Esta combinación convérteo nun exercicio especialmente axeitado tanto para a aprendizaxe como para a experimentación con sistemas reais.
+
+\vspace{1em}
+Neste contexto, o presente traballo formúlase cun dobre obxectivo.
+Por unha banda, persegue unha finalidade didáctica:
+servir como medio para afondar de xeito práctico no funcionamento interno da consola e nos principios da emulación,
+documentando as decisións de deseño tomadas ao longo do desenvolvemento.
+Por outra banda, propón unha finalidade técnica: ofrecer unha solución que poida ser integrada de forma doada en distintos contextos,
+con especial atención á súa execución en sistemas embebidos de recursos limitados.
+A partir dese núcleo de emulación, o traballo materialízase nunha consola portátil \acrfull{diy} de referencia
+construída sobre hardware accesible e de baixo custo e documentada,
+concibida como unha alternativa á escaseza do hardware orixinal
+e ás solucións comerciais caras e/ou pechadas.
+Este posicionamento desenvólvese en detalle na sección~\ref{sec:posicionamento}.
+
+\section{Obxectivos concretos}
+\label{sec:obxectivos}
+
+Para acadar os obxectivos xerais expostos e acadar unha solución axeitada definíronse os seguintes obxectivos concretos:
+
+\begin{itemize}
+    \item Desenvolver un emulador do modelo orixinal de Game Boy, o DMG-01 (\acrlong{dmg}).
+    \item Validar os seus compoñentes fundamentais contra un conxunto de probas de referencia amplamente usado pola comunidade.
+    \item Garantir o seu correcto funcionamento nos xogos máis populares da consola, usando unha mostra representativa de cartuchos con diferentes características de hardware.
+    \item Deseñar e desenvolver unha interface axeitada para o seu uso en contornas embebidas.
+    \item Optimizar o proxecto para asegurar a súa correcta execución en contornas de recursos limitados.
+    \item Documentar unha construción de referencia sobre hardware accesible, que permita a calquera persoa montar, adaptar ou mellorar o seu propio dispositivo.
+\end{itemize}
+
+\section{Estrutura da memoria}
+\label{sec:estructura}
+Esta memoria organízase nos seguintes capítulos:
+
+\begin{enumerate}
+    \item \textbf{Introdución}: contextualízase o proxecto, expóñense os seus obxectivos e detállase a estrutura.
+    \item \textbf{Estado da arte}: expoñerase o estado da emulación de Game Boy e da súa comunidade de desenvolvedores.
+    \item \textbf{Metodoloxía e planificación}: describirase a metodoloxía de traballo seguida, a planificación temporal do proxecto e a estimación dos seus custos.
+    \item \textbf{Tecnoloxías e ferramentas}: presentaranse as tecnoloxías e ferramentas empregadas no desenvolvemento e xustificarase a súa elección.
+    \item \textbf{Arquitectura da consola}: describirase a arquitectura da Game Boy, os seus compoñentes e o seu funcionamento en conxunto.
+    \item \textbf{Desenvolvemento do emulador}: detallarase o proceso de desenvolvemento do emulador, as decisións de deseño tomadas e os retos afrontados.
+    \item \textbf{Probas e validación}: describirase o proceso de proba e validación do emulador e os resultados obtidos.
+    \item \textbf{Conclusión e traballo futuro}: expoñeranse a aprendizaxe adquirida durante o desenvolvemento do proxecto e a súa relación co grao. Abordaranse as liñas de traballo futuro para a continuación do desenvolvemento.
+\end{enumerate}

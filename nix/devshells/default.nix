@@ -27,7 +27,7 @@
     gnutar
     xz
   ];
-in {
+in let
   x11 = pkgs.callPackage ./x11.nix {
     inherit commonPackages;
     platformPackages = lib.x11Packages pkgs;
@@ -44,9 +44,8 @@ in {
     platformPackages = lib.drmPackages pkgs;
   };
   wasm = pkgs.callPackage ./wasm.nix {inherit rustToolchain;};
-  default = pkgs.callPackage ./x11.nix {
-    inherit commonPackages;
-    platformPackages = lib.x11Packages pkgs;
-    platformFeatures = lib.x11Features;
-  };
+  latex = pkgs.callPackage ./latex.nix {inherit commonPackages;};
+in {
+  inherit x11 wayland drm wasm latex;
+  default = x11;
 }
