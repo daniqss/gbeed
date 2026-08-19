@@ -216,7 +216,7 @@ impl Cpu {
             0x24 => IncR8::new(R8::H).into(),
             0x25 => DecR8::new(R8::H).into(),
             0x26 => LdR8Imm8::new(R8::H, gb.read(cpu.pc.wrapping_add(1))).into(),
-            0x27 => Daa::new().into(),
+            0x27 => Daa::new(cpu.carry(), cpu.half_carry(), cpu.subtraction()).into(),
             0x28 => Jr::new(JC::Zero(cpu.zero()), gb.read(cpu.pc.wrapping_add(1))).into(),
             0x29 => AddR16::new(R16::HL).into(),
             0x2A => LdAPointedByHLInc::new().into(),

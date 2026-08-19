@@ -78,18 +78,181 @@ a \acrshort{ppu} está a debuxar unha liña, a \acrshort{cpu} non pode acceder a
 lectura devolve \texttt{0xFF}.
 
 \section{Mapa de memoria}
-mapa mapa mapita
-
-\subsection{ROM}
+\label{sec:mapa-memoria}
+% foto do mapa de memoria e tabla se cabe ben
 
 \subsection{Entrada/saída mapeada en memoria}
+% explicar q é a entrada saida mapeada en memoria
+% taboa con rangos 
 
 
 
 \section{Unidade central de procesamento}
-% comparativa intel 8080 e z80
+\label{sec:cpu}
 
-% especulación sobre que cpu realmente leva: z80(no), sharp LR35902 ou sharp SM83?
+\sloppy
+A \acrshort{cpu} da consola é un procesador de 8 bits funcionando con un reloxo mestre de
+4\,194\,304\,Hz, é dicir, $2^{22}$ oscilacións por segundo. Esa é a frecuencia que xera o
+cristal do sistema, e cada unha das súas oscilacións coñécese como ciclo T
+(\textit{T-cycle}).
+
+Non todos os compoñentes do sistema funcionan a esta frecuencia. A memoria \acrshort{ram} funciona
+a unha cuarta parte da frecuencia do procesador, é dicir, a 1\,048\,576\,Hz.
+Debido a esta diferenza, todo o sistema esta limitado pola memoria, de forma que
+que se fala de ciclos M (\textit{Machine cycle}) á unidade equivalente a catro ciclos T.
+
+\begin{table}[htbp]
+  \centering
+  \rowcolors{2}{white}{udcgray!25}
+  \begin{tabular}{l|c|l}
+  \rowcolor{udcpink!25}
+  \textbf{Compoñente} & \textbf{Frecuencia} & \textbf{Relación co reloxo mestre} \\\hline
+  \acrshort{cpu} & 4\,MiHz & Reloxo mestre \\
+  \acrshort{ppu} & 4\,MiHz & Reloxo mestre \\
+  \acrshort{vram} & 2\,MiHz & Metade do reloxo mestre \\
+  \acrshort{ram} & 1\,MiHz & Cuarta parte do reloxo mestre \\
+  \end{tabular}
+  \caption{Frecuencias de traballo dos principais compoñentes da consola}
+  \label{tab:frecuencias}
+\end{table}
+
+A identidade exacta deste procesador foi durante moito tempo obxecto de confusión.
+É habitual atopar referencias a este procesador como un Zilog Z80, que non se corresponde coa realidade.
+Aínda que a súa sintaxe de ensamblador é de estilo Z80
+e comparte con el unha parte do conxunto de instrucións,
+trátase dun deseño propio de Sharp que está máis próximo ao Intel 8080,
+como se detalla na sección~\ref{subsec:comparativa-cpu}.
+
+Outra denominación máis correcta pero de igual forma incompleta é denominalo polo nome do
+encapsulado completo, o Sharp LR35902.
+O máis probable segundo a información dispoñible actualmente é que se trate dun Sharp SM83 \cite{sharpsm83}.
+
+\begin{figure}[hp!]
+  \centering
+  \includegraphics[width=0.85\textwidth]{imaxes/decap_sm83.jpg}
+  \caption{Decapsulado do Sharp SM83}
+  \label{fig:decap_sm83}
+\end{figure}
+
+\subsection{Conxunto de instrucións e rexistros}
+\label{subsec:isa}
+
+O SM83 conta cun banco de oito rexistros de propósito xeral de 8 bits
+máis dous rexistros de 16 bits de propósito específico.
+Os rexistros de 8 bits pódense combinar por parellas para formar rexistros de 16 bits,
+o que permite empregalos como punteiros dentro do espazo de direccións de 64\,KiB.
+A táboa~\ref{tab:rexistros-cpu} recolle esta organización.
+
+\begin{table}[htbp]
+  \centering
+  \rowcolors{2}{white}{udcgray!25}
+  \setlength{\tabcolsep}{5pt}
+  \begin{tabular}{c|c|c|l}
+  \rowcolor{udcpink!25}
+  \textbf{16 bits} & \textbf{Alto} & \textbf{Baixo} & \textbf{Función} \\\hline
+  \texttt{AF} & \texttt{A} & \texttt{F} & Acumulador e rexistro de \textit{flags} \\
+  \texttt{BC} & \texttt{B} & \texttt{C} & Propósito xeral \\
+  \texttt{DE} & \texttt{D} & \texttt{E} & Propósito xeral \\
+  \texttt{HL} & \texttt{H} & \texttt{L} & Propósito xeral e punteiro a memoria \\
+  \texttt{SP} & --- & --- & Punteiro de pila (\textit{stack pointer}) \\
+  \texttt{PC} & --- & --- & Contador de programa (\textit{program counter}) \\
+  \end{tabular}
+  \caption{Rexistros do procesador SM83~\cite{pandocs}.}
+  \label{tab:rexistros-cpu}
+\end{table}
+
+O rexistro \texttt{A} é o acumulador, e sobre el operan practicamente todas as instrucións
+aritméticas e lóxicas, que toman como segundo operando outro rexistro, un valor inmediato ou
+o contido dunha posición de memoria.
+O rexistro \texttt{F} non é accesible directamente polo programa, senón que reflicte o resultado
+da última operación executada mediante catro \textit{flags} situados no seu \gls{nibble} alto,
+quedando o nibble baixo sen empregarse.
+A táboa~\ref{tab:flags-cpu} describe o seu significado.
+
+\begin{table}[htbp]
+  \centering
+  \rowcolors{2}{white}{udcgray!25}
+  \begin{tabular}{c|c|>{\raggedright\arraybackslash}p{9cm}}
+  \rowcolor{udcpink!25}
+  \textbf{Bit} & \textbf{Nome} & \textbf{Significado} \\\hline
+  7 & \texttt{Z} & Activo se o resultado da operación é cero. \\
+  6 & \texttt{N} & Activo se a última operación foi unha resta. \\
+  5 & \texttt{H} & Acarreo do nibble baixo ao alto. \\
+  4 & \texttt{C} & Acarreo fóra do bit máis significativo, ou pedimento nunha resta. \\
+  \end{tabular}
+  \caption{\textit{Flags} do rexistro \texttt{F}~\cite{pandocs}.}
+  \label{tab:flags-cpu}
+\end{table}
+
+Os \textit{flags} \texttt{Z} e \texttt{C} son os que empregan os saltos condicionais,
+que aceptan as catro condicións \texttt{z}, \texttt{nz}, \texttt{c} e \texttt{nc}.
+Os \textit{flags} \texttt{N} e \texttt{H}, en cambio, non son consultables directamente:
+existen unicamente para dar servizo á instrución \texttt{daa},
+que corrixe o resultado dunha suma ou resta para que sexa válido en representación
+decimal codificada en binario (\acrshort{bcd}).
+
+A parella \texttt{HL} recibe un tratamento especial dentro do conxunto de instrucións.
+A codificación dos operandos de 8 bits reserva un dos oito valores posibles
+para designar non un rexistro, senón o byte de memoria apuntado por \texttt{HL},
+escrito \texttt{[hl]} na sintaxe de RGBDS.
+Isto significa que calquera instrución que opere sobre un rexistro de 8 bits pode operar
+tamén sobre memoria sen necesidade de opcodes adicionais, ao custo dun ciclo M extra
+polo acceso ao bus. Este mecanismo converte a \texttt{HL} no punteiro de traballo habitual
+dos programas.
+
+Os dous rexistros restantes son de propósito específico.
+O contador de programa \texttt{PC} contén a dirección da seguinte instrución a executar,
+e o punteiro de pila \texttt{SP} apunta ao cume da pila,
+empregada polas instrucións \texttt{push} e \texttt{pop} e polas chamadas a subrutinas.
+
+\subsubsection{Codificación das instrucións}
+
+O SM83 é un procesador \acrfull{cisc} de lonxitude de instrución variable:
+cada instrución ocupa entre un e tres bytes, sendo o primeiro o \gls{opcode}
+e os seguintes, se os houber, o operando inmediato de 8 ou 16 bits.
+Existe ademais un prefixo, o byte \texttt{0xCB}, que dá acceso a un segundo
+espazo de 256 opcodes adicados ás operacións de rotación, desprazamento
+e manipulación de bits individuais. Do total de 256 opcodes sen prefixo, 11 non están asignados a ningunha instrución
+e producen un bloqueo ao empregarse.
+
+\begin{figure}[hp!]
+  \centering
+  \includegraphics[width=0.85\textwidth]{imaxes/sm83_instruction_set.png}
+  \caption{}
+  \label{fig:sm83-instruction-set}
+\end{figure}
+
+% TODO: podería poñer tamen a tabloa de opcodes con prefixo? se me sobra sitio
+
+O listado~\ref{lst:asm-exemplo} amosa un fragmento de código en ensamblador de RGBDS
+que ilustra o uso destes mecanismos: unha rutina que copia un bloque de memoria
+apoiándose en \texttt{HL} como punteiro de lectura autoincrementado.
+
+\begin{lstlisting}[language={[x86masm]Assembler}, label={lst:asm-exemplo}]
+; hl = orixe, de = destino, bc = numero de bytes a copiar
+Copia:
+  ; le [hl] no acumulador, incrementa hl e escribe o byte no destino
+  ld a, [hl+]   
+  ld [de], a    
+  ; incrementamos os contadores
+  inc de
+  dec bc
+  ld a, b
+  ; comproba se bc chegou a cero
+  or a, c
+  ; salto relativo de un byte
+  jr nz, Copia  
+  ret
+\end{lstlisting}
+
+
+\subsection{Comparativa co Intel 8080 e o Zilog Z80}
+\label{subsec:comparativa-cpu}
+
+Mentres que o conxunto de instrucións do Zilog Z80 é un superconxunto do Intel 8080,
+o SM83 soporta as características principais do Intel 8080, algunhas características do Z80,
+como son os saltos relativos \texttt{jr} e a instrución \texttt{reti},
+e engade algunhas instrucións propias como \texttt{ldh} e \texttt{swap}.
 
 \begin{figure}[hp!]
   \centering
@@ -98,30 +261,293 @@ mapa mapa mapita
   \label{fig:cpu-comparation}
 \end{figure}
 
-\subsection{Conxunto de instrucións}
+Do Intel 8080 non herda dúas bandeiras de estado, a de signo e a de paridade,
+e polo tanto tampouco as emprega como condicións nas instrucións de salto.
+Ademáis, tampouco soporta as instrucións de entrada/saída dedicadas \texttt{in} e \texttt{out},
+xa que como se comenta na sección~\ref{sec:mapa-memoria}, os periféricos da consola
+están mapeados en memoria e o seu acceso realízase coas mesmas instrucións de carga
+empregadas para acceder ao resto do espazo de direccións.
+
+O que non herda do Z80 é moito máis amplo.
+Non existe o segundo banco de rexistros nin, en consecuencia, as instrucións
+de intercambio entre bancos, nin os rexistros de índice \texttt{IX} e \texttt{IY}
+cos seus prefixos \texttt{0xDD} e \texttt{0xFD}.
+Desaparece por completo o espazo prefixado con \texttt{0xED},
+o que elimina os accesos a memoria de 16 bits, boa parte da aritmética de 16 bits
+e as instrucións de bloque que o Z80 empregaba para copiar rexións de memoria
+nunha soa instrución.
+
+Fronte estas ausencias, o SM83 engade instrucións propias que responden
+directamente ás necesidades da consola.
+As máis características son as cargas con post-incremento e post-decremento
+de \texttt{HL} (\texttt{ld a, [hl+]} e \texttt{ld a, [hl-]}, e as súas versións de escritura),
+que combinan nunha única instrución o acceso a memoria e a actualización do punteiro.
+A segunda achega característica é o acceso rápido á páxina alta do espazo de direccións
+mediante as instrucións \texttt{ldh}, que toman un operando de 8 bits
+e o interpretan como un desprazamento sobre \texttt{0xFF00}.
+Como xa se comentou en sección~\ref{sec:mapa-memoria}, nestos últimos 256 bytes da memoria
+atópanse rexistros de E/S e a \acrshort{hram}, polo que resulta moi beneficioso ter un 
+acceso máis eficiente a estas zonas.
+
+Estas instrucións aforran un byte e un ciclo M en cada acceso fronte á carga absoluta
+de 16 bits equivalente.
+Complétanse cunha variante que toma o desprazamento do rexistro \texttt{C},
+substituíndo as instrucións \texttt{in} e \texttt{out} eliminadas,
+e con outras adicións menores como \texttt{swap}, que intercambia os dous nibbles dun rexistro,
+ou \texttt{stop}, que activa o modo de baixo consumo da consola.
+
+
+A táboa~\ref{tab:opcodes-movidos} recolle unha mostra representativa
+dos opcodes que cambian de significado respecto do Z80.
+
+\begin{table}[htbp]
+  \centering
+  \rowcolors{2}{white}{udcgray!25}
+  \begin{tabular}{c|l|l}
+  \rowcolor{udcpink!25}
+  \textbf{Opcode} & \textbf{Zilog Z80} & \textbf{Sharp SM83} \\\hline
+  \texttt{0x10} & \texttt{djnz PC+dd}  & \texttt{stop} \\
+  \texttt{0x22} & \texttt{ld [nn], hl} & \texttt{ld [hl+], a} \\
+  \texttt{0x2A} & \texttt{ld hl, [nn]} & \texttt{ld a, [hl+]} \\
+  \texttt{0x32} & \texttt{ld [nn], a}  & \texttt{ld [hl-], a} \\
+  \texttt{0x3A} & \texttt{ld a, [nn]}  & \texttt{ld a, [hl-]} \\
+  \texttt{0xD3} & \texttt{out [n], a}  & --- \\
+  \texttt{0xD9} & \texttt{exx}         & \texttt{reti} \\
+  \texttt{0xDB} & \texttt{in a, [n]}   & --- \\
+  \texttt{0xE0} & \texttt{ret po}      & \texttt{ldh [n], a} \\
+  \texttt{0xE2} & \texttt{jp po, nn}   & \texttt{ldh [c], a} \\
+  \texttt{0xEB} & \texttt{ex de, hl}   & --- \\
+  \texttt{0xF0} & \texttt{ret p}       & \texttt{ldh a, [n]} \\
+  \texttt{0xF8} & \texttt{ret m}       & \texttt{ld hl, sp+dd} \\
+  \texttt{0xCB 3X} & \texttt{sll r}    & \texttt{swap r} \\
+  \end{tabular}
+  \caption{Mostra de opcodes que cambian de significado entre o Z80 e o SM83~\cite{pandocs}.}
+  \label{tab:opcodes-movidos}
+\end{table}
+
+
 \subsection{Interrupcións}
+\label{subsec:interrupcions}
 
+A consola dispón de cinco fontes de interrupción, unha por cada periférico
+capaz de reclamar a atención do procesador.
+O seu mecanismo de atención é notablemente máis simple que o dos procesadores modernos,
+e herda directamente a filosofía do 8080.
 
+Non existe unha táboa de vectores de interrupción propiamente dita.
+Nun esquema vectorizado convencional, o procesador consulta unha táboa en memoria
+para obter a dirección do manexador correspondente, o que permite reubicar
+os manexadores libremente. No SM83, en cambio, cada interrupción ten asociada
+unha dirección fixa no comezo do espazo de direccións, separadas oito bytes entre si,
+á que o procesador salta directamente.
+Esas oito posicións son, na práctica, o espazo dispoñible para o manexador,
+polo que os programas adoitan colocar nelas unicamente un salto
+á rutina real situada noutro punto da \acrshort{rom}.
+A táboa~\ref{tab:interrupcions} recolle as cinco interrupcións, o seu vector e a súa orixe.
 
+\begin{table}[htbp]
+  \centering
+  \rowcolors{2}{white}{udcgray!25}
+  \begin{tabular}{c|l|c|p{5cm}}
+  \rowcolor{udcpink!25}
+  \textbf{Bit} & \textbf{Fonte} & \textbf{Vector} & \textbf{Condición de activación} \\\hline
+  0 & VBlank      & \texttt{0x0040} & A \acrshort{ppu} entra no período de borrado vertical. \\
+  1 & LCD (STAT)  & \texttt{0x0048} & A \acrshort{ppu} chega a unha condición configurada no rexistro \texttt{STAT}. \\
+  2 & Timer       & \texttt{0x0050} & O rexistro contador do temporizador desborda. \\
+  3 & Serial      & \texttt{0x0058} & Complétase unha transferencia de 8 bits polo porto serie. \\
+  4 & Joypad      & \texttt{0x0060} & Algún dos bits 0--3 do rexistro \texttt{P1} pasa de alto a baixo. \\
+  \end{tabular}
+  \caption{Fontes de interrupción da consola, ordenadas de maior a menor prioridade~\cite{pandocs}.}
+  \label{tab:interrupcions}
+\end{table}
+
+O mesmo principio de direccións fixas aplícase ás interrupcións software,
+que se solicitan coa instrución \texttt{rst}.
+Esta instrución, herdada tamén do 8080, realiza unha chamada a subrutina
+a unha das oito direccións fixas comprendidas entre \texttt{0x0000} e \texttt{0x0038},
+codificando o destino nos propios bits do opcode.
+Ao ocupar un só byte fronte aos tres da chamada convencional \texttt{call},
+os xogos empregan estas posicións como puntos de entrada ás rutinas máis frecuentes,
+aforrando espazo na \acrshort{rom}.
+Isto explica a distribución da primeira parte do mapa de memoria:
+os primeiros 256 bytes da \acrshort{rom} do cartucho están reservados
+para os destinos de \texttt{rst}, os vectores de interrupción e a cabeceira.
+
+O control das interrupcións repártese entre tres elementos.
+Os rexistros \texttt{IE} (\textit{interrupt enable}, mapeado en \texttt{0xFFFF})
+e \texttt{IF} (\textit{interrupt flag}, mapeado en \texttt{0xFF0F}) empregan os seus cinco bits baixos
+seguindo a orde da táboa~\ref{tab:interrupcions}:
+\texttt{IE} indica que interrupcións están habilitadas
+e \texttt{IF} cales están pendentes de atender.
+Cando un periférico solicita atención, o hardware activa o bit correspondente de \texttt{IF}
+de forma automática, aínda que o programa tamén pode escribir neste rexistro
+para solicitar ou descartar interrupcións manualmente.
+A conxunción \texttt{IE\,\&\,IF} determina, polo tanto, que interrupcións
+están en condicións de ser atendidas.
+
+Por riba destes dous rexistros sitúase o \textit{flag} \texttt{IME}
+(\textit{interrupt master enable}), interno ao procesador e non accesible en memoria,
+que habilita ou deshabilita globalmente a atención de interrupcións.
+Actívase coa instrución \texttt{ei} e desactívase con \texttt{di},
+e o propio procesador ponse a cero ao atender unha interrupción,
+evitando o aniñamento agás que o manexador o habilite explicitamente.
+
+Cando \texttt{IME} está activo e \texttt{IE\,\&\,IF} é distinto de cero,
+o procesador borra o bit correspondente de \texttt{IF}, pon \texttt{IME} a cero
+e realiza unha chamada ao vector correspondente,
+apilando o valor actual do \texttt{PC}.
+Todo o proceso consome cinco ciclos M: dous de espera, dous para apilar o \texttt{PC}
+e un último para cargar a dirección do vector.
+
+A prioridade entre interrupcións simultáneas é fixa e vén dada pola orde dos bits
+en \texttt{IE} e \texttt{IF}: o bit 0 (VBlank) ten a prioridade máis alta
+e o bit 4 (Joypad) a máis baixa.
 
 \section{Unidade de procesamento de píxeles}
 
 \subsection{Modos de funcionamento}
 \subsection{Background, window e objects}
 
-\section{Controladores de bancos de memoria}
+\section{Cartuchos}
+\label{sec:cartuchos}
+% non son hardware da consola propiamente, pero teñen unha gran importancia no seu funcionamento
+% non soamente proporcionan os datos do xogo, senón que tamén incluén hardware adicional para permitir executar xogos máis esixentes
+
+\subsection{ROM}
+% mapeo e desmapeo da bootrom ao escribir en 0xFF50
+% unmaps boot rom when boot reaches pc = 0x00FE, when load 1 in bank register (0xFF50)
+% ```asm
+% ld a, $01
+% ld [0xFF50], a
+% ```
+% Next instruction will be the first `nop` in 0x0100, in the cartridge rom
+
+\subsubsection{Cabeceira do cartucho}
+
+
+\subsection{Controladores de bancos de memoria}
 \label{sec:mbc}
 
 \subsection{Hardware adicional implementado nos cartuchos}
-
 % non propiamente hardware da consola pero fundamental no seu funcionamento
 
+
 \section{Joypad}
-% comentar q los bits estan invertidos
+\label{sec:joypad}
+
+A consola conta con oito botóns: a cruceta direccional, os botóns de acción \textit{A} e \textit{B},
+e os botóns \textit{Start} e \textit{Select}.
+
+Para representar estes oito botóns empréganse soamente seis bits mapeados na dirección de memoria \texttt{0xFF00},
+no rexistro denominado \texttt{P1} ou \texttt{JOYP}.
+Deste xeito o \acrshort{soc} pódese aforrar dúas liñas para conectar estes botóns.
+Esta matriz de dúas columnas e catro filas permite codificar o estado dos oito botóns usando dous destes bits
+como selectores. Estes bits selectores determinan cal das dúas columnas se vai ler, e os catro bits restantes devolven o estado dos botóns da columna seleccionada.
+Cando se escribe un cero nun destes bits selectores, a columna correspondente queda seleccionada e os catro bits restantes devolven o estado dos botóns da columna seleccionada.
+
+
+\begin{table}[htbp]
+  \centering
+  \rowcolors{2}{white}{udcgray!25}
+  \begin{tabular}{c|l|l|l}
+  \rowcolor{udcpink!25}
+  \textbf{Bit} & \textbf{Función} & \textbf{Botóns} & \textbf{Direccións} \\\hline
+  5 & Selección de botóns de acción & \multicolumn{2}{c}{0 selecciona esta columna} \\
+  4 & Selección da cruceta          & \multicolumn{2}{c}{0 selecciona esta columna} \\
+  3 & Lectura da fila 3             & \textit{Start}  & Abaixo \\
+  2 & Lectura da fila 2             & \textit{Select} & Arriba \\
+  1 & Lectura da fila 1             & \textit{B}      & Esquerda \\
+  0 & Lectura da fila 0             & \textit{A}      & Dereita \\
+  \end{tabular}
+  \caption{Organización do rexistro \texttt{P1} do joypad, en \texttt{0xFF00}~\cite{pandocs}.}
+  \label{tab:joypad}
+\end{table}
+
 \section{Temporizadores e rexistros de división}
+
+
+\section{Transferencia serial}
+\label{sec:serial}
+
+Para a comunicación co exterior a Game Boy dispón dun conector de seis pines
+que pode ser conectado tanto a outra consola mediante a diferentes periféricos.
+Para comunicar dúas consolas entre si
+empregase o cable de conexión, coñecido como \textit{link cable}.
+Sobre el constrúense funcionalidades características da plataforma
+en diversos xogos como os intercambios e os combates entre xogadores na saga Pokémon.
+Ademáis, tamén é empregado para aumentar a funcionalidade da consola mediante
+accesorios como a Game Boy Camera ou a Game Boy Printer.
+
+A comunicación funciona sobre tres conexións:
+dúas de datos, unha de saída e outra de entrada, que se cruzan entre as dúas consolas
+de xeito que a saída dunha é a entrada da outra;
+e unha terceira que transporta o sinal de reloxo.
+Esta última é a que establece a asimetría do protocolo,
+que esta baseado no protocolo de comunicación serie síncrono \acrfull{spi}
+Unha das dúas consolas xera internamente o reloxo e, polo tanto, decide cando se produce
+cada intercambio, adoptando o rol de mestre, mentres que a outra se limita a recibir
+ese reloxo e actúa como escrava.
+O reparto de roles non vén dado polo hardware, senón que o acordan os programas
+das dúas consolas ao establecer a conexión, configurando cadanseu porto serie
+para empregar o reloxo interno ou o externo.
+
+
+A transferencia é sempre un intercambio simétrico de un byte, bit a bit,
+e non un envío unidireccional.
+O rexistro \texttt{SB} (\textit{serial transfer data}), en \texttt{0xFF01},
+funciona como un rexistro de desprazamento.
+En cada pulso de reloxo sae o seu bit máis significativo cara á outra consola
+e entra polo bit menos significativo o bit que envía esta.
+Trala oitava rotación, \texttt{SB} contén integramente o byte recibido
+e a outra consola ten no seu \texttt{SB} o byte que enviamos nós.
+Non existe, polo tanto, forma de recibir sen enviar:
+se un programa non preparou un novo byte a tempo, volverá saír o anterior.
+
+
+O control da operación realízase co rexistro \texttt{SC}
+(\textit{serial transfer control}), en \texttt{0xFF02},
+cuxos bits se describen na táboa~\ref{tab:serial-sc}.
+
+
+\begin{table}[htbp]
+  \centering
+  \rowcolors{2}{white}{udcgray!25}
+  \begin{tabular}{c|l|p{7.5cm}}
+  \rowcolor{udcpink!25}
+  \textbf{Bit} & \textbf{Nome} & \textbf{Significado} \\\hline
+  7 & Transfer enable & A 1 mentres hai unha transferencia solicitada ou en curso. O hardware ponno a cero ao rematar. \\
+  1 & Clock speed     & Selecciona o reloxo rápido. Só existe na Game Boy Color. \\
+  0 & Clock select    & 0 emprega o reloxo externo (escravo), 1 o reloxo interno (mestre). \\
+  \end{tabular}
+  \caption{Bits do rexistro de control \texttt{SC}, en \texttt{0xFF02}~\cite{pandocs}.}
+  \label{tab:serial-sc}
+\end{table}
+
+O fluxo habitual consiste en que a consola mestre cargue o byte a enviar en \texttt{SB}
+e escriba \texttt{0x81} en \texttt{SC}, activando á vez o bit de transferencia
+e o reloxo interno, mentres que a escrava carga o seu byte e escribe \texttt{0x80},
+quedando á espera do reloxo externo.
+Ao completarse os oito desprazamentos, ambas as dúas consolas ven o bit 7 de \texttt{SC}
+posto a cero e reciben a interrupción serie descrita na táboa~\ref{tab:interrupcions}.
+No modelo orixinal o reloxo interno é fixo, de 8\,192\,Hz,
+o que dá unha taxa de transferencia dun quilobyte por segundo,
+descontando o tempo que os programas adican a sincronizarse entre bytes.
+O reloxo externo, en cambio, non ten unha velocidade garantida,
+xa que depende por completo da consola que o xera:
+a consola escrava agarda indefinidamente polo seguinte bit,
+polo que os programas deben implementar por si mesmos un temporizador
+que aborte a comunicación se a outra consola non responde.
+
 
 \section{Unidade de procesamento de audio}
 
+\subsection{Canles}
+% catro, pulso con sweep, pulso sen sweep, ruido e onda
+% con rexistro semellantes con diferencias (foto taboa rexistros)
+% - wave
+% con 16 bytes (32 nibbles) adicionais para reproducir calquera forma de onda
+- noise
+% dous modos (15 e 7 bits) xera numeros pseudoaleatorios
 
 
 

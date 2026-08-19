@@ -8,10 +8,20 @@ use crate::{
 
 /// Decimal Adjust Accumulator. Meant to be used after an arithmetic operation whose input where in binary coded decimal.
 #[derive(Debug, Default, Clone, Copy)]
-pub struct Daa;
+pub struct Daa {
+    carry: bool,
+    half_carry: bool,
+    subtraction: bool,
+}
 
 impl Daa {
-    pub fn new() -> Self { Self }
+    pub fn new(carry: bool, half_carry: bool, subtraction: bool) -> Self {
+        Self {
+            carry,
+            half_carry,
+            subtraction,
+        }
+    }
 }
 
 impl Instruction for Daa {
@@ -19,20 +29,20 @@ impl Instruction for Daa {
         let mut adjustment = 0;
         let mut carry = false;
 
-        if gb.cpu.subtraction() {
-            if gb.cpu.half_carry() {
+        if self.subtraction {
+            if self.half_carry {
                 adjustment += 0x6;
             }
-            if gb.cpu.carry() {
+            if self.carry {
                 adjustment += 0x60;
             }
 
             gb.cpu.a = gb.cpu.a.wrapping_sub(adjustment);
         } else {
-            if gb.cpu.half_carry() || (gb.cpu.a & 0x0F) > 0x09 {
+            if self.half_carry || (gb.cpu.a & 0x0F) > 0x09 {
                 adjustment += 0x6;
             }
-            if gb.cpu.carry() || gb.cpu.a > 0x99 {
+            if self.carry || gb.cpu.a > 0x99 {
                 adjustment += 0x60;
                 carry = true
             }
