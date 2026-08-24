@@ -93,7 +93,7 @@ impl Dmg {
         Ok(())
     }
 
-    pub fn step<C: Controller>(&mut self, controller: &mut C) -> Result<Option<InstructionBox>, DmgError> {
+    pub fn step<C: Controller>(&mut self, controller: &mut C) -> Result<Option<Instructions>, DmgError> {
         let prev_cycles = self.cpu.cycles;
 
         let instruction = Cpu::step(self)?;

@@ -120,4 +120,60 @@ macro_rules! reg16 {
     };
 }
 
-pub(crate) use {bit_accessors, field_bit_accessors, flag_methods, reg16};
+macro_rules! instruction_dispatch {
+    (
+        $vis:vis enum $name:ident {
+            $( $variant:ident ),+ $(,)?
+        }
+    ) => {
+        $vis enum $name {
+            $( $variant($variant), )+
+        }
+
+        // the variants are built through `into`, so the tables that decode the opcodes stay
+        // unaware of the enum and read as a plain list of instructions
+        $(
+            impl From<$variant> for $name {
+                #[inline(always)]
+                fn from(instruction: $variant) -> Self { $name::$variant(instruction) }
+            }
+        )+
+
+        impl $name {
+            #[inline(always)]
+            pub(crate) fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+                match self {
+                    $( $name::$variant(instruction) => instruction.exec(gb), )+
+                }
+            }
+
+            #[inline(always)]
+            pub fn info(&self) -> (u8, u8) {
+                match self {
+                    $( $name::$variant(instruction) => instruction.info(), )+
+                }
+            }
+
+            /// Assembly representation of the instruction and its operands
+            pub fn disassembly(&self) -> String {
+                match self {
+                    $( $name::$variant(instruction) => instruction.disassembly(), )+
+                }
+            }
+        }
+
+        impl core::fmt::Display for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                write!(f, "{}", self.disassembly())
+            }
+        }
+
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                write!(f, "{}", self.disassembly())
+            }
+        }
+    };
+}
+
+pub(crate) use {bit_accessors, field_bit_accessors, flag_methods, instruction_dispatch, reg16};

@@ -11,13 +11,13 @@ use crate::{
 };
 
 // TODO: not expose individual instructions
-pub use instructions::{Instruction, InstructionError, Len, Nop};
+pub use instructions::{Instructions, Instruction, InstructionError, Len, Nop};
 use instructions::{JumpCondition as JC, *};
 pub use registers::{Register8 as R8, Register16 as R16};
 
 use core::fmt::{self, Display, Formatter};
 
-pub type FetchResult = core::result::Result<InstructionBox, InstructionError>;
+pub type FetchResult = core::result::Result<Instructions, InstructionError>;
 
 pub const FREQUENCY: u32 = 4_194_304;
 
@@ -99,7 +99,7 @@ impl Cpu {
     }
 
     #[inline(never)]
-    pub(crate) fn step(gb: &mut Dmg) -> Result<Option<InstructionBox>, InstructionError> {
+    pub(crate) fn step(gb: &mut Dmg) -> Result<Option<Instructions>, InstructionError> {
         // check if is neccessatry to handle interrupts before executing the instruction
         if Cpu::handle_interrupts(gb) {
             // 5 Mcycles = 2 NOP + 3 ...
@@ -177,7 +177,7 @@ impl Cpu {
     pub(crate) fn fetch(gb: &mut Dmg, opcode: u8) -> FetchResult {
         let cpu = &gb.cpu;
 
-        let instruction: InstructionBox = match opcode {
+        let instruction: Instructions = match opcode {
             0x00 => Nop::new().into(),
             0x01 => LdR16Imm16::new(R16::BC, gb.load(cpu.pc.wrapping_add(1))).into(),
             0x02 => LdPointedByR16A::new(R16::BC).into(),
@@ -447,7 +447,7 @@ impl Cpu {
         let bit = (cb_opcode & 0x38) >> 3;
         let cpu = &gb.cpu;
 
-        let instruction: InstructionBox = match cb_opcode {
+        let instruction: Instructions = match cb_opcode {
             0x00 => RlcR8::new(R8::B).into(),
             0x01 => RlcR8::new(R8::C).into(),
             0x02 => RlcR8::new(R8::D).into(),

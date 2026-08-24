@@ -1,7 +1,4 @@
-mod instruction_box;
 pub(crate) mod macros;
-
-pub use instruction_box::*;
 
 /// Convert little-endian u8 pair to u16
 #[inline(always)]

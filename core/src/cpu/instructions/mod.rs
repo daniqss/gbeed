@@ -38,8 +38,6 @@ mod sub;
 mod swap;
 mod xor;
 
-use core::fmt::Display;
-
 pub use adc::*;
 pub use add::*;
 pub use and::*;
@@ -90,15 +88,21 @@ pub trait Instruction {
     fn disassembly(&self) -> String;
 }
 
-impl<T: Instruction + Copy + 'static> From<T> for InstructionBox {
-    fn from(val: T) -> Self {
-        InstructionBox::new(val)
-    }
-}
-
-impl Display for dyn Instruction {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", self.disassembly())
+instruction_dispatch! {
+    pub enum Instructions {
+        AdcImm8, AdcPointedByHL, AdcR8, AddAPointedByHL, AddAR8, AddHLSP, AddImm8, AddR16,
+        AddSPImm8, AndImm8, AndPointedByHL, AndR8, BitPointedByHL, BitR8, Call, Ccf, CpImm8,
+        Cpl, CpPointedByHL, CpR8, Daa, DecPointedByHL, DecR16, DecR8, DecStackPointer, Di, Ei,
+        Halt, IncPointedByHL, IncR16, IncR8, IncStackPointer, JpToHL, JpToImm16, Jr,
+        LdAPointedByHLDec, LdAPointedByHLInc, LdAPointedByImm16, LdAPointedByR16, LdhAC,
+        LdhAImm8, LdhCA, LdhImm8A, LdHLSPPlusImm8, LdImm16SP, LdPointedByHLDecA,
+        LdPointedByHLImm8, LdPointedByHLIncA, LdPointedByHLR8, LdPointedByImm16A,
+        LdPointedByR16A, LdR16Imm16, LdR8Imm8, LdR8PointedByHL, LdR8R8, LdSPHL, LdSPImm16, Nop,
+        OrImm8, OrPointedByHL, OrR8, Pop, Push, ResPointedByHL, ResR8, Ret, Reti, Rla, Rlca,
+        RlcPointedByHL, RlcR8, RlPointedByHL, RlR8, Rra, Rrca, RrcPointedByHL, RrcR8,
+        RrPointedByHL, RrR8, Rst, SbcImm8, SbcPointedByHL, SbcR8, Scf, SetPointedByHL, SetR8,
+        SlaPointedByHL, SlaR8, SraPointedByHL, SraR8, SrlPointedByHL, SrlR8, Stop, SubImm8,
+        SubPointedByHL, SubR8, SwapPointedByHL, SwapR8, XorImm8, XorPointedByHL, XorR8,
     }
 }
 
@@ -137,6 +141,9 @@ impl InstructionEffect {
         }
     }
 
+    /// Only read by the instruction tests, the interpreter matches on `len` directly because
+    /// a jump has to leave the program counter alone
+    #[allow(dead_code)]
     pub fn len(&self) -> u8 {
         match &self.len {
             Len::Jump(len) => *len,

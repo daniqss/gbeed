@@ -29,9 +29,8 @@ pub use cartrigde::{CARTRIDGE_LOGO_END, CARTRIDGE_LOGO_START};
 pub use cpu::InstructionError;
 pub use dmg::{Dmg, DmgError};
 
-// hardware components, reachable through the `Dmg` fields
 pub use apu::Apu;
-pub use cpu::Cpu;
+pub use cpu::{Cpu, Instructions};
 pub use interrupts::Interrupt;
 pub use joypad::{Joypad, JoypadButton};
 pub use memory::*;
@@ -39,9 +38,7 @@ pub use ppu::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH, Ppu};
 pub use serial::Serial;
 pub use timer::Timer;
 
-// embedding surface, what a frontend implements to plug itself into the core
 pub use apu::{AudioPlayer, BUFFER_SIZE, DefaultAudioPlayer, SAMPLE_RATE};
 pub use controller::{Controller, DefaultController};
 pub use ppu::{DefaultRenderer, Renderer};
 pub use serial::{DefaultSerialListener, SerialListener};
-pub use utils::InstructionBox;
