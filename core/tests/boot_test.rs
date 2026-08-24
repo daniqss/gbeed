@@ -1,18 +1,18 @@
-use gbeed_core::{DefaultController, prelude::*};
-
-mem_range!(ROM_BANK00, 0x0000, 0x3FFF);
+use gbeed_core::{
+    BOOT_ROM_END, CARTRIDGE_LOGO_END, CARTRIDGE_LOGO_START, DefaultController, ROM_BANK00_START,
+    ROM_BANKNN_END, prelude::*,
+};
 
 const NINTENDO_LOGO: [u8; 48] = [
     0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00,
     0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB,
     0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E,
 ];
-mem_range!(CARTRIDGE_LOGO, 0x0104, 0x0104 + NINTENDO_LOGO.len() as u16 - 1);
 
 #[test]
 fn test_disassembly_boot() -> Result<(), Box<dyn std::error::Error>> {
     let boot_rom_data = std::fs::read("../dmg_boot.bin")?;
-    let game_data = (ROM_BANK00_START..ROM_BANK00_START + 0x8000)
+    let game_data = (ROM_BANK00_START..=ROM_BANKNN_END)
         .map(|addr| {
             if (CARTRIDGE_LOGO_START..=CARTRIDGE_LOGO_END).contains(&addr) {
                 NINTENDO_LOGO[(addr - CARTRIDGE_LOGO_START) as usize]
@@ -31,7 +31,7 @@ fn test_disassembly_boot() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut controller = DefaultController::new();
 
-    while gb.cpu.pc < 0x0100 {
+    while gb.cpu.pc < BOOT_ROM_END {
         let _instr = gb.step(&mut controller);
 
         if gb.cpu.cycles >= 70224 {

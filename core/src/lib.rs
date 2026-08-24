@@ -19,14 +19,13 @@ mod serial;
 mod timer;
 mod utils;
 
-// keep memory bus implementation details in the crate
-use memory::*;
-
 #[doc(hidden)]
 pub use pastey::paste as __paste;
 
 // the emulator, its cartridge and every error they can produce
 pub use cartrigde::{Cartridge, CartridgeError, CartridgeHeader, CartridgeResult, Destination};
+
+pub use cartrigde::{CARTRIDGE_LOGO_END, CARTRIDGE_LOGO_START};
 pub use cpu::InstructionError;
 pub use dmg::{Dmg, DmgError};
 
@@ -35,7 +34,7 @@ pub use apu::Apu;
 pub use cpu::Cpu;
 pub use interrupts::Interrupt;
 pub use joypad::{Joypad, JoypadButton};
-pub use memory::{Accessible, Accessible16, Memory};
+pub use memory::*;
 pub use ppu::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH, Ppu};
 pub use serial::Serial;
 pub use timer::Timer;

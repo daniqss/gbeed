@@ -1,13 +1,19 @@
 #[macro_export]
 macro_rules! mem_range {
     ($name:ident, $start:expr, $end:expr) => {
+        $crate::mem_range!(pub(crate) $name, $start, $end);
+    };
+
+    ($vis:vis $name:ident, $start:expr, $end:expr) => {
         $crate::__paste! {
             #[allow(dead_code)]
-            pub const [<$name _START>]: u16 = $start;
+            $vis const [<$name _START>]: u16 = $start;
+
             #[allow(dead_code)]
-            pub const [<$name _END>]: u16 = $end;
+            $vis const [<$name _END>]: u16 = $end;
+
             #[allow(dead_code)]
-            pub const [<$name _SIZE>]: u16 = ($end) - ($start) + 1;
+            $vis const [<$name _SIZE>]: u16 = ($end) - ($start) + 1;
         }
     };
 }
