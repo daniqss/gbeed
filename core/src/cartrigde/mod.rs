@@ -8,8 +8,7 @@ use crate::{
 };
 
 use features::CartridgeFeatures;
-use header::CartridgeHeader;
-pub use header::{RamSize, RomSize};
+pub use header::{CartridgeHeader, Destination, RamSize, RomSize};
 use mbc::{CartridgeType, MemoryBankController, select_mbc};
 
 /// Used for MBC1M multicart cartridge detection

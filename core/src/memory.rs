@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 /// addressable memory size, 64KB
+#[allow(dead_code)]
 pub const ADDRESABLE_MEMORY: u16 = 0xFFFF;
 
 // in DMG, in CGB 256 + 1792, splited in two parts, with the cartridge header in the middle
@@ -35,10 +36,6 @@ mem_range!(IO_REGISTERS, 0xFF00, 0xFF7F);
 
 mem_range!(HRAM, 0xFF80, 0xFFFE);
 
-pub const BOOT_REGISTER: u16 = 0xFF50;
-
-pub fn is_high_address(address: u16) -> bool { (IO_REGISTERS_START..=ADDRESABLE_MEMORY).contains(&address) }
-
 /// # Memory mapped trait for addressable components
 /// This trait allows to read and write from Dmg and its components, indexing it with a memory address
 /// without the limitations of operators overloading traits
@@ -64,7 +61,7 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new(boot_rom: Option<Vec<u8>>) -> Memory {
+    pub(crate) fn new(boot_rom: Option<Vec<u8>>) -> Memory {
         Memory {
             boot_rom,
             ram: Box::new([0; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize]),

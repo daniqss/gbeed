@@ -64,13 +64,13 @@ pub struct CartridgeHeader {
     pub title: String,
     supports_cgb: GBCSupport,
     supports_sgb: bool,
-    pub cartridge_type: CartridgeType,
-    pub rom_size: RomSize,
-    pub ram_size: RamSize,
+    pub(crate) cartridge_type: CartridgeType,
+    pub(crate) rom_size: RomSize,
+    pub(crate) ram_size: RamSize,
     pub destination: Destination,
     game_version: u8,
-    pub header_checksum: u8,
-    pub global_checksum: u16,
+    pub(crate) header_checksum: u8,
+    pub(crate) global_checksum: u16,
 }
 
 impl CartridgeHeader {

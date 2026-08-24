@@ -46,7 +46,7 @@ pub struct Joypad {
 }
 
 impl Joypad {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             input: 0xFF,
             joyp: 0xCF,
@@ -63,11 +63,8 @@ impl Joypad {
         }
     }
 
-    pub fn any_input(&self) -> bool { self.input != 0xFF }
-
-    // TODO: change visibility in macro
     bit_accessors! {
-        target: joyp;
+        pub(crate) target: joyp;
 
         SELECT_BUTTONS,
         SELECT_DPAD,
@@ -105,6 +102,7 @@ impl Accessible<u16> for Joypad {
 
     fn write(&mut self, address: u16, value: u8) {
         match address {
+            // TODO: interrupt should be triggered on a high to low edge of any input line
             // only bits SELECT_BUTTONS and SELECT_DPAD are writable
             JOYP => self.joyp = (self.joyp & 0xCF) | (value & 0x30),
             _ => unreachable!(

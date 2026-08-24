@@ -50,7 +50,7 @@ impl Default for Serial {
 }
 
 impl Serial {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             sb: 0x00,
             sc: 0x7E,
@@ -58,13 +58,13 @@ impl Serial {
         }
     }
 
-    pub fn step<S: SerialListener>(&mut self, listener: &mut S) {
+    pub(crate) fn step<S: SerialListener>(&mut self, listener: &mut S) {
         for data in self.pending_data.drain(..) {
             listener.on_transfer(data);
         }
     }
 
-    bit_accessors!(target: sc; SC_TRANSFER_START, SC_CLOCK_SPEED, SC_CLOCK_SELECT);
+    bit_accessors!(pub(crate) target: sc; SC_TRANSFER_START, SC_CLOCK_SPEED, SC_CLOCK_SELECT);
 }
 
 impl Accessible<u16> for Serial {

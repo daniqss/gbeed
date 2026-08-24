@@ -7,7 +7,7 @@ extern crate std;
 
 mod apu;
 mod cartrigde;
-pub mod controller;
+mod controller;
 mod cpu;
 mod dmg;
 mod interrupts;
@@ -17,17 +17,32 @@ mod ppu;
 pub mod prelude;
 mod serial;
 mod timer;
-pub mod utils;
+mod utils;
 
-pub use apu::{Apu, AudioPlayer, BUFFER_SIZE, DefaultAudioPlayer, SAMPLE_RATE, STEREO_BUFFER_SIZE};
-pub use cartrigde::Cartridge;
-pub use controller::{Controller, DefaultController};
-pub use cpu::{AFTER_BOOT_CPU, Cpu};
+// keep memory bus implementation details in the crate
+use memory::*;
+
+#[doc(hidden)]
+pub use pastey::paste as __paste;
+
+// the emulator, its cartridge and every error they can produce
+pub use cartrigde::{Cartridge, CartridgeError, CartridgeHeader, CartridgeResult, Destination};
+pub use cpu::InstructionError;
 pub use dmg::{Dmg, DmgError};
+
+// hardware components, reachable through the `Dmg` fields
+pub use apu::Apu;
+pub use cpu::Cpu;
 pub use interrupts::Interrupt;
-pub use joypad::Joypad;
-pub use joypad::JoypadButton;
-pub use memory::*;
-pub use ppu::{DefaultRenderer, Ppu, Renderer};
-pub use serial::{Serial, SerialListener};
+pub use joypad::{Joypad, JoypadButton};
+pub use memory::{Accessible, Accessible16, Memory};
+pub use ppu::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH, Ppu};
+pub use serial::Serial;
 pub use timer::Timer;
+
+// embedding surface, what a frontend implements to plug itself into the core
+pub use apu::{AudioPlayer, BUFFER_SIZE, DefaultAudioPlayer, SAMPLE_RATE};
+pub use controller::{Controller, DefaultController};
+pub use ppu::{DefaultRenderer, Renderer};
+pub use serial::{DefaultSerialListener, SerialListener};
+pub use utils::InstructionBox;

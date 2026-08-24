@@ -1,5 +1,5 @@
 mod instruction_box;
-pub mod macros;
+pub(crate) mod macros;
 
 pub use instruction_box::*;
 

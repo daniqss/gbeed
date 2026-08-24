@@ -9,7 +9,7 @@ pub struct InstructionBox {
 }
 
 impl InstructionBox {
-    pub fn new<T: Instruction + Copy + 'static>(val: T) -> Self {
+    pub(crate) fn new<T: Instruction + Copy + 'static>(val: T) -> Self {
         const {
             assert!(
                 core::mem::size_of::<T>() <= 4,

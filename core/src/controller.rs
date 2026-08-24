@@ -4,10 +4,16 @@ use crate::serial::{DefaultSerialListener, SerialListener};
 
 pub trait Controller: SerialListener + Renderer + AudioPlayer {}
 
+/// # Controller
+/// Expands the three traits a frontend implements into a single type that forwards to them
+///
+/// ```ignore
+/// controller!(pub DefaultController, DefaultSerialListener, DefaultRenderer, DefaultAudioPlayer);
+/// ```
 #[macro_export]
 macro_rules! controller {
-    ($name:ident, $listener:ty, $renderer:ty, $audio_player:ty) => {
-        pub struct $name {
+    ($vis:vis $name:ident, $listener:ty, $renderer:ty, $audio_player:ty) => {
+        $vis struct $name {
             listener: $listener,
             renderer: $renderer,
             audio_player: $audio_player,
@@ -38,7 +44,7 @@ macro_rules! controller {
 }
 
 controller!(
-    DefaultController,
+    pub DefaultController,
     DefaultSerialListener,
     DefaultRenderer,
     DefaultAudioPlayer
