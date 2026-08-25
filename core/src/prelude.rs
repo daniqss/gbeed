@@ -17,5 +17,5 @@ pub use crate::{controller, mem_range};
 pub(crate) use crate::utils;
 
 pub(crate) use crate::utils::macros::{
-    bit_accessors, field_bit_accessors, flag_methods, instruction_dispatch, reg16,
+    bit_accessors, field_bit_accessors, flag_methods, instruction_dispatch, mbc_dispatch, reg16,
 };

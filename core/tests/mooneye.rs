@@ -21,6 +21,8 @@ impl MooneyeListener {
 
 impl SerialListener for MooneyeListener {
     fn on_transfer(&mut self, data: u8) {
+        // println!("received data -> 0x{:02X}, {}", data, data as char);
+
         self.received_data.push(data);
 
         // fibonacci sequence

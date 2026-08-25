@@ -176,4 +176,18 @@ macro_rules! instruction_dispatch {
     };
 }
 
-pub(crate) use {bit_accessors, field_bit_accessors, flag_methods, instruction_dispatch, reg16};
+macro_rules! mbc_dispatch {
+    ($self:ident.$method:ident($( $arg:expr ),*)) => {
+        match $self {
+            Mbc::Mbc0(mbc) => mbc.$method($( $arg ),*),
+            Mbc::Mbc1(mbc) => mbc.$method($( $arg ),*),
+            Mbc::Mbc2(mbc) => mbc.$method($( $arg ),*),
+            Mbc::Mbc3(mbc) => mbc.$method($( $arg ),*),
+            Mbc::Mbc5(mbc) => mbc.$method($( $arg ),*),
+        }
+    };
+}
+
+pub(crate) use {
+    bit_accessors, field_bit_accessors, flag_methods, instruction_dispatch, mbc_dispatch, reg16,
+};

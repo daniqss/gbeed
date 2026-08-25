@@ -34,7 +34,7 @@ impl BlarggListener {
 
 impl SerialListener for BlarggListener {
     fn on_transfer(&mut self, data: u8) {
-        // print!("{}", data as char);
+        // println!("received data -> 0x{:02X}, {}", data, data as char);
 
         self.received_data.push(data as char);
 

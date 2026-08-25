@@ -102,7 +102,8 @@ impl Dmg {
 
         self.ppu.step(controller, delta, &mut self.interrupt_flag);
         self.timer.step(delta, &mut self.interrupt_flag);
-        self.serial.step(controller);
+        self.serial.step(delta, controller, &mut self.interrupt_flag);
+        self.joypad.step(&mut self.interrupt_flag);
         self.apu.step(controller, delta);
 
         Ok(instruction)
