@@ -9,8 +9,11 @@ impl Texture {
     pub fn new(rl: &mut RaylibHandle, thread: &RaylibThread, width: i32, height: i32) -> Self {
         let mut img = Image::gen_image_color(width, height, Color::BLACK);
         img.set_format(PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
+
+        // TODO: remove the unwrap, returning an error if the texture fails to load
         let texture = rl.load_texture_from_image(thread, &img).unwrap();
         let framebuffer = vec![0u8; (width * height * 3) as usize].into_boxed_slice();
+
         Self { texture, framebuffer }
     }
 

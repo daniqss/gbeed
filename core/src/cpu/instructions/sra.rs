@@ -9,7 +9,7 @@ use crate::{
 
 /// Shift Right Arithmetically register r8 (bit 7 of r8 is unchanged).
 /// ┏━━━━━━ r8 ━━━━━━┓ ┏━ Flags ━┓
-/// ┃ b7 → ... → b0 ─╂─╂→   C    ┃
+/// ┃ b7 -> ... -> b0 ─╂─╂->   C    ┃
 /// ┗━━━━━━━━━━━━━━━━┛ ┗━━━━━━━━━┛
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SraR8 {

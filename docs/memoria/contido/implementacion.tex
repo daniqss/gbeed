@@ -8,35 +8,344 @@ dos diferentes compoñentes descritos no capítulo~\ref{chap:arquitectura}.
 \section{Requisitos e restricións}
 % requisitos da libreria: precision, portabilidade, no_std, sen dependencias
 % restricions impostas polas contornas embebidas: memoria, cpu, sen SO
+Para garantir os obxectivos expostos na % sección~\ref{sec:introducion:obxectivos} o núcleo do emulador
+na seccion obxectivos, o núcleo do emulador
+debe seguir unhas directrices de deseño e implementación 
+que aseguren unha correcta execución en contornas limitadas e permita unha fácil integrabilidade e portabilidade.
+
+Para iso séguense as seguintes directrices:
+
+\begin{itemize}
+  \item \textbf{Precisión}: o núcleo do emulador ten como máxima prioridade unha correcta execución en calquera tipo de contorna. Debido a isto,
+  a precisión sempre se verá supeditada á eficiencia, elexindo implementacións de certos compoñentes máis sinxelas se as melloras de precisión non son significativas,
+  afectando soamente a un subconxunto pequeno e pouco representativo do catálogo da consola.
+  
+  \item \textbf{Portabilidade}: o núcleo do emulador debe ser facilmente embebible en diferentes contornas, considerando tanto as probadas neste traballo como as
+  que poderían desenvolverse no futuro. Por isto, a súa implementación debe de estar libre de dependencias externas, polo que se empregou un mecanismo 
+  de Rust chamado \textit{no\_std}.  Este mecanismo permite prescindir da biblioteca estándar de Rust (\textit{std}), que asume a presenza dun sistema operativo,
+  e empregar no seu lugar unicamente o subconxunto \textit{core}, o cal non fai suposicións sobre o contorno de execución e resulta axeitado para sistemas embebidos
+  sen sistema operativo, deixando a posibilidade de incorporar para outras funcionalidades, como a reserva dinámica no \textit{heap}, librerías dependentes da plataforma.
+
+  \item \textbf{Rendemento}: para garantir o funcionamento á velocidade orixinal en todo tipo de plataformas, o núcleo do emulador debe ser eficiente,
+  recorrendo a optimizacións e xeración de código en tempo de compilación, e evitando no bucle quente da execución operacións de entrada/saída, reservas de
+  memoria e demais chamadas ao sistema, xa que son operacións moi destrutivas para o rendemento, especialmente en plataformas cun único núcleo de baixo
+  rendemento.
+\end{itemize} 
+
 
 \section{Deseño da librería e da súa API}
 % organizacion en crates/modulos
 % interfaz publica: como se integra o core noutros frontends
 % decision de deseño: core independente de plataforma, frontends aparte
 
-\section{Implementación dos compoñentes}
+Os \textit{crates} son as unidades de compilación de Rust. Para conseguir unha organización do código modular e con separación de responsabilidades,
+separouse o núcleo do emulador da implementación dos dous frontends. Ademais engadiuse un cuarto \textit{crate} que contén utilidades comúns para ser empregadas polas dúas
+vistas que empregan \textit{raylib}.
 
-\subsection{CPU}
+Dentro da organización do núcleo, empregamos diferentes módulos separando a funcionalidade dos diferentes compoñentes da consola,
+nos que se implementa un \textit{struct} para cada compoñente, que se compoñen dentro do \texttt{struct} \texttt{Dmg}.
+Este é o compoñente principal do núcleo, a través do cal os frontends interactúan co emulador.
+Ademais, o núcleo expón un \textit{trait} chamado \texttt{Controller}, que define a interface que debe implementar un frontend
+para realizar comportamentos de entrada/saída dependentes da plataforma.
+
+Como vemos na figura~\ref{fig:arquitectura-uml}, cada frontend compón a súa aplicación
+cunha instancia de \texttt{Dmg} e cun controlador de seu.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  scale=0.62, transform shape, font=\small,
+  %%%%%%%%% struct -> clase UML
+  struct/.style={draw, fill=white, rectangle split, rectangle split parts=2,
+                 rectangle split part align=center, align=center, inner sep=4pt},
+  %%%%%%%%% trait -> interface UML
+  trait/.style={draw, dashed, fill=black!4, rectangle split, rectangle split parts=2,
+                rectangle split part align=center, align=center, inner sep=4pt},
+  %%%%%%%%% crate -> paquete UML
+  tab/.style={draw, minimum width=14mm, minimum height=4mm, inner sep=0pt},
+  etiqcrate/.style={anchor=north west, xshift=2.5mm, yshift=-2.5mm,
+                    font=\footnotesize\ttfamily},
+  %%%%%%%%% relacións
+  depende/.style={dashed, -{Latex[open, length=2.4mm, width=2mm]}},
+  realiza/.style={dashed, -{Triangle[open, length=3mm, width=3mm]}},
+  compon/.style={{Diamond[length=3mm, width=2.2mm]}-},
+  etiq/.style={font=\scriptsize, inner sep=1.5pt, fill=white}
+]
+
+%%%%%%%%% crate console
+\node[struct, minimum width=52mm] (capp) at (-62mm,0) {
+  \nodepart{one}  \texttt{EmulatorApp<'a>}
+  \nodepart{two}  \footnotesize\ttfamily state, gb, rom\_path,\\
+                  \footnotesize\ttfamily save\_path, controller
+};
+
+\node[struct, minimum width=52mm] (cctrl) at (-62mm,-26mm) {
+  \nodepart{one}  \texttt{ConsoleController<'a>}
+  \nodepart{two}  \footnotesize\ttfamily screen, palette, audio\_stream,\\
+                  \footnotesize\ttfamily speed\_up\_mode, targeted\_fps, rl
+};
+
+%%%%%%%% crate debugger 
+\node[struct, minimum width=52mm] (dapp) at (62mm,0) {
+  \nodepart{one}  \texttt{EmulatorApp<'a>}
+  \nodepart{two}  \footnotesize\ttfamily state, gb, rom\_path,\\
+                  \footnotesize\ttfamily save\_path, controller
+};
+
+\node[struct, minimum width=52mm] (dctrl) at (62mm,-26mm) {
+  \nodepart{one}  \texttt{DebuggerController<'a>}
+  \nodepart{two}  \footnotesize\ttfamily screen\_texture, tile\_textures,\\
+                  \footnotesize\ttfamily bg\_map\_texture, audio\_stream, rl
+};
+
+%%%%%%%%% crate raylib_common
+\node[struct, minimum width=38mm] (tex) at (0,-13mm) {
+  \nodepart{one}  \texttt{Texture}
+  \nodepart{two}  \footnotesize\ttfamily texture, framebuffer
+};
+
+%%%%%%%%% crate core
+\node[trait, minimum width=76mm] (ctrl) at (0,-56mm) {
+  \nodepart{one}  \scriptsize$\ll$trait$\gg$\\[1pt] \texttt{Controller}
+  \nodepart{two}  \footnotesize\ttfamily Renderer + SerialListener + AudioPlayer
+};
+
+\node[struct, minimum width=90mm] (dmg) at (0,-82mm) {
+  \nodepart{one}  \texttt{Dmg}
+  \nodepart{two}  \footnotesize\ttfamily cpu, cartridge, ppu, apu, joypad, serial,\\
+                  \footnotesize\ttfamily interrupt\_flag, interrupt\_enable, bank
+};
+
+\node[struct, minimum width=62mm] (cart) at (0,-108mm) {
+  \nodepart{one}  \texttt{Cartridge}
+  \nodepart{two}  \footnotesize\ttfamily header, features, mbc
+};
+
+%%%%%%%%% crates
+\begin{scope}[on background layer]
+  \node[draw, fill=black!2, fit=(capp)(cctrl),
+        inner xsep=5mm, inner ysep=6mm] (console) {};
+  \node[tab, fill=black!2, anchor=south west] at (console.north west) {};
+
+  \node[draw, fill=black!2, fit=(dapp)(dctrl),
+        inner xsep=5mm, inner ysep=6mm] (debugger) {};
+  \node[tab, fill=black!2, anchor=south west] at (debugger.north west) {};
+
+  \node[draw, fill=black!2, fit=(tex),
+        inner xsep=5mm, inner ysep=6mm] (rcommon) {};
+  \node[tab, fill=black!2, anchor=south west] at (rcommon.north west) {};
+
+  \node[draw, fill=black!2, fit=(ctrl)(dmg)(cart),
+        inner xsep=6mm, inner ysep=7mm] (core) {};
+  \node[tab, fill=black!2, anchor=south west] at (core.north west) {};
+\end{scope}
+\node[etiqcrate] at (console.north west)  {console};
+\node[etiqcrate] at (debugger.north west) {debugger};
+\node[etiqcrate] at (rcommon.north west)  {raylib\_common};
+\node[etiqcrate] at (core.north west)     {core};
+
+%%%%%%%% relacións
+% cada aplicación contén o seu controlador
+\draw[compon] (capp.south) -- node[etiq, right]{controller} (cctrl.north);
+\draw[compon] (dapp.south) -- node[etiq, right]{controller} (dctrl.north);
+
+% os controladores conteñen texturas
+\draw[compon] (cctrl.east) -- node[etiq, pos=0.55, below]{screen} (tex.west);
+\draw[compon] (dctrl.west) -- node[etiq, pos=0.55, below]{textures} (tex.east);
+
+% impl do trait Controller
+\draw[realiza] (cctrl.south) |- node[etiq, pos=0.75, above]{implementa} (ctrl.west);
+\draw[realiza] (dctrl.south) |- node[etiq, pos=0.75, above]{implementa} (ctrl.east);
+
+% cada aplicación posúe unha consola
+\draw[compon] (capp.west) -- ++(-7mm,0)
+      node[etiq, pos=0.9, above]{gb} |- (dmg.west);
+\draw[compon] (dapp.east) -- ++(7mm,0)
+      node[etiq, pos=0.9, above]{gb} |- (dmg.east);
+
+% creación do Cartridge
+\draw[depende] (capp.south west) -- ++(-15mm,0)
+      node[etiq, pos=0.85, above]{$\ll$crea$\gg$} |- (cart.west);
+\draw[depende] (dapp.south east) -- ++(15mm,0)
+      node[etiq, pos=0.85, above]{$\ll$crea$\gg$} |- (cart.east);
+
+% relacións internas do núcleo
+\draw[compon] (dmg.south) -- node[etiq, right]{cartridge} (cart.north);
+\draw[depende] (dmg.north) -- node[etiq, right]{emprega} (ctrl.south);
+
+\end{tikzpicture}
+\caption{Resumo dos \textit{crates} do emulador.}
+\label{fig:arquitectura-uml}
+\end{figure}
+
+% diagrama describindo os diferentes crates e módulos, unha tree view servia pero ns se quedara ben
+
+% interfaz publica de gbeed_core
+% │
+% ├── Dmg ─────────────────────────────── a consola completa
+% │   ├── campos: cpu, cartridge, memory, ppu, joypad, serial,
+% │   │           timer, apu, interrupt_flag, interrupt_enable, bank
+% │   ├── new(cartridge, boot_rom) -> Dmg
+% │   ├── reset()
+% │   ├── run(&mut impl Controller) -> Result<(), DmgError>
+% │   ├── step(&mut impl Controller) -> Result<Option<InstructionBox>, DmgError>
+% │   ├── impl Accessible<u16>     -> read(addr), write(addr, val)
+% │   └── impl Accessible16<u16,u16> ->  load(addr), store(addr, val)
+% │
+% ├── Cartridge
+% │   ├── campos: header, features
+% │   ├── new(raw_rom, save) -> CartridgeResult<Self>
+% │   ├── supports_saves() -> bool
+% │   ├── save_game() -> Option<&[u8]>
+% │   ├── swap_boot_rom(&mut [u8])
+% │   ├── check_header_checksum(raw_rom) -> CartridgeResult<()>
+% │   └── check_global_checksum(raw_rom) -> CartridgeResult<()>
+% │
+% ├── CartridgeHeader
+% │   ├── campos: title, destination        (os demais -> pub(crate))
+% │   ├── new(raw_rom) -> CartridgeResult<Self>
+% │   └── to_string_array() -> Vec<String>
+% │
+% ├── Cpu ─────────────────────────────── só inspección, non se conduce desde fóra
+% │   ├── campos: a f b c d e h l, pc, sp, cycles, ime, halted
+% │   ├── af/bc/de/hl() -> u16   +   set_af/set_bc/set_de/set_hl(u16)
+% │   └── impl Display
+% │       (new, reset, step, fetch, flags -> pub(crate))
+% │
+% ├── Ppu
+% │   ├── campos: vram, oam_ram, sprites_this_frame
+% │   ├── get_scroll() -> (u8, u8)
+% │   ├── get_bg_palette() -> u8
+% │   ├── tile_block0/1/2(), tile_data(), bg_map0(), bg_map1() -> &[u8]
+% │   └── LCDC: lcd_display_enable, window_tile_map_address, window_enable,
+% │             bg_and_window_tile_data, bg_tile_map_address, obj_size,
+% │             obj_enable, bg_enable   (+ set_*)
+% │       (new, step, draw_scanline, dma_transfer, STAT -> pub(crate))
+% │
+% ├── Apu
+% │   └── is_active() -> bool            (new, step -> pub(crate))
+% │
+% ├── Joypad
+% │   ├── campo: input
+% │   ├── button_down(JoypadButton, bool)
+% │   └── impl Display
+% │       (new, bits de selección -> pub(crate))
+% │
+% ├── Serial   campos: sb, sc, pending_data          (new, step -> pub(crate))
+% ├── Timer    campos: internal_counter, tima, tma, tac   (new, step -> pub(crate))
+% ├── Interrupt  campo: .0                    (new, bits -> pub(crate))
+% ├── Memory   campos: boot_rom, ram, hram          (new -> pub(crate))
+% │
+% ├── traits de integración ───────────── o que implementa un frontend
+% │   ├── Controller: SerialListener + Renderer + AudioPlayer
+% │   ├── Renderer        read_pixel, write_pixel, update_screen(&Ppu)
+% │   ├── SerialListener  on_transfer(u8)
+% │   ├── AudioPlayer     playing_stereo, push_sample, flush_buffer
+% │   ├── Accessible<A>   read, write
+% │   ├── Accessible16<A16,A8>  load, store
+% │   └── DefaultController::new / DefaultRenderer::new
+% │       / DefaultSerialListener::new / DefaultAudioPlayer::new
+% │
+% ├── erros
+% │   ├── DmgError (Display, std::error::Error con feature std)
+% │   ├── CartridgeError, CartridgeResult<T>
+% │   └── InstructionError
+% │
+% ├── enums   JoypadButton, Destination
+% │
+% ├── constantes
+% │   ├── DMG_SCREEN_WIDTH, DMG_SCREEN_HEIGHT
+% │   ├── SAMPLE_RATE, BUFFER_SIZE
+% │   ├── NINTENDO_LOGO, CARTRIDGE_LOGO_START, CARTRIDGE_LOGO_END
+% │   └── mapa de memoria (vía `pub use memory::*`): BOOT_ROM, ROM_BANK00,
+% │       ROM_BANKNN, VRAM, EXTERNAL_RAM, WRAM_BANK0, WRAM_BANKN, ECHO_RAM,
+% │       OAM, NOT_USABLE, IO_REGISTERS, HRAM  ×{_START,_END,_SIZE}
+% │       + ADDRESABLE_MEMORY + módulo cgb
+% │
+% ├── macros   mem_range!, controller!
+% └── prelude  Box/Vec/String/format/vec + Dmg, Cartridge, Controller, Joypad,
+%              JoypadButton, Ppu, Renderer, SerialListener, Accessible,
+%              Accessible16, InstructionBox, DMG_SCREEN_*, mem_range!, controller!
+
+\subsection{Inxección de comportamentos no núcleo do emulador}
+
+Como xa se mencionou na sección anterior, a forma na que un cliente pode introducir comportamentos no emulador é empregando o \textit{trait} \texttt{Controller}.
+Este non define métodos de seu, senón que agrupa nun único tipo os tres \textit{traits} que representan as operacións de entrada/saída da consola,
+como vemos no listado~\ref{lst:controller-trait}.
+
+\begin{lstlisting}[float=tbp, caption={\textit{Traits} que compoñen a interface \texttt{Controller}}, label={lst:controller-trait}]
+pub trait Renderer {
+    fn read_pixel(&self, x: usize, y: usize) -> u32;
+    fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8);
+    fn update_screen(&mut self, ppu: &Ppu);
+}
+
+pub trait SerialListener {
+    fn on_transfer(&mut self, data: u8);
+}
+
+pub trait AudioPlayer {
+    fn playing_stereo(&self) -> bool;
+    fn push_sample(&mut self, left: i16, right: i16);
+    fn flush_buffer(&mut self) {}
+}
+
+pub trait Controller: SerialListener + Renderer + AudioPlayer {}
+\end{lstlisting}
+
+Deste xeito, o núcleo non coñece a plataforma sobre a que se executa, pero si os puntos nos que debe delegar nela.
+Que se debuxe o cadro nunha textura de \textit{raylib}, nun \textit{framebuffer} en memoria, ou que simplemente se descarte o resultado
+é unha decisión que corresponde ao cliente, o cal permite manter o núcleo libre de dependencias externas.
+
+Os tests do emulador tamén implementan o \textit{trait} para observar a execución dende fóra,
+recollendo por exemplo a saída do porto serie das ROMs de proba para determinar se un test rematou correctamente,
+sen necesidade de ensuciar a implementación do núcleo con código que só ten sentido durante a validación.
+Este uso detállase en profundidade en % sección~\ref{sec:validacion}.
+
+Cómpre mencionar que esta flexibilidade non supón un custo en tempo de execución.
+Os métodos \texttt{run} e \texttt{step} de \texttt{Dmg} non reciben un obxecto de \textit{trait}, senón un parámetro xenérico acoutado por \texttt{Controller},
+polo que o compilador monomorfiza o código para o tipo concreto empregado por cada cliente.
+A resolución das chamadas prodúcese así en tempo de compilación (\textit{static dispatch}),
+evitando as táboas de métodos virtuais e permitindo mellores optimizacións do compilador.
+
+\section{Implementación dos compoñentes}
+\subsection{Serialización da cabeceira da ROM}
+
+\subsection{Organización do espazo de memoria}
+
+\subsection{Implementación do procesador}
 % decodificacion de instrucions, timing por ciclos
 % interrupcions
 
-\subsection{PPU}
+\subsection{Implementación da unidade gráfica}
 % modos, renderizado por scanline ou por pixel
+
+\subsection{Primeira interface}
+
+\subsection{Temporizadores, mando, transferencia serie e interrupcións}
 
 \subsection{Controladores de bancos de memoria}
 % mbc1, mbc3, mbc5... cales se implementaron e por que
 
-\subsection{Temporizadores}
+\subsection{Depuración e optimización}
+% perfilado, tamaño do binario, optimizacions de compilacion
 
-\subsection{Joypad}
 
 \section{Interfaz para sistemas embebidos}
 % deseño da interfaz para contornos embebidos, no_std
 % framebuffer, entrada, audio
 
-\section{Frontends de referencia}
-% frontend de escritorio con raylib
-% frontend embebido
+\subsection{Interface de estilo consola}
 
-\section{Optimización para contornas de recursos limitados}
-% perfilado, tamaño do binario, optimizacions de compilacion
+\subsection{Implementación do son}
+% tldr: ppu son un monton de maquinas de estados, apu son un monton de contadores
+
+\subsection{Soporte para hardware embebido}
+% compilacion cruzada, x11 en vez de drm ou framebuffer...
+
+% \section{Frontends de referencia}
+% % frontend de escritorio con raylib
+% % frontend embebido
+
+% \section{Optimización para contornas de recursos limitados}
+% % perfilado, tamaño do binario, optimizacions de compilacion

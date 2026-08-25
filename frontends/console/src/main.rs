@@ -61,8 +61,7 @@ impl<'a> EmulatorApp<'a> {
             EmulatorState::GameMenu(state) => state.update(self.controller.rl, dt, &self.gb),
             EmulatorState::SettingsMenu(state) => state.update(dt, self.gb.as_ref(), &mut self.controller),
 
-            // emulator should have already been closed at this point
-            EmulatorState::Exit => unreachable!(),
+            EmulatorState::Exit => unreachable!("emulator should have already been closed at this point"),
         };
 
         if let Some(state) = next_state {

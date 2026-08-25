@@ -9,7 +9,7 @@ use crate::{
 
 /// Shift Right Logically register r8.
 ///    ┏━━━━━━━ r8 ━━━━━━┓ ┏━ Flags ━┓
-/// 0 ─╂→ b7 → ... → b0 ─╂─╂→   C    ┃
+/// 0 ─╂-> b7 -> ... -> b0 ─╂─╂->   C    ┃
 ///    ┗━━━━━━━━━━━━━━━━━┛ ┗━━━━━━━━━┛
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SrlR8 {

@@ -240,15 +240,12 @@ impl Ppu {
         }
     }
 
-    // # Step the PPU by the number of cycles the last instruction took
-    //
-    //            |  20 dots  | 43+ dots  | 51- dots
-    // -----------:-------------------------------------
-    // 144 lines  | Oam       | Pixel     |
-    //            | Search    | Transfer  | HBlank
-    // -------------------------------------------------
-    // 10 lines   |             VBlank
-
+    /// Step the PPU by the number of cycles the last instruction took
+    ///
+    /// |               | 20 dots    | 43+ dots       | 51- dots |
+    /// |:--------------|:-----------|:---------------|:---------|
+    /// | **144 lines** | Oam Search | Pixel Transfer | HBlank   |
+    /// | **10 lines**  | VBlank     |                |          |
     #[inline(never)]
     pub fn step<R: Renderer>(&mut self, renderer: &mut R, delta: usize, interrupt_flag: &mut Interrupt) {
         if !self.lcd_display_enable() {

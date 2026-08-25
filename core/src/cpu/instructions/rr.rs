@@ -22,7 +22,7 @@ fn rr(value: u8, carry: bool) -> u8 { (value >> 1) | if carry { 1 << 7 } else { 
 
 /// rotate bits right between r8 and carry flag
 ///   ┏━━━━━━━ r8 | [hl] ━━━━━━┓ ┏━ Flags ━┓
-/// ┌─╂→  b7  →  ...  →  b0   ─╂─╂→   C   ─╂─┐
+/// ┌─╂->  b7  ->  ...  -> b  ─╂─╂->  C   ─╂─┐
 /// │ ┗━━━━━━━━━━━━━━━━━━━━━━━━┛ ┗━━━━━━━━━┛ │
 /// └────────────────────────────────────────┘
 #[derive(Debug, Default, Clone, Copy)]
