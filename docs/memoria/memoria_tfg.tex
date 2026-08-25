@@ -40,6 +40,15 @@
   \usepackage{multirow}    % permite crear celdas que ocupan varias filas da mesma táboa
   \usepackage{pgfgantt}    % permite construir diagramas de Gantt
   \usetikzlibrary{positioning, fit, arrows.meta, backgrounds, shapes.multipart, calc} % librerias de tikz para os diagramas UML
+
+% definición da linguaxe Rust para listings, tomada de https://github.com/denki/listings-rust (licenza BSD 3-Clause)
+\usepackage{listings-rust}
+\lstset{
+  keywordstyle=[2]\color{udcpink},         % traits
+  keywordstyle=[3]\color{udcpink},         % tipos primitivos e tipos da biblioteca
+  keywordstyle=[4]\color{udcpink},         % construtores de valores
+  keywordstyle=[5]\color{ficblue}\itshape  % macros
+}
 % \usepackage{pdfpages}    % permite insertar ficheiros en PDF no documento
 % \usepackage{rotating}    % permite diferentes tipos de rotacións para figuras e táboas
 % \usepackage{subcaption}  % permite a inclusión de varias subfiguras nunha figura

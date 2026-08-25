@@ -242,9 +242,7 @@ cunha instancia de \texttt{Dmg} e cun controlador de seu.
 % │   ├── SerialListener  on_transfer(u8)
 % │   ├── AudioPlayer     playing_stereo, push_sample, flush_buffer
 % │   ├── Accessible<A>   read, write
-% │   ├── Accessible16<A16,A8>  load, store
-% │   └── DefaultController::new / DefaultRenderer::new
-% │       / DefaultSerialListener::new / DefaultAudioPlayer::new
+% │   └── Accessible16<A16,A8>  load, store
 % │
 % ├── erros
 % │   ├── DmgError (Display, std::error::Error con feature std)
@@ -273,7 +271,7 @@ Como xa se mencionou na sección anterior, a forma na que un cliente pode introd
 Este non define métodos de seu, senón que agrupa nun único tipo os tres \textit{traits} que representan as operacións de entrada/saída da consola,
 como vemos no listado~\ref{lst:controller-trait}.
 
-\begin{lstlisting}[float=tbp, caption={\textit{Traits} que compoñen a interface \texttt{Controller}}, label={lst:controller-trait}]
+\begin{lstlisting}[language=Rust, float=tbp, caption={\textit{Traits} que compoñen a interface \texttt{Controller}}, label={lst:controller-trait}]
 pub trait Renderer {
     fn read_pixel(&self, x: usize, y: usize) -> u32;
     fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8);
@@ -306,16 +304,182 @@ Cómpre mencionar que esta flexibilidade non supón un custo en tempo de execuci
 Os métodos \texttt{run} e \texttt{step} de \texttt{Dmg} non reciben un obxecto de \textit{trait}, senón un parámetro xenérico acoutado por \texttt{Controller},
 polo que o compilador monomorfiza o código para o tipo concreto empregado por cada cliente.
 A resolución das chamadas prodúcese así en tempo de compilación (\textit{static dispatch}),
-evitando as táboas de métodos virtuais e permitindo mellores optimizacións do compilador.
+evitando as indireccións nas táboas de métodos virtuais e permitindo mellores optimizacións do compilador.
 
 \section{Implementación dos compoñentes}
 \subsection{Serialización da cabeceira da ROM}
+O primeiro paso para poder comezar a emular un sistema e cargar de forma axeitada o codigo maquina que se vai executar
+Neste caso, o primeiro que se necesita entender é a cabeceira da ROM. Despois de cargar o ficheiro que o cliente lle pasa ao núcleo do emulador,
+Seguindo as posicións en memoria onde se atopa cada dato que consultadas na documentación~\cite{pandocs},
+o emulador copia a información nunha estructura de xeito que sexa facilmente accesible. 
+Para os datos que teñen un conxunto finito de posibles valores empréganse enumeracións, para que o código sexa máis robusto, lexible e fácil de manter,
+evitando o uso de valores máxicos e comprobacións de cadeas. Este estilo tamén se emprega cos posibles erros que se poden dar durante a serialización.
+No listado~\ref{lst:cartridge-header} amósase a estrutura resultante xunto cunha das enumeracións que emprega,
+\texttt{CartridgeType}, que recolle o hardware dispoñible no cartucho.
+
+\begin{figure}[tbp]
+\centering
+\begin{minipage}[t]{0.48\textwidth}
+\begin{lstlisting}[language=Rust, basicstyle=\ttfamily\tiny, linewidth=\linewidth, xleftmargin=14pt]
+#[derive(Debug, Default)]
+pub struct CartridgeHeader {
+    is_pre_sgb: bool,
+    license: Option<String>,
+    pub title: String,
+    supports_cgb: GBCSupport,
+    supports_sgb: bool,
+    pub(crate) cartridge_type: CartridgeType,
+    pub(crate) rom_size: RomSize,
+    pub(crate) ram_size: RamSize,
+    pub destination: Destination,
+    game_version: u8,
+    pub(crate) header_checksum: u8,
+    pub(crate) global_checksum: u16,
+}
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\begin{lstlisting}[language=Rust, basicstyle=\ttfamily\tiny, linewidth=\linewidth, xleftmargin=14pt, firstnumber=last]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CartridgeType {
+    #[default]
+    RomOnly, RomRam, RomRamBattery,
+    Mbc1, Mbc1Ram, Mbc1RamBattery,
+    Mbc2, Mbc2Battery,
+    MMM01, MMM01Ram, MMM01RamBattery,
+    Mbc3, Mbc3Ram, Mbc3RamBattery,
+    Mbc3TimerBattery, Mbc3TimerRamBattery,
+    Mbc5, Mbc5Ram, Mbc5RamBattery,
+    Mbc5Rumble, Mbc5RumbleRam, Mbc5RumbleRamBattery,
+    Mbc6, Mbc7SensorRumbleRamBattery,
+    PocketCamera, BandaiTama5,
+    HuC3, HuC1RamBattery,
+}
+\end{lstlisting}
+\end{minipage}
+\captionof{lstlisting}{Estrutura da cabeceira do cartucho e enumeración do seu tipo de hardware}
+\label{lst:cartridge-header}
+\end{figure}
+
 
 \subsection{Organización do espazo de memoria}
+A organización do espazo de direccións é un dos puntos clave lograr un deseño modular á vez que eficiente, cómodo e flexible.
+Moitos dos compoñentes do emulador requiren de acceder a espazos de direccións compartidos. A \acrshort{cpu} precisa acceder á totalidade do espazo
+e a \acrshort{ppu} xestiona a súa \acrshort{vram} e a \acrshort{oam}, pero durante unha transferencia por \acrshort{dma} tamén debe ler da memoria de traballo.
+Esta última, como o resto de compoñentes, tamén precisa modificar o rexistro \texttt{interrupt\_flag} para solicitar interrupcións.
+
+
+Unha posible solución sería concentrar todo o espazo de direccións nun único \acrfull{mmu} que se encargase de xestionar todos os accesos,
+pero isto non resulta idóneo, xa que acabaría monopolizando boa parte da xestión do emulador.
+Ademais, non sería ergonómica, xa que non poderíamos separar os rexistros como campos dos distintos compoñentes e romperíase o principio de responsabilidade única.
+Outra solución sería que estes compoñentes estivesen instanciados como variables globais, de xeito que cada un puidese acceder directamente á súa memoria e aos rexistros do resto do sistema.
+Isto non é idiomático en Rust xa que non é \textit{thread-safe}, nin é unha boa práctica de deseño en xeral.
+
+
+A solución adoptada consiste en empregar ao contedor dos compoñentes \texttt{Dmg} como acceso centralizado ao espazo de direccións.
+Este pásase como referencia alí onde se precise acceder ao espazo de direccións, sen necesidade de introducir un compoñente adicional.
+O direccionamento realízase a través do \textit{trait} \texttt{Accessible}, que define as operacións \texttt{read} e \texttt{write} sobre unha dirección,
+e do seu equivalente para operandos de dous bytes, \texttt{Accessible16}, con \texttt{load} e \texttt{store}.
+Estes \textit{traits} impleméntanos tanto \texttt{Dmg} como cada un dos seus compoñente,
+de xeito que cada un accede directamente á súa memoria e, ao mesmo tempo, expón os seus datos ao resto do sistema.
+
+Como se ve no listado~\ref{lst:dmg-read}, a implementación de \texttt{Dmg} limítase a decidir, en función do rango no que cae a dirección,
+a que compoñente lle corresponde resolver o acceso, e a devolver directamente os valores daquelas rexións que xestiona el mesmo.
+
+\begin{lstlisting}[language=Rust, basicstyle=\ttfamily\scriptsize, float=tbp, caption={Implementación da función \textit{read} por \texttt{Dmg}}, label={lst:dmg-read}]
+fn read(&self, address: u16) -> u8 {
+    match address {
+        ROM_BANK00_START..=ROM_BANKNN_END =>
+          self.cartridge.read(address),
+        VRAM_START..=VRAM_END =>
+          self.ppu.read(address),
+        EXTERNAL_RAM_START..=EXTERNAL_RAM_END =>
+          self.cartridge.read(address),
+        WRAM_BANK0_START..=WRAM_BANKN_END =>
+          self.memory.ram[(address - WRAM_BANK0_START) as usize],
+        ECHO_RAM_START..=ECHO_RAM_END => {
+            let offset = (address - ECHO_RAM_START) as usize;
+            self.memory.ram[offset]
+        }
+        OAM_START..=OAM_END =>
+          self.ppu.read(address),
+
+        NOT_USABLE_START..=NOT_USABLE_END => 0xFF,
+
+        IO_REGISTERS_START..=IO_REGISTERS_END =>
+          match address {
+            JOYP =>
+              self.joypad.read(address),
+            SERIAL_REGISTER_START..=SERIAL_REGISTER_END =>
+              self.serial.read(address),
+            TIMER_REGISTER_START..=TIMER_REGISTER_END =>
+              self.timer.read(address),
+
+            IF =>
+              self.interrupt_flag.0 | 0xE0,
+
+            APU_REGISTER_START..=APU_REGISTER_END =>
+              self.apu.read(address),
+            PPU_REGISTER_START..=PPU_REGISTER_END =>
+              self.ppu.read(address),
+
+            BANK_REGISTER =>
+              self.bank,
+
+            _ => 0xFF,
+        },
+        HRAM_START..=HRAM_END =>
+          self.memory.hram[(address - HRAM_START) as usize],
+        IE =>
+          self.interrupt_enable.0,
+    }
+}
+\end{lstlisting}
+
+Como se pode pode observar no listado~\ref{lst:dmg-read}, a función \textit{read} de \texttt{Dmg} fai un \textit{match} sobre o enderezo pasado como argumento,
+redireccionando a cada compoñente segundo o rango desexado.
+
+As memorias de propósito xeral como a \acrshort{ram}, a \acrshort{hram} e a Boot \acrshort{rom}, que se pode pasar de forma opcional ao emulador durante a súa creación,
+gárdanse no \texttt{struct} \texttt{Memory}. En cambio, as memorias de propósito máis especifico como as \acrshort{vram} e \acrshort{oam} e a Wave \acrshort{ram}
+gárdanse na \texttt{Ppu} e na \texttt{Apu} respectivamente, xa que isto permite o seu acceso de forma máis doada e eficiente, mantendo ainda así o acceso para a \texttt{Cpu}
+
 
 \subsection{Implementación do procesador}
 % decodificacion de instrucions, timing por ciclos
 % interrupcions
+
+Unha vez con acceso aos datos da \acrshort{rom} e ao resto do espazo de memoria,
+o seguinte paso para emular o sistema é interpretar cada unha das instrucións da \acrshort{isa} da \acrshort{cpu}. 
+Para iso, a nosa \texttt{Cpu} ten que ler de memoria a instrución atopada na posición sinalada polo contador de programa,
+decodificala, e executala do mesmo xeito que o fai o hardware orixinal.
+No listado~\ref{lst:cpu-decode} pódese ver como se produce a decodificación dunha instrución empregando o seu \gls{opcode} para a súa identificación.
+
+\begin{lstlisting}[language=Rust, float=tbp, caption={Función \textit{decode} de \texttt{Cpu}}, label={lst:cpu-decode}]
+pub(crate) fn decode(gb: &mut Dmg, opcode: u8) -> DecodeResult {
+  let cpu = &gb.cpu;
+
+  let instruction: Instructions = match opcode {
+      0x00 => Nop::new().into(),
+      0x01 => LdR16Imm16::new(
+        R16::BC, gb.load(cpu.pc.wrapping_add(1))
+      ).into(),
+      0x02 => LdPointedByR16A::new(R16::BC).into(),
+      0x03 => IncR16::new(R16::BC).into(),
+      0x04 => IncR8::new(R8::B).into(),
+      0x05 => DecR8::new(R8::B).into(),
+      ...
+      0xFD => 
+        return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
+      0xFE => CpImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+      0xFF => Rst::new(0x38).into(),
+  };
+
+  Ok(instruction)
+}
+\end{lstlisting}
+
+
+
 
 \subsection{Implementación da unidade gráfica}
 % modos, renderizado por scanline ou por pixel
