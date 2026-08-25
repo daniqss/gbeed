@@ -10,7 +10,7 @@ use crate::{
     prelude::*,
 };
 
-pub use renderer::{DefaultRenderer, Renderer};
+pub use renderer::Renderer;
 
 mem_range!(PPU_REGISTER, 0xFF40, 0xFF4B);
 

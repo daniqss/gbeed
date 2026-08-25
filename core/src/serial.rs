@@ -16,17 +16,6 @@ const FAST_CYCLES_PER_BIT: i32 = CYCLES_PER_BIT / 32;
 const TRANSFER_BITS: u8 = 8;
 
 pub trait SerialListener {
-    fn on_transfer(&mut self, data: u8);
-}
-
-#[derive(Default)]
-pub struct DefaultSerialListener;
-
-impl DefaultSerialListener {
-    pub fn new() -> Self { DefaultSerialListener }
-}
-
-impl SerialListener for DefaultSerialListener {
     fn on_transfer(&mut self, _data: u8) {}
 }
 

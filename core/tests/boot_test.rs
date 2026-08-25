@@ -29,7 +29,7 @@ fn test_disassembly_boot() -> Result<(), Box<dyn std::error::Error>> {
     let mut set_audio = false;
     let mut setup_logo = false;
 
-    let mut controller = DefaultController::new();
+    let mut controller = DefaultController {};
 
     while gb.cpu.pc < BOOT_ROM_END {
         let _instr = gb.step(&mut controller);

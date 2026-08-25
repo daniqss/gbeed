@@ -1,6 +1,4 @@
-use gbeed_core::{
-    AudioPlayer, Controller, DefaultAudioPlayer, DefaultRenderer, Ppu, Renderer, SerialListener, prelude::*,
-};
+use gbeed_core::{AudioPlayer, SerialListener, prelude::*};
 use std::{fs, path::Path};
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -78,12 +76,7 @@ impl SerialListener for BlarggListener {
     }
 }
 
-controller!(
-    BlarggController,
-    BlarggListener,
-    DefaultRenderer,
-    DefaultAudioPlayer
-);
+impl_controller!(BlarggListener: Renderer, AudioPlayer);
 
 fn run_dmg_sound_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     const STATUS_ADDR: u16 = 0xA000;
@@ -96,11 +89,8 @@ fn run_dmg_sound_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let rom_path = format!("{}/{}", rom_dir, rom_name);
     let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
     let cartridge = Cartridge::new(&rom, None).map_err(|e| format!("Failed to create cartridge: {e}"))?;
-    let mut controller = BlarggController {
-        listener: BlarggListener::new(rom_name),
-        renderer: DefaultRenderer::new(),
-        audio_player: DefaultAudioPlayer::new(),
-    };
+
+    let mut controller = BlarggListener::new(rom_name);
     let mut gb = Dmg::new(cartridge, None);
 
     for frame in 0..TIMEOUT_FRAMES {
@@ -144,24 +134,20 @@ fn run_blargg_test(rom_dir: &str, rom_name: &str) -> Result<()> {
 
     let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
     let cartridge = Cartridge::new(&rom, None).map_err(|e| format!("Failed to create cartridge: {e}"))?;
-    let listener = BlarggListener::new(rom_name);
-    let mut controller = BlarggController {
-        listener,
-        renderer: DefaultRenderer::new(),
-        audio_player: DefaultAudioPlayer::new(),
-    };
+    let mut controller = BlarggListener::new(rom_name);
+
     let mut gb = Dmg::new(cartridge, None);
 
     let timeout_cycles = 100_000;
     let mut cycles = 0;
 
-    while !controller.listener.test_passed && cycles < timeout_cycles {
+    while !controller.test_passed && cycles < timeout_cycles {
         gb.run(&mut controller)?;
         cycles += gb.cpu.cycles;
     }
 
     assert!(
-        controller.listener.test_passed,
+        controller.test_passed,
         "Test did not pass within {} cycles",
         timeout_cycles
     );

@@ -15,7 +15,7 @@ check *ARGS:
 
 lint *ARGS:
     cargo fmt --all
-    cargo clippy --features "${DISPLAY_FEATURES}" --all-targets {{ARGS}} -- -D warnings
+    cargo clippy --workspace --all-targets --features "${DISPLAY_FEATURES}" {{ARGS}} -- -D warnings
 
 test *ARGS: fetch-test-roms
     cargo test --features "${DISPLAY_FEATURES}" {{ARGS}}

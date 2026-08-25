@@ -38,7 +38,7 @@ pub use ppu::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH, Ppu};
 pub use serial::Serial;
 pub use timer::Timer;
 
-pub use apu::{AudioPlayer, BUFFER_SIZE, DefaultAudioPlayer, SAMPLE_RATE};
+pub use apu::{AudioPlayer, BUFFER_SIZE, SAMPLE_RATE, STEREO_BUFFER_SIZE};
 pub use controller::{Controller, DefaultController};
-pub use ppu::{DefaultRenderer, Renderer};
-pub use serial::{DefaultSerialListener, SerialListener};
+pub use ppu::Renderer;
+pub use serial::SerialListener;

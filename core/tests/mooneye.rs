@@ -1,6 +1,4 @@
-use gbeed_core::{
-    AudioPlayer, Controller, DefaultAudioPlayer, DefaultRenderer, Ppu, Renderer, SerialListener, prelude::*,
-};
+use gbeed_core::{AudioPlayer, SerialListener, prelude::*};
 use std::{fs, path::Path};
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -40,36 +38,27 @@ impl SerialListener for MooneyeListener {
     }
 }
 
-controller!(
-    MooneyeController,
-    MooneyeListener,
-    DefaultRenderer,
-    DefaultAudioPlayer
-);
+impl_controller!(MooneyeListener: Renderer, AudioPlayer);
 
 fn run_mooneye_test(rom_dir: &str, rom_name: &str) -> Result<()> {
     let rom_path = format!("{}/{}", rom_dir, rom_name);
 
     let rom = fs::read(Path::new(&rom_path)).expect("Failed to read ROM file");
     let cartridge = Cartridge::new(&rom, None).map_err(|e| format!("Failed to create cartridge: {e}"))?;
-    let listener = MooneyeListener::new();
-    let mut controller = MooneyeController {
-        listener,
-        renderer: DefaultRenderer::new(),
-        audio_player: DefaultAudioPlayer::new(),
-    };
+
+    let mut controller = MooneyeListener::new();
     let mut gb = Dmg::new(cartridge, None);
 
     let timeout_cycles = 100_000;
     let mut cycles = 0;
 
     println!("Running Mooneye test: {}", rom_name);
-    while controller.listener.test_passed.is_none() && cycles < timeout_cycles {
+    while controller.test_passed.is_none() && cycles < timeout_cycles {
         gb.run(&mut controller)?;
         cycles += gb.cpu.cycles;
     }
 
-    match controller.listener.test_passed {
+    match controller.test_passed {
         Some(true) => Ok(()),
         Some(false) => panic!("Test {} FAILED", rom_name),
         None => panic!("Test {} TIMEOUT ({} cycles)", rom_name, cycles),

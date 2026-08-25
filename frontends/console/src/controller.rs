@@ -1,11 +1,12 @@
 use gbeed_core::{
-    AudioPlayer, BUFFER_SIZE, Controller, Ppu, Renderer, SAMPLE_RATE, SerialListener,
-    prelude::DMG_SCREEN_WIDTH,
+    AudioPlayer, BUFFER_SIZE, Ppu, Renderer, SAMPLE_RATE, SerialListener, prelude::DMG_SCREEN_WIDTH,
 };
+
 use gbeed_raylib_common::{
     Texture, color,
     settings::{SpeedUpMode, SpeedUpMultiplier, TargetedFps},
 };
+
 use raylib::prelude::*;
 
 pub struct ConsoleController<'a> {
@@ -119,5 +120,3 @@ impl AudioPlayer for ConsoleController<'_> {
         self.sample_idx = 0;
     }
 }
-
-impl Controller for ConsoleController<'_> {}
