@@ -13,6 +13,10 @@ run *ARGS:
 check *ARGS:
     cargo check --features "${DISPLAY_FEATURES}" {{ARGS}}
 
+lint *ARGS:
+    cargo fmt --all
+    cargo clippy --features "${DISPLAY_FEATURES}" --all-targets {{ARGS}} -- -D warnings
+
 test *ARGS: fetch-test-roms
     cargo test --features "${DISPLAY_FEATURES}" {{ARGS}}
 

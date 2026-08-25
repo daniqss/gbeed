@@ -9,7 +9,7 @@ use crate::{
 
 use features::CartridgeFeatures;
 pub use header::{CartridgeHeader, Destination, RamSize, RomSize};
-use mbc::{CartridgeType, MemoryBankController, select_mbc};
+use mbc::{CartridgeType, Mbc, select_mbc};
 
 /// Used for MBC1M multicart cartridge detection
 /// Used in several emulators for this purpose, considered fair use of the cartridge data
@@ -74,7 +74,7 @@ pub type CartridgeResult<T> = core::result::Result<T, CartridgeError>;
 pub struct Cartridge {
     pub header: CartridgeHeader,
     pub features: CartridgeFeatures,
-    mbc: Box<dyn MemoryBankController>,
+    mbc: Mbc,
 }
 
 impl core::fmt::Debug for Cartridge {

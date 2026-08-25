@@ -11,7 +11,7 @@ use crate::{
 };
 
 // TODO: not expose individual instructions
-pub use instructions::{Instructions, Instruction, InstructionError, Len, Nop};
+pub use instructions::{Instruction, InstructionError, Instructions, Len, Nop};
 use instructions::{JumpCondition as JC, *};
 pub use registers::{Register8 as R8, Register16 as R16};
 

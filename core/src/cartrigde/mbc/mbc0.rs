@@ -29,8 +29,15 @@ impl MemoryBankController for Mbc0 {
         features: &CartridgeFeatures,
         header: &CartridgeHeader,
     ) -> CartridgeResult<Self> {
+        if raw_rom.len() < MBC0_ROM_SIZE {
+            return Err(CartridgeError::InvalidRomSize(
+                Some(header.rom_size),
+                "ROM is smaller than the 32KB of a cartridge without a memory bank controller",
+            ));
+        }
+
         // SAFETY: store the ROM in the heap to avoid large stack allocation
-        // that crash the emulator on some targets, like WASM
+        // that could crash the emulator on some targets, like WASM
         // This way we avoid stack copy with compile time known size in heap allocation
         let rom: Box<[u8; MBC0_ROM_SIZE]> = unsafe {
             let mut boxed: Box<MaybeUninit<[u8; MBC0_ROM_SIZE]>> = Box::new(MaybeUninit::uninit());
