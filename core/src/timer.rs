@@ -25,7 +25,7 @@ pub struct Timer {
 }
 
 impl Timer {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Timer {
             internal_counter: 0xABCC,
             tima: 0,
@@ -38,7 +38,7 @@ impl Timer {
     }
 
     #[inline(never)]
-    pub fn step(&mut self, cycles: usize, interrupt: &mut Interrupt) {
+    pub(crate) fn step(&mut self, cycles: usize, interrupt: &mut Interrupt) {
         if self.overflow_pending {
             self.overflow_delay -= cycles as i32;
             if self.overflow_delay <= 0 {

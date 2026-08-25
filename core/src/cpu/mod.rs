@@ -11,13 +11,13 @@ use crate::{
 };
 
 // TODO: not expose individual instructions
-pub use instructions::{Instruction, InstructionError, Len, Nop};
+pub use instructions::{Instruction, InstructionError, Instructions, Len, Nop};
 use instructions::{JumpCondition as JC, *};
 pub use registers::{Register8 as R8, Register16 as R16};
 
 use core::fmt::{self, Display, Formatter};
 
-pub type FetchResult = core::result::Result<InstructionBox, InstructionError>;
+pub type FetchResult = core::result::Result<Instructions, InstructionError>;
 
 pub const FREQUENCY: u32 = 4_194_304;
 
@@ -61,7 +61,7 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new(start_at_boot: bool) -> Cpu {
+    pub(crate) fn new(start_at_boot: bool) -> Cpu {
         if start_at_boot {
             Cpu::default()
         } else {
@@ -69,19 +69,20 @@ impl Cpu {
         }
     }
 
-    reg16!(af, set_af, a, f);
-    reg16!(bc, set_bc, b, c);
-    reg16!(de, set_de, d, e);
-    reg16!(hl, set_hl, h, l);
+    reg16!(pub af, set_af, a, f);
+    reg16!(pub bc, set_bc, b, c);
+    reg16!(pub de, set_de, d, e);
+    reg16!(pub hl, set_hl, h, l);
 
     flag_methods! {
+        pub(crate)
         carry => CARRY_FLAG_MASK,
         zero => ZERO_FLAG_MASK,
         subtraction => SUBTRACTION_FLAG_MASK,
         half_carry => HALF_CARRY_FLAG_MASK,
     }
 
-    pub fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) {
         self.a = AFTER_BOOT_CPU.a;
         self.f = AFTER_BOOT_CPU.f;
         self.b = AFTER_BOOT_CPU.b;
@@ -98,7 +99,7 @@ impl Cpu {
     }
 
     #[inline(never)]
-    pub fn step(gb: &mut Dmg) -> Result<Option<InstructionBox>, InstructionError> {
+    pub(crate) fn step(gb: &mut Dmg) -> Result<Option<Instructions>, InstructionError> {
         // check if is neccessatry to handle interrupts before executing the instruction
         if Cpu::handle_interrupts(gb) {
             // 5 Mcycles = 2 NOP + 3 ...
@@ -173,10 +174,10 @@ impl Cpu {
 
     /// Execute instruction based on the opcode.
     /// Return a result with the effect of the instruction or an instruction error (e.g unused opcode)
-    pub fn fetch(gb: &mut Dmg, opcode: u8) -> FetchResult {
+    pub(crate) fn fetch(gb: &mut Dmg, opcode: u8) -> FetchResult {
         let cpu = &gb.cpu;
 
-        let instruction: InstructionBox = match opcode {
+        let instruction: Instructions = match opcode {
             0x00 => Nop::new().into(),
             0x01 => LdR16Imm16::new(R16::BC, gb.load(cpu.pc.wrapping_add(1))).into(),
             0x02 => LdPointedByR16A::new(R16::BC).into(),
@@ -446,7 +447,7 @@ impl Cpu {
         let bit = (cb_opcode & 0x38) >> 3;
         let cpu = &gb.cpu;
 
-        let instruction: InstructionBox = match cb_opcode {
+        let instruction: Instructions = match cb_opcode {
             0x00 => RlcR8::new(R8::B).into(),
             0x01 => RlcR8::new(R8::C).into(),
             0x02 => RlcR8::new(R8::D).into(),

@@ -1,8 +1,7 @@
 use gbeed_core::prelude::*;
 use raylib::prelude::*;
-use std::io::ErrorKind;
+use std::fs;
 use std::path::{Path, PathBuf};
-use std::{fs, io};
 
 mod controller;
 mod scenes;

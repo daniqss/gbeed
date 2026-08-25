@@ -93,7 +93,7 @@ impl Dmg {
         Ok(())
     }
 
-    pub fn step<C: Controller>(&mut self, controller: &mut C) -> Result<Option<InstructionBox>, DmgError> {
+    pub fn step<C: Controller>(&mut self, controller: &mut C) -> Result<Option<Instructions>, DmgError> {
         let prev_cycles = self.cpu.cycles;
 
         let instruction = Cpu::step(self)?;
@@ -102,7 +102,8 @@ impl Dmg {
 
         self.ppu.step(controller, delta, &mut self.interrupt_flag);
         self.timer.step(delta, &mut self.interrupt_flag);
-        self.serial.step(controller);
+        self.serial.step(delta, controller, &mut self.interrupt_flag);
+        self.joypad.step(&mut self.interrupt_flag);
         self.apu.step(controller, delta);
 
         Ok(instruction)
