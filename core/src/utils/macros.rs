@@ -113,29 +113,37 @@ macro_rules! reg16 {
         $hi:ident, $lo:ident
     ) => {
         #[inline]
-        $vis fn $get(&self) -> u16 { to_u16(self.$lo, self.$hi) }
+        $vis fn $get(&self) -> u16 { crate::utils::to_u16(self.$lo, self.$hi) }
 
         #[inline]
-        $vis fn $set(&mut self, value: u16) { from_u16(&mut self.$lo, &mut self.$hi, value); }
+        $vis fn $set(&mut self, value: u16) { crate::utils::from_u16(&mut self.$lo, &mut self.$hi, value); }
     };
 }
 
+// an instruction generic over its operands is listed as it is written, `Or<R8>`, and its variant is
+// named after the instantiation, `OrR8`, so the enum needs no type alias to name each combination
+
+/// Generates a enum with variants for each instruction and its operands
 macro_rules! instruction_dispatch {
     (
         $vis:vis enum $name:ident {
-            $( $variant:ident ),+ $(,)?
+            $( $instruction:ident $(< $( $operand:ident ),+ >)? ),+ $(,)?
         }
     ) => {
+        $crate::__paste! {
         $vis enum $name {
-            $( $variant($variant), )+
+            $( [<$instruction $($($operand)+)?>]($instruction $(<$($operand),+>)?), )+
         }
 
-        // the variants are built through `into`, so the tables that decode the opcodes stay
-        // unaware of the enum and read as a plain list of instructions
+        // the variants are built through `into`,
+        // so the tables that decode the opcodes stay unaware of the enum
+        // and read as a plain list of instructions
         $(
-            impl From<$variant> for $name {
+            impl From<$instruction $(<$($operand),+>)?> for $name {
                 #[inline(always)]
-                fn from(instruction: $variant) -> Self { $name::$variant(instruction) }
+                fn from(instruction: $instruction $(<$($operand),+>)?) -> Self {
+                    $name::[<$instruction $($($operand)+)?>](instruction)
+                }
             }
         )+
 
@@ -143,23 +151,24 @@ macro_rules! instruction_dispatch {
             #[inline(always)]
             pub(crate) fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
                 match self {
-                    $( $name::$variant(instruction) => instruction.exec(gb), )+
+                    $( $name::[<$instruction $($($operand)+)?>](instruction) => instruction.exec(gb), )+
                 }
             }
 
             #[inline(always)]
             pub fn info(&self) -> (u8, u8) {
                 match self {
-                    $( $name::$variant(instruction) => instruction.info(), )+
+                    $( $name::[<$instruction $($($operand)+)?>](instruction) => instruction.info(), )+
                 }
             }
 
             /// Assembly representation of the instruction and its operands
             pub fn disassembly(&self) -> String {
                 match self {
-                    $( $name::$variant(instruction) => instruction.disassembly(), )+
+                    $( $name::[<$instruction $($($operand)+)?>](instruction) => instruction.disassembly(), )+
                 }
             }
+        }
         }
 
         impl core::fmt::Display for $name {
