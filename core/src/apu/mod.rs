@@ -231,7 +231,6 @@ impl Apu {
         output
     }
 
-    #[inline]
     fn mix(&mut self) -> (i16, i16) {
         let ch1_vol = self
             .sweep_pulse

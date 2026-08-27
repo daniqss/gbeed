@@ -61,10 +61,7 @@
     ]);
 in
   mkShell {
-    buildInputs = [
-      commonPackages
-      latexPackages
-    ];
+    buildInputs = [latexPackages] ++ commonPackages;
 
     env = {
       LATEXMKOPTS = "-xelatex";

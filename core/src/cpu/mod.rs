@@ -383,7 +383,7 @@ impl Cpu {
             0xCA => JpToImm16::new(JC::Zero(cpu.zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
             0xCB => {
                 let cb_opcode = gb.read(cpu.pc.wrapping_add(1));
-                Cpu::decode_cb(gb, cb_opcode)?
+                Cpu::decode_cb(cb_opcode)
             }
             0xCC => Call::new(JC::Zero(cpu.zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
             0xCD => Call::new(JC::None, gb.load(cpu.pc.wrapping_add(1))).into(),
@@ -442,10 +442,9 @@ impl Cpu {
         Ok(instruction)
     }
 
-    fn decode_cb(gb: &mut Dmg, cb_opcode: u8) -> DecodeResult {
+    fn decode_cb(cb_opcode: u8) -> Instructions {
         // used bit in res, set and bit instructions
         let bit = (cb_opcode & 0x38) >> 3;
-        let cpu = &gb.cpu;
 
         let instruction: Instructions = match cb_opcode {
             0x00 => RlcR8::new(R8::B).into(),
@@ -521,7 +520,7 @@ impl Cpu {
                 5 => BitR8::new(bit, R8::L).into(),
                 6 => BitPointedByHL::new(bit).into(),
                 7 => BitR8::new(bit, R8::A).into(),
-                _ => return Err(InstructionError::OutOfRangeCBOpcode(cb_opcode, cpu.pc)),
+                _ => unreachable!(),
             },
             0x80..=0xBF => match cb_opcode & 0x07 {
                 0 => ResR8::new(bit, R8::B).into(),
@@ -547,7 +546,7 @@ impl Cpu {
             },
         };
 
-        Ok(instruction)
+        instruction
     }
 }
 

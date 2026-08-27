@@ -1,0 +1,184 @@
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  scale=0.55, transform shape, font=\small,
+  %%%%%%%%% struct -> clase UML
+  struct/.style={draw, fill=white, rectangle split, rectangle split parts=2,
+                 rectangle split part align=center, align=left, inner sep=4pt},
+  structm/.style={draw, fill=white, rectangle split, rectangle split parts=3,
+                  rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% trait -> interface UML
+  trait/.style={draw, dashed, fill=black!4, rectangle split, rectangle split parts=2,
+                rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% crate -> paquete UML
+  tab/.style={draw, minimum width=14mm, minimum height=4mm, inner sep=0pt},
+  etiqcrate/.style={anchor=north west, xshift=2.5mm, yshift=-2.5mm,
+                    font=\footnotesize\ttfamily},
+  %%%%%%%%% relacións
+  depende/.style={dashed, -{Latex[open, length=2.4mm, width=2mm]}},
+  realiza/.style={dashed, -{Triangle[open, length=3mm, width=3mm]}},
+  compon/.style={{Diamond[length=3mm, width=2.2mm]}-},
+  etiq/.style={font=\scriptsize, inner sep=1.5pt, fill=white},
+  membro/.style={font=\footnotesize\ttfamily}
+]
+
+%%%%%%%%% crate console
+\node[structm, minimum width=52mm] (capp) at (-74mm,0) {
+  \nodepart{one}  \texttt{EmulatorApp<'a>}
+  \nodepart[membro]{two}
+        - state: EmulatorState\\
+        - gb: Option<Dmg>\\
+        - rom\_path: Option<PathBuf>\\
+        - save\_path: Option<PathBuf>\\
+        - controller: ConsoleController
+  \nodepart[membro]{three}
+        + new(rl, thread, audio)\\
+        + should\_close()\\
+        + update()\\
+        + draw()
+};
+
+\node[structm, minimum width=52mm] (cctrl) at (-74mm,-68mm) {
+  \nodepart{one}  \texttt{ConsoleController<'a>}
+  \nodepart[membro]{two}
+        + screen: Texture\\
+        + palette: Palette\\
+        + speed\_up\_mode: SpeedUpMode\\
+        + targeted\_fps: TargetedFps\\
+        + rl: \&mut RaylibHandle\\
+        - sample\_idx: usize\\
+        - audio\_buffer: Box<[i16]>\\
+        - audio\_stream: AudioStream
+  \nodepart[membro]{three}
+        + new(rl, thread, audio)
+};
+
+%%%%%%%% crate debugger
+\node[structm, minimum width=52mm] (dapp) at (74mm,0) {
+  \nodepart{one}  \texttt{EmulatorApp<'a>}
+  \nodepart[membro]{two}
+        - state: EmulatorState\\
+        - gb: Option<Dmg>\\
+        - save\_path: Option<PathBuf>\\
+        - boot\_rom: Option<Vec<u8>>\\
+        - controller: DebuggerController\\
+        - layout: Layout
+  \nodepart[membro]{three}
+        + new(rl, thread, audio, boot\_path)\\
+        + should\_close() / load\_rom(path)\\
+        + update() / draw()\\
+        + save\_game()
+};
+
+\node[structm, minimum width=52mm] (dctrl) at (74mm,-68mm) {
+  \nodepart{one}  \texttt{DebuggerController<'a>}
+  \nodepart[membro]{two}
+        + screen\_texture: Texture\\
+        + tile\_textures: [Texture; 3]\\
+        + bg\_map\_texture: Texture\\
+        + scroll\_x / scroll\_y: i32\\
+        + rl: \&mut RaylibHandle\\
+        - sample\_idx: usize\\
+        - audio\_buffer: Box<[i16]>\\
+        - audio\_stream: AudioStream
+  \nodepart[membro]{three}
+        + new(rl, thread, audio)
+};
+
+%%%%%%%%% crate raylib_common
+\node[structm, minimum width=40mm] (tex) at (0,-34mm) {
+  \nodepart{one}  \texttt{Texture}
+  \nodepart[membro]{two}
+        - texture: Texture2D\\
+        - framebuffer: Box<[u8]>
+  \nodepart[membro]{three}
+        + new(rl, thread, width, height)\\
+        + update()
+};
+
+%%%%%%%%% crate core
+\node[trait, minimum width=76mm] (ctrl) at (0,-124mm) {
+  \nodepart{one}  \scriptsize$\ll$trait$\gg$\\[1pt] \texttt{Controller}
+  \nodepart[membro]{two}
+        + Renderer + SerialListener + AudioPlayer
+};
+
+\node[structm, minimum width=88mm] (dmg) at (0,-166mm) {
+  \nodepart{one}  \texttt{Dmg}
+  \nodepart[membro]{two}
+        + cpu, cartridge, memory, ppu, apu\\
+        + joypad, serial, timer\\
+        + interrupt\_flag, interrupt\_enable, bank
+  \nodepart[membro]{three}
+        + new(cartridge, boot\_rom) / reset()\\
+        + run(controller) / step(controller)\\
+        + read(address) / write(address, value)
+};
+
+\node[structm, minimum width=62mm] (cart) at (0,-216mm) {
+  \nodepart{one}  \texttt{Cartridge}
+  \nodepart[membro]{two}
+        + header: CartridgeHeader\\
+        + features: CartridgeFeatures\\
+        - mbc: Mbc
+  \nodepart[membro]{three}
+        + new(raw\_rom, save)\\
+        + save\_game() / swap\_boot\_rom(boot\_rom)
+};
+
+%%%%%%%%% crates
+\begin{scope}[on background layer]
+  \node[draw, fill=black!2, fit=(capp)(cctrl),
+        inner xsep=5mm, inner ysep=6mm] (console) {};
+  \node[tab, fill=black!2, anchor=south west] at (console.north west) {};
+
+  \node[draw, fill=black!2, fit=(dapp)(dctrl),
+        inner xsep=5mm, inner ysep=6mm] (debugger) {};
+  \node[tab, fill=black!2, anchor=south west] at (debugger.north west) {};
+
+  \node[draw, fill=black!2, fit=(tex),
+        inner xsep=4mm, inner ysep=6mm] (rcommon) {};
+  \node[tab, fill=black!2, anchor=south west] at (rcommon.north west) {};
+
+  \node[draw, fill=black!2, fit=(ctrl)(dmg)(cart),
+        inner xsep=6mm, inner ysep=7mm] (core) {};
+  \node[tab, fill=black!2, anchor=south west] at (core.north west) {};
+\end{scope}
+\node[etiqcrate] at (console.north west)  {console};
+\node[etiqcrate] at (debugger.north west) {debugger};
+\node[etiqcrate] at (rcommon.north west)  {raylib\_common};
+\node[etiqcrate] at (core.north west)     {core};
+
+%%%%%%%% relacións
+% cada aplicación contén o seu controlador
+\draw[compon] (capp.south) -- node[etiq, right]{controller} (cctrl.north);
+\draw[compon] (dapp.south) -- node[etiq, right]{controller} (dctrl.north);
+
+% os controladores conteñen texturas
+\draw[compon] (cctrl.east) -- node[etiq, pos=0.55, below]{screen} (tex.west);
+\draw[compon] (dctrl.west) -- node[etiq, pos=0.55, below]{textures} (tex.east);
+
+% impl do trait Controller
+\draw[realiza] (cctrl.south) |- node[etiq, pos=0.75, above]{implementa} (ctrl.west);
+\draw[realiza] (dctrl.south) |- node[etiq, pos=0.75, above]{implementa} (ctrl.east);
+
+% cada aplicación posúe unha consola
+\draw[compon] (capp.west) -- ++(-14mm,0)
+      node[etiq, pos=0.9, above]{gb} |- (dmg.west);
+\draw[compon] (dapp.east) -- ++(14mm,0)
+      node[etiq, pos=0.9, above]{gb} |- (dmg.east);
+
+% creación do Cartridge
+\draw[depende] (capp.south west) -- ++(-22mm,0)
+      node[etiq, pos=0.85, above]{$\ll$crea$\gg$} |- (cart.west);
+\draw[depende] (dapp.south east) -- ++(22mm,0)
+      node[etiq, pos=0.85, above]{$\ll$crea$\gg$} |- (cart.east);
+
+% relacións internas do núcleo
+\draw[compon] (dmg.south) -- node[etiq, right]{cartridge} (cart.north);
+\draw[depende] (dmg.north) -- node[etiq, right]{emprega} (ctrl.south);
+
+\end{tikzpicture}
+\caption{Resumo dos \textit{crates} do emulador.}
+\label{fig:arquitectura-uml}
+\end{figure}
