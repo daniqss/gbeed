@@ -22,25 +22,14 @@ impl Jr {
 
 impl Instruction for Jr {
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-        let should_jump = self.jc.should_jump();
         gb.cpu.pc = gb.cpu.pc.wrapping_add(2);
 
-        if should_jump {
-            // cast i8 offset to u16 to perform addition
-            // offset is relative to the next instruction
-            let result = if self.offset & 0x80 != 0 {
-                let mut e8: u8 = !self.offset;
-                e8 = e8.wrapping_add(1);
-
-                gb.cpu.pc.wrapping_sub(e8 as u16)
-            } else {
-                gb.cpu.pc.wrapping_add(self.offset as u16)
-            };
-            gb.cpu.pc = result;
-            Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
-        } else {
-            Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
+        if self.jc.should_jump() {
+            // the signed offset is relative to the next instruction
+            gb.cpu.pc = gb.cpu.pc.wrapping_add(self.offset as i8 as u16);
         }
+
+        Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { if self.jc.should_jump() { (3, 2) } else { (2, 2) } }
     fn disassembly(&self) -> String { format!("jr {}{}", self.jc, self.offset as i8) }

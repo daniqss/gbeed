@@ -1,84 +1,31 @@
-mod adc;
-mod add;
-mod and;
-mod bit;
-mod ccf;
-mod cp;
-mod cpl;
-mod daa;
-mod dec;
-mod di;
-mod ei;
-mod halt;
-mod inc;
+mod arithmetic;
+mod bits;
+mod flags;
+mod interrupts;
 mod jumps;
-mod ld;
-mod ldh;
-mod nop;
-mod or;
-mod pop;
-mod push;
-mod res;
-mod rl;
-mod rla;
-mod rlc;
-mod rlca;
-mod rr;
-mod rra;
-mod rrc;
-mod rrca;
-mod sbc;
-mod scf;
-mod set;
-mod sla;
-mod sra;
-mod srl;
-mod stop;
-mod sub;
-mod swap;
-mod xor;
+mod load;
+mod logic;
+mod misc;
+mod operands;
+mod shift;
+mod stack;
 
-pub use adc::*;
-pub use add::*;
-pub use and::*;
-pub use bit::*;
-pub use ccf::Ccf;
-pub use cp::*;
-pub use cpl::Cpl;
-pub use daa::Daa;
-pub use dec::*;
-pub use di::Di;
-pub use ei::Ei;
-pub use halt::Halt;
-pub use inc::*;
+pub use arithmetic::*;
+pub use bits::*;
+pub use flags::*;
+pub use interrupts::*;
 pub use jumps::*;
-pub use ld::*;
-pub use ldh::*;
-pub use nop::Nop;
-pub use or::*;
-pub use pop::Pop;
-pub use push::Push;
-pub use res::*;
-pub use rl::*;
-pub use rla::Rla;
-pub use rlc::*;
-pub use rlca::Rlca;
-pub use rr::*;
-pub use rra::Rra;
-pub use rrc::*;
-pub use rrca::Rrca;
-pub use sbc::*;
-pub use scf::Scf;
-pub use set::*;
-pub use sla::*;
-pub use sra::*;
-pub use srl::*;
-pub use stop::Stop;
-pub use sub::*;
-pub use swap::*;
-pub use xor::*;
+pub use load::*;
+pub use logic::*;
+pub use misc::*;
+pub use operands::*;
+pub use shift::*;
+pub use stack::*;
 
-use crate::{cpu::flags::Flags, prelude::*};
+use crate::{
+    cpu::{R8, R16, flags::Flags},
+    prelude::*,
+};
 
 /// Represents a CPU instruction.
 /// The instruction can be executed and can provide its disassembly representation
@@ -90,19 +37,23 @@ pub trait Instruction {
 
 instruction_dispatch! {
     pub enum Instructions {
-        AdcImm8, AdcPointedByHL, AdcR8, AddAPointedByHL, AddAR8, AddHLSP, AddImm8, AddR16,
-        AddSPImm8, AndImm8, AndPointedByHL, AndR8, BitPointedByHL, BitR8, Call, Ccf, CpImm8,
-        Cpl, CpPointedByHL, CpR8, Daa, DecPointedByHL, DecR16, DecR8, DecStackPointer, Di, Ei,
-        Halt, IncPointedByHL, IncR16, IncR8, IncStackPointer, JpToHL, JpToImm16, Jr,
-        LdAPointedByHLDec, LdAPointedByHLInc, LdAPointedByImm16, LdAPointedByR16, LdhAC,
-        LdhAImm8, LdhCA, LdhImm8A, LdHLSPPlusImm8, LdImm16SP, LdPointedByHLDecA,
-        LdPointedByHLImm8, LdPointedByHLIncA, LdPointedByHLR8, LdPointedByImm16A,
-        LdPointedByR16A, LdR16Imm16, LdR8Imm8, LdR8PointedByHL, LdR8R8, LdSPHL, LdSPImm16, Nop,
-        OrImm8, OrPointedByHL, OrR8, Pop, Push, ResPointedByHL, ResR8, Ret, Reti, Rla, Rlca,
-        RlcPointedByHL, RlcR8, RlPointedByHL, RlR8, Rra, Rrca, RrcPointedByHL, RrcR8,
-        RrPointedByHL, RrR8, Rst, SbcImm8, SbcPointedByHL, SbcR8, Scf, SetPointedByHL, SetR8,
-        SlaPointedByHL, SlaR8, SraPointedByHL, SraR8, SrlPointedByHL, SrlR8, Stop, SubImm8,
-        SubPointedByHL, SubR8, SwapPointedByHL, SwapR8, XorImm8, XorPointedByHL, XorR8,
+        Adc<Imm8>, Adc<PointedByHL>, Adc<R8>, AddA<Imm8>, AddA<PointedByHL>, AddA<R8>,
+        AddHL<R16>, AddHL<StackPointer>, AddSPImm8, And<Imm8>, And<PointedByHL>, And<R8>,
+        Bit<PointedByHL>, Bit<R8>, Call, Ccf, Cp<Imm8>, Cp<PointedByHL>, Cp<R8>, Cpl, Daa,
+        Dec<PointedByHL>, Dec<R8>, Dec16<R16>, Dec16<StackPointer>, Di, Ei, Halt,
+        Inc<PointedByHL>, Inc<R8>, Inc16<R16>, Inc16<StackPointer>, JpToHL, JpToImm16, Jr,
+        Ld<PointedByHL, Imm8>, Ld<PointedByHL, R8>, Ld<PointedByImm16, R8>, Ld<PointedByR16, R8>,
+        Ld<R8, Imm8>, Ld<R8, PointedByHL>, Ld<R8, PointedByImm16>, Ld<R8, PointedByR16>,
+        Ld<R8, R8>, Ld16<R16>, Ld16<StackPointer>, LdAPointedByHLDec, LdAPointedByHLInc,
+        Ldh<PointedByC, R8>, Ldh<PointedByHighImm8, R8>, Ldh<R8, PointedByC>,
+        Ldh<R8, PointedByHighImm8>, LdHLSPPlusImm8, LdImm16SP, LdPointedByHLDecA,
+        LdPointedByHLIncA, LdSPHL, Nop, Or<Imm8>, Or<PointedByHL>, Or<R8>, Pop, Push,
+        Res<PointedByHL>, Res<R8>, Ret, Reti,
+        Rl<PointedByHL>, Rl<R8>, Rla, Rlc<PointedByHL>, Rlc<R8>, Rlca, Rr<PointedByHL>, Rr<R8>,
+        Rra, Rrc<PointedByHL>, Rrc<R8>, Rrca, Rst, Sbc<Imm8>, Sbc<PointedByHL>, Sbc<R8>, Scf,
+        Set<PointedByHL>, Set<R8>, Sla<PointedByHL>, Sla<R8>, Sra<PointedByHL>, Sra<R8>,
+        Srl<PointedByHL>, Srl<R8>, Stop, Sub<Imm8>, Sub<PointedByHL>, Sub<R8>,
+        Swap<PointedByHL>, Swap<R8>, Xor<Imm8>, Xor<PointedByHL>, Xor<R8>,
     }
 }
 

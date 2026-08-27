@@ -598,7 +598,6 @@ impl Ppu {
     /// It will take 160 dots or 320 at double speed
     /// CPU can access only HRAM and PPU can't access OAM
     /// Most games transfer to HRAM code to continue execution in CPU, and execute DMA transfer in VBlank
-    // TODO: implement this coping memory directly from cartridge to OAM
     pub(crate) fn dma_transfer(gb: &mut Dmg, src_addr: u8) {
         let src_addr = (src_addr as u16) << 8;
         for i in 0..OAM_SIZE {

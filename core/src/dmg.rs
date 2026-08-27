@@ -10,7 +10,6 @@ use crate::{
     ppu::{DMA_REGISTER, PPU_REGISTER_END, PPU_REGISTER_START},
     serial::{SERIAL_REGISTER_END, SERIAL_REGISTER_START},
     timer::{TIMER_REGISTER_END, TIMER_REGISTER_START},
-    utils::{high, low, to_u16},
 };
 
 const BANK_REGISTER: u16 = 0xFF50;
@@ -217,11 +216,13 @@ impl Accessible<u16> for Dmg {
 }
 
 impl Accessible16<u16, u16> for Dmg {
-    fn load(&self, address: u16) -> u16 { to_u16(self.read(address), self.read(address.wrapping_add(1))) }
+    fn load(&self, address: u16) -> u16 {
+        utils::to_u16(self.read(address), self.read(address.wrapping_add(1)))
+    }
 
     fn store(&mut self, address: u16, value: u16) {
-        self.write(address, low(value));
-        self.write(address.wrapping_add(1), high(value));
+        self.write(address, utils::low(value));
+        self.write(address.wrapping_add(1), utils::high(value));
     }
 }
 
