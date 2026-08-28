@@ -8,6 +8,7 @@
   waylandPackages,
   x11Features,
   waylandFeatures,
+  rustSource,
   # toggle wayland: (packages.debugger.override {withWayland = true;})
   withWayland ? false,
   ...
@@ -18,7 +19,7 @@ in
     pname = name;
     inherit version;
 
-    src = lib.cleanSource ../..;
+    src = rustSource;
     cargoLock = {
       lockFile = ../../Cargo.lock;
       allowBuiltinFetchGit = true;

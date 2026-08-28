@@ -11,6 +11,8 @@
     x11Features = lib.x11Features;
     waylandPackages = lib.waylandPackages pkgs;
     waylandFeatures = lib.waylandFeatures;
+
+    inherit (lib) rustSource;
   };
 in let
   console = pkgs.callPackage ./console.nix platformArgs;
@@ -19,4 +21,13 @@ in {
   inherit console debugger;
   debugger-wayland = debugger.override {withWayland = true;};
   default = console;
+
+  console-gamepi13 = console.override {withGamepi13 = true;};
+
+  # panel firmware blob and audio overlay for the gamepi13
+  inherit
+    (import ./gamepi13 {inherit lib pkgs;})
+    gamepi13-panel
+    gamepi13-audremap18
+    ;
 }

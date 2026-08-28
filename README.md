@@ -55,41 +55,29 @@ DRM support is tested in Intel, AMD and Broadcom iGPUs. In Nvidia (specifically 
 
 ### Recommended hardware
 The recommended hardware to use the `console` frontend is the **Raspberry Pi Zero 2 W**, as its `aarch64` architecture has full NixOS support, allowing us to easily provide a ready-to-use SD card image (see [raspberry-pi-zero-2-sd-image](#how-to-build-a-raspberry-pi-zero-2-sd-image)).
-The original **Raspberry Pi Zero** (`armv6l`) is also supported, but only via a manually cross-compiled binary. NixOS does not support `armv6l` as a hosted system, so there is no managed image for it. Device setup must be done manually (see [Alpine armv6l build](#how-to-build-for-armv6l-alpine-linux) or [Debian armv6l build](#how-to-build-for-armv6l-debian-linux)).
+The original **Raspberry Pi Zero** (`armv6l`) is also supported, but only via a manually cross-compiled binary. NixOS does not support `armv6l` as a hosted system, so there is no managed image for it. Device setup must be done manually (see [Debian armv6l build](#how-to-build-for-armv6l-debian-linux)).
 
 ### How to build a Raspberry Pi Zero 2 SD image
-The easiest way to run gbeed in a console format is on a Raspberry Pi Zero 2 W. This project offers a ready-to-use NixOS SD image that boots directly into gbeed — no installer, no manual setup.
+The easiest way to run gbeed in a console format with gamepi13 is on a Raspberry Pi Zero 2 W. This project offers a ready-to-use NixOS SD image that boots directly into gbeed with no manual setup to configure gamepi13.
 
 #### Download a pre-built image
 Pre-built images are (will be) available on the [Releases](https://github.com/daniqss/gbeed/releases) page. Download `gbeed02.img.zst` from the latest release.
 
 #### Build from source
-You can also build the image yourself (requires an `aarch64-linux` host):
+You can also build the image yourself (requires an `aarch64-linux` host or emulation):
 ```sh
 nix build github:daniqss/gbeed#installerImages.gbeed02
+zstd -d gbeed02.img.zst -c | sudo dd of=/dev/<SD_CARD_DEVICE> bs=4M status=progress conv=fsync && sync
 ```
 
-#### Flash it to your SD card
-```sh
-zstd -d gbeed02.img.zst -c | sudo dd of=/dev/<SD_CARD_DEVICE> bs=4M status=progress conv=fsync && sync
+In Nixos, to allow emulation of `aarch64-linux` on `x86_64-linux`, you may need to enable the `binfmt` service:
+```nix
+boot.binfmt.emulatedSystems = ["aarch64-linux"];
 ```
 
 On first boot, the system starts directly into `gbeed`. ROMs should be placed at `/home/gbeed/roms/` (`.gb` and `.gbc` files).
 
-If more build customization is wanted, cloning the repository, modifying [the `gbeed02` host configuration](./nix/hosts/gbeed02.nix) and building the `installerImage` target will produce a custom image, and should not require intense compilation thanks to nixos-raspberrypi cachix.
-
-### How to build for armv6l Alpine Linux
-The easiest way to build the project for armv6l is through cross-compilation on x86_64/aarch64. This is done via a podman or docker container and qemu using the provided `Dockerfile.cross.alpine`. This provides a fully isolated build environment.
-
-You can easily do this with `just`:
-```sh
-just cross-build-alpine
-```
-
-This will:
-1. Install the `arm` binfmt if needed.
-2. Build the project inside an `arm32v6/alpine` container.
-3. Extract the resulting binary as `./gbeed`.
+If more build customization is wanted, cloning the repository, modifying [the `gbeed02` host configuration](./nix/hosts/gbeed02) and building the `installerImage` target will produce a custom image, and should not require intense compilation thanks to nixos-raspberrypi cachix.
 
 ### How to build for armv6l Debian Linux
 A Debian Bookworm build is also available, using native cross-compilation (no qemu emulation) via the provided `Dockerfile.cross.debian`. This is significantly faster than the Alpine build, producing a binary linked against glibc instead of musl.
@@ -103,10 +91,20 @@ This will:
 1. Build the project inside a Debian Bookworm container using the `arm-unknown-linux-gnueabihf` Rust target.
 2. Extract the resulting binary as `./gbeed`.
 
-### How to run on a Waveshare GamePi13
-The [Waveshare GamePi13](https://www.waveshare.com/wiki/GamePi13) is a handheld Raspberry Pi with an SPI display and a PWM speaker, with no DRM/KMS device. gbeed can still boot straight into it on the raylib X11 backend, mirroring the framebuffer to the SPI panel with `fbcp` and routing audio to the speaker.
+To use this binary on a Raspberry Pi Zero with the gamepi13 you must manually configure the device, install the required libraries and copy the binary to the device. The complete process is documented in [here](./docs/debian-gamepi13.md).
 
-Using the [Debian armv6l build](#how-to-build-for-armv6l-debian-linux), the full device setup (overlays, `config.txt`, tty1 autologin, X session and audio) is documented in [docs/deploy-gamepi13.md](./docs/deploy-gamepi13.md).
+### How to build for armv6l Alpine Linux
+The easiest way to build the project for armv6l is through cross-compilation on x86_64/aarch64. This is done via a podman or docker container and qemu using the provided `Dockerfile.cross.alpine`. This provides a fully isolated build environment.
+
+You can easily do this with `just`:
+```sh
+just cross-build-alpine
+```
+
+This will:
+1. Install the `arm` binfmt if needed.
+2. Build the project inside an `arm32v6/alpine` container.
+3. Extract the resulting binary as `./gbeed`.
 
 
 ## Tests

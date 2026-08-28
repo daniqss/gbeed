@@ -3,13 +3,16 @@ use raylib::prelude::*;
 
 use crate::scenes::EmulatorState;
 
-#[cfg(feature = "gamepi13")]
-const GAMEPI13_FACTOR: i32 = 2;
-#[cfg(not(feature = "gamepi13"))]
-const GAMEPI13_FACTOR: i32 = 1;
+// the GamePi13 panel is 240x240. Rendering at twice that only makes sense when
+// `fbcp` sits in between downscaling a 480x480 framebuffer onto it, as in the
+// Debian deployment; on a native DRM device the mode *is* 240x240
+#[cfg(feature = "fbcp")]
+const SCALE_FACTOR: i32 = 2;
+#[cfg(not(feature = "fbcp"))]
+const SCALE_FACTOR: i32 = 1;
 
-pub const SCREEN_WIDTH: i32 = 240 * GAMEPI13_FACTOR;
-pub const SCREEN_HEIGHT: i32 = 240 * GAMEPI13_FACTOR;
+pub const SCREEN_WIDTH: i32 = 240 * SCALE_FACTOR;
+pub const SCREEN_HEIGHT: i32 = 240 * SCALE_FACTOR;
 
 pub const PADDING_X: i32 = 5;
 pub const PADDING_Y: i32 = 10;
