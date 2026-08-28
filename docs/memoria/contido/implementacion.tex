@@ -8,35 +8,254 @@ dos diferentes compoñentes descritos no capítulo~\ref{chap:arquitectura}.
 \section{Requisitos e restricións}
 % requisitos da libreria: precision, portabilidade, no_std, sen dependencias
 % restricions impostas polas contornas embebidas: memoria, cpu, sen SO
+Para garantir os obxectivos expostos na % sección~\ref{sec:introducion:obxectivos} o núcleo do emulador
+na seccion obxectivos, o núcleo do emulador
+debe seguir unhas directrices de deseño e implementación 
+que aseguren unha correcta execución en contornas limitadas e permita unha fácil integrabilidade e portabilidade.
+
+Para iso séguense as seguintes directrices:
+
+\begin{itemize}
+  \item \textbf{Precisión}: o núcleo do emulador ten como máxima prioridade unha correcta execución en calquera tipo de contorna. Debido a isto,
+  a precisión sempre se verá supeditada á eficiencia, elexindo implementacións de certos compoñentes máis sinxelas se as melloras de precisión non son significativas,
+  afectando soamente a un subconxunto pequeno e pouco representativo do catálogo da consola.
+  
+  \item \textbf{Portabilidade}: o núcleo do emulador debe ser facilmente embebible en diferentes contornas, considerando tanto as probadas neste traballo como as
+  que poderían desenvolverse no futuro. Por isto, a súa implementación debe de estar libre de dependencias externas, polo que se empregou un mecanismo 
+  de Rust chamado \textit{no\_std}.  Este mecanismo permite prescindir da biblioteca estándar de Rust (\textit{std}), que asume a presenza dun sistema operativo,
+  e empregar no seu lugar unicamente o subconxunto \textit{core}, o cal non fai suposicións sobre o contorno de execución e resulta axeitado para sistemas embebidos
+  sen sistema operativo, deixando a posibilidade de incorporar para outras funcionalidades, como a reserva dinámica no \textit{heap}, librerías dependentes da plataforma.
+
+  \item \textbf{Rendemento}: para garantir o funcionamento á velocidade orixinal en todo tipo de plataformas, o núcleo do emulador debe ser eficiente,
+  recorrendo a optimizacións e xeración de código en tempo de compilación, e evitando no bucle quente da execución operacións de entrada/saída, reservas de
+  memoria e demais chamadas ao sistema, xa que son operacións moi destrutivas para o rendemento, especialmente en plataformas cun único núcleo de baixo
+  rendemento.
+\end{itemize} 
+
 
 \section{Deseño da librería e da súa API}
 % organizacion en crates/modulos
 % interfaz publica: como se integra o core noutros frontends
 % decision de deseño: core independente de plataforma, frontends aparte
 
-\section{Implementación dos compoñentes}
+Os \textit{crates} son as unidades de compilación de Rust. Para conseguir unha organización do código modular e con separación de responsabilidades,
+separouse o núcleo do emulador da implementación dos dous frontends. Ademais engadiuse un cuarto \textit{crate} que contén utilidades comúns para ser empregadas polas dúas
+vistas que empregan \textit{raylib}.
 
-\subsection{CPU}
+Dentro da organización do núcleo, empregamos diferentes módulos separando a funcionalidade dos diferentes compoñentes da consola,
+nos que se implementa un \textit{struct} para cada compoñente, que se compoñen dentro do \texttt{struct} \texttt{Dmg}.
+Este é o compoñente principal do núcleo, a través do cal os frontends interactúan co emulador.
+Ademais, o núcleo expón un \textit{trait} chamado \texttt{Controller}, que define a interface que debe implementar un frontend
+para realizar comportamentos de entrada/saída dependentes da plataforma.
+
+Como vemos na figura~\ref{fig:arquitectura-uml}, cada frontend compón a súa aplicación
+cunha instancia de \texttt{Dmg} e cun controlador de seu.
+
+\input{diagramas/arquitectura-uml}
+
+\subsection{Inxección de comportamentos no núcleo do emulador}
+
+Como xa se mencionou na sección anterior, a forma na que un cliente pode introducir comportamentos no emulador é empregando o \textit{trait} \texttt{Controller}.
+Este non define métodos de seu, senón que agrupa nun único tipo os tres \textit{traits} que representan as operacións de entrada/saída da consola,
+como vemos no listado~\ref{lst:controller-trait}.
+
+\begin{lstlisting}[language=Rust, float=tbp, caption={\textit{Traits} que compoñen a interface \texttt{Controller}}, label={lst:controller-trait}]
+pub trait Renderer {
+    fn read_pixel(&self, x: usize, y: usize) -> u32;
+    fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8);
+    fn update_screen(&mut self, ppu: &Ppu);
+}
+
+pub trait SerialListener {
+    fn on_transfer(&mut self, data: u8);
+}
+
+pub trait AudioPlayer {
+    fn playing_stereo(&self) -> bool;
+    fn push_sample(&mut self, left: i16, right: i16);
+    fn flush_buffer(&mut self) {}
+}
+
+pub trait Controller: SerialListener + Renderer + AudioPlayer {}
+\end{lstlisting}
+
+Deste xeito, o núcleo non coñece a plataforma sobre a que se executa, pero si os puntos nos que debe delegar nela.
+Que se debuxe o cadro nunha textura de \textit{raylib}, nun \textit{framebuffer} en memoria, ou que simplemente se descarte o resultado
+é unha decisión que corresponde ao cliente, o cal permite manter o núcleo libre de dependencias externas.
+
+Os tests do emulador tamén implementan o \textit{trait} para observar a execución dende fóra,
+recollendo por exemplo a saída do porto serie das ROMs de proba para determinar se un test rematou correctamente,
+sen necesidade de ensuciar a implementación do núcleo con código que só ten sentido durante a validación.
+Este uso detállase en profundidade en % sección~\ref{sec:validacion}.
+
+Cómpre mencionar que esta flexibilidade non supón un custo en tempo de execución.
+Os métodos \texttt{run} e \texttt{step} de \texttt{Dmg} non reciben un obxecto de \textit{trait}, senón un parámetro xenérico acoutado por \texttt{Controller},
+polo que o compilador monomorfiza o código para o tipo concreto empregado por cada cliente.
+A resolución das chamadas prodúcese así en tempo de compilación (\textit{static dispatch}),
+evitando as indireccións nas táboas de métodos virtuais e permitindo mellores optimizacións do compilador.
+
+\section{Implementación dos compoñentes}
+\subsection{Serialización da cabeceira da ROM}
+O primeiro paso para poder comezar a emular un sistema e cargar de forma axeitada o codigo maquina que se vai executar
+Neste caso, o primeiro que se necesita entender é a cabeceira da ROM. Despois de cargar o ficheiro que o cliente lle pasa ao núcleo do emulador,
+Seguindo as posicións en memoria onde se atopa cada dato que consultadas na documentación~\cite{pandocs},
+o emulador copia a información nunha estructura de xeito que sexa facilmente accesible. 
+Para os datos que teñen un conxunto finito de posibles valores empréganse enumeracións, para que o código sexa máis robusto, lexible e fácil de manter,
+evitando o uso de valores máxicos e comprobacións de cadeas. Este estilo tamén se emprega cos posibles erros que se poden dar durante a serialización.
+Na figura~\ref{fig:cartridge-uml} amósase a estrutura resultante xunto coas enumeracións que emprega, entre elas
+\texttt{CartridgeType}, que recolle o hardware dispoñible no cartucho.
+
+\input{diagramas/cartucho-uml}
+
+
+\subsection{Organización do espazo de memoria}
+A organización do espazo de direccións é un dos puntos clave lograr un deseño modular á vez que eficiente, cómodo e flexible.
+Moitos dos compoñentes do emulador requiren de acceder a espazos de direccións compartidos. A \acrshort{cpu} precisa acceder á totalidade do espazo
+e a \acrshort{ppu} xestiona a súa \acrshort{vram} e a \acrshort{oam}, pero durante unha transferencia por \acrshort{dma} tamén debe ler da memoria de traballo.
+Esta última, como o resto de compoñentes, tamén precisa modificar o rexistro \texttt{interrupt\_flag} para solicitar interrupcións.
+
+
+Unha posible solución sería concentrar todo o espazo de direccións nun único \acrfull{mmu} que se encargase de xestionar todos os accesos,
+pero isto non resulta idóneo, xa que acabaría monopolizando boa parte da xestión do emulador.
+Ademais, non sería ergonómica, xa que non poderíamos separar os rexistros como campos dos distintos compoñentes e romperíase o principio de responsabilidade única.
+Outra solución sería que estes compoñentes estivesen instanciados como variables globais, de xeito que cada un puidese acceder directamente á súa memoria e aos rexistros do resto do sistema.
+Isto non é idiomático en Rust xa que non é \textit{thread-safe}, nin é unha boa práctica de deseño en xeral.
+
+
+A solución adoptada consiste en empregar ao contedor dos compoñentes \texttt{Dmg} como acceso centralizado ao espazo de direccións.
+Este pásase como referencia alí onde se precise acceder ao espazo de direccións, sen necesidade de introducir un compoñente adicional.
+O direccionamento realízase a través do \textit{trait} \texttt{Accessible}, que define as operacións \texttt{read} e \texttt{write} sobre unha dirección,
+e do seu equivalente para operandos de dous bytes, \texttt{Accessible16}, con \texttt{load} e \texttt{store}.
+Estes \textit{traits} impleméntanos tanto \texttt{Dmg} como cada un dos seus compoñente,
+de xeito que cada un accede directamente á súa memoria e, ao mesmo tempo, expón os seus datos ao resto do sistema.
+
+Como se ve no listado~\ref{lst:dmg-read}, a implementación de \texttt{Dmg} limítase a decidir, en función do rango no que cae a dirección,
+a que compoñente lle corresponde resolver o acceso, e a devolver directamente os valores daquelas rexións que xestiona el mesmo.
+
+\begin{lstlisting}[language=Rust, basicstyle=\ttfamily\scriptsize, float=tbp, caption={Implementación da función \textit{read} por \texttt{Dmg}}, label={lst:dmg-read}]
+fn read(&self, address: u16) -> u8 {
+    match address {
+        ROM_BANK00_START..=ROM_BANKNN_END =>
+          self.cartridge.read(address),
+        VRAM_START..=VRAM_END =>
+          self.ppu.read(address),
+        EXTERNAL_RAM_START..=EXTERNAL_RAM_END =>
+          self.cartridge.read(address),
+        WRAM_BANK0_START..=WRAM_BANKN_END =>
+          self.memory.ram[(address - WRAM_BANK0_START) as usize],
+        ECHO_RAM_START..=ECHO_RAM_END => {
+            let offset = (address - ECHO_RAM_START) as usize;
+            self.memory.ram[offset]
+        }
+        OAM_START..=OAM_END =>
+          self.ppu.read(address),
+
+        NOT_USABLE_START..=NOT_USABLE_END => 0xFF,
+
+        IO_REGISTERS_START..=IO_REGISTERS_END =>
+          match address {
+            JOYP =>
+              self.joypad.read(address),
+            SERIAL_REGISTER_START..=SERIAL_REGISTER_END =>
+              self.serial.read(address),
+            TIMER_REGISTER_START..=TIMER_REGISTER_END =>
+              self.timer.read(address),
+
+            IF =>
+              self.interrupt_flag.0 | 0xE0,
+
+            APU_REGISTER_START..=APU_REGISTER_END =>
+              self.apu.read(address),
+            PPU_REGISTER_START..=PPU_REGISTER_END =>
+              self.ppu.read(address),
+
+            BANK_REGISTER =>
+              self.bank,
+
+            _ => 0xFF,
+        },
+        HRAM_START..=HRAM_END =>
+          self.memory.hram[(address - HRAM_START) as usize],
+        IE =>
+          self.interrupt_enable.0,
+    }
+}
+\end{lstlisting}
+
+Como se pode pode observar no listado~\ref{lst:dmg-read}, a función \textit{read} de \texttt{Dmg} fai un \textit{match} sobre o enderezo pasado como argumento,
+redireccionando a cada compoñente segundo o rango desexado.
+
+As memorias de propósito xeral como a \acrshort{ram}, a \acrshort{hram} e a Boot \acrshort{rom}, que se pode pasar de forma opcional ao emulador durante a súa creación,
+gárdanse no \texttt{struct} \texttt{Memory}. En cambio, as memorias de propósito máis especifico como as \acrshort{vram} e \acrshort{oam} e a Wave \acrshort{ram}
+gárdanse na \texttt{Ppu} e na \texttt{Apu} respectivamente, xa que isto permite o seu acceso de forma máis doada e eficiente, mantendo ainda así o acceso para a \texttt{Cpu}
+
+
+\subsection{Implementación do procesador}
 % decodificacion de instrucions, timing por ciclos
 % interrupcions
 
-\subsection{PPU}
+Unha vez con acceso aos datos da \acrshort{rom} e ao resto do espazo de memoria,
+o seguinte paso para emular o sistema é interpretar cada unha das instrucións da \acrshort{isa} da \acrshort{cpu}. 
+Para iso, a nosa \texttt{Cpu} ten que ler de memoria a instrución atopada na posición sinalada polo contador de programa,
+decodificala, e executala do mesmo xeito que o fai o hardware orixinal.
+No listado~\ref{lst:cpu-decode} pódese ver como se produce a decodificación dunha instrución empregando o seu \gls{opcode} para a súa identificación.
+
+\begin{lstlisting}[language=Rust, float=tbp, caption={Función \textit{decode} de \texttt{Cpu}}, label={lst:cpu-decode}]
+pub(crate) fn decode(gb: &mut Dmg, opcode: u8) -> DecodeResult {
+  let cpu = &gb.cpu;
+
+  let instruction: Instructions = match opcode {
+      0x00 => Nop::new().into(),
+      0x01 => LdR16Imm16::new(
+        R16::BC, gb.load(cpu.pc.wrapping_add(1))
+      ).into(),
+      0x02 => LdPointedByR16A::new(R16::BC).into(),
+      0x03 => IncR16::new(R16::BC).into(),
+      0x04 => IncR8::new(R8::B).into(),
+      0x05 => DecR8::new(R8::B).into(),
+      ...
+      0xFD => 
+        return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
+      0xFE => CpImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
+      0xFF => Rst::new(0x38).into(),
+  };
+
+  Ok(instruction)
+}
+\end{lstlisting}
+
+
+
+
+\subsection{Implementación da unidade gráfica}
 % modos, renderizado por scanline ou por pixel
+
+\subsection{Primeira interface}
+
+\subsection{Temporizadores, mando, transferencia serie e interrupcións}
 
 \subsection{Controladores de bancos de memoria}
 % mbc1, mbc3, mbc5... cales se implementaron e por que
 
-\subsection{Temporizadores}
+\subsection{Depuración e optimización}
+% perfilado, tamaño do binario, optimizacions de compilacion
 
-\subsection{Joypad}
 
 \section{Interfaz para sistemas embebidos}
 % deseño da interfaz para contornos embebidos, no_std
 % framebuffer, entrada, audio
 
-\section{Frontends de referencia}
-% frontend de escritorio con raylib
-% frontend embebido
+\subsection{Interface de estilo consola}
 
-\section{Optimización para contornas de recursos limitados}
-% perfilado, tamaño do binario, optimizacions de compilacion
+\subsection{Implementación do son}
+% tldr: ppu son un monton de maquinas de estados, apu son un monton de contadores
+
+\subsection{Soporte para hardware embebido}
+% compilacion cruzada, x11 en vez de drm ou framebuffer...
+
+% \section{Frontends de referencia}
+% % frontend de escritorio con raylib
+% % frontend embebido
+
+% \section{Optimización para contornas de recursos limitados}
+% % perfilado, tamaño do binario, optimizacions de compilacion

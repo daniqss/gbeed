@@ -21,7 +21,7 @@ fn rra(value: u8, carry: bool) -> u8 { (value >> 1) | if carry { 1 << 7 } else {
 
 /// rotate bits right between A and carry flag
 ///   ┏━━━━━━━ A ━━━━━━┓ ┏━ Flags ━┓
-/// ┌─╂→ b7 → ... → b0 ─╂─╂→   C   ─╂─┐
+/// ┌─╂-> b7 -> ... -> b0 ─╂─╂->   C   ─╂─┐
 /// │ ┗━━━━━━━━━━━━━━━━━┛ ┗━━━━━━━━━┛ │
 /// └─────────────────────────────────┘
 #[derive(Debug, Default, Clone, Copy)]

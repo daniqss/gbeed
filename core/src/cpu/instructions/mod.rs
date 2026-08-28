@@ -30,8 +30,11 @@ use crate::{
 /// Represents a CPU instruction.
 /// The instruction can be executed and can provide its disassembly representation
 pub trait Instruction {
+    /// Executes the instruction, changing the gb state and returning the effect of the instruction
     fn exec(&mut self, gb: &mut Dmg) -> InstructionResult;
+    /// Tuple of cycles and length of the instruction in bytes
     fn info(&self) -> (u8, u8);
+    /// Returns the disassembly representation of the instruction
     fn disassembly(&self) -> String;
 }
 

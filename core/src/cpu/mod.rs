@@ -16,7 +16,7 @@ pub use registers::{Register8 as R8, Register16 as R16};
 
 use core::fmt::{self, Display, Formatter};
 
-pub type FetchResult = core::result::Result<Instructions, InstructionError>;
+pub type DecodeResult = core::result::Result<Instructions, InstructionError>;
 
 pub const FREQUENCY: u32 = 4_194_304;
 
@@ -99,7 +99,7 @@ impl Cpu {
 
     #[inline(never)]
     pub(crate) fn step(gb: &mut Dmg) -> Result<Option<Instructions>, InstructionError> {
-        // check if is neccessatry to handle interrupts before executing the instruction
+        // check if is necessary to handle interrupts before executing the instruction
         if Cpu::handle_interrupts(gb) {
             // 5 Mcycles = 2 NOP + 3 ...
             gb.cpu.cycles = gb.cpu.cycles.wrapping_add(5);
@@ -113,7 +113,7 @@ impl Cpu {
 
         let opcode = gb.read(gb.cpu.pc);
 
-        let mut instruction = Cpu::fetch(gb, opcode)?;
+        let mut instruction = Cpu::decode(gb, opcode)?;
         let effect = instruction.exec(gb)?;
 
         gb.cpu.cycles = gb.cpu.cycles.wrapping_add(effect.cycles as usize);
@@ -167,7 +167,7 @@ impl Cpu {
 
     /// Execute instruction based on the opcode.
     /// Return a result with the effect of the instruction or an instruction error (e.g unused opcode)
-    pub(crate) fn fetch(gb: &mut Dmg, opcode: u8) -> FetchResult {
+    pub(crate) fn decode(gb: &mut Dmg, opcode: u8) -> DecodeResult {
         let cpu = &gb.cpu;
 
         let instruction: Instructions = match opcode {
@@ -210,7 +210,7 @@ impl Cpu {
             0x24 => Inc::new(R8::H).into(),
             0x25 => Dec::new(R8::H).into(),
             0x26 => Ld::new(R8::H, Imm8(gb.read(cpu.pc.wrapping_add(1)))).into(),
-            0x27 => Daa::new().into(),
+            0x27 => Daa::new(cpu.carry(), cpu.half_carry(), cpu.subtraction()).into(),
             0x28 => Jr::new(JC::Zero(cpu.zero()), gb.read(cpu.pc.wrapping_add(1))).into(),
             0x29 => AddHL::new(R16::HL).into(),
             0x2A => LdAPointedByHLInc::new().into(),
@@ -376,7 +376,7 @@ impl Cpu {
             0xCA => JpToImm16::new(JC::Zero(cpu.zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
             0xCB => {
                 let cb_opcode = gb.read(cpu.pc.wrapping_add(1));
-                Cpu::fetch_cb(gb, cb_opcode)?
+                Cpu::decode_cb(cb_opcode)
             }
             0xCC => Call::new(JC::Zero(cpu.zero()), gb.load(cpu.pc.wrapping_add(1))).into(),
             0xCD => Call::new(JC::None, gb.load(cpu.pc.wrapping_add(1))).into(),
@@ -435,10 +435,9 @@ impl Cpu {
         Ok(instruction)
     }
 
-    fn fetch_cb(gb: &mut Dmg, cb_opcode: u8) -> FetchResult {
+    fn decode_cb(cb_opcode: u8) -> Instructions {
         // used bit in res, set and bit instructions
         let bit = (cb_opcode & 0x38) >> 3;
-        let cpu = &gb.cpu;
 
         let instruction: Instructions = match cb_opcode {
             0x00 => Rlc::new(R8::B).into(),
@@ -514,7 +513,7 @@ impl Cpu {
                 5 => Bit::new(bit, R8::L).into(),
                 6 => Bit::new(bit, PointedByHL).into(),
                 7 => Bit::new(bit, R8::A).into(),
-                _ => return Err(InstructionError::OutOfRangeCBOpcode(cb_opcode, cpu.pc)),
+                _ => unreachable!(),
             },
             0x80..=0xBF => match cb_opcode & 0x07 {
                 0 => Res::new(bit, R8::B).into(),
@@ -540,7 +539,7 @@ impl Cpu {
             },
         };
 
-        Ok(instruction)
+        instruction
     }
 }
 

@@ -67,12 +67,12 @@ As iteracións realizadas foron as seguintes:
     \item \textbf{Primeira interface}: constrúese unha interface básica que permite visualizar
     a saída do emulador e interactuar con el,
     indispensable para probar de forma cómoda o resto de compoñentes.
-    \item \textbf{Temporizadores, mando, porto serie e interrupcións}: impleméntanse o temporizador, 
+    \item \textbf{Temporizadores, mando, transferencia serie e interrupcións}: impleméntanse o temporizador, 
     os controis, o sistema de interrupcións e o porto serie. Grazas a este último compoñente
     puidose implementar un sistema para validar de forma automatizada o emulador 
     contra varias suites de test.
     Conséguese executar os primeiros xogos sen controlador de bancos de memoria.
-    \item \textbf{Controladores de memoria}: impleméntanse os \acrfullpl{mbc}
+    \item \textbf{Controladores de bancos de memoria}: impleméntanse os \acrfullpl{mbc}
      máis empregados nos cartuchos, ampliando a compatibilidade a un gran número de xogos.
      Válidanse coas probas de \acrshort{mbc} de mooneye.
     \item \textbf{Depuración e optimización}: corríxense erros en xogos problemáticos, 
@@ -147,7 +147,7 @@ Esta análise recóllese na seguinte táboa~\ref{tab:riscos}.
       & Garantir e validar tanto a compilación como a execución correcta do emulador sobre un Linux embebido nunha Raspberry Pi Zero,
       sen empregar un hardware específico para a súa presentación. \\
 
-    Incompatibilidade dos controladores da pantalla GamePi13 co backend \acrshort{drm}
+    Incompatibilidade dos controladores da pantalla GamePi13 co backend \acrfull{drm}
       & Medio / Alta
       & Recorrer ao backend X11, máis pesado pero compatible cos controladores dispoñibles,
       en lugar do backend \acrshort{drm}, máis lixeiro e moderno. \\
