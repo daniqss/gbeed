@@ -64,7 +64,7 @@ impl SweepPulse {
         }
     }
 
-    field_bit_accessors!(target: period_high; TRIGGER, LENGTH_ENABLE);
+    field_bit_accessors!(pub(crate) target: period_high; TRIGGER, LENGTH_ENABLE);
 
     pub fn clear_registers(&mut self) {
         self.sweep = 0;

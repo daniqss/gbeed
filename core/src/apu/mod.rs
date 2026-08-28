@@ -101,7 +101,7 @@ impl Default for Apu {
 }
 
 impl Apu {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             sweep_pulse: SweepPulse::new(),
             pulse: Pulse::new(),
@@ -124,13 +124,13 @@ impl Apu {
     }
 
     #[inline(always)]
-    pub fn is_active(&self) -> bool { self.master_control & AUDIO_ON_OFF != 0 }
+    pub fn is_active(&self) -> bool { self.audio_on_off() }
 
-    bit_accessors!(target: master_control; AUDIO_ON_OFF, CH1_ON_FLAG, CH2_ON_FLAG, CH3_ON_FLAG, CH4_ON_FLAG);
-    bit_accessors!(target: sound_panning; CH1_LEFT, CH2_LEFT, CH3_LEFT, CH4_LEFT, CH1_RIGHT, CH2_RIGHT, CH3_RIGHT, CH4_RIGHT);
+    bit_accessors!(pub(crate) target: master_control; AUDIO_ON_OFF, CH1_ON_FLAG, CH2_ON_FLAG, CH3_ON_FLAG, CH4_ON_FLAG);
+    bit_accessors!(pub(crate) target: sound_panning; CH1_LEFT, CH2_LEFT, CH3_LEFT, CH4_LEFT, CH1_RIGHT, CH2_RIGHT, CH3_RIGHT, CH4_RIGHT);
 
     #[inline(never)]
-    pub fn step<P: AudioPlayer>(&mut self, player: &mut P, delta: usize) {
+    pub(crate) fn step<P: AudioPlayer>(&mut self, player: &mut P, delta: usize) {
         if !self.is_active() {
             return;
         }

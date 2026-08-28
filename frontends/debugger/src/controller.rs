@@ -1,7 +1,6 @@
 use gbeed_core::prelude::*;
 use gbeed_core::{
-    AudioPlayer, BUFFER_SIZE, Controller, Ppu, Renderer, SAMPLE_RATE, SerialListener,
-    prelude::DMG_SCREEN_WIDTH,
+    AudioPlayer, BUFFER_SIZE, Ppu, Renderer, SAMPLE_RATE, SerialListener, prelude::DMG_SCREEN_WIDTH,
 };
 use gbeed_raylib_common::{Texture, color::DMG_CLASSIC_PALETTE, settings::SpeedUpMultiplier};
 use raylib::prelude::*;
@@ -109,8 +108,6 @@ impl SerialListener for DebuggerController<'_> {
         println!("through serial port -> {data:04X}");
     }
 }
-
-impl Controller for DebuggerController<'_> {}
 
 impl AudioPlayer for DebuggerController<'_> {
     fn playing_stereo(&self) -> bool { false }

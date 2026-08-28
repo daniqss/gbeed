@@ -8,4 +8,4 @@ default = ["std"]
 std = []
 
 [dependencies]
-paste = "1.0.15"
+pastey = "0.2.3"

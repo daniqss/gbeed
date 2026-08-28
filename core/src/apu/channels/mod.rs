@@ -6,7 +6,8 @@ mod wave;
 pub use noise::Noise;
 pub use pulse::Pulse;
 pub use sweep_pulse::SweepPulse;
-pub use wave::{WAVE_RAM_END, WAVE_RAM_START, Wave};
+pub use wave::Wave;
+pub(crate) use wave::{WAVE_RAM_END, WAVE_RAM_START};
 
 use super::{Envelope, LengthCounter};
 

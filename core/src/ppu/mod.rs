@@ -10,7 +10,7 @@ use crate::{
     prelude::*,
 };
 
-pub use renderer::{DefaultRenderer, Renderer};
+pub use renderer::Renderer;
 
 mem_range!(PPU_REGISTER, 0xFF40, 0xFF4B);
 
@@ -143,7 +143,7 @@ impl core::fmt::Debug for Ppu {
 }
 
 impl Ppu {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             dots: 0,
             frames: 0,
@@ -172,7 +172,8 @@ impl Ppu {
 
     // lcd_control bit access functions
     bit_accessors! {
-        target: lcd_control;
+        // a frontend should use to draw the tile maps correctly
+        pub target: lcd_control;
 
         LCD_DISPLAY_ENABLE,
         WINDOW_TILE_MAP_ADDRESS,
@@ -186,7 +187,7 @@ impl Ppu {
 
     // lcd_status bit access functions
     bit_accessors! {
-        target: lcd_status;
+        pub(crate) target: lcd_status;
 
         LYC_EQ_LY_INTERRUPT,
         OAM_INTERRUPT,
@@ -250,7 +251,12 @@ impl Ppu {
     // 10 lines   |             VBlank
 
     #[inline(never)]
-    pub fn step<R: Renderer>(&mut self, renderer: &mut R, delta: usize, interrupt_flag: &mut Interrupt) {
+    pub(crate) fn step<R: Renderer>(
+        &mut self,
+        renderer: &mut R,
+        delta: usize,
+        interrupt_flag: &mut Interrupt,
+    ) {
         if !self.lcd_display_enable() {
             return;
         }
@@ -335,7 +341,7 @@ impl Ppu {
     }
 
     #[inline(always)]
-    pub fn draw_scanline<R: Renderer>(&mut self, renderer: &mut R) {
+    pub(crate) fn draw_scanline<R: Renderer>(&mut self, renderer: &mut R) {
         // draw background
         if self.bg_enable() {
             self.draw_bg(renderer);
@@ -592,8 +598,7 @@ impl Ppu {
     /// It will take 160 dots or 320 at double speed
     /// CPU can access only HRAM and PPU can't access OAM
     /// Most games transfer to HRAM code to continue execution in CPU, and execute DMA transfer in VBlank
-    // TODO: implement this coping memory directly from cartridge to OAM
-    pub fn dma_transfer(gb: &mut Dmg, src_addr: u8) {
+    pub(crate) fn dma_transfer(gb: &mut Dmg, src_addr: u8) {
         let src_addr = (src_addr as u16) << 8;
         for i in 0..OAM_SIZE {
             let byte = gb.read(src_addr + i);
