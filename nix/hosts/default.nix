@@ -4,8 +4,6 @@
   ...
 }: {
   gbeed02 = inputs.nixos-raspberrypi.lib.nixosSystemFull {
-    # who this host is, shared by every module below instead of being repeated
-    # in each of them
     specialArgs =
       inputs
       // {

@@ -12,12 +12,5 @@
         brcm,function = <2>; /* alt5 */
       };
     };
-
-    fragment@1 {
-      target = <&chosen>;
-      __overlay__ {
-        bootargs = "snd_bcm2835.enable_headphones=1";
-      };
-    };
   };
 ''
