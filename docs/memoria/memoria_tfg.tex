@@ -39,11 +39,13 @@
 % \usepackage{moreverb}    % permite personalizar o entorno verbatim
   \usepackage{multirow}    % permite crear celdas que ocupan varias filas da mesma táboa
   \usepackage{pgfgantt}    % permite construir diagramas de Gantt
-  \usetikzlibrary{positioning, fit, arrows.meta, backgrounds, shapes.multipart, calc} % librerias de tikz para os diagramas UML
+  \usetikzlibrary{positioning, fit, arrows.meta, backgrounds, shapes.multipart, shapes.geometric, calc} % librerias de tikz para os diagramas UML
+
 
 % definición da linguaxe Rust para listings, tomada de https://github.com/denki/listings-rust (licenza BSD 3-Clause)
 \usepackage{listings-rust}
 \lstset{
+  basicstyle=\ttfamily\scriptsize,         % código un pouco máis compacto
   keywordstyle=[2]\color{udcpink},         % traits
   keywordstyle=[3]\color{udcpink},         % tipos primitivos e tipos da biblioteca
   keywordstyle=[4]\color{udcpink},         % construtores de valores

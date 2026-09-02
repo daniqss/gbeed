@@ -74,8 +74,8 @@ en función da dirección.
 
 
 Por estar todos os compoñentes pendurados do mesmo bus, certos accesos entran en
-conflito. O caso máis representativo é o acceso á \acrshort{vram} e á \acrshort{oam} por parte da \acrshort{ppu}: mentres
-a \acrshort{ppu} está a debuxar unha liña, a \acrshort{cpu} non pode acceder a esas memorias e calquera
+conflito. O caso máis representativo é o acceso á \acrshort{vram} e á \acrshort{oam} por parte da \acrshort{ppu}
+Mentres a \acrshort{ppu} está a debuxar unha liña, a \acrshort{cpu} non pode acceder a esas memorias e calquera
 lectura devolve \texttt{0xFF}.
 
 \section{Mapa de memoria}
@@ -83,7 +83,7 @@ lectura devolve \texttt{0xFF}.
 
 \begin{figure}[hp!]
   \centering
-  \includegraphics[width=0.60\textwidth]{imaxes/memory_map.png}
+  \includegraphics[width=0.55\textwidth]{imaxes/memory_map.png}
   \caption{Mapa de memoria da Game Boy \cite{UltimateGameBoyTalk}}
   \label{fig:memory-map}
 \end{figure}
@@ -139,7 +139,7 @@ cristal do sistema, e cada unha das súas oscilacións coñécese como ciclo T
 Non todos os compoñentes do sistema funcionan a esta frecuencia. A memoria \acrshort{ram} funciona
 a unha cuarta parte da frecuencia do procesador, é dicir, a 1\,048\,576\,Hz.
 Debido a esta diferenza, todo o sistema está limitado pola memoria, de forma que
-se fala de ciclos M (\textit{Machine cycle}) para referirse á unidade equivalente a catro ciclos T.
+se fala de ciclos M (\textit{M-cycle}) para referirse á unidade equivalente a catro ciclos T.
 
 \begin{table}[htbp]
   \centering
@@ -169,7 +169,7 @@ O máis probable segundo a información dispoñible actualmente é que se trate 
 
 \begin{figure}[hp!]
   \centering
-  \includegraphics[width=0.85\textwidth]{imaxes/decap_sm83.jpg}
+  \includegraphics[width=0.6\textwidth]{imaxes/decap_sm83.jpg}
   \caption{Decapsulado do Sharp SM83}
   \label{fig:decap_sm83}
 \end{figure}
@@ -231,8 +231,7 @@ Os \textit{flags} \texttt{Z} e \texttt{C} son os que empregan os saltos condicio
 que aceptan as catro condicións \texttt{z}, \texttt{nz}, \texttt{c} e \texttt{nc}.
 Os \textit{flags} \texttt{N} e \texttt{H}, en cambio, non son consultables directamente:
 existen unicamente para dar servizo á instrución \texttt{daa},
-que corrixe o resultado dunha suma ou resta para que sexa válido en representación
-decimal codificada en binario (\acrshort{bcd}).
+que corrixe o resultado dunha suma ou resta para que sexa válido en representación \acrfull{bcd}.
 
 A parella \texttt{HL} recibe un tratamento especial dentro do conxunto de instrucións.
 A codificación dos operandos de 8 bits reserva un dos oito valores posibles
@@ -250,9 +249,9 @@ empregada polas instrucións \texttt{push} e \texttt{pop} e polas chamadas a sub
 
 \subsubsection{Codificación das instrucións}
 
-O SM83 é un procesador \acrfull{cisc} de lonxitude de instrución variable:
-cada instrución ocupa entre un e tres bytes, sendo o primeiro o \gls{opcode}
-e os seguintes, se os houber, o operando inmediato de 8 ou 16 bits.
+O SM83 é un procesador \acrfull{cisc} de lonxitude de instrución variable entre un e tres bytes,
+sendo o primeiro o \gls{opcode}
+e os seguintes, se os houbese, o operando inmediato de 8 ou 16 bits.
 Existe ademais un prefixo, o byte \texttt{0xCB}, que dá acceso a un segundo
 espazo de 256 opcodes adicados ás operacións de rotación, desprazamento
 e manipulación de bits individuais. Do total de 256 opcodes sen prefixo, 11 non están asignados a ningunha instrución
@@ -264,28 +263,6 @@ e producen un bloqueo ao empregarse.
   \caption{Conxunto de instrucións sen prefixo do SM83~\cite{pandocs}}
   \label{fig:sm83-instruction-set}
 \end{figure}
-
-
-O listado~\ref{lst:asm-exemplo} amosa un fragmento de código en ensamblador de RGBDS
-que ilustra o uso destes mecanismos: unha rutina que copia un bloque de memoria
-apoiándose en \texttt{HL} como punteiro de lectura autoincrementado.
-
-\begin{lstlisting}[language={[x86masm]Assembler}, label={lst:asm-exemplo}]
-; hl = orixe, de = destino, bc = numero de bytes a copiar
-Copia:
-  ; le [hl] no acumulador, incrementa hl e escribe o byte no destino
-  ld a, [hl+]   
-  ld [de], a    
-  ; incrementamos os contadores
-  inc de
-  dec bc
-  ld a, b
-  ; comproba se bc chegou a cero
-  or a, c
-  ; salto relativo de un byte
-  jr nz, Copia  
-  ret
-\end{lstlisting}
 
 
 \subsection{Comparativa co Intel 8080 e o Zilog Z80}
@@ -310,7 +287,7 @@ xa que como se comenta na sección~\ref{sec:mapa-memoria}, os periféricos da co
 están mapeados en memoria e o seu acceso realízase coas mesmas instrucións de carga
 empregadas para acceder ao resto do espazo de direccións.
 
-O que non herda do Z80 é moito máis amplo.
+O que non herda se do Z80 é moito máis amplo.
 Non existe o segundo banco de rexistros nin, en consecuencia, as instrucións
 de intercambio entre bancos, nin os rexistros de índice \texttt{IX} e \texttt{IY}
 cos seus prefixos \texttt{0xDD} e \texttt{0xFD}.
@@ -351,7 +328,7 @@ Non existe unha táboa de vectores de interrupción propiamente dita.
 Nun esquema vectorizado convencional, o procesador consulta unha táboa en memoria
 para obter a dirección do manexador correspondente, o que permite reubicar
 os manexadores libremente. No SM83, en cambio, cada interrupción ten asociada
-unha dirección fixa no comezo do espazo de direccións, separadas oito bytes entre si,
+unha dirección fixa no comezo da \acrshort{rom}, separadas oito bytes entre si,
 á que o procesador salta directamente.
 Esas oito posicións son, na práctica, o espazo dispoñible para o manexador,
 polo que os programas adoitan colocar nelas unicamente un salto
@@ -392,18 +369,11 @@ e \acrfull{if} (mapeado en \texttt{0xFF0F}) empregan os seus cinco bits baixos
 seguindo a orde da táboa~\ref{tab:interrupcions}:
 \acrshort{ie} indica que interrupcións están habilitadas
 e \acrshort{if} cales están pendentes de atender.
-Cando un periférico solicita atención, o hardware activa o bit correspondente de \acrshort{if}
-de forma automática, aínda que o programa tamén pode escribir neste rexistro
-para solicitar ou descartar interrupcións manualmente.
-A conxunción \acrshort{ie}\,\&\,\acrshort{if} determina, polo tanto, que interrupcións
-están en condicións de ser atendidas.
 
 Por riba destes dous rexistros sitúase o \textit{flag} \acrfull{ime},
 interno ao procesador e non accesible en memoria,
-que habilita ou deshabilita globalmente a atención de interrupcións.
-Actívase coa instrución \texttt{ei} e desactívase con \texttt{di},
-e o propio procesador ponno a cero ao atender unha interrupción,
-evitando o aniñamento agás que o manexador o habilite explicitamente.
+que habilita ou deshabilita globalmente a atención de interrupcións mediante
+as instrucións \texttt{ei} e \texttt{di} respectivamente.
 
 Cando \acrshort{ime} está activo e \acrshort{ie}\,\&\,\acrshort{if} é distinto de cero,
 o procesador borra o bit correspondente de \acrshort{if}, pon \acrshort{ime} a cero
@@ -411,10 +381,6 @@ e realiza unha chamada ao vector correspondente,
 apilando o valor actual do \texttt{PC}.
 Todo o proceso consome cinco ciclos M: dous de espera, dous para apilar o \texttt{PC}
 e un último para cargar a dirección do vector.
-
-A prioridade entre interrupcións simultáneas é fixa e vén dada pola orde dos bits
-en \acrshort{ie} e \acrshort{if}: o bit 0 (VBlank) ten a prioridade máis alta
-e o bit 4 (Joypad) a máis baixa.
 
 \section{Unidade de procesamento de píxeles}
 \label{sec:ppu}
@@ -494,19 +460,13 @@ adicionais e solicita a interrupción \textit{VBlank} descrita na
 táboa~\ref{tab:interrupcions}. Este é o único intervalo no que a \acrshort{vram} e a
 \acrshort{oam} están accesibles durante un tempo prolongado, polo que os xogos concentran
 nel todas as actualizacións gráficas.
-A alternativa para modificar a \acrshort{oam} é a transferencia \acrfull{dma}.
+A alternativa para modificar a \acrshort{oam} é a \acrfull{dma}.
 Consiste na copia automática de 160 bytes desde calquera páxina de memoria
 á \acrshort{oam} en 160 ciclos M, sen intervención do procesador, a través da escritura
 no rexistro mapeado en \texttt{0xFF46}. Durante este tempo, a \acrshort{cpu} só pode
 acceder a \acrshort{hram}, polo que o recomendado e iniciar esta transferencia dende
 código residente na \acrshort{hram}, onde o programa debe empezar e acabar a transferencia para evadir
 o conflito no bus.
-
-O rexistro \texttt{STAT} permite ademais configurar unha segunda fonte de interrupción,
-programable para dispararse ao entrar nos modos 0, 1 ou 2, ou ben cando o contador de liña
-\texttt{LY} coincide co valor escrito en \texttt{LYC}. Esta última condición é a base dos
-efectos gráficos por liña característicos da plataforma, que se conseguen modificando os
-rexistros de desprazamento xusto antes de que se debuxe unha liña concreta.
 
 \subsection{Fondo, xanela e obxectos}
 \label{subsec:ppu-capas}
@@ -561,9 +521,6 @@ se recolle na táboa~\ref{tab:oam-entrada}.
 \end{table}
 
 
-Ese desprazamento das coordenadas permite que un obxecto entre e saia da pantalla
-parcialmente polos bordos superior e esquerdo, xa que a posición cero equivale a estar
-completamente fóra.
 As estritas limitacións do hardware só fai posible debuxar dez
 obxectos por liña, e os que exceden ese límite simplemente desaparecen.
 Cando dous se solapan, ten prioridade o de coordenada X menor e, en caso de empate,
@@ -595,15 +552,8 @@ de forma que prevalece o do obxecto agás que sexa transparente ou dunha priorid
 Só entón se traduce o índice resultante a través da paleta correspondente
 e o píxel final se debuxa na pantalla.
 
-Este deseño explica que a duración do modo 3 non sexa fixa. O desprazamento fino do fondo
-obriga a descartar os primeiros \texttt{SCX} $\bmod$ 8 píxeles xa producidos, a aparición
-da xanela baleira a cola de fondo e reinicia o \textit{fetcher}, e cada obxecto presente na
-liña interrompe a busca en curso para intercalar a súa propia. Cada unha destas situacións
-engade \textit{dots} ao modo 3 que se restan do \textit{HBlank} seguinte, de aí os rangos
-recollidos na táboa~\ref{tab:ppu-modos}.
 
 A figura~\ref{fig:ppu-composition-vram-oam} ilustra esta organización cun cadro real.
-
 
 \begin{figure}[hp!]
   \centering
@@ -627,13 +577,12 @@ A figura~\ref{fig:ppu-composition-vram-oam} ilustra esta organización cun cadro
 
 Os cartuchos non forman parte do hardware da consola propiamente dita, pero teñen unha
 importancia capital no seu funcionamento. A súa función non se limita a proporcionar os
-datos e o código do xogo: son tamén o mecanismo mediante o cal a consola foi capaz de
-estender as súas capacidades ao longo de toda a súa vida comercial, incorporando memoria
+datos e o código do xogo xa que poden estender as capacidades da consola incorporando memoria
 adicional, almacenamento persistente grazas a pilas e mesmo periféricos completos.
 
 Por exemplo, os cartuchos iniciais, máis sinxelos, soamente contiñan 32\,KiB de datos na súa ROM,
 que era todo o que podía direccionar a consola directamente. Co hardware adicional dos \acrshort{mbc},
-podíanse empregar \acrshort{rom} de ata 8\,MiB.
+podíanse empregar \acrshortpl{rom} de ata 8\,MiB.
 
 Movendo o custo e a ampliación das capacidades da consola ao cartucho, Nintendo conseguiu
 que as consolas xa vendidas puidesen executar xogos moito máis esixentes sen modificación ningunha.
@@ -645,7 +594,7 @@ non executa código do cartucho, senón a Boot \acrshort{rom}, que se superpón 
 256 bytes do espazo de direccións.
 Rematadas as súas comprobacións e inicializacións, esta debe cederlle o control ao cartucho, e faino
 escribindo un valor distinto de cero no rexistro \texttt{0xFF50}, o que provoca que o
-hardware a desmapee permanentemente e deixe visible a \acrshort{rom} do cartucho nese rango.
+hardware a desmapee permanentemente e deixe visible a \acrshort{rom} do cartucho nese rango inicial.
 
 \begin{lstlisting}[language={[x86masm]Assembler}, label={lst:bootrom-unmap}]
   ; últimas instrucións da Boot ROM
@@ -656,7 +605,6 @@ hardware a desmapee permanentemente e deixe visible a \acrshort{rom} do cartucho
   ; saltando ata despois da cabeceira
   nop
   jp $0150
-
 \end{lstlisting}
 
 Ao completarse a instrución, o contador de programa
@@ -679,8 +627,7 @@ hardware que incorpora o cartucho; o tamaño das memorias e sumas de control
 (tanto da cabeceira como de toda a \acrshort{rom}) para verificar a integridade dos datos.
 
 Os datos do tamaño das memorias non son empregados pola consola, pero para a implementación dun emulador son 
-esenciais para coñecer o tipo de cartucho, e a si ser capaz de emulalo correctamente, e reservar a suficiente memoria
-para a \acrshort{rom} e a \acrshort{ram} externa.
+esenciais para coñecer o tipo de cartucho, e a si ser capaz de emulalo correctamente.
 
 \subsection{Controladores de bancos de memoria}
 \label{sec:mbc}
@@ -690,8 +637,7 @@ o bus de direccións da consola e os chips de memoria.
 A súa función é a conmutación de bancos: presentar, nunha mesma xanela do mapa de memoria,
 fragmentos distintos dunha memoria moito maior que o espazo direccionable.
 
-O mecanismo apóiase nunha particularidade do bus: a \acrshort{rom} do cartucho é de só
-lectura, polo que o banco aproveita esas escrituras como canle de control, almacenando o dato nun
+O mecanismo aproveita esas escrituras na \acrshort{rom} como canle de control, almacenando o dato nun
 rexistro interno que determina que banco queda visible na xanela conmutable.
 Cada tipo de cartucho emprega rexistros distintos agrupados en varios grupos principais,
 que aínda así poden conter diferente hardware adicional, como baterías, \acrfull{rtc}
@@ -699,26 +645,7 @@ ou motores de vibración.
 O byte \texttt{0x0147} da cabeceira non identifica só a familia de controlador,
 senón a combinación exacta de compoñentes que leva o cartucho, de xeito que un mesmo
 \acrshort{mbc} dá lugar a varias variantes, cada unha cunha capacidade de \acrshort{rom}
-e de \acrshort{ram} distinta; a táboa~\ref{tab:mbc} recolle as familias máis
-empregadas e o hardware que poden incorporar.
-
-
-\begin{table}[htbp]
-  \centering
-  \rowcolors{2}{white}{udcgray!25}
-  \begin{tabular}{l|c|c|>{\raggedright\arraybackslash}p{3.6cm}}
-  \rowcolor{udcpink!25}
-  \textbf{Familia} & \textbf{\acrshort{rom} máx.} & \textbf{\acrshort{ram} máx.} & \textbf{Hardware adicional} \\\hline
-  Ningunha & 32\,KiB & 8\,KiB & \acrshort{ram} e batería \\
-  MBC1 & 2\,MiB & 32\,KiB & \acrshort{ram} e batería \\
-  MBC2 & 256\,KiB & 512$\times$4 bits & Batería; a \acrshort{ram} vai integrada no controlador \\
-  MBC3 & 2\,MiB & 32\,KiB & \acrshort{ram}, batería e \acrshort{rtc} \\
-  MBC5 & 8\,MiB & 128\,KiB & \acrshort{ram}, batería e vibración \\
-  Outras & --- & --- & MBC6, MBC7, MMM01, HuC1, HuC3 e Pocket Camera \\
-  \end{tabular}
-  \caption{Familias de controladores de bancos de memoria, coas capacidades máximas que admiten e o hardware que poden incorporar~\cite{pandocs}.}
-  \label{tab:mbc}
-\end{table}
+e de \acrshort{ram} distinta.
 
 \subsection{Hardware adicional implementado nos cartuchos}
 
@@ -733,14 +660,13 @@ Sobre esa mesma alimentación permanente constrúese o \acrshort{rtc} dos MBC3, 
 tempo real que segue avanzando coa consola apagada e que permite implementar ciclos de día
 e noite ou eventos dependentes da data.
 
-Outros cartuchos foron aínda máis lonxe: o MBC5 permite controlar un motor de vibración,
+O MBC5 permite controlar un motor de vibración, 
 o MBC7 incorpora un acelerómetro de dous eixos empregado como sistema de control por
 inclinación, e a Game Boy Camera integra directamente un sensor de imaxe no cartucho
 xunto coa lóxica necesaria para capturar e procesar fotografías.
 En todos estes casos o mecanismo é o mesmo, o periférico exponse como un conxunto de
 rexistros accesibles desde o espazo de direccións do cartucho, sen que a consola precise
 saber nada del.
-
 
 \section{Joypad}
 \label{sec:joypad}
@@ -850,27 +776,9 @@ En cada pulso de reloxo sae o seu bit máis significativo cara á outra consola
 e entra polo bit menos significativo o bit que envía esta.
 Trala oitava rotación, \acrshort{sb} contén integramente o byte recibido
 e a outra consola ten no seu \acrshort{sb} o byte que enviamos nós.
-Non existe, polo tanto, forma de recibir sen enviar:
-se un programa non preparou un novo byte a tempo, volverá saír o anterior.
+Non existe, polo tanto, forma de recibir sen enviar.
 
 
-O control da operación realízase co rexistro \acrfull{sc}, en \texttt{0xFF02},
-cuxos bits se describen na táboa~\ref{tab:serial-sc}.
-
-
-\begin{table}[htbp]
-  \centering
-  \rowcolors{2}{white}{udcgray!25}
-  \begin{tabular}{c|l|p{7.5cm}}
-  \rowcolor{udcpink!25}
-  \textbf{Bit} & \textbf{Nome} & \textbf{Significado} \\\hline
-  7 & Transfer enable & A 1 mentres hai unha transferencia solicitada ou en curso. O hardware ponno a cero ao rematar. \\
-  1 & Clock speed     & Selecciona o reloxo rápido. Só existe na Game Boy Color. \\
-  0 & Clock select    & 0 emprega o reloxo externo (escravo), 1 o reloxo interno (mestre). \\
-  \end{tabular}
-  \caption{Bits do rexistro de control \acrshort{sc}, en \texttt{0xFF02}~\cite{pandocs}.}
-  \label{tab:serial-sc}
-\end{table}
 
 O fluxo habitual consiste en que a consola mestre cargue o byte a enviar en \acrshort{sb}
 e escriba \texttt{0x81} en \acrshort{sc}, activando á vez o bit de transferencia
@@ -882,9 +790,8 @@ No modelo orixinal o reloxo interno é fixo, de 8\,192\,Hz,
 o que dá unha taxa de transferencia dun quilobyte por segundo,
 descontando o tempo que os programas adican a sincronizarse entre bytes.
 O reloxo externo, en cambio, non ten unha velocidade garantida,
-xa que depende por completo da consola que o xera:
-a consola escrava agarda indefinidamente polo seguinte bit,
-polo que os programas deben implementar por si mesmos un temporizador
+xa que depende por completo da consola que o xera, podendo deixar indefinidamente agardando á consola escrava polo seguinte bit.
+Por isto, os programas deben implementar por si mesmos un temporizador
 que aborte a comunicación se a outra consola non responde.
 
 \section{Unidade de procesamento de audio}
@@ -900,7 +807,7 @@ adecuado, e non un ficheiro de audio convencional como os que reproduce o hardwa
 
 \begin{figure}[hp!]
   \centering
-  \includegraphics[width=0.65\textwidth]{imaxes/apu_details.png}
+  \includegraphics[width=0.55\textwidth]{imaxes/apu_details.png}
   \caption{Esquema do circuito da \acrshort{apu} \cite{pandocs}}
   \label{fig:apu-details}
 \end{figure}
@@ -951,7 +858,3 @@ en modo de só lectura, de cales das catro canles están activas nese momento.
 
 A temporización de todos estes elementos non depende dun reloxo propio, senón que se deriva
 do contador interno descrito na sección~\ref{sec:temporizadores}.
-Un divisor coñecido como \textit{DIV-APU} xera un pulso a 512\,Hz a partir dun dos bits
-dese contador, e é ese pulso o que fai avanzar os contadores de lonxitude, os envolventes
-de volume e a unidade de varrido, cada un a unha fracción distinta desa frecuencia.
-

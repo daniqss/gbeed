@@ -37,7 +37,6 @@ impl Timer {
         }
     }
 
-    #[inline(never)]
     pub(crate) fn step(&mut self, cycles: usize, interrupt: &mut Interrupt) {
         if self.overflow_pending {
             self.overflow_delay -= cycles as i32;

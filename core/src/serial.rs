@@ -13,6 +13,8 @@ pub const SC_CLOCK_SELECT: u8 = 0x01;
 const CYCLES_PER_BIT: i32 = 512;
 /// 32 times faster, so 128 T-cycles for a whole byte.
 const FAST_CYCLES_PER_BIT: i32 = CYCLES_PER_BIT / 32;
+const CYCLES_PER_BIT_SHIFT: u32 = CYCLES_PER_BIT.trailing_zeros();
+const FAST_CYCLES_PER_BIT_SHIFT: u32 = FAST_CYCLES_PER_BIT.trailing_zeros();
 const TRANSFER_BITS: u8 = 8;
 
 pub trait SerialListener {
@@ -78,11 +80,13 @@ impl Serial {
 
         // the counter already went past the first tick, so the remaining overshoot tells
         // how many further ticks fit in this step
-        let cycles_per_bit = self.cycles_per_bit();
-        let ticks = 1 + (-self.counter / cycles_per_bit);
+        let shift = self.cycles_per_bit_shift();
+        // counter <= 0 here, so the overshoot is non-negative and the arithmetic
+        // shift is exactly the truncating division
+        let ticks = 1 + ((-self.counter) >> shift);
         let bits = ticks.min(self.remaining_bits as i32) as u8;
 
-        self.counter += ticks * cycles_per_bit;
+        self.counter += ticks << shift;
         self.remaining_bits -= bits;
 
         // no link cable attached, so the incoming bits are always high
@@ -99,11 +103,11 @@ impl Serial {
     }
 
     #[inline(always)]
-    fn cycles_per_bit(&self) -> i32 {
+    fn cycles_per_bit_shift(&self) -> u32 {
         if self.sc_clock_speed() {
-            FAST_CYCLES_PER_BIT
+            FAST_CYCLES_PER_BIT_SHIFT
         } else {
-            CYCLES_PER_BIT
+            CYCLES_PER_BIT_SHIFT
         }
     }
 
@@ -133,7 +137,7 @@ impl Accessible<u16> for Serial {
                 if self.sc_transfer_start() && self.sc_clock_select() {
                     self.transfer_data = self.sb;
                     self.remaining_bits = TRANSFER_BITS;
-                    self.counter = self.cycles_per_bit();
+                    self.counter = 1 << self.cycles_per_bit_shift();
                 } else if !self.sc_transfer_start() {
                     self.remaining_bits = 0;
                 }

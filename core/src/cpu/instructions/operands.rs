@@ -3,12 +3,12 @@ use crate::{
     cpu::{R8, R16},
     prelude::*,
 };
-use core::fmt::{Display, Formatter};
+use core::fmt::{Debug, Display, Formatter};
 
 /// # 8 bit operand
 /// From where a instruction takes bytes to operate with.
 /// Different operands takes different amount of cycles and instruction length
-pub trait Operand: Copy + Default + core::fmt::Debug + Display {
+pub trait Operand: Copy + Default + Debug + Display {
     const READ_CYCLES: u8;
     const LEN: u8;
 
@@ -40,7 +40,7 @@ impl WritableOperand for R8 {
 
 /// # 16 bit operand
 /// Same, but bigger, and no instruction lenght cost, because they aren't immediate values
-pub trait Operand16: Copy + Default + core::fmt::Debug + Display {
+pub trait Operand16: Copy + Default + Debug + Display {
     fn load(&self, gb: &Dmg) -> u16;
     fn store(&self, gb: &mut Dmg, value: u16);
 }

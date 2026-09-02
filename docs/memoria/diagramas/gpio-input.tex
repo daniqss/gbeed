@@ -1,0 +1,105 @@
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  scale=0.55, transform shape, font=\small,
+  %%%%%%%%% struct -> clase UML
+  struct/.style={draw, fill=white, rectangle split, rectangle split parts=2,
+                 rectangle split part align=center, align=left, inner sep=4pt},
+  structm/.style={draw, fill=white, rectangle split, rectangle split parts=3,
+                  rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% trait -> interface UML
+  trait/.style={draw, dashed, fill=black!4, rectangle split, rectangle split parts=2,
+                rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% crate -> paquete UML
+  tab/.style={draw, minimum width=14mm, minimum height=4mm, inner sep=0pt},
+  etiqcrate/.style={anchor=north west, xshift=2.5mm, yshift=-2.5mm,
+                    font=\footnotesize\ttfamily},
+  %%%%%%%%% relacións
+  depende/.style={dashed, -{Latex[open, length=2.4mm, width=2mm]}},
+  realiza/.style={dashed, -{Triangle[open, length=3mm, width=3mm]}},
+  compon/.style={{Diamond[length=3mm, width=2.2mm]}-},
+  etiq/.style={font=\scriptsize, inner sep=1.5pt, fill=white},
+  membro/.style={font=\footnotesize\ttfamily}
+]
+
+%%%%%%%%% quen recolle a entrada de todas as fontes
+\node[structm, minimum width=62mm] (mgr) at (0,0) {
+  \nodepart{one}  \texttt{InputManager}
+  \nodepart[membro]{two}
+        + key\_triggers: InputKeyTriggers\\
+        + mouse\_triggers: Option<InputMouseTriggers>\\
+        + gpio\_triggers: Option<InputGpioTriggers>\\
+        + current / previous: InputState
+  \nodepart[membro]{three}
+        + update(rl, dt)\\
+        + is\_held\_*() / is\_pressed\_*()
+};
+
+%%%%%%%%% o estado resultante
+\node[structm, minimum width=52mm] (state) at (100mm,0) {
+  \nodepart{one}  \texttt{InputState}
+  \nodepart[membro]{two}
+        + up / down / left / right: bool\\
+        + a / b / start / select: bool\\
+        + escape / speed\_up: bool
+  \nodepart[membro]{three}
+        + merge(rl, states)\\
+        + apply(joypad)
+};
+
+%%%%%%%%% a interface común a todas as fontes de entrada
+\node[trait, minimum width=52mm] (tois) at (100mm,-52mm) {
+  \nodepart{one}  \scriptsize$\ll$trait$\gg$\\[1pt] \texttt{ToInputState}
+  \nodepart[membro]{two}
+        + to\_input(rl) -> InputState
+};
+
+%%%%%%%%% a fonte de entrada da Gamepi13
+\node[structm, minimum width=62mm] (gpiot) at (0,-52mm) {
+  \nodepart{one}  \texttt{InputGpioTriggers}
+  \nodepart[membro]{two}
+        - pins: Arc<GpioPins>
+  \nodepart[membro]{three}
+        + new()\\
+        + shared()\\
+        + to\_input(rl)
+};
+
+%%%%%%%%% os pines do conector, co seu número BCM
+\node[struct, minimum width=62mm] (pins) at (0,-112mm) {
+  \nodepart{one}  \texttt{GpioPins}
+  \nodepart[membro]{two}
+        - up: InputPin (5) \quad - down: InputPin (6)\\
+        - left: InputPin (16) \quad - right: InputPin (13)\\
+        - a: InputPin (21) \quad - b: InputPin (20)\\
+        - x: InputPin (15) \quad - y: InputPin (12)\\
+        - l: InputPin (23) \quad - r: InputPin (14)\\
+        - start: InputPin (26) \quad - select: InputPin (19)
+};
+
+%%%%%%%%% a dependencia externa
+\node[struct, minimum width=42mm] (pin) at (100mm,-112mm) {
+  \nodepart{one}  \texttt{InputPin}
+  \nodepart[membro]{two}
+        + into\_input\_pullup()\\
+        + is\_low()
+};
+
+\begin{scope}[on background layer]
+  \node[draw, fill=black!2, fit=(pin), inner xsep=5mm, inner ysep=7mm] (rpipal) {};
+  \node[tab, fill=black!2, anchor=south west] at (rpipal.north west) {};
+\end{scope}
+\node[etiqcrate] at (rpipal.north west) {rpi\_pal};
+
+%%%%%%%%% relacións
+\draw[compon] (mgr.east) -- node[etiq, above]{current} (state.west);
+\draw[compon] (mgr.south) -- node[etiq, right]{gpio\_triggers} (gpiot.north);
+\draw[realiza] (gpiot.east) -- node[etiq, above]{implementa} (tois.west);
+\draw[depende] (tois.north) -- node[etiq, right]{$\ll$devolve$\gg$} (state.south);
+\draw[compon] (gpiot.south) -- node[etiq, right]{pins} (pins.north);
+\draw[depende] (pins.east) -- node[etiq, above, align=center]{12 pines\\ en modo \textit{pull-up}} (rpipal.west);
+
+\end{tikzpicture}
+\caption{Recollida da entrada dos botóns da Gamepi13 a través dos \acrshort{gpio}.}
+\label{fig:gpio-input}
+\end{figure}

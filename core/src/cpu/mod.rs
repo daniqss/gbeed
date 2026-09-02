@@ -97,7 +97,6 @@ impl Cpu {
         self.halted = AFTER_BOOT_CPU.halted;
     }
 
-    #[inline(never)]
     pub(crate) fn step(gb: &mut Dmg) -> Result<Option<Instructions>, InstructionError> {
         // check if is necessary to handle interrupts before executing the instruction
         if Cpu::handle_interrupts(gb) {
@@ -165,8 +164,7 @@ impl Cpu {
         gb.cpu.pc = service_routine_addr;
     }
 
-    /// Execute instruction based on the opcode.
-    /// Return a result with the effect of the instruction or an instruction error (e.g unused opcode)
+    /// Creates an instruction based on its opcode.
     pub(crate) fn decode(gb: &mut Dmg, opcode: u8) -> DecodeResult {
         let cpu = &gb.cpu;
 

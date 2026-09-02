@@ -1,36 +1,97 @@
 \chapter{Conclusións}
 \label{chap:conclusions}
 
-\lettrine{D}{erradeiro} capítulo da memoria, onde se presentará a
-situación final do traballo, as leccións aprendidas, a relación coas
-competencias da titulación en xeral e a mención en particular,
-% efectivamente isto son as conclusions do meu tfg super chulo
-posibles liñas futuras,\dots
+% \lettrine{D}{erradeiro} capítulo da memoria, onde se presentará a
+% situación final do traballo, as leccións aprendidas, a relación coas
+% competencias da titulación en xeral e a mención en particular,
+% % efectivamente isto son as conclusions do meu tfg super chulo
+% posibles liñas futuras,\dots
+\lettrine{E}{ste} capítulo presenta as conclusións acadadas durante o desenvolvemento do traballo.
+Preséntase o estado final do traballo, a aprendizaxe obtida, a relación coas competencias da titulación e da mención, e posibles liñas de traballo futuro.
 
 \section{Estado final do traballo}
+O traballo acadou forma exitosa os obxectivos propostos implementando un emulador de Game Boy capaz de 
+executar de forma correcta os xogos máis populares da consola.
+% funcionamento dos seus compoñentes mediante unha importante cantidade de probas.
+Para garantir isto validouse extensamente o funcionamento dos seus compoñentes.
 
-\section{Lecciones aprendidas}
 
-\section{Relación co contido da mención}
-% \subsection{Emulahardware}
+Actualmente o proxecto inclúe o núcleo do emulador como unha libraría independente e facilmente integrable en diversas plataformas,
+ademais de dúas implementacións de referencia de clientes empregando este núcleo.
+Estas vistas poñen de manifesto a capacidade do poñen de manifesto as capacidades do proxecto para ser facilmente empregado en distintas contornas,
+incluidos sistemas embebidos con recursos limitados.
 
-% \subsection{Programar hardware}
+Empregando un dos clientes, documentouse a construción dunha consola portátil \acrshort{diy} de referencia, baseada en hardware accesible e de baixo custo,
+que pode ser montada de forma doada ofertando unha solución alternativa e aberta para xogar a títulos de consola Game Boy.
+Na figura~\ref{fig:gamepi13} pódese ver esta construción de referencia executando o emulador.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.5\textwidth]{imaxes/gamepi13.png}
+  \caption{A construción de referencia, unha Raspberry Pi Zero 2 W cun GamePi13, executando o emulador.}
+  \label{fig:gamepi13}
+\end{figure}
+
+\section{Relación co contido do grao}
+Para a realización deste traballo foi necesario un coñecemento transversal da Enxeñaría Informática, en especial nas áreas de arquitectura de computadores e programación de baixo nivel.
+Para modelar con elegancia un sistema como a Game Boy require unha comprensión profunda do funcionamento do hardware a emular
+e un dominio dunha linguaxe de programación de sistemas para poder manter a eficiencia e a precisión.
+Ademais, un traballo deste estilo permite asentar os coñecementos relativos á arquitectura de computadores e aos sistemas embebidos de xeito práctico.
+En vez de empregar ou estudar de forma teórica conceptos como a entrada/saída mapeada en memoria ou os diferentes tipos de \acrshort{isa},
+implementar estes conceptos dende cero permiten unha consolidación dos conceptos moito máis profundo e duradeiro.
+A Game Boy é un sistema perfecto para este tipo de traballo. Ao tratarse dunha consola antiga e con hardware bastante sinxelo xa para a súa época,
+o reto de emulalo é o suficientemente asequible como para ser abordable nun tempo razoable para unha persoa sen experiencia previa en emulación,
+pero o suficientemente complexo como para non ser trivial e permitir un aprendizaxe verdadeiro e valioso.
+
+Para conseguir realizar o traballo empregáronse tamén todo clase de coñecemento relativos á Enxeñaría de Computadores, que sen ser principais no proxecto,
+axudaron a mellorar e desenvolver o emulador.
+
+O análise para realizar o perfilado e a posterior optimización empregaron técnicas e conceptos impartidos durante o grao.
+Para a construción do son empregouse conceptos e ferramentas do procesamento de sinal como o filtrado e para a 
+configuración da Raspberry Pi como unha consola portátil \acrshort{diy} e a elaboración da cadea de 
+compilación cruzada foi necesario un coñecemento extenso de sistemas Linux.
+
 
 
 \section{Traballo futuro}
+Nesta última sección presentaranse as posibles liñas de traballo futuro que este proxecto podería abordar para profundizar nos seus obxectivos e ampliar os mesmos.
 
-\subsection{mellora ux}
-% imaxe de nix
-% siii imaxe con Nixos, ou tecnoloxias mais propias como yocto.
-% habria q estudar a mellora q pode ofrecer en tamaño ocupado en sd.
-% pode q non merezca a pena o esforzo, seria mellor mellorar a config de nix para non ocupar moito a store
+\subsection{Mellora da experiencia de usuario}
+\subsubsection{Distribución do proxecto}
+A actual forma de distribución do proxecto inclúe tanto a compilación cruzada do emulador como a configuración manual
+da imaxe do sistema operativo para a Raspberry Pi. Para certo público isto pode non ser un problema, ou ser mesmo un reclamo,
+xa que oferta unha experiencia de usuario máis próxima á filosofía \acrshort{diy} do proxecto.
+Ainda así, unha gran cantidade de posibles usuarios poderíanse ver intimidados por estes requerimentos.
+Para solucionar isto o mellor sería ofrecer unha imaxe preconfigurada do sistema operativo cunha instalación do emulador, de forma que o usuario
+só tivese que copiar a imaxe a unha tarxeta SD. Isto pódese lograr empregando ferramentas para a construción de sistemas de forma declarativa como NixOS, 
+ainda que o seu soporte para as placas da familia Raspberry Pi Zero é especialmente limitado e fráxil.
 
-% docs 
-% docs con vitedocs ou docusaurus algo asi.
+\subsubsection{Documentación}
+% docs con vitepress ou docusaurus algo asi.
+Para facer máis accesible o proxecto a este público menos técnico, sería recomendable mellorar a visibilidade do proxecto e a súa documentación
+creando unha páxina web adicada especificamente para este proxecto. Plataformas como Github poden resultar intimidantes para persoas sen experiencia en desenvolvemento de software,
+polo que empregando ferramentas de xeración de páxinas de documentacion como Vitepress ou Docusaurus, poderíase crear unha páxina web máis amigable e accesible para o público en xeral,
+deixando as forxas de código como Github exclusivamente para o desenvolvemento do proxecto.
 
-% bare metal directamente, aproveitando q a libreria é no std
-% frontend no std dedicado usando o core  ou  usar frontend console usando software renderer de raylib?? averia q miralo
-% impresion de carcasa con impresora 3d
+
+\subsection{Mellora da emulación}
+O proxecto cumpre cos obxectivos propostos, pero existen moitas posibilidades de mellora e ampliación do lado da emulación.
+
+\begin{itemize}
+  \item \textbf{Soporte de Game Boy Color}: a primeira mellora, a máis obvia, sería aumentar o catálogo dispoñible emulando tamén a Game Boy Color. Gran parte do traballo
+  sirve como base, necesitando nalgunhas áreas unha ampliación para soportar as funcionalidades adicionais da seguinte iteración da familia Game Boy.
+  Tamén se podería implementar o soporte para o resto de cartuchos existentes, ampliando o catálogo dos xogos dispoñibles para emular no proxecto
+  ata case a totalidade deste.
+
+  \item \textbf{Mellora da precisión}: para acadar o novo obxectivo anterior tamén é necesario mellorar a precisión da emulación. Do lado da \acrshort{cpu}
+  o seguinte paso sería emular a execución ciclo a ciclo. Por outra banda, na \acrshort{ppu} pódese implementar de forma opcionar o renderizado
+  mediante o \textit{fifo fetcher}, facendo posible o estudo da mellor opción custo/beneficio para a emulación.
+
+  \item \textbf{Mellora do rendemento}: nesta área a primeira área de mellora sería a compilacion en tempo de execución na \acrshort{cpu},
+  de forma que os bloques de código nativo se compilen á plataforma de destino unha vez e se empreguen de forma repetida, para evitar de forma
+  repetitiva a interpretación das mesmas instrucións.
+\end{itemize}
+
 
 
 

@@ -6,25 +6,25 @@ as decisións de deseño tomadas e os retos afrontados durante a implementación
 dos diferentes compoñentes descritos no capítulo~\ref{chap:arquitectura}.
 
 \section{Requisitos e restricións}
+\label{sec:requisitos}
 % requisitos da libreria: precision, portabilidade, no_std, sen dependencias
 % restricions impostas polas contornas embebidas: memoria, cpu, sen SO
-Para garantir os obxectivos expostos na % sección~\ref{sec:introducion:obxectivos} o núcleo do emulador
-na seccion obxectivos, o núcleo do emulador
-debe seguir unhas directrices de deseño e implementación 
-que aseguren unha correcta execución en contornas limitadas e permita unha fácil integrabilidade e portabilidade.
+Para garantir os obxectivos expostos na sección~\ref{sec:obxectivos}, o núcleo do emulador
+debe seguir unhas directrices de deseño e implementación
+que aseguren unha execución correcta en contornas limitadas e que permitan unha fácil integración e portabilidade.
 
-Para iso séguense as seguintes directrices:
+Estas directrices son as seguintes:
 
 \begin{itemize}
-  \item \textbf{Precisión}: o núcleo do emulador ten como máxima prioridade unha correcta execución en calquera tipo de contorna. Debido a isto,
-  a precisión sempre se verá supeditada á eficiencia, elexindo implementacións de certos compoñentes máis sinxelas se as melloras de precisión non son significativas,
-  afectando soamente a un subconxunto pequeno e pouco representativo do catálogo da consola.
-  
+  \item \textbf{Precisión}: o núcleo do emulador ten como máxima prioridade unha execución correcta en calquera tipo de contorna.
+  Aínda así, a precisión pondérase fronte á simplicidade da implementación, elixindo implementacións máis sinxelas dalgúns compoñentes
+  cando as melloras de precisión non son significativas e afectan soamente a un subconxunto pequeno e pouco representativo do catálogo da consola.
+
   \item \textbf{Portabilidade}: o núcleo do emulador debe ser facilmente embebible en diferentes contornas, considerando tanto as probadas neste traballo como as
-  que poderían desenvolverse no futuro. Por isto, a súa implementación debe de estar libre de dependencias externas, polo que se empregou un mecanismo 
-  de Rust chamado \textit{no\_std}.  Este mecanismo permite prescindir da biblioteca estándar de Rust (\textit{std}), que asume a presenza dun sistema operativo,
+  que poderían desenvolverse no futuro. Por isto, a súa implementación debe estar libre de dependencias externas, polo que se empregou un mecanismo
+  de Rust chamado \textit{no\_std}. Este mecanismo permite prescindir da biblioteca estándar de Rust (\textit{std}), que asume a presenza dun sistema operativo,
   e empregar no seu lugar unicamente o subconxunto \textit{core}, o cal non fai suposicións sobre o contorno de execución e resulta axeitado para sistemas embebidos
-  sen sistema operativo, deixando a posibilidade de incorporar para outras funcionalidades, como a reserva dinámica no \textit{heap}, librerías dependentes da plataforma.
+  sen sistema operativo, deixando a posibilidade de incorporar librerías dependentes da plataforma para outras funcionalidades, como a reserva dinámica no \textit{heap}.
 
   \item \textbf{Rendemento}: para garantir o funcionamento á velocidade orixinal en todo tipo de plataformas, o núcleo do emulador debe ser eficiente,
   recorrendo a optimizacións e xeración de código en tempo de compilación, e evitando no bucle quente da execución operacións de entrada/saída, reservas de
@@ -39,11 +39,11 @@ Para iso séguense as seguintes directrices:
 % decision de deseño: core independente de plataforma, frontends aparte
 
 Os \textit{crates} son as unidades de compilación de Rust. Para conseguir unha organización do código modular e con separación de responsabilidades,
-separouse o núcleo do emulador da implementación dos dous frontends. Ademais engadiuse un cuarto \textit{crate} que contén utilidades comúns para ser empregadas polas dúas
+separouse o núcleo do emulador da implementación dos dous frontends. Ademais, engadiuse un cuarto \textit{crate} que contén as utilidades comúns ás dúas
 vistas que empregan \textit{raylib}.
 
-Dentro da organización do núcleo, empregamos diferentes módulos separando a funcionalidade dos diferentes compoñentes da consola,
-nos que se implementa un \textit{struct} para cada compoñente, que se compoñen dentro do \texttt{struct} \texttt{Dmg}.
+Dentro do núcleo, a funcionalidade de cada compoñente da consola sepárase nun módulo propio,
+no que se implementa un \textit{struct} que despois se compón dentro do \texttt{struct} \texttt{Dmg}.
 Este é o compoñente principal do núcleo, a través do cal os frontends interactúan co emulador.
 Ademais, o núcleo expón un \textit{trait} chamado \texttt{Controller}, que define a interface que debe implementar un frontend
 para realizar comportamentos de entrada/saída dependentes da plataforma.
@@ -86,7 +86,7 @@ Que se debuxe o cadro nunha textura de \textit{raylib}, nun \textit{framebuffer}
 Os tests do emulador tamén implementan o \textit{trait} para observar a execución dende fóra,
 recollendo por exemplo a saída do porto serie das ROMs de proba para determinar se un test rematou correctamente,
 sen necesidade de ensuciar a implementación do núcleo con código que só ten sentido durante a validación.
-Este uso detállase en profundidade en % sección~\ref{sec:validacion}.
+Este uso detállase en profundidade no capítulo~\ref{chap:validacion}.
 
 Cómpre mencionar que esta flexibilidade non supón un custo en tempo de execución.
 Os métodos \texttt{run} e \texttt{step} de \texttt{Dmg} non reciben un obxecto de \textit{trait}, senón un parámetro xenérico acoutado por \texttt{Controller},
@@ -96,10 +96,11 @@ evitando as indireccións nas táboas de métodos virtuais e permitindo mellores
 
 \section{Implementación dos compoñentes}
 \subsection{Serialización da cabeceira da ROM}
-O primeiro paso para poder comezar a emular un sistema e cargar de forma axeitada o codigo maquina que se vai executar
-Neste caso, o primeiro que se necesita entender é a cabeceira da ROM. Despois de cargar o ficheiro que o cliente lle pasa ao núcleo do emulador,
-Seguindo as posicións en memoria onde se atopa cada dato que consultadas na documentación~\cite{pandocs},
-o emulador copia a información nunha estructura de xeito que sexa facilmente accesible. 
+O primeiro paso para comezar a emular un sistema é cargar de forma axeitada o código máquina que se vai executar.
+Para iso, o primeiro que se necesita entender é a cabeceira da \acrshort{rom}, que describe o contido do cartucho.
+Despois de cargar o ficheiro que o cliente lle pasa ao núcleo do emulador, e seguindo as posicións en memoria de cada dato,
+consultadas na documentación~\cite{pandocs},
+o emulador copia a información nunha estrutura que fai doado o seu acceso.
 Para os datos que teñen un conxunto finito de posibles valores empréganse enumeracións, para que o código sexa máis robusto, lexible e fácil de manter,
 evitando o uso de valores máxicos e comprobacións de cadeas. Este estilo tamén se emprega cos posibles erros que se poden dar durante a serialización.
 Na figura~\ref{fig:cartridge-uml} amósase a estrutura resultante xunto coas enumeracións que emprega, entre elas
@@ -109,7 +110,7 @@ Na figura~\ref{fig:cartridge-uml} amósase a estrutura resultante xunto coas enu
 
 
 \subsection{Organización do espazo de memoria}
-A organización do espazo de direccións é un dos puntos clave lograr un deseño modular á vez que eficiente, cómodo e flexible.
+A organización do espazo de direccións é un dos puntos clave para lograr un deseño modular á vez que eficiente, cómodo e flexible.
 Moitos dos compoñentes do emulador requiren de acceder a espazos de direccións compartidos. A \acrshort{cpu} precisa acceder á totalidade do espazo
 e a \acrshort{ppu} xestiona a súa \acrshort{vram} e a \acrshort{oam}, pero durante unha transferencia por \acrshort{dma} tamén debe ler da memoria de traballo.
 Esta última, como o resto de compoñentes, tamén precisa modificar o rexistro \texttt{interrupt\_flag} para solicitar interrupcións.
@@ -117,58 +118,32 @@ Esta última, como o resto de compoñentes, tamén precisa modificar o rexistro 
 
 Unha posible solución sería concentrar todo o espazo de direccións nun único \acrfull{mmu} que se encargase de xestionar todos os accesos,
 pero isto non resulta idóneo, xa que acabaría monopolizando boa parte da xestión do emulador.
-Ademais, non sería ergonómica, xa que non poderíamos separar os rexistros como campos dos distintos compoñentes e romperíase o principio de responsabilidade única.
+Ademais, non sería ergonómica, xa que non se poderían separar os rexistros como campos dos distintos compoñentes e romperíase o principio de responsabilidade única.
 Outra solución sería que estes compoñentes estivesen instanciados como variables globais, de xeito que cada un puidese acceder directamente á súa memoria e aos rexistros do resto do sistema.
 Isto non é idiomático en Rust xa que non é \textit{thread-safe}, nin é unha boa práctica de deseño en xeral.
 
 
-A solución adoptada consiste en empregar ao contedor dos compoñentes \texttt{Dmg} como acceso centralizado ao espazo de direccións.
-Este pásase como referencia alí onde se precise acceder ao espazo de direccións, sen necesidade de introducir un compoñente adicional.
+A solución adoptada consiste en empregar o contedor dos compoñentes, \texttt{Dmg}, como acceso centralizado ao espazo de direccións.
+Este pásase como referencia alí onde se precise, sen necesidade de introducir un compoñente adicional.
 O direccionamento realízase a través do \textit{trait} \texttt{Accessible}, que define as operacións \texttt{read} e \texttt{write} sobre unha dirección,
 e do seu equivalente para operandos de dous bytes, \texttt{Accessible16}, con \texttt{load} e \texttt{store}.
-Estes \textit{traits} impleméntanos tanto \texttt{Dmg} como cada un dos seus compoñente,
+Estes \textit{traits} impleméntaos tanto \texttt{Dmg} como cada un dos seus compoñentes,
 de xeito que cada un accede directamente á súa memoria e, ao mesmo tempo, expón os seus datos ao resto do sistema.
 
 Como se ve no listado~\ref{lst:dmg-read}, a implementación de \texttt{Dmg} limítase a decidir, en función do rango no que cae a dirección,
 a que compoñente lle corresponde resolver o acceso, e a devolver directamente os valores daquelas rexións que xestiona el mesmo.
 
-\begin{lstlisting}[language=Rust, basicstyle=\ttfamily\scriptsize, float=tbp, caption={Implementación da función \textit{read} por \texttt{Dmg}}, label={lst:dmg-read}]
+\begin{lstlisting}[language=Rust, float=tbp, caption={Implementación da función \textit{read} por \texttt{Dmg}}, label={lst:dmg-read}]
 fn read(&self, address: u16) -> u8 {
     match address {
         ROM_BANK00_START..=ROM_BANKNN_END =>
           self.cartridge.read(address),
-        VRAM_START..=VRAM_END =>
-          self.ppu.read(address),
-        EXTERNAL_RAM_START..=EXTERNAL_RAM_END =>
-          self.cartridge.read(address),
-        WRAM_BANK0_START..=WRAM_BANKN_END =>
-          self.memory.ram[(address - WRAM_BANK0_START) as usize],
-        ECHO_RAM_START..=ECHO_RAM_END => {
-            let offset = (address - ECHO_RAM_START) as usize;
-            self.memory.ram[offset]
-        }
-        OAM_START..=OAM_END =>
-          self.ppu.read(address),
-
-        NOT_USABLE_START..=NOT_USABLE_END => 0xFF,
-
+        ...
         IO_REGISTERS_START..=IO_REGISTERS_END =>
           match address {
             JOYP =>
               self.joypad.read(address),
-            SERIAL_REGISTER_START..=SERIAL_REGISTER_END =>
-              self.serial.read(address),
-            TIMER_REGISTER_START..=TIMER_REGISTER_END =>
-              self.timer.read(address),
-
-            IF =>
-              self.interrupt_flag.0 | 0xE0,
-
-            APU_REGISTER_START..=APU_REGISTER_END =>
-              self.apu.read(address),
-            PPU_REGISTER_START..=PPU_REGISTER_END =>
-              self.ppu.read(address),
-
+            ...
             BANK_REGISTER =>
               self.bank,
 
@@ -182,11 +157,8 @@ fn read(&self, address: u16) -> u8 {
 }
 \end{lstlisting}
 
-Como se pode pode observar no listado~\ref{lst:dmg-read}, a función \textit{read} de \texttt{Dmg} fai un \textit{match} sobre o enderezo pasado como argumento,
-redireccionando a cada compoñente segundo o rango desexado.
-
-As memorias de propósito xeral como a \acrshort{ram}, a \acrshort{hram} e a Boot \acrshort{rom}, que se pode pasar de forma opcional ao emulador durante a súa creación,
-gárdanse no \texttt{struct} \texttt{Memory}. En cambio, as memorias de propósito máis especifico como as \acrshort{vram} e \acrshort{oam} e a Wave \acrshort{ram}
+As memorias de propósito xeral, como a \acrshort{ram}, a \acrshort{hram} e a Boot \acrshort{rom}, que se lle pode pasar de forma opcional ao emulador durante a súa creación,
+gárdanse no \texttt{struct} \texttt{Memory}. En cambio, as memorias de propósito máis específico, como a \acrshort{vram}, a \acrshort{oam} e a Wave \acrshort{ram},
 gárdanse na \texttt{Ppu} e na \texttt{Apu} respectivamente, xa que isto permite o seu acceso de forma máis doada e eficiente, mantendo ainda así o acceso para a \texttt{Cpu}
 
 
@@ -205,57 +177,473 @@ pub(crate) fn decode(gb: &mut Dmg, opcode: u8) -> DecodeResult {
   let cpu = &gb.cpu;
 
   let instruction: Instructions = match opcode {
-      0x00 => Nop::new().into(),
-      0x01 => LdR16Imm16::new(
-        R16::BC, gb.load(cpu.pc.wrapping_add(1))
-      ).into(),
-      0x02 => LdPointedByR16A::new(R16::BC).into(),
-      0x03 => IncR16::new(R16::BC).into(),
-      0x04 => IncR8::new(R8::B).into(),
-      0x05 => DecR8::new(R8::B).into(),
-      ...
-      0xFD => 
-        return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
-      0xFE => CpImm8::new(gb.read(cpu.pc.wrapping_add(1))).into(),
-      0xFF => Rst::new(0x38).into(),
+    0x00 => Nop::new().into(),
+    0x01 =>
+      Ld16::new(R16::BC, gb.load(cpu.pc.wrapping_add(1))).into(),
+    0x02 => Ld::new(PointedByR16(R16::BC), R8::A).into(),
+    0x03 => Inc16::new(R16::BC).into(),
+    0x04 => Inc::new(R8::B).into(),
+    ...
+    0xFD =>
+      return Err(InstructionError::UnusedOpcode(opcode, cpu.pc)),
+    0xFE => Cp::new(Imm8(gb.read(cpu.pc.wrapping_add(1)))).into(),
+    0xFF => Rst::new(0x38).into(),
   };
 
   Ok(instruction)
 }
 \end{lstlisting}
 
+Cada unha das instrucións está implementada por, polo menos, un \texttt{struct} que implementa o \textit{trait} \texttt{Instruction}.
+Nalgúns casos é necesario distinguir entre implementacións da mesma instrución con diferentes operandos,
+pero o caso xeral resólvese cun parámetro xenérico que representa o tipo de operando.
+Este operando implementa o \textit{trait} \texttt{Operand}, que define as operacións de lectura e escritura sobre el,
+ademais de proporcionar información sobre o seu tamaño na instrución e o número de ciclos que tarda en accederse a el.
 
+Esta implementación permite manter o código modular e ampliable, e reduce o código repetitivo grazas ao uso de parámetros xenéricos,
+sen supoñer ningún custo adicional en tempo de execución.
+Un exemplo deste deseño pódese ver no listado~\ref{lst:or-instruction}.
+
+\begin{lstlisting}[language=Rust, float=tbp, caption={Implementación da instrución \texttt{or}}, label={lst:or-instruction}]
+pub struct Or<S: Operand> {
+  src: S,
+}
+impl<S: Operand> Or<S> {
+  pub fn new(src: S) -> Self { Self { src } }
+}
+impl<S: Operand> Instruction for Or<S> {
+  fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
+    gb.cpu.a |= self.src.read(gb);
+
+    Ok(InstructionEffect::new(
+      self.info(),
+      Flags {
+        z: Some(check_zero(gb.cpu.a)),
+        n: Some(false),
+        h: Some(false),
+        c: Some(false),
+      },
+    ))
+  }
+  fn info(&self) -> (u8, u8) { (1 + S::READ_CYCLES, 1 + S::LEN) }
+  fn disassembly(&self) -> String { format!("or {}", self.src) }
+}
+\end{lstlisting}
+
+Como se pode ver nese mesmo listado, para o manexo das bandeiras empréganse dous tipos de datos.
+\texttt{InstructionEffect} recolle os efectos da execución dunha instrución, que despois empregará a \texttt{Cpu} para actualizar o seu estado.
+O tamaño da instrución, necesario para calcular a nova dirección do contador de programa, e o tempo que esta tardou en executarse
+gárdanse como números enteiros, pero as bandeiras requiren un tratamento especial.
+Para facilitar a actualización individual de cada unha delas a un dos tres estados posibles (\texttt{true}, \texttt{false} ou sen cambios)
+emprégase o \texttt{struct} \texttt{Flags}, que contén un campo opcional por cada bandeira.
+
+\subsubsection{Bucle de execución e manexo de interrupcións}
+
+Ademais de executar instrucións, o procesador ten que atender de forma axeitada as solicitudes de interrupción.
+O primeiro que fai en cada paso é comprobar se hai interrupcións pendentes.
+Se é o caso, atende a de maior prioridade, saltando á súa rutina de servizo.
+En caso contrario prosegue coa execución de instrucións, para despois calcular a nova dirección do contador de programa, actualizar as bandeiras e contabilizar o tempo consumido.
+Isto último marcará o traballo que deba facer a continuación o resto de compoñentes.
+O diagrama da figura~\ref{fig:cpu-step} amosa o fluxo de execución de cada paso do procesador.
+
+\input{diagramas/cpu-step}
 
 
 \subsection{Implementación da unidade gráfica}
-% modos, renderizado por scanline ou por pixel
+\label{sec:ppu-implementation}
+% diagrama ca maquina de estados, cos diferentes modos e as suas transicións
+% explicar o renderizado por scanline ou pixel fifo e explicar un pouco como funciona a implementacion realizada (scanline)
+
+Despois de cada paso da \acrshort{cpu}, o resto de compoñentes tamén avanzan, segundo o tempo que consumiu a instrución executada.
+A \acrshort{ppu} consiste nunha máquina de estados que vai percorrendo os modos que xa se describiron no capítulo~\ref{chap:arquitectura}.
+O diagrama da figura~\ref{fig:ppu-modos} amosa a implementación desa máquina de estados e as súas transicións.
+
+\input{diagramas/ppu-modos}
+
+
+\subsubsection{Algoritmo de debuxado}
+O algoritmo implementado para o debuxado de cada cadro é o chamado \textit{scanline rendering}, que consiste en debuxar cada liña de píxeles de esquerda a dereita sen interrupción.
+Capa por capa, vanse escribindo os píxeles sobre o \textit{framebuffer} proporcionado polo \textit{trait} \texttt{Renderer}.
+Esta aproximación non resulta tan fiel ao hardware orixinal, xa que non é capaz de reproducir os efectos que se producen cando se modifican os rexistros a media liña.
+
+A pesar desta limitación, foi a implementación escollida pola súa sinxeleza e polo escaso beneficio real de implementar a solución máis fidedigna.
+A maior parte do catálogo non necesita o nivel de precisión que oferta o algoritmo do \textit{FIFO fetcher}, sendo xogos como
+\textit{Prehistorik Man} unha excepción coñecida xustamente por esta limitación.
+
+O debuxado de cada liña divídese nunha función por cada unha das tres capas descritas no capítulo~\ref{chap:arquitectura},
+que se executan en orde e só se a súa capa está activada nos rexistros de control.
+
+\begin{itemize}
+  \item \texttt{draw\_bg} resolve o fondo. A partir de \texttt{ly} e do desprazamento \texttt{SCY} obtén a fila do mapa de \glspl{tile}
+  e percorre os 160 píxeles da liña, avanzando ao seguinte \gls{tile} cada oito píxeles.
+  Ademais de escribir cada píxel, garda o seu identificador de cor nunha caché da liña, que será necesaria despois para resolver as prioridades.
+
+  \item \texttt{draw\_window} debuxa a xanela por riba do fondo, empezando na columna indicada por \texttt{WX} e só se a liña actual xa acadou \texttt{WY}.
+  A diferenza do fondo, non emprega \texttt{ly} para indexar o mapa, senón un contador propio que só avanza nas liñas nas que a xanela é visible.
+
+  \item \texttt{draw\_sprites} percorre as 40 entradas da \acrshort{oam}, quedándose coas que interseccionan a liña actual
+  ata o límite de dez obxectos por liña que impón o hardware.
+  Aquí resólvense tamén as dúas regras de prioridade da consola.
+  Entre dous obxectos que se solapan gaña o de menor coordenada horizontal,
+  e un obxecto marcado como \textit{detrás do fondo} descártase se o píxel do fondo que gardou a caché non é o cor 0.
+\end{itemize}
 
 \subsection{Primeira interface}
+% para poder validar o traballo, primeira interface con diferentes características para debuggear (estado botons e texturas co estado das diferentes secciones da vram )(fotos de como se ve en architectura.tex, referenciar)
+% permitiu comprobar e testear de forma inicial e rapida a ppu, identificando e solucionando erros no debuxo
+% a version actual desta interfaz esta desplegada como web grazas a wasm en https://daniqss.github.io/gbeed/, con caracteristicas como cargar roms e gardar a partida no navegador
 
-\subsection{Temporizadores, mando, transferencia serie e interrupcións}
+
+Para a presentación do resultado do debuxado producido polo núcleo do emulador, implementouse unha primeira interface. Ademais de presentar a execución do xogo
+e permitir a interacción co mesmo, esta interface tamén ten como obxectivo facilitar ferramentas de depuración para mellorar a experiencia de desenvolvemento.
+Estas consisten principalmente en varias texturas que permiten visualizar de forma sinxela o estado da memoria de vídeo e de algúns rexistros da \acrshort{ppu},
+como os que controlan o desprazamento do \gls{viewport} sobre o fondo.
+
+Estas texturas son precisamente as que se empregaron para ilustrar a organización da \acrshort{vram} e a composición dun cadro
+na figura~\ref{fig:ppu-composition-vram-oam} do capítulo~\ref{chap:arquitectura}.
+
+Grazas a estas ferramentas é posible identificar máis rapidamente a orixe dos erros no algoritmo de debuxado,
+xa que permiten distinguir se se producen no paso de composición do cadro ou na obtención dos recursos gardados en memoria.
+
+Ademais destas texturas, tamén se amosa o estado dos botóns mediante a súa representación gráfica.
+Este elemento ten unha dobre función. Ademais de servir para ver o estado da entrada do emulador, tamén permite
+a interacción empregando un rato ou unha pantalla táctil.
+
+\subsubsection{Despregamento da interface en forma de aplicación web}
+Para permitir un acceso máis sinxelo ao emulador e facilitar o seu uso en sesións máis longas, despregouse esta interface en forma de aplicación web,
+de xeito que poida ser empregada en todo tipo de dispositivos.
+Compilando o proxecto a WebAssembly con Emscripten é posible embeber o emulador nun elemento \textit{canvas} de HTML sobre o que se debuxa a súa saída.
+Esta non é a mellor solución posible, xa que, ao estar toda a interface contida nun elemento \textit{canvas}, pérdense as vantaxes de accesibilidade
+que oferta a plataforma web.
+
+Aínda así, esta solución permite empregar o emulador en todo tipo de dispositivos
+con moi pouco traballo de adaptación, e valida a capacidade de embebemento do núcleo.
+
+Para o despregamento empregouse un \textit{workflow} de GitHub Actions que compila o proxecto e publica os artefactos resultantes en GitHub Pages
+despois de cada \textit{commit} na rama principal.
+Na figura~\ref{fig:deploy-web} pódese ver o resultado nos dous tipos de dispositivo,
+onde se aprecia como a disposición dos elementos se adapta ao espazo dispoñible:
+nun escritorio amósanse tamén as texturas de depuración, mentres que nun móbil se reserva todo o espazo
+para a pantalla e para os botóns táctiles.
+
+\begin{figure}[hp!]
+  \centering
+  \begin{subfigure}[c]{0.72\textwidth}
+    \includegraphics[width=\textwidth]{imaxes/deploy_desktop.png}
+    \caption{Nun navegador de escritorio, coas texturas de depuración.}
+    \label{fig:deploy-desktop}
+  \end{subfigure}
+  \hspace{0.02\textwidth}
+  \begin{subfigure}[c]{0.22\textwidth}
+    \includegraphics[width=\textwidth]{imaxes/deploy_mobile.png}
+    \caption{Nun dispositivo móbil, cos botóns táctiles.}
+    \label{fig:deploy-mobile}
+  \end{subfigure}
+  \caption{Interface de depuración despregada como aplicación web.}
+  \label{fig:deploy-web}
+\end{figure}
+
+
+\subsection{Temporizadores}
+% explicar un pouco o codigo, pero non ten demasiado e non podemos repetir o de arquitectura.tex
+% como se recolle o input do exterior
+
+O temporizador, o mando e o porto serie son compoñentes moito máis pequenos que os anteriores, pero comparten o mesmo problema.
+Todos avanzan cos ciclos da última instrución, así que ningún deles pode permitirse un bucle por ciclo.
+A solución en todos os casos foi calcular directamente cantas veces tería sucedido o evento nese intervalo.
+
+O temporizador implementa os seus catro rexistros cun contador interno de 16 bits do que derivan todos eles.
+\texttt{DIV} é simplemente o seu byte alto, e cada frecuencia de \texttt{TAC} corresponde a observar un bit distinto dese contador.
+Con isto, o número de incrementos de \texttt{TIMA} nun paso é a diferenza entre o contador antes e despois, desprazada ese número de bits.
+Non hai bucle ningún, só dous desprazamentos e unha resta.
+
+Esta forma de modelalo dá de balde os comportamentos que non se derivan da descrición funcional dos rexistros.
+Escribir en \texttt{DIV} ponno a cero, e se o bit observado estaba alto iso provoca un flanco de baixada e un incremento extra de \texttt{TIMA}.
+O mesmo ocorre ao cambiar de frecuencia en \texttt{TAC}, xa que o bit observado pasa a ser outro.
+Tamén se modela o atraso de catro ciclos entre o desbordamento e a recarga con \texttt{TMA},
+durante o cal as escrituras en \texttt{TIMA} se ignoran.
+
+\subsection{Mando}
+O mando é o compoñente máis sinxelo de implementar.
+
+O estado dos botóns entra desde fóra cun único método, \texttt{button\_down}, que activa ou desactiva o bit correspondente.
+É o cliente quen decide de onde saen eses eventos, sexa un teclado, un mando ou unha pantalla táctil.
+
+A interrupción producida polo mando non adoita ser usada pola maioría dos xogos, sendo o seu uso máis frecuente
+espertar a consola cando está no modo de baixo consumo no que entra coa instrución \texttt{STOP}.
+Solicítase cando se produce un flanco de alto a baixo en calquera das catro liñas de entrada.
+Este flanco pode vir tanto de premer un botón como dunha escritura que cambie o \textit{nibble} seleccionado,
+polo que abonda con mostrear as catro liñas unha vez por paso e comparalas coas do paso anterior.
+
+
+\subsection{Transferencia serie}
+Na transferencia serie asúmese que non hai ningunha outra consola conectada.
+Só se emula o rol de mestre: se un xogo configura o reloxo externo, a transferencia queda pendente para sempre, que é o que faría o hardware real sen cable.
+Cando o xogo emprega o reloxo interno, cóntanse os ciclos de cada bit e desprázase \acrshort{sb} tantas posicións como bits collesen no intervalo,
+enchendo os bits entrantes con uns, xa que unha liña sen conectar lese como alta.
+Ao completarse os oito bits actívase a interrupción e o byte enviado entrégaselle ao cliente a través do \textit{trait} \texttt{SerialListener}.
+Esa é a base do mecanismo de validación descrito no capítulo~\ref{chap:validacion}, xa que as \acrshortpl{rom} de proba publican por aquí os seus resultados.
+
+A implementación deste compoñente non está completa. Moi poucos emuladores de Game Boy ofrecen esta característica, debido á gran precisión
+que require o seu funcionamento sobre software.
+Aínda que non lles achegue nada aos usuarios do emulador, internamente ten unha grande relevancia.
+Moitos conxuntos de probas empregan a transferencia serie para comunicar os resultados da execución,
+polo que é imprescindible para automatizar a validación do núcleo.
 
 \subsection{Controladores de bancos de memoria}
-% mbc1, mbc3, mbc5... cales se implementaron e por que
+% mbc1, mbc3, mbc5... cales se implementaron e por que (son os mais empregados)
+% diagrama cos diferentes bancos e tabla como a do README con xogos comprobados e os seus mbc
 
-\subsection{Depuración e optimización}
+Do lado do emulador, un \acrshort{mbc} non é máis que unha función que traduce unha dirección da consola
+nun desprazamento dentro do vector que contén a \acrshort{rom} ou a \acrshort{ram} completa.
+O que cambia dun controlador a outro é como se calcula ese desprazamento e que escrituras modifican os rexistros de banco.
+
+Implementáronse os catro controladores máis empregados, ademais dos cartuchos sen controlador.
+Con eles cóbrese practicamente todo o catálogo comercial da consola.
+Quedaron fóra os pouco habituais, como o MBC6, o MBC7 ou a Pocket Camera,
+xa que se priorizou a cobertura dos xogos máis vendidos e representativos do catálogo da consola.
+
+Cada controlador incorpora a súa lóxica de funcionamento.
+\begin{itemize}
+  \item O MBC1 divide o número de banco en dous rexistros e ten dous modos de direccionamento,
+  o que fai que os mesmos bits signifiquen banco de \acrshort{rom} ou de \acrshort{ram} segundo o modo activo.
+  \item O MBC2 leva a súa propia \acrshort{ram} de 512 posicións de catro bits integrada no controlador, polo que as escrituras descartan o \gls{nibble} alto.
+  \item O MBC3 engade o \acrshort{rtc}, que se mapea no mesmo rango que a \acrshort{ram} externa.
+  \item O MBC5 é o máis regular dos catro, e é o único que admite os 8\,MiB completos.
+\end{itemize}
+
+Todos eles comparten a mesma interface, definida polo \textit{trait} \texttt{MemoryBankController},
+e agrúpanse nun \textit{enum} \texttt{Mbc} que o \texttt{Cartridge} garda como un campo máis.
+Deste xeito, o despache de cada acceso resólvese cun \textit{match} xerado por unha macro en tempo de compilación,
+evitando o custo dun obxecto de \textit{trait} nun camiño que se percorre en cada lectura de memoria.
+Na figura~\ref{fig:mbc-uml} amósase o deseño da implementación dos controladores de bancos de memoria.
+
+\input{diagramas/mbc-uml}
+
+
+\subsubsection{Baterías e persistencia de datos}
+Para gardar os datos das partidas, os cartuchos empregan unha batería para alimentar de forma permanente a súa \acrshort{ram} externa.
+Na implementación do núcleo, esta persistencia realízase expoñendo a \acrshort{ram} externa ao cliente, que pode resolvela como lle conveña.
+As dúas vistas permiten gardar os datos en ficheiros que volcan o contido da \acrshort{ram} externa, mais na versión web
+do emulador emprégase de forma conxunta o sistema de ficheiros virtual de Emscripten e o \textit{localStorage} da Web Storage \acrshort{api} do navegador.
+
+
+
+\subsection{Optimización}
 % perfilado, tamaño do binario, optimizacions de compilacion
+% emprego de flamegraphs para atopar as partes mais empregadas e podelas optimizar
+% - aforrar recalculos en algoritmos de debuxado
+% - simplificacion de algoritmos para reducir a sua complexidade de O(n) a O(1), en timer e apu (basicamente contadores, en vez de bucles sumas directas)
+% - eliminacion de chamadas ao sistema, eliminar Box en cpu por unha version sen heap nin dynamic dispatch e eliminar prints q saltaban nalguns xogos (pokemon amarelo ao ser cgb saltaban
+% prints de escritura a rexistro q non existe, isto ralentizaba moito en rpi0 mononucleo)
+
+Para asegurar unha execución correcta en plataformas de baixo rendemento, optimizar o núcleo do emulador resulta fundamental
+para conseguir unha experiencia fluída. Para este traballo empregáronse \textit{flamegraphs}, que parten dos datos xerados
+polo perfilador \textit{perf} para amosar de forma visual o tempo de execución de cada función.
+A partir destes gráficos puidéronse identificar as zonas máis custosas do núcleo, para concentrar nelas os esforzos de optimización.
+
+\subsubsection{Reutilización de cálculos}
+O primeiro grupo de melloras foi eliminar recálculos nos bucles de debuxado.
+Ao compoñer unha liña, a dirección base da fila de \glspl{tile} é a mesma para os 160 píxeles, e os dous bytes que definen unha fila só cambian cada oito píxeles.
+Calculándoos unha vez por fila en lugar de unha vez por píxel, o traballo por liña redúcese notablemente.
+Na mesma liña, cando un obxecto está reflectido horizontalmente invértense os bits do byte enteiro dunha vez, e non a posición de cada píxel por separado.
+
+% TODO: conseguir flamegraph desta mellora
+
+\subsubsection{Reducción da complexidade algorítmica}
+O segundo grupo foi eliminar os bucles de cada paso dos compoñentes.
+O temporizador implementábase orixinalmente con bucles que avanzaban os seus contadores unha unidade de cada vez.
+Como esas estruturas son contadores periódicos, o número de eventos nun intervalo pódese calcular directamente cunha división,
+o que converte un custo lineal no número de ciclos nun custo constante.
+
+O listado~\ref{lst:timer-antes} amosa a versión orixinal, que en cada ciclo actualizaba o contador interno
+e comprobaba se o bit seleccionado por \texttt{TAC} baixaba, para incrementar \texttt{TIMA} nese caso.
+No listado~\ref{lst:timer-despois} amósase a versión actual, na que o número de flancos do intervalo se obtén
+comparando o contador antes e despois de avanzalo, desprazado tantas posicións como indique a frecuencia seleccionada.
+
+\begin{lstlisting}[language=Rust, float=tbp, caption={Avance do temporizador ciclo a ciclo}, label={lst:timer-antes}]
+for _ in 0..cycles {
+  self.internal_counter =
+    self.internal_counter.wrapping_add(1);
+
+  if self.is_timer_enabled() {
+    let current_bit = self.get_selected_bit();
+    if self.previous_bit && !current_bit {
+      self.increment_tima();
+    }
+    self.previous_bit = current_bit;
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Rust, float=tbp, caption={Avance do temporizador en tempo constante}, label={lst:timer-despois}]
+let prev_counter = self.internal_counter;
+self.internal_counter =
+  self.internal_counter.wrapping_add(cycles as u16);
+
+if !self.is_timer_enabled() {
+  return;
+}
+
+let bit_pos =
+  CLOCK_BITS[(self.tac & INPUT_CLOCK_SELECT_MASK) as usize];
+let shift = bit_pos + 1;
+
+let start = prev_counter as u32;
+let end = start + cycles as u32;
+
+// each falling edge of the observed bit increments TIMA
+let edges = (end >> shift) - (start >> shift);
+
+if edges > 0 {
+  let mut new_tima = self.tima as u32 + edges;
+
+  if new_tima > 0xFF {
+    self.overflow_pending = true;
+    self.overflow_delay = 4;
+    new_tima &= 0xFF;
+  }
+
+  self.tima = new_tima as u8;
+}
+
+self.previous_bit =
+  ((self.internal_counter >> bit_pos) & 1) != 0;
+\end{lstlisting}
+
+Despois de implementar a \acrshort{apu} identificouse nela a mesma oportunidade de optimización, e aplicouse do mesmo xeito.
+
+\subsubsection{Eliminación de chamadas ao sistema}
+O terceiro grupo foi eliminar as chamadas ao sistema do bucle quente.
+A decodificación de instrucións empregaba reserva dinámica e \textit{dynamic dispatch}.
+Substituíndo o uso de \texttt{Box} por un \texttt{enum} que representa o conxunto de instrucións evitouse a reserva de memoria e a chamada virtual en cada execución.
+
+Ademais, os xogos retrocompatibles de Game Boy Color presentaban un deterioro importante do rendemento ao executarse nunha Raspberry Pi Zero,
+inapreciable nun computador de escritorio.
+Anteriormente o emulador non tiña en conta os rexistros propios de Game Boy Color que estes xogos empregan continuamente, polo que trataba as lecturas e escrituras
+nas posicións nas que están mapeados como erros, imprimindo unha mensaxe por cada acceso.
+Tendo en conta estes rexistros e eliminando os avisos noutras posicións, xogos como Pokémon Gold pasaron de ter unha gran inestabilidade a executarse a velocidade completa.
 
 
-\section{Interfaz para sistemas embebidos}
-% deseño da interfaz para contornos embebidos, no_std
-% framebuffer, entrada, audio
 
 \subsection{Interface de estilo consola}
+% menus e tal en raylib
+% elementos para mellorar a experiencia de usuario, velocidade duplicada, fps, paleta, ensinar info de fps...
+% desligar fps de velocidade do emulador
+
+
+Para conseguir unha experiencia adaptada a pantallas pequenas como a da Gamepi13, e cunha sensación próxima
+á dunha consola, creouse outra interface de usuario centrada nesta idea.
+Esta ofrece unha experiencia máis completa, con menús para a selección de \acrshortpl{rom}, axustes da velocidade de execución ou diferentes paletas de cores.
+
+A xestión da interface resolveuse cunha máquina de estados, que se pode ver na figura~\ref{fig:ui-state-machine}.
+A aplicación organízase en catro pantallas: a selección de \acrshortpl{rom}, a emulación, o menú do xogo e o menú de axustes.
+Os tres menús están dispostos como un carrusel que se percorre co pad direccional,
+mentres que a emulación é accesible desde calquera deles.
+Cada estado é unha variante dun \textit{enum} que garda os seus propios datos,
+e o seu método \texttt{update} devolve de xeito opcional o estado ao que se debe transitar,
+de forma que a lóxica de cada pantalla queda confinada no seu módulo.
+
+\input{diagramas/ui-estados}
+
+\subsubsection{Separación da velocidade de execución e a velocidade de debuxado}
+
+Ata este momento, a velocidade de execución do emulador estaba ligada á velocidade de debuxado da interface.
+Grazas á sinxela \acrshort{api} de raylib, executar o emulador á velocidade axeitada era tan doado como configurar
+a taxa de refresco a 60\,Hz, que é aproximadamente a velocidade de execución da consola orixinal.
+Pero para poder acelerar a execución do xogo sen malgastar recursos en debuxar cadros que a pantalla da Gamepi13 non podería amosar,
+implementouse un acumulador de tempo que permite desacoplar estas dúas velocidades.
+No listado~\ref{lst:speed-control} pódese observar a implementación desta lóxica.
+
+\begin{lstlisting}[language=Rust, float=tbp, caption={Control de velocidade do emulador}, label={lst:speed-control}]
+// avoid spiral of death by capping the accumulator if the hardware can't keep up
+self.accumulator += dt * speed;
+self.accumulator = self.accumulator.min(MAX_ACCUMULATOR);
+
+let mut steps = 0;
+
+while self.accumulator >= GB_FRAME_TIME && steps < MAX_STEPS {
+  gb.run(controller)?;
+  self.accumulator -= GB_FRAME_TIME;
+  steps += 1;
+}
+\end{lstlisting}
+
 
 \subsection{Implementación do son}
 % tldr: ppu son un monton de maquinas de estados, apu son un monton de contadores
 
+Gran parte do traballo da \acrshort{apu} consiste en decrementar contadores ata chegar a cero, momento no que se produce un evento e o contador se recarga.
+Iso simplifica moito a implementación, xa que non hai que decidir en que estado está o compoñente,
+só canto lle falta a cada contador para o seu seguinte evento.
+
+Por riba dos contadores de cada canle está o \textit{frame sequencer}, que xera un pulso a 512\,Hz
+e reparte o traballo entre os oito pasos do seu ciclo. Os contadores de lonxitude actualízanse cada dous pasos,
+o varrido cada catro e o envolvente de volume unha vez por ciclo.
+Cada canle mantén á súa vez o seu propio temporizador de período, que é o que fixa a frecuencia da nota.
+
+O emulador non xera un sinal analóxico, senón mostras discretas.
+Para iso lévase un contador adicional que decide cando se debe emitir unha mostra;
+nese momento consúltase o valor actual das catro canles.
+Á mostra resultante aplícaselle o volume mestre e o panorama, e pásase a través dun filtro paso alto para eliminar as compoñentes continuas
+que producen os conversores dixitais-analóxicos de cada canle. No listado~\ref{lst:apu-high-pass} pódese ver a implementación desta lóxica.
+
+\begin{lstlisting}[language=Rust, float=tbp, caption={Filtro paso alto da \acrshort{apu}}, label={lst:apu-high-pass}]
+/// applies the DC-blocking high-pass filter to a single channel sample
+/// removes the DC offset that the unsigned DAC outputs would otherwise leave
+#[inline(always)]
+fn high_pass(&mut self, channel: usize, sample: f32) -> f32 {
+  let diff = self.filter_diff[channel];
+  let output = sample - diff;
+  self.filter_diff[channel] = sample - output * self.filter_rate;
+  output
+}
+\end{lstlisting}
+
+A mostra entrégase ao cliente a través do \textit{trait} \texttt{AudioPlayer}, que a almacena nun búfer circular que se vai enchendo a medida que o emulador produce novas mostras.
+Se o \textit{backend} de audio non consegue consumilas ao mesmo ritmo, o búfer énchese e as mostras novas descártanse.
+
+
+
 \subsection{Soporte para hardware embebido}
-% compilacion cruzada, x11 en vez de drm ou framebuffer...
+% compilacion cruzada, x11 en vez de drm ou framebuffer... en debian antiguo, para rpi0
+% nixos con soporte para gamepi13 reproducible. con driver de mipi-spi e tal. para rpi02. empregando drm backend e sen configuracion manual.
 
-% \section{Frontends de referencia}
-% % frontend de escritorio con raylib
-% % frontend embebido
+% Levar o emulador a unha Raspberry Pi Zero non é só cuestión de rendemento.
+% Estes aparellos non teñen potencia para compilar o proxecto e, no caso do modelo orixinal,
+% a súa arquitectura \texttt{armv6l} xa non conta con soporte de primeira clase nas distribucións habituais.
+% Por iso o binario constrúese sempre nun equipo de escritorio e cópiase despois ao dispositivo.
 
-% \section{Optimización para contornas de recursos limitados}
-% % perfilado, tamaño do binario, optimizacions de compilacion
+A implementación de referencia dunha consola \acrshort{diy} como testemuña das capacidades do proxecto
+foi realizado empregando unha Raspberry Pi Zero W e unha Raspberry Pi Zero 2 W xunto cunha pantalla GamePi13.
+Na documentación oficial do fabricante recoméndase empregar a súa propia imaxe preconfigurada de Debian.
+Esta foi a solución, máis sinxela, escollida para a realización deste concepto.
+Isto débese a que a pantalla depende de ferramentas e APIs antigas e sen mantemento que non están dispoñibles nas distribucións actuais.
+En concreto, o fabricante recomenda o uso do hardware empregando \textit{fbcp}~\cite{fbcp}. Este programa, sen desenvolvemento
+activo e en estado de arquivo, permite copiar o contido dun \textit{framebuffer} de X11 destinado á saída de vídeo regular, como un HDMI,
+a outro \textit{framebuffer} que se amosa na pantalla GamePi13.
+
+Esta solución depende do \textit{driver} DispmanX~\cite{dispmanx}, que está deprecado e non se recomenda o seu uso,
+recomendándose empregar \acrshort{drm} ou drivers \textit{mipi-dbi-spi} no seu lugar.
+A pesar de ser tecnicamente posible o uso destes sistemas co Gamepi13, o seu uso non está documentado,
+polo que se optou por empregar o método documentado.
+
+Isto supón que un dos riscos expostos en \ref{sec:riscos} se materializou.
+En vez de poder empregar o emulador sobre o backend \acrshort{drm} de raylib, tivose que empregar
+o backend X11, xa que \textit{fbcp} funciona soamente sobre este sistema. A pesar disto,
+a experiencia final do usuario non se ve afectada, polo que o impacto deste risco foi mínimo.
+
+\subsubsection{Compilación cruzada}
+Para conseguir o binario para a arquitectura \texttt{armv6l} da Raspberry Pi Zero, empregouse compilación cruzada, 
+que se realiza nun contedor de Docker/Podman para manter a reproducibilidade do proceso e as dependencias illadas.
+Durante este proceso, enlázase o binario contra versións de librarías suficientemente antigas para garantir a compatibilidade coas imaxes usadas.
+Desta forma, evítase un erro en tempo de execución ao non se atopar as versións esperadas.
+
+\subsubsection{Uso dos botóns da Gamepi13}
+Para poder empregar os botóns da Gamepi13 o cliente do emulador emprega \textit{rpi-pal}, unha dependencia que
+permite acceder facilmente aos GPIO da Raspberry Pi. Seguindo a configuración dos pins documentada polo fabricante,
+o cliente recolle o estado dos botóns e llo comunica ao núcleo do emulador.
+Na figura~\ref{fig:gpio-input} pódese ver como se modelo esta entrada.
+
+\input{diagramas/gpio-input}
+

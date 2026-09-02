@@ -30,11 +30,6 @@ Para acceder a un valor sen tomar a súa pertenza empréganse os préstamos ou \
 que permiten crear referencias a un valor, mantendo a súa dona orixinal.
 Poden existir simultaneamente varias referencias de só lectura, ou ben unha única referencia mutable,
 pero nunca ámbalas dúas.
-Estas regras de exclusividade non só prevén os accesos inválidos á memoria,
-senón que, combinadas cos \textit{traits} \texttt{Send} e \texttt{Sync},
-que indican que tipos poden transferirse ou compartirse entre fíos,
-eliminan tamén as condicións de carreira en tempo de compilación.
-Isto foi denominado pola comunidade como \textit{fearless concurrency}.
 
 O encargado de facer cumprir estas regras é un subsistema do compilador de Rust,
 o \textit{borrow checker}.
@@ -106,10 +101,7 @@ Empregando estes mecanismos Rust crea dous dos tipos máis importantes do seu ec
 
   \item[\texttt{Result}] representa o resultado dunha operación que pode fallar,
   transportando o valor de éxito ou o erro producido. Este tipo é a base do sistema de xestión de erros
-  que substitúe as excepcións polos erros como valores,
-  deixando as excepcións (en Rust denominadas \textit{panics}) para situacións excepcionais e irrecuperables.
-  Ademais este tipo engade azucre sintáctico para a propagación de erros mediante o operador \texttt{?},
-  permitindo escribir código de tratamento de erros conciso e lexible.
+  que substitúe as excepcións polos erros como valores.
 \end{description}
 
 
@@ -119,12 +111,9 @@ Os datos defínense en \texttt{structs} e o comportamento engádese por separado
 en bloques \texttt{impl}, que conteñen os seus métodos.
 As interfaces compartidas exprésanse mediante \textit{traits},
 que un tipo pode implementar para adquirir un comportamento común,
-con soporte tanto para o despacho estático, resolto por monomorfización,
+con soporte tanto para o despache estático, resolto por monomorfización,
 como para o dinámico a través dos \textit{trait objects} (\texttt{dyn}).
 Foméntase así a composición sobre a herdanza.
-Reutilízase código combinando tipos que conteñen outros tipos
-e implementando \textit{traits}, que poden ofrecer métodos por defecto,
-evitando as fráxiles xerarquías profundas de clases.
 
 \subsubsection{Metaprogramación}
 Para completar a súa capacidade expresiva, Rust conta cun sistema de metaprogramación baseado en macros.
@@ -136,7 +125,6 @@ as macros de Rust operan sobre a estrutura sintáctica do código,
 polo que non poden capturar accidentalmente variables do contexto onde se expanden,
 e o código que producen valídase co resto do programa,
 detectándose nel os erros de sintaxe e de tipos e mantendo todas as garantías do compilador.
-O seu principal inconveniente é que constitúen unha sublinguaxe propia máis difícil de ler e depurar.
 
 
 \section{Cargo e o seu ecosistema}
@@ -144,15 +132,8 @@ Boa parte da experiencia de uso de Rust débese a Cargo,
 o xestor de paquetes e sistema de construción oficial da linguaxe.
 Cargo encárgase de descargar e compilar as dependencias do proxecto,
 os \textit{crates}, publicados no rexistro central crates.io~\cite{CratesIo}.
-As dependencias decláranse no manifesto \texttt{Cargo.toml} mediante versionado semántico,
-e as versións exactas resoltas quedan fixadas no ficheiro \texttt{Cargo.lock},
-o que garante que todas as máquinas compilen exactamente o mesmo código.
-
-Cargo permite ademais organizar varios crates relacionados nun \textit{workspace} común,
-que comparte a resolución de dependencias e o directorio de compilación.
-Este proxecto está estruturado deste xeito,
-cun crate central co núcleo do emulador e crates separados para cada interface,
-como se detallará no capítulo~\ref{chap:implementacion}.
+As dependencias decláranse no manifesto \texttt{Cargo.toml}
+e as versións exactas resoltas quedan fixadas no ficheiro \texttt{Cargo.lock}.
 
 O ecosistema complétase cunha serie de ferramentas oficiais e de terceiros.
 Cargo inclúe subcomandos para xestionar dependencias, crear proxectos e compilar e executar tanto os proxectos como as súas probas.
@@ -164,25 +145,13 @@ a partir dos datos obtidos empregando o perfilador \textit{perf} de Linux.
 
 \section{Raylib como librería gráfica}
 Raylib~\cite{Raylib}
-% cita entrevista eric leyendas y videojuegos?
 é unha librería escrita en C99 e creada por Ramon Santamaría (Raysan5) para crear videoxogos de forma sinxela.
 Naceu nunha contorna docente, como ferramenta para ensinar programación de videoxogos
 a estudantes con pouca experiencia previa en programación.
 Ese espírito mantense no seu deseño, ofrecendo unha interface sinxela e autocontida para xestionar a ventá, a entrada,
 o debuxado e o audio, sen necesidade de empregar un motor de xogos grande e complexo.
 
-A figura~\ref{fig:raylib-architecture} amosa a súa arquitectura interna,
-organizada en módulos independentes.
-O módulo central, rcore, xestiona as peculiaridades da plataforma empregada, como a creación da ventá,
-o contexto gráfico, a entrada e o bucle principal.
-Sobre el sitúanse os módulos de debuxado de formas, texturas, texto e modelos 3D,
-que non chaman directamente á \acrshort{api} gráfica do sistema,
-senón a unha capa intermedia, rlgl,
-que abstrae as diferentes versións de OpenGL dispoñibles en cada plataforma.
-O audio xestiónao o módulo raudio, construído sobre miniaudio.
-Precisamente unha das vantaxes da librería é o seu reducido número de dependencias:
-as que precisa, como a propia miniaudio, van incluídas no seu código fonte,
-variando unicamente en función da plataforma de destino.
+A figura~\ref{fig:raylib-architecture} amosa a súa arquitectura interna.
 
 \begin{figure}[hp!]
   \centering
@@ -202,19 +171,13 @@ na que a ventá pasa a ser un elemento \textit{canvas},
 a entrada tradúcese a eventos do DOM
 e as chamadas a OpenGL ES execútanse sobre WebGL,
 todo iso co programa compilado a \acrfull{wasm}.
-En sistemas embebidos GLFW substitúese por completo:
-raylib pode renderizar mediante OpenGL ES sobre o subsistema \acrshort{drm} de Linux,
-sen necesidade dun servidor gráfico,
-e conta ademais cun renderizador por software para plataformas sen aceleración gráfica.
-A comunidade mantén tamén adaptacións para consolas como a Nintendo 64.
+En sistemas embebidos GLFW substitúese por completo empregando osubsistema \acrshort{drm} de Linux,
+sen necesidade dun servidor gráfico completo.
 
 A elección do backend realízase en tempo de compilación,
 polo que o mesmo código fonte pode dirixirse a calquera destas plataformas sen modificacións.
 Neste traballo a librería emprégase a través de raylib-rs~\cite{RaylibRs},
-o seu \textit{binding} para Rust, que expón estes backends como \textit{features} de cargo
-(por exemplo \texttt{raylib/wayland} ou \texttt{raylib/drm}),
-o que permite que as interfaces do emulador compilen para escritorio, web e embebidos
-a partir do mesmo código.
+o seu \textit{binding} para Rust.
 
 \section{Outras ferramentas}
 
@@ -270,33 +233,17 @@ dende as máquinas de desenvolvemento x86\_64,
 empregando contedores no primeiro caso e Emscripten no segundo.
 
 \subsubsection{Contedores para as arquitecturas ARM}
-Os binarios para \texttt{armv6l} constrúense dentro de contedores,
-definidos en cadanseu \textit{Dockerfile} e invocados dende receitas de just
+Os binarios para \texttt{armv6l} constrúense dentro dun contedor,
+definido nun \textit{Dockerfile} e invocado dende receitas de just
 que constrúen a imaxe e extraen dela o binario resultante,
 facendo o proceso reproducible en calquera máquina con podman ou Docker.
-Nas dúas variantes existentes a xeración de código axústase ao procesador do dispositivo,
-e os \textit{Dockerfiles} copian primeiro os manifestos de cargo
+A xeración de código axústase ao procesador do dispositivo,
+e o \textit{Dockerfile} copia primeiro os manifestos de cargo
 para compilar as dependencias nunha capa cacheada polo contedor,
 de xeito que cada reconstrución só recompila o código propio do emulador.
 
-\subsubsection{Emulación con QEMU}
-A primeira variante parte dunha imaxe de Alpine Linux para \texttt{arm32v6},
-executada nunha máquina x86\_64 grazas a QEMU en modo usuario,
-rexistrado a través de binfmt\_misc para que o núcleo de Linux
-delegue nel a execución dos binarios ARM.
-Dentro do contedor a compilación é nativa,
-coas librerías de desenvolvemento empaquetadas por Alpine,
-polo que non hai que manter ningunha cadea de compilación cruzada.
-O binario enlaza coa librería estándar musl
-e emprega o backend \acrshort{drm} de raylib sobre OpenGL ES 2.0,
-para dispositivos que renderizan sen servidor gráfico.
-O prezo a pagar é a velocidade: ao emularse todas as instrucións,
-a compilación é varias veces máis lenta que unha nativa, pero é
-unha opción sinxela ao non existiren imaxes de compilación cruzada
-dirixidas a Alpine Linux \texttt{arm32v6}.
-
 \subsubsection{Cadea de ferramentas cruzada}
-A segunda variante realiza unha compilación cruzada real coa
+A compilación cruzada realízase coa
 imaxe dockcross/linux-armv6, que inclúe unha cadea de GCC para ARM.
 
 Engádese o obxectivo \texttt{arm-unknown-linux-gnueabihf} de Rust
@@ -305,8 +252,8 @@ As librerías de sistema que precisa raylib (X11, OpenGL e ALSA)
 tómanse dos paquetes armhf de Debian e cópianse ao \textit{sysroot} como \textit{stubs}:
 o enlazador só precisa táboas de símbolos válidas,
 xa que as implementacións reais proporciónaas o sistema operativo do dispositivo en execución.
-Ao executarse o compilador de forma nativa esta variante é moito máis rápida,
-e o seu binario, enlazado con glibc e co backend X11 de raylib,
+Ao executarse o compilador de forma nativa a compilación é rápida,
+e o binario resultante, enlazado con glibc e co backend X11 de raylib,
 é o que se desprega no dispositivo final do proxecto,
 unha consola portátil baseada na Raspberry Pi cuxa pantalla SPI carece de soporte \acrshort{drm}.
 
@@ -335,8 +282,7 @@ e un proceso de desenvolvemento e despregue reproducible en todas esas plataform
 \subsection{Linguaxe de programación}
 Rust é a linguaxe que mellor cobre os dous primeiros requisitos á vez.
 As linguaxes tradicionais do ámbito, C e C++, ofrecen o mesmo rendemento.
-A pesar de que neste traballo non se aproveita a súa capacidade para a programación concorrente,
-as garantías de seguridade de memoria de Rust permiten un desenvolvemento despreocupado
+As garantías de seguridade de memoria de Rust permiten un desenvolvemento despreocupado
 dos erros típicos de C e C++ que poden ser difíciles de detectar e depurar.
 O sistema de tipos e \textit{pattern matching} permite modelar con claridade e de forma
 óptima o hardware, o conxunto de instrucións e as máquinas de estado do emulador,
@@ -348,7 +294,7 @@ Escolleuse raylib porque cobre vídeo, audio e entrada nunha única librería au
 cunha \acrshort{api} máis sinxela e compatible cunha grande cantidade de plataformas.
 
 En calquera caso, esta dependencia queda confinada nas interfaces de usuario:
-o núcleo do emulador non depende de raylib nin de ningunha outra librería.
+o núcleo do emulador non depende de raylib.
 Deste xeito, crear outra interface de usuario empregando outra librería para outro contexto diferente
 é trivial. O desenvolvedor só tería que implementar as interfaces que demanda o emulador
 e xa podería adecuar o resto da interface de usuario ás súas necesidades.
@@ -356,8 +302,6 @@ e xa podería adecuar o resto da interface de usuario ás súas necesidades.
 As ferramentas restantes responden ao terceiro requisito.
 Nix garante que todas as contornas de desenvolvemento son idénticas e reproducibles,
 e fai viable traballar para catro backends gráficos incompatibles dende unha mesma máquina;
-% os contedores con QEMU evitan manter cadeas de compilación cruzada fráxiles
-% para producir binarios nativos do dispositivo embebido;
 e just documenta e automatiza todos estes fluxos no propio repositorio.
 Este apoio á reproducibilidade non é accesorio nun traballo coma este:
 permite validar o emulador da mesma forma en todas as plataformas

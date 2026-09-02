@@ -32,8 +32,6 @@ impl BlarggListener {
 
 impl SerialListener for BlarggListener {
     fn on_transfer(&mut self, data: u8) {
-        // println!("received data -> 0x{:02X}, {}", data, data as char);
-
         self.received_data.push(data as char);
 
         if self.received_data.len() == self.rom_name.len() {
@@ -44,8 +42,6 @@ impl SerialListener for BlarggListener {
                 self.rom_name.iter().collect::<String>(),
                 self.received_data.iter().collect::<String>()
             );
-
-        // println!("ROM name received: {}", self.rom_name.iter().collect::<String>());
         } else if self.received_data.len() == self.rom_name.len() + self.separator.len() {
             let separator_start = self.rom_name.len();
             let separator_end = separator_start + self.separator.len();

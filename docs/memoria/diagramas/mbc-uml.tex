@@ -1,0 +1,118 @@
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  scale=0.52, transform shape, font=\small,
+  %%%%%%%%% struct -> clase UML
+  struct/.style={draw, fill=white, rectangle split, rectangle split parts=2,
+                 rectangle split part align=center, align=left, inner sep=4pt},
+  structm/.style={draw, fill=white, rectangle split, rectangle split parts=3,
+                  rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% enum -> enumeración UML
+  enumer/.style={draw, fill=black!4, rectangle split, rectangle split parts=2,
+                 rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% trait -> interface UML
+  trait/.style={draw, dashed, fill=black!4, rectangle split, rectangle split parts=2,
+                rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% relacións
+  depende/.style={dashed, -{Latex[open, length=2.4mm, width=2mm]}},
+  realiza/.style={dashed, -{Triangle[open, length=3mm, width=3mm]}},
+  compon/.style={{Diamond[length=3mm, width=2.2mm]}-},
+  etiq/.style={font=\scriptsize, inner sep=1.5pt, fill=white},
+  membro/.style={font=\footnotesize\ttfamily}
+]
+
+%%%%%%%%% quen posúe o controlador
+\node[struct, minimum width=58mm] (cart) at (0,0) {
+  \nodepart{one}  \texttt{Cartridge}
+  \nodepart[membro]{two}
+        - mbc: Mbc
+};
+
+%%%%%%%%% o despache estático
+\node[structm, minimum width=72mm] (mbc) at (0,-38mm) {
+  \nodepart{one}  \scriptsize$\ll$enum$\gg$\\[1pt] \texttt{Mbc}
+  \nodepart[membro]{two}
+        Mbc0(Mbc0) / Mbc1(Mbc1) / Mbc2(Mbc2)\\
+        Mbc3(Mbc3) / Mbc5(Mbc5)
+  \nodepart[membro]{three}
+        + read\_rom(address) / write\_rom(address, value)\\
+        + read\_ram(address) / write\_ram(address, value)\\
+        + get\_ram() / swap\_boot\_rom(boot\_rom)
+};
+
+%%%%%%%%% a interface común
+\node[trait, minimum width=72mm] (trait) at (0,-86mm) {
+  \nodepart{one}  \scriptsize$\ll$trait$\gg$\\[1pt] \texttt{MemoryBankController}
+  \nodepart[membro]{two}
+        + new(raw\_rom, save, features, header)\\
+        + read\_rom(address) / write\_rom(address, value)\\
+        + read\_ram(address) / write\_ram(address, value)\\
+        + get\_ram() / swap\_boot\_rom(boot\_rom)
+};
+
+%%%%%%%%% as implementacións
+\node[struct, minimum width=40mm] (m0) at (-116mm,-146mm) {
+  \nodepart{one}  \texttt{Mbc0}
+  \nodepart[membro]{two}
+        - rom: [u8; 32\,KiB]\\
+        - ram: Option<[u8; 8\,KiB]>
+};
+
+\node[struct, minimum width=44mm] (m1) at (-58mm,-152mm) {
+  \nodepart{one}  \texttt{Mbc1}
+  \nodepart[membro]{two}
+        - mode: BankingMode\\
+        - is\_multicart: bool\\
+        - primary\_bank: u8\\
+        - secondary\_bank: u8\\
+        - rom / ram / tamaños
+};
+
+\node[struct, minimum width=44mm] (m2) at (0,-150mm) {
+  \nodepart{one}  \texttt{Mbc2}
+  \nodepart[membro]{two}
+        - rom\_selected\_bank: u8\\
+        - ram: [u8; 512]\\
+        - ram\_enabled: bool\\
+        - rom / rom\_size
+};
+
+\node[struct, minimum width=44mm] (m3) at (58mm,-152mm) {
+  \nodepart{one}  \texttt{Mbc3}
+  \nodepart[membro]{two}
+        - timer: Option<Rtc>\\
+        - rtc\_selected: bool\\
+        - rtc\_latch\_state: u8\\
+        - rom\_selected\_bank: u8\\
+        - ram\_selected\_bank: u8\\
+        - rom / ram / tamaños
+};
+
+\node[struct, minimum width=44mm] (m5) at (116mm,-150mm) {
+  \nodepart{one}  \texttt{Mbc5}
+  \nodepart[membro]{two}
+        - rumble: Option<Rumble>\\
+        - rom\_selected\_bank: u16\\
+        - ram\_selected\_bank: u8\\
+        - rom / ram / tamaños
+};
+
+%%%%%%%%% relacións
+\draw[compon] (cart.south) -- node[etiq, right]{mbc} (mbc.north);
+
+\draw[depende] (mbc.east) -- ++(22mm,0)
+      node[etiq, pos=0.9, above]{$\ll$delega$\gg$} |- (trait.east);
+
+%%%%%%%%% realizacións do trait
+\coordinate (bus) at (0,-114mm);
+\draw[realiza] (bus) -- (trait.south);
+\draw (m0.north) |- (bus);
+\draw (m1.north) |- (bus);
+\draw (m2.north) -- (bus);
+\draw (m3.north) |- (bus);
+\draw (m5.north) |- (bus);
+
+\end{tikzpicture}
+\caption{Deseño dos controladores de bancos de memoria implementados.}
+\label{fig:mbc-uml}
+\end{figure}

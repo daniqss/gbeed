@@ -18,8 +18,7 @@ dentro da familia Game Boy, que se resumen na táboa~\ref{tab:gb-modelos}.
 Os modelos agrúpanse en dúas familias: a orixinal (DMG, Pocket, Light e
 Color, todos baseados no \acrfull{soc} Sharp SM83) e a
 Game Boy Advance (GBA, SP e Micro, baseados no ARM7TDMI cun coprocesador Sharp
-SM83 que garante a compatibilidade cara atrás coa familia orixinal). Os prezos
-refírense ao lanzamento no mercado xaponés, primeiro mercado de todas estas consolas.
+SM83 que garante a compatibilidade cara atrás coa familia orixinal).
 
 A familia orixinal contou con tres revisións: a Game Boy Pocket, cun formato reducido;
 a Game Boy Light, con retroiluminación e distribuída unicamente en Xapón;
@@ -43,21 +42,20 @@ ata o último modelo da familia Nintendo 3DS, só contaban con compatibilidade c
 e recorrían á emulación para executar os xogos da familia orixinal.
 
 
-% TODO: axustar frecuencias e facer distincion mebihercios e megahercios e revisar datos
 \begin{table}[hp!]
   \centering
   \resizebox{\textwidth}{!}{%
   \rowcolors{2}{white}{udcgray!25}%
-  \begin{tabular}{l|c|c|l|l|l|r}
+  \begin{tabular}{l|c|c|l|r}
   \rowcolor{udcpink!25}
-  \textbf{Modelo} & \textbf{Lanz.} & \textbf{Fin fab.} & \textbf{Procesador} & \textbf{Pantalla} & \textbf{Alimentación} & \textbf{Prezo} \\\hline
-  \textit{Game Boy} (DMG-01)         & 1989 & 2003 & Sharp SM83 \mbox{4\,194\,304\,Hz}              & STN LCD mono.        & 4 $\times$ AA       & 12\,500\,¥ \\
-  \textit{Game Boy Pocket} (MGB)     & 1996 & 2003 & Sharp SM83 \mbox{4\,194\,304\,Hz}              & FSTN LCD mono.       & 2 $\times$ AAA      & 6\,800\,¥  \\
-  \textit{Game Boy Light} (MGB-101)  & 1998 & 2003 & Sharp SM83 \mbox{4\,194\,304\,Hz}              & FSTN retroil.        & 2 $\times$ AA       & 6\,800\,¥  \\
-  \textit{Game Boy Color} (CGB)      & 1998 & 2003 & Sharp SM83 ata \mbox{4\,194\,304/8\,388\,608\,Hz}       & TFT LCD a cor        & 2 $\times$ AA       & 8\,900\,¥  \\
-  \textit{Game Boy Advance} (AGB)    & 2001 & 2009 & ARM7TDMI \mbox{16\,777\,216\,Hz} + Sharp SM83                              & TFT cor panor.       & 2 $\times$ AA       & 9\,800\,¥  \\
-  \textit{Game Boy Advance SP} (AGS) & 2003 & 2009 & ARM7TDMI + Sharp SM83                                & TFT pregable         & Li-ion recargable   & 12\,500\,¥ \\
-  \textit{Game Boy Micro} (OXY)      & 2005 & 2009 & ARM7TDMI                                & TFT retroiluminada   & Li-ion recargable   & 12\,000\,¥ \\
+  \textbf{Modelo} & \textbf{Lanz.} & \textbf{Fin fab.} & \textbf{Procesador} & \textbf{Prezo} \\\hline
+  \textit{Game Boy} (DMG-01)         & 1989 & 2003 & Sharp SM83            & 12\,500\,¥ \\
+  \textit{Game Boy Pocket} (MGB)     & 1996 & 2003 & Sharp SM83            & 6\,800\,¥  \\
+  \textit{Game Boy Light} (MGB-101)  & 1998 & 2003 & Sharp SM83            & 6\,800\,¥  \\
+  \textit{Game Boy Color} (CGB)      & 1998 & 2003 & Sharp SM83            & 8\,900\,¥  \\
+  \textit{Game Boy Advance} (AGB)    & 2001 & 2009 & ARM7TDMI + Sharp SM83 & 9\,800\,¥  \\
+  \textit{Game Boy Advance SP} (AGS) & 2003 & 2009 & ARM7TDMI + Sharp SM83 & 12\,500\,¥ \\
+  \textit{Game Boy Micro} (OXY)      & 2005 & 2009 & ARM7TDMI              & 12\,000\,¥ \\
   \end{tabular}}
   \caption{Familia Game Boy: modelos, especificacións principais e datas comerciais. Prezos de saída no mercado xaponés.}
   \label{tab:gb-modelos}
@@ -174,6 +172,9 @@ Complementándoos, o Game Boy: Complete Technical Reference~\cite{gbctr},
 de Joonas Javanainen, coñecido na comunidade como Gekkio,
 documenta o hardware con precisión de ciclo a partir de medicións sobre consolas reais;
 trátase dun traballo aínda inacabado, de desenvolvemento aberto e publicado baixo licenza Creative Commons.
+Detrás desta documentación hai un labor previo de investigación do hardware~\cite{gbresearch},
+que analiza os propios chips ata o nivel do silicio para reconstruír o seu funcionamento interno,
+e do que despois se derivan as descricións que empregan os emuladores.
 
 \subsubsection{Ferramentas de desenvolvemento}
 Este coñecemento acumulado deu lugar tamén a un ecosistema de desenvolvemento activo.
@@ -182,6 +183,7 @@ cuxas orixes se remontan a 1996 co ensamblador xAsm de Carsten Sørensen,
 ofrece hoxe un conxunto completo de ferramentas para a creación de novos xogos:
 rgbasm e rgblink, como ensamblador e enlazador; rgbfix, que axusta a cabeceira
 e a suma de comprobación da \acrfull{rom}; e rgbgfx, que converte imaxes en gráficos compatibles coa consola.
+
 
 GB Studio~\cite{gbstudio},
 creado por Chris Maltby a partir dun xogo feito para unha \textit{game jam}
@@ -199,7 +201,7 @@ o que permite que se sigan a crear novos xogos para a plataforma.
 Os primeiros emuladores apareceron a mediados dos anos noventa,
 coa consola aínda á venda.
 Entre os pioneiros destacan Virtual GameBoy de Marat Fayzullin
-e NO\$GMB de Martin Korth, que xa incluía un completo depurador
+e NO\$GMB de Martin Korth, que xa incluía un depurador
 e cuxo autor foi ademais responsable da primeira versión dos Pan Docs.
 Na actualidade podemos atopar entre os emuladores máis relevantes proxectos de código aberto como os seguintes:
 \begin{itemize}
@@ -213,20 +215,15 @@ Na actualidade podemos atopar entre os emuladores máis relevantes proxectos de 
 Tanto os anteriores como moitos poden ser empregados tanto de forma independente como integrados en RetroArch~\cite{retroarch},
 unha interface multiplataforma que agrupa ducias de emuladores como núcleos intercambiables.
 
-Unha mención especial aparte merece Mooneye GB~\cite{mooneye},
-tamén de Joonas Javanainen, desenvolvido como ferramenta de investigación do hardware
-e acompañado dunha suite de tests que se converteu nunha referencia
-para validar a precisión doutros emuladores.
 
 As técnicas máis avanzadas descritas na sección anterior tiveron tamén
 os seus primeiros experimentos nesta plataforma,
 como gb-recompiled~\cite{gbrecompiled},
 unha proba de concepto de recompilación estática de xogos de Game Boy.
-Porén, esta aproximación resulta aquí máis complicada que noutras plataformas:
-os xogos de Game Boy executan con frecuencia código dende a \acrfull{ram}
-e empregan código automodificable,
-o que impide traducir estaticamente todo o programa
-e obriga a manter un intérprete de apoio en tempo de execución.
+Porén, esta aproximación resulta aquí máis complicada que noutras plataformas,
+xa que os xogos adoitan a executar código automodificable e ubicado na \acrshort{ram},
+o que impide traducir estaticamente todo o programa.
+
 
 \section{Uso comercial de emuladores de Game Boy}
 \subsection{Emuladores oficiais de Nintendo}
@@ -309,10 +306,8 @@ Os seus modelos máis capaces, como os de Anbernic, son dispositivos de propósi
 concibidos para emular ducias de plataformas,
 polo que a experiencia resultante afástase da dunha Game Boy
 e o seu hardware queda sobredimensionado para o único fin de executar estes xogos.
-Ademais, o usuario segue dependendo dun fabricante externo:
-non controla o software que goberna o dispositivo nin pode garantir a súa continuidade,
-de xeito que a conservación a longo prazo queda supeditada
-á supervivencia comercial dese fabricante.
+Ademais, o usuario segue dependendo dun fabricante externo.
+
 A reimplementación en \acrshort{fpga} da sección~\ref{subsec:emulacion-hardware}
 acada, pola súa banda, a maior fidelidade posible,
 mais a un prezo que a converte nunha solución de nicho
@@ -333,7 +328,7 @@ Fronte a estas opcións, proponse un núcleo de emulación reutilizable
 acompañado dunha construción de referencia sobre hardware barato e accesible.
 O núcleo, independente de calquera librería gráfica,
 pode integrarse en contextos moi diferentes, como se expón na sección~\ref{sec:obxectivos};
-e a construción de referencia toma como base un \acrfull{sbc} da familia Raspberry Pi,
+e a construción de referencia toma como base un \acrfull{sbc} da familia Raspberry Pi Zero,
 un compoñente amplamente dispoñible e de baixo custo.
 
 
@@ -356,5 +351,5 @@ Deste xeito, o proxecto non pretende competir en fidelidade coas solucións en \
 nin en variedade coas consolas de emulación comerciais,
 senón ofrecer unha vía accesible e duradeira
 para gozar dunha experiencia portátil de Game Boy,
-sen depender da escaseza do hardware orixinal nin da continuidade dun fabricante,
+sen depender da escaseza do hardware orixinal,
 reforzando así a finalidade didáctica e documental que guía todo o traballo.
