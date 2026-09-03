@@ -2,10 +2,13 @@
 # extends the stock sd-image module with `sdImage.extraFirmwareConfig`, since config.txt
 # cannot be edited after the image module writes it.
 {
+  username,
   config,
   lib,
   ...
-}: {
+}: let
+  user = config.users.users.${username};
+in {
   options.sdImage.extraFirmwareConfig = lib.mkOption {
     type = lib.types.attrs;
     default = {};
@@ -18,6 +21,11 @@
       start_x = 0;
       gpu_mem = 16;
     };
+
+    # create rom dirs during image creation, so the user can drop roms in before first boot
+    sdImage.populateRootCommands = lib.mkAfter ''
+      mkdir -p ./files${user.home}/roms ./files${user.home}/saves
+    '';
 
     sdImage.populateFirmwareCommands = lib.mkIf (config.sdImage.extraFirmwareConfig != {}) (
       let

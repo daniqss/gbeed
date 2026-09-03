@@ -8,6 +8,7 @@
   gbeed = pkgs.gbeed.console-gamepi13;
   user = config.users.users.${username};
 in {
+  # change rom dirs to user
   systemd.tmpfiles.rules = [
     "d ${user.home}/roms 0755 ${user.name} ${user.group} -"
     "d ${user.home}/saves 0755 ${user.name} ${user.group} -"
