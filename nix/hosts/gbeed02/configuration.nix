@@ -7,7 +7,7 @@
   ...
 }: {
   imports = [
-    ./network.nix
+    # ./network.nix
     ./sd-image.nix
     ./service.nix
   ];
