@@ -22,6 +22,9 @@
     # needed to load the gamepi13 panel driver, otherwise the panel stays black
     kernelModules = ["panel-mipi-dbi"];
 
+    # vc4 brings its own hdmi codec, the speaker stays on the bcm2835 headphones card
+    kernelParams = ["snd_bcm2835.enable_hdmi=0"];
+
     initrd.availableKernelModules = ["xhci_pci" "usbhid" "usb_storage"];
 
     loader = {
@@ -52,6 +55,10 @@
         {
           name = "gamepi13-audremap18";
           dtsFile = ./dts/audremap18.dts;
+        }
+        {
+          name = "vc4-kms-v3d";
+          dtsFile = ./dts/vc4-kms-v3d.dts;
         }
       ];
     };
