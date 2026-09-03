@@ -19,7 +19,7 @@
 
   users.users.${username} = {
     isNormalUser = true;
-    extraGroups = ["video" "render" "input" "gpio" "wheel"];
+    extraGroups = ["wheel" "networkmanager" "video" "render" "input" "gpio"];
 
     initialPassword = hostname;
     home = "/home/${username}";
