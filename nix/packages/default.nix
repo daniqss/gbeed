@@ -24,10 +24,6 @@ in {
 
   console-gamepi13 = console.override {withGamepi13 = true;};
 
-  # panel firmware blob and audio overlay for the gamepi13
-  inherit
-    (import ./gamepi13 {inherit lib pkgs;})
-    gamepi13-panel
-    gamepi13-audremap18
-    ;
+  # panel initialisation blob for the gamepi13
+  inherit (import ./gamepi13 {inherit lib pkgs;}) gamepi13-panel;
 }

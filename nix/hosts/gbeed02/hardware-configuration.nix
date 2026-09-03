@@ -1,38 +1,85 @@
+# strongly based in https://github.com/plmercereau/nixos-pi-zero-2/blob/main/hardware.nix, thank you!
 {
-  nixos-raspberrypi,
-  config,
+  outputs,
+  pkgs,
+  lib,
   ...
 }: {
-  imports = with nixos-raspberrypi.nixosModules; [
-    raspberry-pi-02.base
-    # raspberry-pi-02.display-vc4
-  ];
+  nixpkgs = {
+    hostPlatform = "aarch64-linux";
 
-  # filesystem layout for SD card
-  fileSystems = {
-    "/boot/firmware" = {
-      device = "/dev/disk/by-label/FIRMWARE";
-      fsType = "vfat";
-      options = [
-        "noatime"
-        "noauto"
-        "x-systemd.automount"
-        "x-systemd.idle-timeout=1min"
-      ];
+    overlays = [
+      (_final: super: {
+        makeModulesClosure = x: super.makeModulesClosure (x // {allowMissing = true;});
+      })
+      outputs.overlays.default
+    ];
+  };
+
+  boot = {
+    kernelPackages = pkgs.linuxPackages_rpi02w;
+
+    # needed to load the gamepi13 panel driver, otherwise the panel stays black
+    kernelModules = ["panel-mipi-dbi"];
+
+    initrd.availableKernelModules = ["xhci_pci" "usbhid" "usb_storage"];
+
+    loader = {
+      grub.enable = false;
+      generic-extlinux-compatible.enable = true;
     };
-    "/" = {
-      device = "/dev/disk/by-label/NIXOS_SD";
-      fsType = "ext4";
-      options = ["noatime"];
+
+    swraid.enable = lib.mkForce false;
+  };
+
+  hardware = {
+    graphics.enable = true;
+
+    enableRedistributableFirmware = lib.mkForce false;
+    firmware = [
+      pkgs.raspberrypiWirelessFirmware
+      pkgs.gbeed.gamepi13-panel
+    ];
+
+    deviceTree = {
+      enable = true;
+      filter = "*2837*";
+      overlays = [
+        {
+          name = "gamepi13-panel";
+          dtsFile = ./dts/panel.dts;
+        }
+        {
+          name = "gamepi13-audremap18";
+          dtsFile = ./dts/audremap18.dts;
+        }
+      ];
     };
   };
 
-  system.nixos.tags = let
-    cfg = config.boot.loader.raspberry-pi;
-  in [
-    "gbeed"
-    "raspberry-pi-${cfg.variant}"
-    cfg.bootloader
-    config.boot.kernelPackages.kernel.version
-  ];
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+  };
+
+  users.groups.gpio = {};
+
+  services.udev.extraRules = ''
+    SUBSYSTEM=="drm", KERNEL=="card[0-9]*", SUBSYSTEMS=="spi", SYMLINK+="dri/gbeed-panel"
+    KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"
+    SUBSYSTEM=="gpiomem", GROUP="gpio", MODE="0660"
+  '';
+
+  environment.etc."asound.conf".text = ''
+    pcm.!default {
+        type plug
+        slave.pcm "hw:Headphones,0"
+    }
+    ctl.!default {
+        type hw
+        card Headphones
+    }
+  '';
+
+  system.nixos.tags = ["gbeed" "gamepi13"];
 }

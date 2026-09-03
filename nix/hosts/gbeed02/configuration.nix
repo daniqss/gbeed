@@ -8,6 +8,8 @@
 }: {
   imports = [
     ./network.nix
+    ./sd-image.nix
+    ./service.nix
   ];
 
   image.baseName = lib.mkForce hostname;
