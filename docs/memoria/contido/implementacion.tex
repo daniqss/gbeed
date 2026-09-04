@@ -94,7 +94,7 @@ polo que o compilador monomorfiza o código para o tipo concreto empregado por c
 A resolución das chamadas prodúcese así en tempo de compilación (\textit{static dispatch}),
 evitando as indireccións nas táboas de métodos virtuais e permitindo mellores optimizacións do compilador.
 
-\section{Implementación dos compoñentes}
+\section{Deseño e implementación dos compoñentes}
 \subsection{Serialización da cabeceira da ROM}
 O primeiro paso para comezar a emular un sistema é cargar de forma axeitada o código máquina que se vai executar.
 Para iso, o primeiro que se necesita entender é a cabeceira da \acrshort{rom}, que describe o contido do cartucho.
@@ -430,25 +430,48 @@ do emulador emprégase de forma conxunta o sistema de ficheiros virtual de Emscr
 
 
 \subsection{Optimización}
-% perfilado, tamaño do binario, optimizacions de compilacion
-% emprego de flamegraphs para atopar as partes mais empregadas e podelas optimizar
-% - aforrar recalculos en algoritmos de debuxado
-% - simplificacion de algoritmos para reducir a sua complexidade de O(n) a O(1), en timer e apu (basicamente contadores, en vez de bucles sumas directas)
-% - eliminacion de chamadas ao sistema, eliminar Box en cpu por unha version sen heap nin dynamic dispatch e eliminar prints q saltaban nalguns xogos (pokemon amarelo ao ser cgb saltaban
-% prints de escritura a rexistro q non existe, isto ralentizaba moito en rpi0 mononucleo)
 
 Para asegurar unha execución correcta en plataformas de baixo rendemento, optimizar o núcleo do emulador resulta fundamental
 para conseguir unha experiencia fluída. Para este traballo empregáronse \textit{flamegraphs}, que parten dos datos xerados
 polo perfilador \textit{perf} para amosar de forma visual o tempo de execución de cada función.
 A partir destes gráficos puidéronse identificar as zonas máis custosas do núcleo, para concentrar nelas os esforzos de optimización.
 
-\subsubsection{Reutilización de cálculos}
-O primeiro grupo de melloras foi eliminar recálculos nos bucles de debuxado.
-Ao compoñer unha liña, a dirección base da fila de \glspl{tile} é a mesma para os 160 píxeles, e os dous bytes que definen unha fila só cambian cada oito píxeles.
+\subsubsection{Optimización dos bucles de debuxado}
+O primeiro grupo de melloras concentrouse nos bucles de debuxado da \acrshort{ppu},
+onde calquera traballo redundante ten un efecto multiplicador de máis de vinte e tres mil veces por cadro,
+ao percorrer 160 píxeles por liña e 144 liñas por cadro.
+A mellora principal consistiu na reutilización de cálculos entre píxeles consecutivos.
+Ao compoñer unha liña, a dirección base da fila de \glspl{tile} é a mesma para os 160 píxeles,
+e os dous bytes que definen unha fila só cambian cada oito píxeles.
 Calculándoos unha vez por fila en lugar de unha vez por píxel, o traballo por liña redúcese notablemente.
-Na mesma liña, cando un obxecto está reflectido horizontalmente invértense os bits do byte enteiro dunha vez, e non a posición de cada píxel por separado.
+Na mesma liña, cando un obxecto está reflectido horizontalmente invértense os bits do byte enteiro dunha vez,
+e non a posición de cada píxel por separado.
 
-% TODO: conseguir flamegraph desta mellora
+No caso da capa do fondo, estes cálculos cachéanse en vez de ser usados e descartados
+para evitar récalculos á hora de resolver a prioridade dos obxectos sobre este.
+
+Outras da melloras desenvolvidas foi o acceso directo da \acrshort{ppu} ás súas memorias, sen pasar
+polos métodos de lectura e escritura de \texttt{Dmg}, e a eliminación de divisións
+intercambiandoas por operacións de desprazamento e máscara de bits equivalentes.
+
+\begin{figure}[hp!]
+  \centering
+  \begin{subfigure}[c]{\textwidth}
+    \includegraphics[width=\textwidth]{imaxes/flamegraph_baseline.png}
+    \caption{Antes de optimizar os bucles de debuxado consumindo un 26,0\,\% do tempo de execución}
+    \label{fig:flamegraph-baseline}
+  \end{subfigure}
+
+  \vspace{0.02\textheight}
+
+  \begin{subfigure}[c]{\textwidth}
+    \includegraphics[width=\textwidth]{imaxes/flamegraph_optimized.png}
+    \caption{Despois de optimizar os bucles de debuxado consumindo un 9,5\,\% do tempo de execución}
+    \label{fig:flamegraph-optimized}
+  \end{subfigure}
+  \caption{\textit{Flamegraphs} do núcleo antes e despois de optimizar a \acrshort{ppu}.}
+  \label{fig:flamegraph-debuxado}
+\end{figure}
 
 \subsubsection{Reducción da complexidade algorítmica}
 O segundo grupo foi eliminar os bucles de cada paso dos compoñentes.

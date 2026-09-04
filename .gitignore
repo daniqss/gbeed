@@ -12,7 +12,7 @@ roms/
 saves/
 
 perf*
-flamegraph*
+flamegraph*.svg
 *.svg
 
 mts-20240926-1737-443f6e1/

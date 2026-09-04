@@ -42,4 +42,3 @@ fetch-test-roms:
 
 flamegraph *ARGS:
     RUSTFLAGS="-Cforce-frame-pointers=yes -Cforce-unwind-tables=yes" cargo flamegraph --profile bench --features "${DISPLAY_FEATURES}" -p gbeed-console {{ARGS}}
-
