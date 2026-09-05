@@ -1,23 +1,9 @@
 Reverts the PPU drawing optimizations, to compare them against the current core.
 
-Turns the drawing loops back into their original form: the tile row address and
-its two bytes are recomputed for every pixel, VRAM and OAM are reached through
-the memory bus instead of being indexed directly, the sprite to background
-priority is resolved by reading the framebuffer back instead of using a cache,
-and the tile coordinates use divisions instead of shifts. It also marks every
-draw_ function as #[inline(never)], so that each one shows up as its own frame
-in a flamegraph.
-
     git apply core/examples/ppu_profile/ppu_profile.patch
-    just flamegraph-core --freq 499 -- <rom> 40000
+    export RUSTFLAGS="-Cforce-frame-pointers=yes -Cforce-unwind-tables=yes" 
+    cargo flamegraph --profile bench --features "${DISPLAY_FEATURES}" --example ppu_profile <rom> [frames]
     git apply -R core/examples/ppu_profile/ppu_profile.patch
-
-To profile the current version under the same conditions, apply only the
-#[inline(never)] hunks of core/src/ppu/mod.rs below. Without them LLVM inlines
-draw_bg into Ppu::step and the drawing does not appear as a separate frame.
-
-Sampling above ~500 Hz drops chunks on this workload and the PPU disappears
-from the graph, hence the --freq 499.
 
 diff --git a/core/examples/ppu_profile/main.rs b/core/examples/ppu_profile/main.rs
 index 4d38b9e..52cef4e 100644

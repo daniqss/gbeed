@@ -1,4 +1,4 @@
-\chapter{Desenvolvemento do emulador}
+\chapter{Desenvolvemento}
 \label{chap:implementacion}
 
 \lettrine{N}{este} capítulo detállase o proceso de desenvolvemento do emulador,
@@ -251,8 +251,6 @@ O diagrama da figura~\ref{fig:cpu-step} amosa o fluxo de execución de cada paso
 
 \subsection{Implementación da unidade gráfica}
 \label{sec:ppu-implementation}
-% diagrama ca maquina de estados, cos diferentes modos e as suas transicións
-% explicar o renderizado por scanline ou pixel fifo e explicar un pouco como funciona a implementacion realizada (scanline)
 
 Despois de cada paso da \acrshort{cpu}, o resto de compoñentes tamén avanzan, segundo o tempo que consumiu a instrución executada.
 A \acrshort{ppu} consiste nunha máquina de estados que vai percorrendo os modos que xa se describiron no capítulo~\ref{chap:arquitectura}.
@@ -289,10 +287,6 @@ que se executan en orde e só se a súa capa está activada nos rexistros de con
 \end{itemize}
 
 \subsection{Primeira interface}
-% para poder validar o traballo, primeira interface con diferentes características para debuggear (estado botons e texturas co estado das diferentes secciones da vram )(fotos de como se ve en architectura.tex, referenciar)
-% permitiu comprobar e testear de forma inicial e rapida a ppu, identificando e solucionando erros no debuxo
-% a version actual desta interfaz esta desplegada como web grazas a wasm en https://daniqss.github.io/gbeed/, con caracteristicas como cargar roms e gardar a partida no navegador
-
 
 Para a presentación do resultado do debuxado producido polo núcleo do emulador, implementouse unha primeira interface. Ademais de presentar a execución do xogo
 e permitir a interacción co mesmo, esta interface tamén ten como obxectivo facilitar ferramentas de depuración para mellorar a experiencia de desenvolvemento.
@@ -345,8 +339,6 @@ para a pantalla e para os botóns táctiles.
 
 
 \subsection{Temporizadores}
-% explicar un pouco o codigo, pero non ten demasiado e non podemos repetir o de arquitectura.tex
-% como se recolle o input do exterior
 
 O temporizador, o mando e o porto serie son compoñentes moito máis pequenos que os anteriores, pero comparten o mesmo problema.
 Todos avanzan cos ciclos da última instrución, así que ningún deles pode permitirse un bucle por ciclo.
@@ -391,8 +383,6 @@ Moitos conxuntos de probas empregan a transferencia serie para comunicar os resu
 polo que é imprescindible para automatizar a validación do núcleo.
 
 \subsection{Controladores de bancos de memoria}
-% mbc1, mbc3, mbc5... cales se implementaron e por que (son os mais empregados)
-% diagrama cos diferentes bancos e tabla como a do README con xogos comprobados e os seus mbc
 
 Do lado do emulador, un \acrshort{mbc} non é máis que unha función que traduce unha dirección da consola
 nun desprazamento dentro do vector que contén a \acrshort{rom} ou a \acrshort{ram} completa.
@@ -550,10 +540,6 @@ Tendo en conta estes rexistros e eliminando os avisos noutras posicións, xogos 
 
 
 \subsection{Interface de estilo consola}
-% menus e tal en raylib
-% elementos para mellorar a experiencia de usuario, velocidade duplicada, fps, paleta, ensinar info de fps...
-% desligar fps de velocidade do emulador
-
 
 Para conseguir unha experiencia adaptada a pantallas pequenas como a da Gamepi13, e cunha sensación próxima
 á dunha consola, creouse outra interface de usuario centrada nesta idea.
@@ -631,11 +617,6 @@ Se o \textit{backend} de audio non consegue consumilas ao mesmo ritmo, o búfer 
 \subsection{Soporte para hardware embebido}
 % compilacion cruzada, x11 en vez de drm ou framebuffer... en debian antiguo, para rpi0
 % nixos con soporte para gamepi13 reproducible. con driver de mipi-spi e tal. para rpi02. empregando drm backend e sen configuracion manual.
-
-% Levar o emulador a unha Raspberry Pi Zero non é só cuestión de rendemento.
-% Estes aparellos non teñen potencia para compilar o proxecto e, no caso do modelo orixinal,
-% a súa arquitectura \texttt{armv6l} xa non conta con soporte de primeira clase nas distribucións habituais.
-% Por iso o binario constrúese sempre nun equipo de escritorio e cópiase despois ao dispositivo.
 
 A implementación de referencia dunha consola \acrshort{diy} como testemuña das capacidades do proxecto
 foi realizado empregando unha Raspberry Pi Zero W e unha Raspberry Pi Zero 2 W xunto cunha pantalla GamePi13.

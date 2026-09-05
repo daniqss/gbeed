@@ -213,10 +213,10 @@ Este proxecto dispón de varias shells de desenvolvemento independentes para X11
 que empregan as súas dependencias necesarias e exportan a variable de contorna \texttt{DISPLAY\_FEATURES} coas \textit{features} de raylib correspondentes ao seu backend.
 Ademais, tamén conta cunha shell para o desenvolvemento da memoria con \LaTeX{} en local.
 
-% Por último, Nix emprégase tamén para xerar a imaxe completa do sistema operativo do dispositivo embebido:
-% unha configuración mínima de NixOS a partir da que se constrúe unha imaxe de arranque
-% para a Raspberry Pi empregada como plataforma de referencia, co emulador xa integrado.
-% Deste xeito, non só a compilación senón tamén a despregadura no hardware final é reproducible.
+Por último, Nix emprégase tamén para xerar a imaxe completa do sistema operativo do dispositivo embebido:
+unha configuración mínima de NixOS a partir da que se constrúe unha imaxe de arranque
+para a Raspberry Pi empregada como plataforma de referencia, co emulador e o soporte da pantalla xa integrados.
+Deste xeito, non só a compilación senón tamén a despregadura no hardware final é reproducible.
 
 \subsection{Compilación cruzada}
 O emulador debe executarse en plataformas nas que non é posible compilar o código fonte directamente:
@@ -271,6 +271,42 @@ que compila a interface e copia os artefactos a un directorio de distribución
 xunto cos ficheiros estáticos da páxina.
 A \acrshort{rom} pásase ao emulador a través do sistema de ficheiros virtual.
 Para probar en local sérvese a páxina co módulo \texttt{http.server} de Python.
+
+
+\section{Hardware empregado}
+Co obxectivo de crear unha consola portátil de referencia empregando o emulador para demostrar as súas capacidades,
+escolleuse hardware de baixo custo, amplamente empregado e documentado e de doada adquisición,
+para que calquera persoa poida reproducir a construción sen recorrer a compoñentes descontinuados ou a montaxes a medida,
+
+A este criterio engádese un segundo requisito, que o dispositivo poida executar un sistema operativo Linux
+de propósito xeral en lugar de firmware \textit{bare metal},
+de forma que a consola non quede limitada ao emulador
+e o usuario conserve a capacidade de ampliar o uso que lle dá ao dispositivo.
+
+\subsection{Raspberry Pi Zero}
+Como microcomputador empregouse a familia de \acrshort{sbc} Raspberry Pi Zero~\cite{RaspberryPiZero},
+probablemente a opción máis coñecida e documentada dentro deste rango de prezo.
+Durante o desenvolvemento empregáronse dous modelos, a Raspberry Pi Zero W e a Raspberry Pi Zero 2~W.
+Desta forma valídase o emulador en dúas arquitecturas distintas:
+a primeira conta cun único núcleo \texttt{armv6l},
+mentres que a segunda incorpora catro núcleos Cortex-A53 de 64 bits,
+capaces de executar tanto código \texttt{aarch64} como código de 32 bits.
+O usuario pode escoller que modelo empregar, segundo as súas necesidades.
+
+En ambos casos empregouse a variante \textbf{W} durante o desenvolvemento, que engade conectividade sen fíos.
+Esta non é necesaria para o funcionamento da consola,
+pero si mellora notablemente a experiencia de desenvolvemento,
+xa que permite acceder ao dispositivo por rede para copiar binarios e depurar a execución
+sen ter que extraer a tarxeta SD en cada iteración.
+A nivel de usuario final o comportamento é idéntico ao dos modelos sen conectividade.
+
+\subsection{GamePi13}
+
+Para lograr unha experiencia de consola portátil completa, empregouse o GamePi13~\cite{GamePi13}.
+Este dispositivo consiste dunha placa que se conecta directamente aos \acrshort{gpio} da Raspberry Pi Zero sen necesidade de soldadura,
+e inclue un controlador ST7789 para a súa pantalla \acrshort{spi}, un altofalante, unha saída de auriculares
+e un conxunto de botóns coa disposición habitual dunha consola portátil, cos que se recolle a entrada do usuario.
+
 
 \section{Xustificación tecnolóxica}
 Os obxectivos expostos na sección~\ref{sec:obxectivos} impoñen os requisitos 
