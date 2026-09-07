@@ -618,36 +618,65 @@ Se o \textit{backend} de audio non consegue consumilas ao mesmo ritmo, o búfer 
 % compilacion cruzada, x11 en vez de drm ou framebuffer... en debian antiguo, para rpi0
 % nixos con soporte para gamepi13 reproducible. con driver de mipi-spi e tal. para rpi02. empregando drm backend e sen configuracion manual.
 
-A implementación de referencia dunha consola \acrshort{diy} como testemuña das capacidades do proxecto
-foi realizado empregando unha Raspberry Pi Zero W e unha Raspberry Pi Zero 2 W xunto cunha pantalla GamePi13.
-Na documentación oficial do fabricante recoméndase empregar a súa propia imaxe preconfigurada de Debian.
-Esta foi a solución, máis sinxela, escollida para a realización deste concepto.
-Isto débese a que a pantalla depende de ferramentas e APIs antigas e sen mantemento que non están dispoñibles nas distribucións actuais.
-En concreto, o fabricante recomenda o uso do hardware empregando \textit{fbcp}~\cite{fbcp}. Este programa, sen desenvolvemento
-activo e en estado de arquivo, permite copiar o contido dun \textit{framebuffer} de X11 destinado á saída de vídeo regular, como un HDMI,
-a outro \textit{framebuffer} que se amosa na pantalla GamePi13.
 
-Esta solución depende do \textit{driver} DispmanX~\cite{dispmanx}, que está deprecado e non se recomenda o seu uso,
-recomendándose empregar \acrshort{drm} ou drivers \textit{mipi-dbi-spi} no seu lugar.
-A pesar de ser tecnicamente posible o uso destes sistemas co Gamepi13, o seu uso non está documentado,
-polo que se optou por empregar o método documentado.
 
-Isto supón que un dos riscos expostos en \ref{sec:riscos} se materializou.
-En vez de poder empregar o emulador sobre o backend \acrshort{drm} de raylib, tivose que empregar
-o backend X11, xa que \textit{fbcp} funciona soamente sobre este sistema. A pesar disto,
-a experiencia final do usuario non se ve afectada, polo que o impacto deste risco foi mínimo.
+Para cumprir co obxectivo de que o emulador poida ser usado para a creación dunha consola \acrshort{diy},
+documentouse e despregouse unha solución de referencia co hardware comentado na sección~\ref{sec:hardware-empregado}.
+Dado que se empregaron dous modelos de Raspberry Pi Zero con arquitecturas distintas, ofrécense dúas alternativas.
+A primeira, unha imaxe de NixOS construída dende o propio repositorio, é a recomendada e a que ofrece unha mellor experiencia,
+pero require unha Raspberry Pi Zero 2~W.
+A segunda parte da imaxe de Debian que distribúe o fabricante da pantalla, e é a única opción para a Raspberry Pi Zero orixinal.
 
-\subsubsection{Compilación cruzada}
-Para conseguir o binario para a arquitectura \texttt{armv6l} da Raspberry Pi Zero, empregouse compilación cruzada, 
-que se realiza nun contedor de Docker/Podman para manter a reproducibilidade do proceso e as dependencias illadas.
-Durante este proceso, enlázase o binario contra versións de librerías suficientemente antigas para garantir a compatibilidade coas imaxes usadas.
-Desta forma, evítase un erro en tempo de execución ao non se atopar as versións esperadas.
+\subsubsection{Imaxe reproducible de NixOS}
+
+Ademais das contornas de desenvolvemento descritas no capítulo~\ref{chap:ferramentas}, Nix~\cite{nix} permite declarar
+a configuración completa dun sistema operativo como código, de xeito que a mesma descrición produce sempre a mesma imaxe.
+Aproveitando isto, o repositorio define un sistema NixOS mínimo para a Raspberry Pi Zero 2~W
+que incorpora o soporte da GamePi13 e o propio emulador, sen que o usuario teña que realizar ningunha configuración manual.
+
+O soporte da pantalla resólvese co controlador \textit{panel-mipi-dbi} do núcleo de Linux, que substitúe as
+\acrshortpl{api} obsoletas recomendadas polo fabricante. Consiste dunha implementación xenérica que sabe enviar píxeles por \acrshort{spi},
+pero precisa que se lle indique como inicializar o panel concreto. Para iso configúrase o \textit{overlay} \texttt{mipi-dbi-spi}
+cos parámetros da pantalla, extraídos do \textit{overlay} que distribúe o fabricante, e xérase en tempo de compilación
+o \textit{firmware} coa secuencia de inicialización do controlador ST7789V. Do mesmo xeito xérase e engádese ao \textit{firmware}
+de arranque o \textit{overlay} que habilita a saída de audio por \acrshort{pwm} do altofalante.
+
+O resultado é que a pantalla aparece como un dispositivo \acrshort{drm} máis do sistema, polo que o emulador pode
+empregar directamente o backend \acrshort{drm} de raylib, evitando o sobrecusto dunha sesión gráfica completa.
+O emulador execútase como un servizo que arranca automaticamente co sistema.
+
+Grazas ao módulo de imaxes de NixOS, todo isto compílase nunha imaxe de tarxeta SD lista para gravar,
+sen pasos adicionais de instalación. O usuario só ten que escribila na tarxeta e acender o dispositivo,
+o que dá unha experiencia próxima á dunha consola comercial.
+
+\subsubsection{Imaxe do fabricante de Debian}
+
+A Raspberry Pi Zero orixinal, coa súa arquitectura \texttt{armv6l}, non está soportada por NixOS,
+polo que para ela hai que recorrer ao método documentado polo fabricante da pantalla~\cite{GamePi13}.
+Este consiste en partir dunha imaxe de Debian preconfigurada, pero desactualizada, sobre a que se instala o emulador
+seguindo a guía elaborada neste traballo.
+
+Para amosar na pantalla a saída do sistema emprégase \textit{fbcp}~\cite{fbcp}, un programa en estado de arquivo
+que copia continuamente o contido do \textit{framebuffer} principal, destinado á saída HDMI, ao da pantalla \acrshort{spi}.
+\textit{fbcp} captura ese contido a través de DispmanX~\cite{dispmanx}, unha \acrshort{api} propia de Broadcom tamén obsoleta,
+o que obriga a manter desactivado o controlador moderno de vídeo da placa.
+
+Isto supón que un dos riscos expostos na sección~\ref{sec:riscos} se materializou.
+En vez de poder empregar o emulador sobre o backend \acrshort{drm} de raylib, tívose que empregar o backend X11,
+xa que \textit{fbcp} só funciona sobre este sistema. O arranque encadéase entón cun inicio de sesión automático
+que lanza un servidor X e, dentro del, o emulador. A pesar disto, a experiencia final do usuario non se ve notablemente afectada,
+polo que o impacto deste risco foi mínimo.
+
+O binario para esta plataforma obtense mediante compilación cruzada nun contedor, tal e como se describiu no capítulo~\ref{chap:ferramentas},
+o que mantén o proceso reproducible e as dependencias illadas.
+Durante o enlazado empréganse versións das librerías de sistema suficientemente antigas para garantir a compatibilidade
+coa imaxe do fabricante, evitando así un erro en tempo de execución ao non atoparse as versións esperadas.
 
 \subsubsection{Uso dos botóns da Gamepi13}
-Para poder empregar os botóns da Gamepi13 o cliente do emulador emprega \textit{rpi-pal}, unha dependencia que
+En calquera dos casos anteriores, unha vez configurada a pantalla, o cliente do emulador ten que poder empregar os botóns da Gamepi13.
+Para conseguilo emprégase \textit{rpi-pal}, unha dependencia que
 permite acceder facilmente aos GPIO da Raspberry Pi. Seguindo a configuración dos pins documentada polo fabricante,
 o cliente recolle o estado dos botóns e llo comunica ao núcleo do emulador.
-Na figura~\ref{fig:gpio-input} pódese ver como se modelo esta entrada.
+Na figura~\ref{fig:gpio-input} pódese ver como se modela esta entrada.
 
 \input{diagramas/gpio-input}
-

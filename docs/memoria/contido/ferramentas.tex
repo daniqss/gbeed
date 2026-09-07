@@ -220,14 +220,11 @@ Deste xeito, non só a compilación senón tamén a despregadura no hardware fin
 
 \subsection{Compilación cruzada}
 O emulador debe executarse en plataformas nas que non é posible compilar o código fonte directamente:
-o dispositivo embebido e o navegador web.
+a Raspberry Pi Zero e o navegador web.
 No primeiro caso, os binarios xéranse para a arquitectura \texttt{armv6l} de 32 bits,
 xa que unha Raspberry Pi Zero orixinal resulta demasiado limitada
 para compilar un proxecto de Rust de forma nativa.
-Estes binarios de 32 bits son ademais compatibles cara adiante:
-poden executarse sen modificacións en dispositivos \texttt{aarch64}
-como a Raspberry Pi Zero 2~W, grazas á retrocompatibilidade
-do modo de execución de 32 bits destes procesadores.
+
 Os binarios prodúcense polo tanto mediante compilación cruzada
 dende as máquinas de desenvolvemento x86\_64,
 empregando contedores no primeiro caso e Emscripten no segundo.
@@ -253,9 +250,7 @@ tómanse dos paquetes armhf de Debian e cópianse ao \textit{sysroot} como \text
 o enlazador só precisa táboas de símbolos válidas,
 xa que as implementacións reais proporciónaas o sistema operativo do dispositivo en execución.
 Ao executarse o compilador de forma nativa a compilación é rápida,
-e o binario resultante, enlazado con glibc e co backend X11 de raylib,
-é o que se desprega no dispositivo final do proxecto,
-unha consola portátil baseada na Raspberry Pi cuxa pantalla SPI carece de soporte \acrshort{drm}.
+e o binario resultante enlázase con \textit{glibc} e co backend X11 de raylib.
 
 
 \subsubsection{Compilación para a web con Emscripten}
@@ -274,6 +269,7 @@ Para probar en local sérvese a páxina co módulo \texttt{http.server} de Pytho
 
 
 \section{Hardware empregado}
+\label{sec:hardware-empregado}
 Co obxectivo de crear unha consola portátil de referencia empregando o emulador para demostrar as súas capacidades,
 escolleuse hardware de baixo custo, amplamente empregado e documentado e de doada adquisición,
 para que calquera persoa poida reproducir a construción sen recorrer a compoñentes descontinuados ou a montaxes a medida,

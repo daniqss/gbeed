@@ -54,14 +54,18 @@ compilación cruzada foi necesario un coñecemento extenso de sistemas Linux.
 
 
 \section{Traballo futuro}
-Nesta última sección presentaranse as posibles liñas de traballo futuro que este proxecto podería abordar para profundizar nos seus obxectivos e ampliar os mesmos.
+Nesta última sección presentaranse as posibles liñas de traballo futuro que este proxecto podería abordar para afondar nos seus obxectivos e amplialos.
 
 \subsection{Mellora da experiencia de usuario}
-\subsubsection{Documentación}
+Para poder ofertar unha mellor experiencia de consola \acrshort{diy} aos usuarios, unha gran adición consistiría en crear e distribuír un modelo de carcasa 3D
+para poder empregar coa implementación de referencia que presenta este traballo.
+Isto permitiría aos usuarios construír unha consola portátil máis robusta e cómoda de empregar, mellorando a experiencia de usuario.
+
+\subsubsection{Mellora da documentación}
 % docs con vitepress ou docusaurus algo asi.
-Para facer máis accesible o proxecto a un público menos técnico, sería recomendable mellorar a visibilidade do proxecto e a súa documentación
-creando unha páxina web adicada especificamente para este proxecto. Plataformas como Github poden resultar intimidantes para persoas sen experiencia en desenvolvemento de software,
-polo que empregando ferramentas de xeración de páxinas de documentacion como Vitepress ou Docusaurus, poderíase crear unha páxina web máis amigable e accesible para o público en xeral,
+Para facer máis accesible o proxecto a un público menos técnico, permitíndolle acadar un gran alcance, sería recomendable mellorar a visibilidade deste
+creando unha páxina web adicada especificamente para a súa documentación. Plataformas como Github poden resultar intimidantes para persoas sen experiencia en desenvolvemento de software,
+polo que empregando ferramentas de xeración de páxinas de documentación como Vitepress ou Docusaurus, poderíase crear unha páxina web máis amigable e accesible para o público en xeral,
 deixando as forxas de código como Github exclusivamente para o desenvolvemento do proxecto.
 
 
@@ -70,7 +74,7 @@ O proxecto cumpre cos obxectivos propostos, pero existen moitas posibilidades de
 
 \begin{itemize}
   \item \textbf{Soporte de Game Boy Color}: a primeira mellora, a máis obvia, sería aumentar o catálogo dispoñible emulando tamén a Game Boy Color. Gran parte do traballo
-  sirve como base, necesitando nalgunhas áreas unha ampliación para soportar as funcionalidades adicionais da seguinte iteración da familia Game Boy.
+  serve como base, necesitando nalgunhas áreas unha ampliación para soportar as funcionalidades adicionais da seguinte iteración da familia Game Boy.
   Tamén se podería implementar o soporte para o resto de cartuchos existentes, ampliando o catálogo dos xogos dispoñibles para emular no proxecto
   ata case a totalidade deste.
 
@@ -78,9 +82,13 @@ O proxecto cumpre cos obxectivos propostos, pero existen moitas posibilidades de
   o seguinte paso sería emular a execución ciclo a ciclo. Por outra banda, na \acrshort{ppu} pódese implementar de forma opcionar o renderizado
   mediante o \textit{fifo fetcher}, facendo posible o estudo da mellor opción custo/beneficio para a emulación.
 
-  \item \textbf{Mellora do rendemento}: nesta área a primeira área de mellora sería a compilacion en tempo de execución na \acrshort{cpu},
+  \item \textbf{Mellora do rendemento}: nesta área a primeira área de mellora sería a compilación en tempo de execución na \acrshort{cpu},
   de forma que os bloques de código nativo se compilen á plataforma de destino unha vez e se empreguen de forma repetida, para evitar de forma
   repetitiva a interpretación das mesmas instrucións.
+
+  \item \textbf{Mellora da portabilidade}: para que o proxecto poida ser empregado en máis contextos e os desenvolvedores o poidan empregar en diferentes
+  contornas con distintas tecnoloxías, unha gran adición ao núcleo do emulador sería ter unha interface como librería de C. Deste xeito, dende calquera
+  linguaxe de programación que poida chamar a librerías de C, como Python, Java ou C\# poderíase reutilizar este traballo.
 \end{itemize}
 
 
