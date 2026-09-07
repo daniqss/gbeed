@@ -13,6 +13,10 @@ run *ARGS:
 check *ARGS:
     cargo check --features "${DISPLAY_FEATURES}" {{ARGS}}
 
+lint *ARGS:
+    cargo fmt --all
+    cargo clippy --workspace --all-targets --features "${DISPLAY_FEATURES}" {{ARGS}} -- -D warnings
+
 test *ARGS: fetch-test-roms
     cargo test --features "${DISPLAY_FEATURES}" {{ARGS}}
 
@@ -38,4 +42,3 @@ fetch-test-roms:
 
 flamegraph *ARGS:
     RUSTFLAGS="-Cforce-frame-pointers=yes -Cforce-unwind-tables=yes" cargo flamegraph --profile bench --features "${DISPLAY_FEATURES}" -p gbeed-console {{ARGS}}
-

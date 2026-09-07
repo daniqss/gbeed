@@ -1,0 +1,146 @@
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  scale=0.5, transform shape, font=\small,
+  %%%%%%%%% struct -> clase UML
+  struct/.style={draw, fill=white, rectangle split, rectangle split parts=2,
+                 rectangle split part align=center, align=left, inner sep=4pt},
+  structm/.style={draw, fill=white, rectangle split, rectangle split parts=3,
+                  rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% enum -> enumeración UML
+  enumer/.style={draw, fill=black!4, rectangle split, rectangle split parts=2,
+                 rectangle split part align=center, align=left, inner sep=4pt},
+  enumerm/.style={draw, fill=black!4, rectangle split, rectangle split parts=3,
+                  rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% relacións
+  depende/.style={dashed, -{Latex[open, length=2.4mm, width=2mm]}},
+  compon/.style={{Diamond[length=3mm, width=2.2mm]}-},
+  etiq/.style={font=\scriptsize, inner sep=1.5pt, fill=white},
+  membro/.style={font=\footnotesize\ttfamily}
+]
+
+%%%%%%%%% raíz do módulo
+\node[structm, minimum width=70mm] (cart) at (0,0) {
+  \nodepart{one}   \texttt{Cartridge}
+  \nodepart[membro]{two}
+        + header: CartridgeHeader\\
+        + features: CartridgeFeatures\\
+        - mbc: Mbc
+  \nodepart[membro]{three}
+        + new(raw\_rom, save)\\
+        + read(address) / write(address, value)\\
+        + save\_game()\\
+        + swap\_boot\_rom(boot\_rom)\\
+        + check\_header\_checksum(raw\_rom)\\
+        + check\_global\_checksum(raw\_rom)
+};
+
+%%%%%%%%% cabeceira e características
+\node[structm, minimum width=60mm] (head) at (-78mm,-84mm) {
+  \nodepart{one}  \texttt{CartridgeHeader}
+  \nodepart[membro]{two}
+        - is\_pre\_sgb: bool\\
+        - license: Option<String>\\
+        + title: String\\
+        - supports\_cgb: GBCSupport\\
+        - supports\_sgb: bool\\
+        \textasciitilde{} cartridge\_type: CartridgeType\\
+        \textasciitilde{} rom\_size: RomSize\\
+        \textasciitilde{} ram\_size: RamSize\\
+        + destination: Destination\\
+        - game\_version: u8\\
+        \textasciitilde{} header\_checksum: u8\\
+        \textasciitilde{} global\_checksum: u16
+  \nodepart[membro]{three}
+        + new(raw\_rom)\\
+        + to\_string\_array()
+};
+
+\node[structm, minimum width=56mm] (feat) at (78mm,-70mm) {
+  \nodepart{one}  \texttt{CartridgeFeatures}
+  \nodepart[membro]{two}
+        + has\_ram: bool\\
+        + has\_battery: bool\\
+        + has\_timer: bool\\
+        + has\_rumble: bool\\
+        + has\_sensor: bool
+  \nodepart[membro]{three}
+        + new(cartridge\_type)\\
+        + supports\_saves()
+};
+
+%%%%%%%%% enumeracións da cabeceira
+\node[enumerm, minimum width=34mm] (romsz) at (-124mm,-166mm) {
+  \nodepart{one}  \scriptsize$\ll$enum$\gg$\\[1pt] \texttt{RomSize}
+  \nodepart[membro]{two}
+        Rom32KB \dots{} Rom8MB
+  \nodepart[membro]{three}
+        + new(value)\\
+        + get\_banks\_count()\\
+        + get\_size()
+};
+\node[enumerm, minimum width=34mm] (ramsz) at (-64mm,-166mm) {
+  \nodepart{one}  \scriptsize$\ll$enum$\gg$\\[1pt] \texttt{RamSize}
+  \nodepart[membro]{two}
+        None \dots{} Ram128KB
+  \nodepart[membro]{three}
+        + new(value)\\
+        + get\_banks\_count()\\
+        + get\_size()
+};
+\node[enumer, minimum width=34mm] (dest) at (-124mm,-212mm) {
+  \nodepart{one}  \scriptsize$\ll$enum$\gg$\\[1pt] \texttt{Destination}
+  \nodepart[membro]{two}
+        Japan\\
+        Overseas\\
+        Undefined
+};
+\node[enumer, minimum width=34mm] (gbc) at (-64mm,-212mm) {
+  \nodepart{one}  \scriptsize$\ll$enum$\gg$\\[1pt] \texttt{GBCSupport}
+  \nodepart[membro]{two}
+        None\\
+        Enhancements\\
+        Only
+};
+
+\node[enumerm, minimum width=62mm] (ctype) at (78mm,-170mm) {
+  \nodepart{one}   \scriptsize$\ll$enum$\gg$\\[1pt] \texttt{CartridgeType}
+  \nodepart[membro]{two}
+        RomOnly\\
+        RomRam / RomRamBattery\\
+        Mbc1 / Mbc1Ram / Mbc1RamBattery\\
+        Mbc2 / Mbc2Battery\\
+        Mbc3 / Mbc3Ram / Mbc3RamBattery\\
+        Mbc3TimerBattery / Mbc3TimerRamBattery\\
+        Mbc5 / Mbc5Ram / Mbc5RamBattery\\
+        Mbc5Rumble / Mbc5RumbleRam / \dots{}\\
+        Mbc6 / Mbc7SensorRumbleRamBattery\\
+        MMM01 / MMM01Ram / MMM01RamBattery\\
+        PocketCamera / BandaiTama5\\
+        HuC3 / HuC1RamBattery
+  \nodepart[membro]{three}
+        + new(raw\_rom)\\
+        + has\_ram() / has\_battery() / has\_timer()\\
+        + has\_rumble() / has\_sensor()
+};
+
+%%%%%%%%% composición de Cartridge
+\draw[compon] (cart.west) -- ++(-18mm,0) node[etiq, pos=0.8, above]{header} |- (head.north);
+\draw[compon] (cart.east) -- ++(18mm,0) node[etiq, pos=0.8, above]{features} |- (feat.north);
+
+%%%%%%%%% composición da cabeceira
+\coordinate (hbus) at (-78mm,-138mm);
+\draw[compon] (head.south) -- (hbus);
+\draw (hbus) -| node[etiq, pos=0.75, left]{rom\_size} (romsz.north);
+\draw (hbus) -| node[etiq, pos=0.75, right]{ram\_size} (ramsz.north);
+\draw (hbus) -- ++(-72mm,0) |- node[etiq, pos=0.6, left]{destination} (dest.west);
+\draw (hbus) -- ++(52mm,0) |- node[etiq, pos=0.6, right]{supports\_cgb} (gbc.east);
+\draw[compon] (head.east) -- ++(16mm,0) node[etiq, pos=0.4, above]{cartridge\_type} |- (ctype.west);
+
+%%%%%%%%% dependencias
+\draw[depende] (feat.south) -- node[etiq, right]{$\ll$deriva de$\gg$} (ctype.north);
+
+\end{tikzpicture}
+\caption{Estrutura da cabeceira do cartucho e das enumeracións que emprega.}
+\label{fig:cartridge-uml}
+\end{figure}

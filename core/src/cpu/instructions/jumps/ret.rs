@@ -1,7 +1,7 @@
 use crate::{
     cpu::{
         flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
+        instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition, stack},
     },
     prelude::*,
 };
@@ -22,9 +22,7 @@ impl Instruction for Ret {
             return Ok(InstructionEffect::new(self.info(), Flags::none()));
         }
 
-        let return_addr = gb.load(gb.cpu.sp);
-        gb.cpu.pc = return_addr;
-        gb.cpu.sp = gb.cpu.sp.wrapping_add(2);
+        gb.cpu.pc = stack::pop(gb);
 
         Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
     }

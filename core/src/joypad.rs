@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{interrupts::Interrupt, prelude::*};
 
 pub const JOYP: u16 = 0xFF00;
 
@@ -39,18 +39,56 @@ pub enum JoypadButton {
 /// | Left  | B      | P11 |
 /// | Right | A      | P10 |
 /// A button beeing pressed is seen as the corresponding bit being 0, not 1 as usual in other components.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Joypad {
     pub input: u8,
     joyp: u8,
+
+    /// state of the P10-P13 lines on the previous step, used to detect falling edges
+    previous_lines: u8,
+}
+
+impl Default for Joypad {
+    fn default() -> Self { Joypad::new() }
 }
 
 impl Joypad {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             input: 0xFF,
             joyp: 0xCF,
+            previous_lines: 0x0F,
         }
+    }
+
+    /// The interrupt is requested on a high to low edge of any of the four input lines,
+    /// no matter if it comes from a button being pressed or from a write selecting the
+    /// other nibble, so both cases are covered by sampling the lines once per step.
+    pub(crate) fn step(&mut self, interrupt: &mut Interrupt) {
+        let lines = self.lines();
+
+        if self.previous_lines & !lines != 0 {
+            interrupt.set_joypad_interrupt(true);
+        }
+
+        self.previous_lines = lines;
+    }
+
+    /// Current state of the P10-P13 lines, low means pressed
+    fn lines(&self) -> u8 {
+        let buttons = if self.select_buttons() {
+            0x0F
+        } else {
+            self.input >> 4
+        };
+
+        let dpad = if self.select_dpad() {
+            0x0F
+        } else {
+            self.input & 0x0F
+        };
+
+        buttons & dpad
     }
 
     pub fn button_down(&mut self, btn: JoypadButton, is_down: bool) {
@@ -63,11 +101,8 @@ impl Joypad {
         }
     }
 
-    pub fn any_input(&self) -> bool { self.input != 0xFF }
-
-    // TODO: change visibility in macro
     bit_accessors! {
-        target: joyp;
+        pub(crate) target: joyp;
 
         SELECT_BUTTONS,
         SELECT_DPAD,
@@ -81,21 +116,8 @@ impl Joypad {
 impl Accessible<u16> for Joypad {
     fn read(&self, address: u16) -> u8 {
         match address {
-            JOYP => {
-                // input is high by default, no buttons pressed
-                let mut current_input = 0x0F;
-
-                // select nibble by checking select bits
-                if !self.select_buttons() {
-                    current_input &= self.input >> 4;
-                }
-                if !self.select_dpad() {
-                    current_input &= self.input & 0x0F;
-                }
-
-                // bits 7 and 6 are always high, bits 5 and 4 are the select bits, and bits 3 to 0 are the current input
-                0xC0 | (self.joyp & 0x30) | current_input
-            }
+            // bits 7 and 6 are always high, bits 5 and 4 are the select bits, and bits 3 to 0 are the current input
+            JOYP => 0xC0 | (self.joyp & 0x30) | self.lines(),
             _ => unreachable!(
                 "Attempted to read from Joypad with invalid address {:04X}",
                 address
@@ -105,7 +127,8 @@ impl Accessible<u16> for Joypad {
 
     fn write(&mut self, address: u16, value: u8) {
         match address {
-            // only bits SELECT_BUTTONS and SELECT_DPAD are writable
+            // only bits SELECT_BUTTONS and SELECT_DPAD are writable,
+            // the edge caused by changing the selected nibble is detected in `step`
             JOYP => self.joyp = (self.joyp & 0xCF) | (value & 0x30),
             _ => unreachable!(
                 "Attempted to write to Joypad with invalid address {:04X}",

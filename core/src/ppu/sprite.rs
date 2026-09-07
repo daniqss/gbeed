@@ -36,7 +36,7 @@ impl Sprite {
     }
 
     bit_accessors! {
-        target: flags;
+        pub(crate) target: flags;
 
         PRIORITY,
         YFLIP,

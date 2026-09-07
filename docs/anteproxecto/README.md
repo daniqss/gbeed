@@ -10,7 +10,7 @@ GameBoy Emulator for embedded systems
 
 ## Breve descrición
 Este proxecto consiste no desenvolvemento dun emulador do modelo DMG de GameBoy que poida ser executado sobre un Linux lixeiro como Alpine Linux nun microcontrolador Raspberry Pi Zero de arquitectura ARM. Para isto debemos replicar o funcionamento dos diferentes compoñentes hardware da consola orixinal: interpretar o conxunto de instrucións da súa CPU, implementar o sistema gráfico, xestionar a entrada/saída... e reproducir a sincronización de todos estes elementos para garantir unha correcta emulación de maneira estable e precisa.
-O emulador permitirá xogar con xogos dos tipos de cartuchos máis populares nun contorno lixeiro sen empregar unha sesión gráfica completa, senón usando unha interface sinxela feita cunha libraría que empregue o subsistema de Linux DRM/KMS, como SDL2. Isto proporcionará aos usuarios unha solución optimizada para sistemas limitados e facilitará a súa integración en proxectos embebidos personalizados.
+O emulador permitirá xogar con xogos dos tipos de cartuchos máis populares nun contorno lixeiro sen empregar unha sesión gráfica completa, senón usando unha interface sinxela feita cunha librería que empregue o subsistema de Linux DRM/KMS, como SDL2. Isto proporcionará aos usuarios unha solución optimizada para sistemas limitados e facilitará a súa integración en proxectos embebidos personalizados.
 
 ## Obxectivos concretos
 - Crear un emulador do modelo DMG de GameBoy completo e funcional

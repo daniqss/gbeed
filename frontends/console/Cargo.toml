@@ -15,4 +15,8 @@ raylib = { git = "https://github.com/raylib-rs/raylib-rs", version = "5.7.0" }
 gbeed-raylib-common = { path = "../raylib_common" }
 
 [features]
+# GPIO buttons on the GamePi13 header
 gamepi13 = ["gbeed-raylib-common/gamepi13"]
+# render at 2x for the fbcp based Debian deployment, which downscales a 480x480
+# framebuffer onto the 240x240 panel. Not needed when rendering to it via DRM
+fbcp = []

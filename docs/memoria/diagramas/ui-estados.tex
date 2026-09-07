@@ -1,0 +1,54 @@
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  scale=0.68, transform shape, font=\small,
+  %%%%%%%%% estados da máquina
+  estado/.style={draw, rounded corners=2mm, fill=white, align=center,
+                 minimum width=38mm, minimum height=12mm, inner sep=3pt},
+  fin/.style={draw, rounded corners=2mm, fill=black!6, align=center,
+              minimum width=26mm, minimum height=10mm, inner sep=3pt},
+  inicio/.style={circle, fill=black, minimum size=2.4mm, inner sep=0pt},
+  %%%%%%%%% relacións
+  fluxo/.style={-{Latex[length=2.4mm, width=2mm]}},
+  etiq/.style={font=\scriptsize, align=center, inner sep=2pt, fill=white}
+]
+
+%%%%%%%%% os tres menús forman un carrusel horizontal
+\node[estado] (sel)  at (-72mm,0)  {\textbf{SelectionMenu}\\ \scriptsize selección de \acrshortpl{rom}};
+\node[estado] (game) at (0,0)      {\textbf{GameMenu}\\ \scriptsize menú do xogo};
+\node[estado] (set)  at (72mm,0)   {\textbf{SettingsMenu}\\ \scriptsize axustes};
+
+%%%%%%%%% a emulación e a saída
+\node[estado] (emu)  at (0,-46mm)  {\textbf{Emulation}\\ \scriptsize execución do xogo};
+\node[fin]    (exit) at (72mm,-76mm) {\textbf{Exit}};
+
+\node[inicio] (ini) at (-108mm,0) {};
+\draw[fluxo] (ini) -- (sel.west);
+
+%%%%%%%%% navegación entre menús co pad direccional
+\draw[fluxo] ([yshift=2.5mm]sel.east) -- node[etiq, above]{\texttt{dereita}} ([yshift=2.5mm]game.west);
+\draw[fluxo] ([yshift=-2.5mm]game.west) -- node[etiq, below]{\texttt{esquerda}} ([yshift=-2.5mm]sel.east);
+\draw[fluxo] ([yshift=2.5mm]game.east) -- node[etiq, above]{\texttt{dereita}} ([yshift=2.5mm]set.west);
+\draw[fluxo] ([yshift=-2.5mm]set.west) -- node[etiq, below]{\texttt{esquerda}} ([yshift=-2.5mm]game.east);
+
+%%%%%%%%% o carrusel péchase polos extremos
+\draw[fluxo] ([xshift=-4mm]set.north) -- ++(0,10mm)
+      -- node[etiq, above]{\texttt{dereita}} ([xshift=-4mm,yshift=10mm]sel.north)
+      -- ([xshift=-4mm]sel.north);
+\draw[fluxo] ([xshift=4mm]sel.north) -- ++(0,20mm)
+      -- node[etiq, above]{\texttt{esquerda}} ([xshift=4mm,yshift=20mm]set.north)
+      -- ([xshift=4mm]set.north);
+
+%%%%%%%%% entrada e saída da emulación
+\draw[fluxo] (sel.south) |- node[etiq, pos=0.25, left]{\texttt{A}: carga a \acrshort{rom}} (emu.west);
+\draw[fluxo] (game.south) -- node[etiq, right]{\texttt{A} / \texttt{Start} / \texttt{Select}} (emu.north);
+\draw[fluxo] (emu.north west) -- ++(-14mm,0) node[etiq, pos=0.9, above]{\texttt{Esc}\\ garda a partida} |- (game.west);
+\draw[fluxo] (set.south) |- node[etiq, pos=0.25, right]{\texttt{Esc}} (emu.east);
+
+%%%%%%%%% saída do emulador
+\draw[fluxo] (set.east) -- ++(20mm,0) node[etiq, pos=0.9, above]{opción \textit{exit} + \texttt{A}} |- (exit.east);
+
+\end{tikzpicture}
+\caption{Máquina de estados da interface de estilo consola.}
+\label{fig:ui-state-machine}
+\end{figure}

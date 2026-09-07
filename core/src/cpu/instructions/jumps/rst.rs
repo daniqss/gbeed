@@ -1,7 +1,7 @@
 use crate::{
     cpu::{
         flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult},
+        instructions::{Instruction, InstructionEffect, InstructionError, InstructionResult, stack},
     },
     prelude::*,
 };
@@ -23,12 +23,8 @@ impl Instruction for Rst {
             return Err(InstructionError::MalformedInstruction);
         }
 
-        // maybe this logic should be shared with call
-        let mut sp = gb.cpu.sp.wrapping_sub(1);
-        gb.write(sp, utils::high(gb.cpu.pc.wrapping_add(1)));
-        sp = sp.wrapping_sub(1);
-        gb.write(sp, utils::low(gb.cpu.pc.wrapping_add(1)));
-        gb.cpu.sp = sp;
+        let return_addr = gb.cpu.pc.wrapping_add(1);
+        stack::push(gb, return_addr);
 
         // implicit jump to called address
         gb.cpu.pc = self.vec as u16;

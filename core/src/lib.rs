@@ -7,7 +7,7 @@ extern crate std;
 
 mod apu;
 mod cartrigde;
-pub mod controller;
+mod controller;
 mod cpu;
 mod dmg;
 mod interrupts;
@@ -17,17 +17,28 @@ mod ppu;
 pub mod prelude;
 mod serial;
 mod timer;
-pub mod utils;
+mod utils;
 
-pub use apu::{Apu, AudioPlayer, BUFFER_SIZE, DefaultAudioPlayer, SAMPLE_RATE, STEREO_BUFFER_SIZE};
-pub use cartrigde::Cartridge;
-pub use controller::{Controller, DefaultController};
-pub use cpu::{AFTER_BOOT_CPU, Cpu};
+#[doc(hidden)]
+pub use pastey::paste as __paste;
+
+// the emulator, its cartridge and every error they can produce
+pub use cartrigde::{Cartridge, CartridgeError, CartridgeHeader, CartridgeResult, Destination};
+
+pub use cartrigde::{CARTRIDGE_LOGO_END, CARTRIDGE_LOGO_START};
+pub use cpu::InstructionError;
 pub use dmg::{Dmg, DmgError};
+
+pub use apu::Apu;
+pub use cpu::{Cpu, Instructions};
 pub use interrupts::Interrupt;
-pub use joypad::Joypad;
-pub use joypad::JoypadButton;
+pub use joypad::{Joypad, JoypadButton};
 pub use memory::*;
-pub use ppu::{DefaultRenderer, Ppu, Renderer};
-pub use serial::{Serial, SerialListener};
+pub use ppu::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH, Ppu};
+pub use serial::Serial;
 pub use timer::Timer;
+
+pub use apu::{AudioPlayer, BUFFER_SIZE, SAMPLE_RATE, STEREO_BUFFER_SIZE};
+pub use controller::{Controller, DefaultController};
+pub use ppu::Renderer;
+pub use serial::SerialListener;

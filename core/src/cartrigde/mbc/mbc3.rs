@@ -1,4 +1,3 @@
-use alloc::{boxed::Box, vec, vec::Vec};
 use crate::{
     BOOT_ROM_END, BOOT_ROM_START, EXTERNAL_RAM_SIZE, EXTERNAL_RAM_START, ROM_BANK00_END, ROM_BANK00_START,
     ROM_BANKNN_END, ROM_BANKNN_SIZE, ROM_BANKNN_START,
@@ -9,6 +8,7 @@ use crate::{
     },
     prelude::*,
 };
+use alloc::{boxed::Box, vec, vec::Vec};
 
 use super::MemoryBankController;
 

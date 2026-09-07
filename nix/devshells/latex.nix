@@ -3,31 +3,29 @@
   texliveBasic,
   commonPackages,
 }: let
-  # Conxunto mínimo de TeX Live para compilar docs/memoria: só os paquetes
-  # que a memoria carrega realmente (véxase memoria_tfg.fls). Evítase
-  # texliveFull (~5,8 GiB de closure) para que os despregues sexan rápidos
-  # e reproducibles.
-  texlive = texliveBasic.withPackages (ps:
+  # basic with pkgs to avoid pulling in the full texlive version, more than 5GB
+  latexPackages = texliveBasic.withPackages (ps:
     with ps; [
-      # motor e automatización da compilación
       latexmk
       xetex
-      tools # longtable, multicol, array
+      tools
       colortbl
       graphics-def
       graphics-cfg
-      # tipografía e idiomas (xelatex + galego/inglés)
+
+      # fonts and languages
       fontspec
       polyglossia
-      hyphen-galician # sen isto o galego queda sen guionado
+      hyphen-galician
       hyphen-english
       libertine
       psnfss
-      helvetic # phv: portada
+      helvetic
       zapfding
-      # estilo do documento (estilo_tfg.sty)
+
+      # style
       appendix
-      caption # subcaption
+      caption
       datetime2
       datetime2-galician
       datetime2-english
@@ -42,16 +40,19 @@
       titlesec
       tocbibind
       xcolor
-      # bibliografía (natbib + estilo IEEEtranN) e glosarios
+
+      # biblio
       natbib
       ieeetran
       glossaries
       mfirstuc
-      # táboas, gráficos e diagramas de Gantt
+
+      # tables and graphics
       pgf
       pgfgantt
       supertabular
-      # matemáticas e utilidades varias
+
+      # maths
       amsmath
       amsfonts
       etoolbox
@@ -60,7 +61,7 @@
     ]);
 in
   mkShell {
-    buildInputs = [texlive commonPackages];
+    buildInputs = [latexPackages] ++ commonPackages;
 
     env = {
       LATEXMKOPTS = "-xelatex";

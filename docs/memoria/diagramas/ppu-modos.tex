@@ -1,0 +1,41 @@
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  scale=0.72, transform shape, font=\small,
+  %%%%%%%%% estados da máquina
+  modo/.style={draw, rounded corners=2mm, fill=white, align=center,
+               minimum width=34mm, minimum height=11mm, inner sep=3pt},
+  %%%%%%%%% relacións
+  fluxo/.style={-{Latex[length=2.4mm, width=2mm]}},
+  etiq/.style={font=\scriptsize, align=center, inner sep=2pt, fill=white}
+]
+
+\node[modo] (oam)    at (0,0)      {\textbf{Modo 2}\\ Busca en \acrshort{oam}};
+\node[modo] (draw)   at (72mm,0)   {\textbf{Modo 3}\\ Transferencia de píxeles};
+\node[modo] (hblank) at (72mm,-36mm) {\textbf{Modo 0}\\ \textit{HBlank}};
+\node[modo] (vblank) at (0,-36mm)  {\textbf{Modo 1}\\ \textit{VBlank}};
+
+%%%%%%%%% transicións
+\draw[fluxo] (oam) -- node[etiq, above]{80 \textit{dots}} (draw);
+
+\draw[fluxo] (draw) -- node[etiq, right]{172 \textit{dots}\\ debúxase a liña \texttt{ly}} (hblank);
+
+\draw[fluxo] (hblank) -- node[etiq, below, pos=0.55]
+      {204 \textit{dots}, \texttt{ly = 144}\\ \textit{VBlank} e cadro completo} (vblank);
+
+\draw[fluxo] (hblank.north west) -- node[etiq, pos=0.45]
+      {204 \textit{dots}, \texttt{ly < 144}} (oam.south east);
+
+\draw[fluxo] (vblank) -- node[etiq, left]{\texttt{ly = 154}\\ \texttt{ly = 0}} (oam);
+
+\draw[fluxo] (vblank.south west) to[out=-135, in=135, looseness=6]
+      node[etiq, below left, pos=0.5]{456 \textit{dots}\\ \texttt{ly += 1}} (vblank.west);
+
+%%%%%%%%% entrada
+\node[etiq, above=5mm of oam, fill=none] (ent) {\texttt{dots += ciclos da instrución}};
+\draw[fluxo] (ent) -- (oam);
+
+\end{tikzpicture}
+\caption{Máquina de estados dos modos da \acrshort{ppu} tal e como se implementa.}
+\label{fig:ppu-modos}
+\end{figure}

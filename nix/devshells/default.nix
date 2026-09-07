@@ -43,6 +43,7 @@ in let
     platformFeatures = lib.drmFeatures;
     platformPackages = lib.drmPackages pkgs;
   };
+
   wasm = pkgs.callPackage ./wasm.nix {inherit rustToolchain;};
   latex = pkgs.callPackage ./latex.nix {inherit commonPackages;};
 in {

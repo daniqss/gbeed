@@ -47,7 +47,7 @@ impl Noise {
         }
     }
 
-    field_bit_accessors!(target: control; TRIGGER, LENGTH_ENABLE);
+    field_bit_accessors!(pub(crate) target: control; TRIGGER, LENGTH_ENABLE);
 
     pub fn clear_registers(&mut self) {
         self.length_timer = 0;

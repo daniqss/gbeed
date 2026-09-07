@@ -1,7 +1,7 @@
 use crate::{
     cpu::{
         flags::Flags,
-        instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition},
+        instructions::{Instruction, InstructionEffect, InstructionResult, JumpCondition, stack},
     },
     prelude::*,
 };
@@ -25,13 +25,7 @@ impl Instruction for Call {
         }
 
         let return_addr = gb.cpu.pc.wrapping_add(3);
-
-        let mut sp = gb.cpu.sp.wrapping_sub(1);
-        gb.write(sp, utils::high(return_addr));
-
-        sp = sp.wrapping_sub(1);
-        gb.write(sp, utils::low(return_addr));
-        gb.cpu.sp = sp;
+        stack::push(gb, return_addr);
 
         gb.cpu.pc = self.n16;
 

@@ -1,9 +1,201 @@
-\chapter{Material adicional}
-\label{chap:adicional}
+\chapter{Manual de instalación}
+\label{chap:manual-instalacion}
 
-\lettrine{E}{xemplo} de capítulo con formato de apéndice, onde se pode
-incluír material adicional que non teña cabida no corpo principal do
-documento, suxeito á limitación de 80 páxinas establecida no
-regulamento de TFGs.
+\lettrine{E}{ste} apéndice recolle o procedemento completo para poñer en marcha a implementación de referencia
+da consola \acrshort{diy} descrita neste traballo. Ofrécense dous camiños, en función do modelo de Raspberry Pi
+que se empregue: unha imaxe de NixOS lista para gravar, recomendada e válida só para a Raspberry Pi Zero 2~W,
+e unha instalación manual sobre a imaxe de Debian do fabricante, que é a única alternativa para a Raspberry Pi Zero orixinal.
 
-\Blindtext
+
+\section{Instalación con NixOS na Raspberry Pi Zero 2 W}
+
+Esta é a vía recomendada. Todo o sistema operativo, incluído o soporte da pantalla, o audio e o propio
+emulador, vén xa configurado na imaxe, polo que non hai ningún paso de configuración posterior no dispositivo.
+
+\subsection{Obtención da imaxe}
+
+A imaxe pode descargarse xa construída dende a páxina de \textit{releases} do repositorio, co nome
+\texttt{gbeed02.img.zst}, ou construírse na propia máquina empregando a caché binaria sempre que estea dispoñible.
+Para construíla só se precisa ter Nix instalado, coa funcionalidade de \textit{flakes} habilitada:
+
+\begin{lstlisting}[language=bash]
+nix build github:daniqss/gbeed#installerImages.gbeed02
+\end{lstlisting}
+
+Como a imaxe é para a arquitectura \texttt{aarch64-linux}, a construción require unha máquina desa arquitectura
+ou, no seu defecto, emulación. Nun sistema NixOS habilítase engadindo á configuración:
+
+\begin{lstlisting}
+boot.binfmt.emulatedSystems = ["aarch64-linux"];
+\end{lstlisting}
+
+\subsection{Gravado na tarxeta}
+
+Para gravala nunha tarxeta microSD recoméndase descomprimila e gravala empregando \texttt{dd}
+seleccionando o dispositivo da tarxeta como destino:
+
+\begin{lstlisting}[language=bash]
+zstd -dc gbeed02.img.zst | sudo dd of=/dev/mmcblk0 bs=4M status=progress conv=fsync
+\end{lstlisting}
+
+O sistema arrancará o emulador directamente unha vez inserida a tarxeta, pero para poder xogar
+é necesario copiar as \acrshortpl{rom} ao dispositivo. Isto pódese facer montando a tarxeta e copiando os ficheiros á ruta \texttt{/home/gbeed/roms}.
+
+
+
+\section{Instalación manual sobre Debian na Raspberry Pi Zero}
+
+NixOS non conta con soporte para a Raspberry Pi Zero, polo que a instalación parte da imaxe de
+Raspberry Pi OS Bookworm Lite que distribúe o fabricante da pantalla, sobre a que se instalan manualmente
+o binario e a configuración descritos a continuación.
+
+\subsection{Cadea de arranque}
+
+Tras o inicio de sesión automático en \texttt{tty1} lévantase un
+servidor X no que se executa o emulador, mentres \textit{fbcp} copia continuamente o contido do
+\textit{framebuffer} principal (\texttt{fb0}) ao da pantalla \acrshort{spi} (\texttt{fb1}).
+Na táboa~\ref{tab:arranque-debian} recóllense as pezas que interveñen en cada paso.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{clp{6.2cm}}
+    \hline
+    \textbf{Paso} & \textbf{Compoñente} & \textbf{Función} \\
+    \hline
+    1 & \texttt{config.txt}      & Carga os \textit{overlays} da pantalla \acrshort{spi} e do audio por \acrshort{pwm} \\
+    2 & \texttt{getty@tty1}      & Inicio de sesión automático sen contrasinal \\
+    3 & \texttt{\textasciitilde/.bash\_profile} & Só en \texttt{tty1}: lanza \textit{fbcp} e o servidor X \\
+    4 & \texttt{\textasciitilde/.xinitrc}       & Executa o emulador dentro de X \\
+    5 & \textit{fbcp}            & Copia \texttt{fb0} a \texttt{fb1} \\
+    6 & \texttt{/etc/asound.conf} & Dirixe a saída de audio ao altofalante \\
+    \hline
+  \end{tabular}
+  \caption{Cadea de arranque da instalación sobre Debian.}
+  \label{tab:arranque-debian}
+\end{table}
+
+\subsection{Instalación do binario}
+
+O binario para \texttt{armv6l} obtense por compilación cruzada nun contedor, executando na máquina
+de desenvolvemento:
+
+\begin{lstlisting}[language=bash]
+just cross debian
+\end{lstlisting}
+
+O resultado, \texttt{gbeed-debian}, está enlazado contra glibc e co \textit{backend} X11. Unha vez
+copiado ao dispositivo, instálase nun directorio do \texttt{PATH}:
+
+\begin{lstlisting}[language=bash]
+sudo install -m 755 gbeed-debian /usr/local/bin/gbeed
+\end{lstlisting}
+
+\subsection{Configuración do sistema}
+
+Precísanse dous \textit{overlays} de \textit{device tree}, que se descargan da documentación do fabricante
+e se copian a \texttt{/boot/firmware/overlays/}:
+
+\begin{itemize}
+    \item \texttt{waveshare13}, que crea o dispositivo \texttt{/dev/fb1} correspondente á pantalla.
+    \item \texttt{audremap
+    18}, que reencamiña a saída de audio ao \acrshort{gpio}~18.
+\end{itemize}
+
+Actívanse dende \texttt{/boot/firmware/config.txt}, onde tamén se forza unha saída HDMI virtual de
+$480\times480$ píxeles, a resolución da pantalla, aínda que non haxa ningún monitor conectado:
+
+\begin{lstlisting}
+dtparam=audio=on
+dtparam=spi=on
+dtoverlay=waveshare13
+dtoverlay=audremap18
+
+# rompe fbcp/DispmanX
+# dtoverlay=vc4-kms-v3d
+
+disable_fw_kms_setup=1
+hdmi_force_hotplug=1
+hdmi_group=2
+hdmi_mode=87
+hdmi_cvt 480 480 60 6 0 0 0
+hdmi_drive=2
+\end{lstlisting}
+
+
+O inicio de sesión automático en \texttt{tty1} configúrase cun \textit{drop-in} de systemd. No directorio
+\texttt{/etc/systemd/system/getty@tty1.service.d/} colócase un ficheiro no que a primeira liña
+baleira descarta a orde orixinal da unidade antes de substituíla:
+
+\begin{lstlisting}
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin <usuario> --noclear %I $TERM
+\end{lstlisting}
+
+Xa coa sesión iniciada, \texttt{\textasciitilde/.bash\_profile} lanza o resto da pila gráfica.
+A comprobación sobre \texttt{tty1} evita que se intente arrancar X nas sesións abertas por \textit{ssh}:
+
+\begin{lstlisting}[language=bash]
+if [ "$(tty)" = "/dev/tty1" ]; then
+    export FRAMEBUFFER=/dev/fb0
+    fbcp &
+    startx
+fi
+\end{lstlisting}
+
+Finalmente, \texttt{\textasciitilde/.xinitrc} define o que se executa dentro de X. As ordes \texttt{xset}
+desactivan o apagado automático da pantalla e \texttt{exec} fai que o servidor X remate cando o faga o
+emulador:
+
+\begin{lstlisting}[language=bash]
+#!/bin/sh
+xset -dpms
+xset s off
+xset s noblank
+exec /usr/local/bin/gbeed
+\end{lstlisting}
+
+\subsection{Audio}
+
+O sistema emprega ALSA directamente, sen ningún servidor de son intermedio. Das dúas tarxetas que amosa
+\texttt{aplay -l}, a \texttt{0} é a saída HDMI, que non se usa, e a \texttt{1} é a analóxica que chega ao
+altofalante grazas ao \textit{overlay} \texttt{audremap18}. Como o emulador abre o dispositivo
+predeterminado de ALSA, hai que apuntalo a esa segunda tarxeta creando o ficheiro
+\texttt{/etc/asound.conf}:
+
+\begin{lstlisting}
+pcm.!default {
+    type plug
+    slave.pcm "hw:1,0"
+}
+ctl.!default {
+    type hw
+    card 1
+}
+\end{lstlisting}
+
+\subsection{Verificación}
+
+Ante calquera fallo, a pila pódese verificar capa por capa coas ordes da táboa~\ref{tab:verificacion-debian},
+o que permite illar en que punto da cadea de arranque está o problema. Convén ter en conta que
+\textit{fbcp} depende da librería \texttt{libbcm\_host.so.0}, do paquete \texttt{libraspberrypi0}. Se unha
+operación de \texttt{apt} a retira, a pantalla queda en negro aínda que o emulador funcione correctamente.
+
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \begin{tabular}{lp{5.2cm}p{3cm}}
+    \hline
+    \textbf{Capa} & \textbf{Orde} & \textbf{Resultado esperado} \\
+    \hline
+    Pantalla \acrshort{spi} & \texttt{cat /dev/urandom | sudo tee /dev/fb1} & ruído de cores \\
+    \textit{fbcp}           & \texttt{pgrep -a fbcp}                        & devolve un PID \\
+    \texttt{libbcm\_host}   & \texttt{ldconfig -p | grep bcm\_host}         & librería listada \\
+    Servidor X              & \texttt{pgrep -a Xorg}                        & Xorg en \texttt{:0 vt1} \\
+    Audio                   & \texttt{speaker-test -twav -l1}               & escóitase o son \\
+    \hline
+  \end{tabular}
+  \caption{Verificación por capas da instalación sobre Debian.}
+  \label{tab:verificacion-debian}
+\end{table}

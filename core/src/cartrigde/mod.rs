@@ -3,23 +3,23 @@ mod header;
 mod mbc;
 
 use crate::{
-    EXTERNAL_RAM_END, EXTERNAL_RAM_START, ROM_BANK00_SIZE, ROM_BANK00_START, ROM_BANKNN_END, ROM_BANKNN_SIZE,
-    prelude::*,
+    BOOT_ROM_SIZE, EXTERNAL_RAM_END, EXTERNAL_RAM_START, ROM_BANK00_SIZE, ROM_BANK00_START, ROM_BANKNN_END,
+    ROM_BANKNN_SIZE, prelude::*,
 };
 
 use features::CartridgeFeatures;
-use header::CartridgeHeader;
-pub use header::{RamSize, RomSize};
-use mbc::{CartridgeType, MemoryBankController, select_mbc};
+pub use header::{CartridgeHeader, Destination, RamSize, RomSize};
+use mbc::{CartridgeType, Mbc, select_mbc};
 
 /// Used for MBC1M multicart cartridge detection
 /// Used in several emulators for this purpose, considered fair use of the cartridge data
-pub const NINTENDO_LOGO: [u8; 48] = [
+pub(crate) const NINTENDO_LOGO: [u8; 48] = [
     0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00,
     0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB,
     0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E,
 ];
-mem_range!(CARTRIDGE_LOGO, 0x0104, 0x0104 + NINTENDO_LOGO.len() as u16 - 1);
+
+mem_range!(pub CARTRIDGE_LOGO, BOOT_ROM_SIZE + 4, BOOT_ROM_SIZE + 4 + NINTENDO_LOGO.len() as u16 - 1);
 
 #[derive(Debug)]
 pub enum CartridgeError {
@@ -74,7 +74,7 @@ pub type CartridgeResult<T> = core::result::Result<T, CartridgeError>;
 pub struct Cartridge {
     pub header: CartridgeHeader,
     pub features: CartridgeFeatures,
-    mbc: Box<dyn MemoryBankController>,
+    mbc: Mbc,
 }
 
 impl core::fmt::Debug for Cartridge {

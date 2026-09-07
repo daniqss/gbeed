@@ -39,6 +39,18 @@
 % \usepackage{moreverb}    % permite personalizar o entorno verbatim
   \usepackage{multirow}    % permite crear celdas que ocupan varias filas da mesma táboa
   \usepackage{pgfgantt}    % permite construir diagramas de Gantt
+  \usetikzlibrary{positioning, fit, arrows.meta, backgrounds, shapes.multipart, shapes.geometric, calc} % librerias de tikz para os diagramas UML
+
+
+% definición da linguaxe Rust para listings, tomada de https://github.com/denki/listings-rust (licenza BSD 3-Clause)
+\usepackage{listings-rust}
+\lstset{
+  basicstyle=\ttfamily\scriptsize,         % código un pouco máis compacto
+  keywordstyle=[2]\color{udcpink},         % traits
+  keywordstyle=[3]\color{udcpink},         % tipos primitivos e tipos da biblioteca
+  keywordstyle=[4]\color{udcpink},         % construtores de valores
+  keywordstyle=[5]\color{ficblue}\itshape  % macros
+}
 % \usepackage{pdfpages}    % permite insertar ficheiros en PDF no documento
 % \usepackage{rotating}    % permite diferentes tipos de rotacións para figuras e táboas
 % \usepackage{subcaption}  % permite a inclusión de varias subfiguras nunha figura
@@ -56,10 +68,15 @@
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
  \include{portada/portada}
- \dedicatoria{A meus pa pe pi po} % escribe neste comando o teu texto de dedicatoria
+ \dedicatoria{Aos meus pais} % escribe neste comando o teu texto de dedicatoria
  \paxinaenbranco
  \begin{agradecementos}
- substitúe este comando polo teu texto de agradecementos
+Quero comezar dándolle as grazas á miña familia, en especial aos meus pais, por ser un exemplo de esforzo e integridade,
+por animarme sempre a dar un paso adiante e por inspirarme a traballar duro pero mantendo a compostura.
+
+\vspace{1em}
+Tamén quero agradecer a todos os amigos que me acompañaron durante estes anos e compartiron comigo risas, desventuras e sobremesas.
+
  \end{agradecementos}
  \include{portada/resumo}
 
@@ -84,11 +101,11 @@
  \include{contido/metodoloxia}
  \include{contido/ferramentas}
  \include{contido/arquitectura}
+ %  \include{contido/demo}
  \include{contido/implementacion}
  \include{contido/validacion}
-%  \include{contido/demo}
  \include{contido/conclusions}
-
+ 
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  % Apéndices, glosarios e bibliografía  %
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

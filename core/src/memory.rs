@@ -1,43 +1,40 @@
 use crate::prelude::*;
 
 /// addressable memory size, 64KB
+#[allow(dead_code)]
 pub const ADDRESABLE_MEMORY: u16 = 0xFFFF;
 
 // in DMG, in CGB 256 + 1792, splited in two parts, with the cartridge header in the middle
-mem_range!(BOOT_ROM, 0x0000, 0x00FF);
+mem_range!(pub BOOT_ROM, 0x0000, 0x00FF);
 
 // From cartridge, usually a fixed bank
-mem_range!(ROM_BANK00, 0x0000, 0x3FFF);
+mem_range!(pub ROM_BANK00, 0x0000, 0x3FFF);
 
 // From cartridge, switchable bank via [mapper](https://gbdev.io/pandocs/MBCs.html#mbcs) (if any)
-mem_range!(ROM_BANKNN, 0x4000, 0x7FFF);
+mem_range!(pub ROM_BANKNN, 0x4000, 0x7FFF);
 
 // In CGB mode, switchable bank 0/1
-mem_range!(VRAM, 0x8000, 0x9FFF);
+mem_range!(pub VRAM, 0x8000, 0x9FFF);
 
 // From cartridge, switchable bank if any
-mem_range!(EXTERNAL_RAM, 0xA000, 0xBFFF);
+mem_range!(pub EXTERNAL_RAM, 0xA000, 0xBFFF);
 
-mem_range!(WRAM_BANK0, 0xC000, 0xCFFF);
+mem_range!(pub WRAM_BANK0, 0xC000, 0xCFFF);
 
 // In CGB mode, switchable bank 1–7
-mem_range!(WRAM_BANKN, 0xD000, 0xDFFF);
+mem_range!(pub WRAM_BANKN, 0xD000, 0xDFFF);
 
 // Nintendo says use of this area is prohibited
-mem_range!(ECHO_RAM, 0xE000, 0xFDFF);
+mem_range!(pub ECHO_RAM, 0xE000, 0xFDFF);
 
-mem_range!(OAM, 0xFE00, 0xFE9F);
+mem_range!(pub OAM, 0xFE00, 0xFE9F);
 
 // Nintendo says use of this area is prohibited
-mem_range!(NOT_USABLE, 0xFEA0, 0xFEFF);
+mem_range!(pub NOT_USABLE, 0xFEA0, 0xFEFF);
 
-mem_range!(IO_REGISTERS, 0xFF00, 0xFF7F);
+mem_range!(pub IO_REGISTERS, 0xFF00, 0xFF7F);
 
-mem_range!(HRAM, 0xFF80, 0xFFFE);
-
-pub const BOOT_REGISTER: u16 = 0xFF50;
-
-pub fn is_high_address(address: u16) -> bool { (IO_REGISTERS_START..=ADDRESABLE_MEMORY).contains(&address) }
+mem_range!(pub HRAM, 0xFF80, 0xFFFE);
 
 /// # Memory mapped trait for addressable components
 /// This trait allows to read and write from Dmg and its components, indexing it with a memory address
@@ -64,7 +61,7 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new(boot_rom: Option<Vec<u8>>) -> Memory {
+    pub(crate) fn new(boot_rom: Option<Vec<u8>>) -> Memory {
         Memory {
             boot_rom,
             ram: Box::new([0; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize]),
@@ -77,7 +74,9 @@ impl Default for Memory {
     fn default() -> Self { Memory::new(None) }
 }
 
-pub mod cgb {
+/// # CGB specific registers
+/// Not public because we just use them to avoid warning printings in cgb games
+pub(crate) mod cgb {
     pub const KEY0_SYS: u16 = 0xFF4C;
     pub const KEY1_SPD: u16 = 0xFF4D;
 

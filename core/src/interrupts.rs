@@ -20,10 +20,10 @@ pub const VBLANK_INTERRUPT: u8 = 0x01;
 pub struct Interrupt(pub u8);
 
 impl Interrupt {
-    pub fn new() -> Self { Interrupt(0) }
+    pub(crate) fn new() -> Self { Interrupt(0) }
 
     bit_accessors! {
-        target: 0;
+        pub(crate) target: 0;
 
         JOYPAD_INTERRUPT,
         SERIAL_INTERRUPT,

@@ -1,0 +1,104 @@
+\begin{figure}[htbp]
+\centering
+% \cod: texto monoespazado para o código dentro dos nodos
+\providecommand{\cod}{\footnotesize\ttfamily}
+\begin{tikzpicture}[
+  scale=0.56, transform shape, font=\small,
+  %%%%%%%%% nodos do fluxograma
+  inicio/.style={draw, rounded corners=3mm, fill=black!6, align=center,
+                 minimum width=40mm, minimum height=7mm, inner sep=3pt},
+  fin/.style={draw, rounded corners=3mm, fill=white, align=center,
+              minimum width=40mm, minimum height=7mm, inner sep=3pt},
+  proceso/.style={draw, fill=white, align=center, text width=44mm,
+                  minimum height=7mm, inner sep=3pt},
+  decision/.style={draw, diamond, aspect=2.6, fill=black!4, align=center,
+                   inner sep=2pt},
+  %%%%%%%%% relacións
+  fluxo/.style={-{Latex[length=2.4mm, width=2mm]}},
+  etiq/.style={font=\scriptsize, inner sep=1.5pt, fill=white}
+]
+
+%%%%%%%%% columna 1: entrada e Cpu::handle_interrupts
+\node[inicio] (inicio) at (0,24mm) {\texttt{Cpu::step(gb)}};
+
+\node[decision] (pendentes) at (0,-8mm)
+  {\footnotesize \texttt{IE \& IF \& 0x1F}\\ \footnotesize $\neq 0$?};
+
+\node[proceso] (despertar) at (0,-30mm) {{\cod halted = false}};
+
+\node[decision] (ime) at (0,-48mm) {\footnotesize \texttt{ime} activo?};
+
+\node[proceso] (servir) at (0,-78mm)
+  {{\cod ime = false}\\[2pt]
+   {\scriptsize servir a interrupción de maior}\\[-1pt]
+   {\scriptsize prioridade (VBlank, LCD, Timer,}\\[-1pt]
+   {\scriptsize Serial, Joypad):}\\[2pt]
+   {\cod push(pc)}\\ {\cod IF \&= !mask}\\ {\cod pc = vector}};
+
+\node[proceso] (cinco) at (0,-110mm) {{\cod cycles += 5}};
+\node[fin] (retint) at (0,-126mm) {{\cod Ok(None)}};
+
+%%%%%%%%% columna 2: fetch, decode e execución
+\node[decision] (halted) at (78mm,-62mm) {\footnotesize \texttt{halted}?};
+\node[proceso, text width=30mm] (catro) at (138mm,-62mm) {{\cod cycles += 4}};
+\node[fin, minimum width=32mm] (rethalt) at (138mm,-80mm) {{\cod Ok(None)}};
+
+\node[proceso] (fetchdec) at (78mm,-90mm)
+  {{\cod opcode = gb.read(pc)}\\
+   {\cod instruction =}\\
+   {\cod \phantom{ins}Cpu::decode(opcode)}};
+\node[fin, minimum width=46mm] (reterr) at (148mm,-90mm)
+  {{\cod Err(InstructionError)}};
+
+\node[proceso, text width=48mm] (execcyc) at (78mm,-120mm)
+  {{\cod effect = instruction}\\ {\cod \phantom{effect =} .exec(gb)}\\
+   {\cod cycles += effect.cycles}};
+
+%%%%%%%%% columna 3: actualización do estado da Cpu
+\node[proceso, text width=50mm] (pcupd) at (160mm,-120mm)
+  {{\scriptsize novo \texttt{pc} segundo \texttt{effect.len}:}\\[2pt]
+   {\scriptsize \texttt{Jump}: xa o fixou a instrución}\\[-1pt]
+   {\scriptsize \texttt{AddLen(len)}: \texttt{pc += len}}};
+
+\node[proceso, text width=50mm] (bandeiras) at (160mm,-148mm)
+  {{\cod effect.flags}\\ {\cod \phantom{effe} .apply(\&mut f)}};
+\node[fin, minimum width=50mm] (retok) at (160mm,-166mm)
+  {{\cod Ok(Some(instruction))}};
+
+%%%%%%%%% caixa de handle_interrupts
+\begin{scope}[on background layer]
+  \node[draw, dashed, fill=black!2, fit=(pendentes)(despertar)(ime)(servir),
+        inner xsep=6mm, inner ysep=8mm] (hi) {};
+\end{scope}
+\node[anchor=north west, xshift=1.5mm, yshift=-1.5mm,
+      font=\footnotesize\ttfamily] at (hi.north west) {Cpu::handle\_interrupts};
+
+%%%%%%%%% fluxo dentro de handle_interrupts
+\draw[fluxo] (inicio) -- (pendentes);
+\draw[fluxo] (pendentes) -- node[etiq, right]{si} (despertar);
+\draw[fluxo] (despertar) -- (ime);
+\draw[fluxo] (ime) -- node[etiq, right]{si} (servir);
+\draw[fluxo] (servir.south) -- node[etiq, right, pos=0.6]{\texttt{true}} (cinco.north);
+\draw[fluxo] (cinco) -- (retint);
+
+%%%%%%%%% saídas a false: continúan co paso normal
+\draw[-] (pendentes.east) -- node[etiq, above]{non} (78mm,-8mm);
+\draw[-] (ime.east) -- node[etiq, above, pos=0.4]{non} (78mm,-48mm);
+\draw[fluxo] (78mm,-8mm) -- node[etiq, right, pos=0.55]{\texttt{false}}
+      (halted.north);
+
+%%%%%%%%% continuación de step
+\draw[fluxo] (halted.east) -- node[etiq, above]{si} (catro.west);
+\draw[fluxo] (catro) -- (rethalt);
+\draw[fluxo] (halted.south) -- node[etiq, right]{non} (fetchdec.north);
+\draw[fluxo] (fetchdec.east) -- node[etiq, above, align=center]
+      {opcode\\ non usado} (reterr.west);
+\draw[fluxo] (fetchdec) -- (execcyc);
+\draw[fluxo] (execcyc.east) -- (pcupd.west);
+\draw[fluxo] (pcupd) -- (bandeiras);
+\draw[fluxo] (bandeiras) -- (retok);
+
+\end{tikzpicture}
+\caption{Fluxo de execución dun paso da \acrshort{cpu} e do manexo de interrupcións.}
+\label{fig:cpu-step}
+\end{figure}

@@ -2,6 +2,8 @@
 
 target/
 gbeed*
+# ...except the host definition, which is source
+!nix/hosts/gbeed02/
 dist/
 
 # nix symlink
@@ -12,7 +14,7 @@ roms/
 saves/
 
 perf*
-flamegraph*
+flamegraph*.svg
 *.svg
 
 mts-20240926-1737-443f6e1/

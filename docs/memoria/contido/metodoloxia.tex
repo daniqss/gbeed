@@ -1,9 +1,9 @@
 \chapter{Metodoloxía e planificación}
 \label{chap:metodoloxia}
 
-\lettrine{N}{este} capítulo describirase a metodoloxía de traballo que se decidiu seguir durante o desenvolvemento do proxecto,
+\lettrine{N}{este} capítulo descríbese a metodoloxía de traballo que se decidiu seguir durante o desenvolvemento do proxecto,
 xustificando a decisión da metodoloxía incremental e iterativa aplicada.
-Tamén se comentará a súa planificación temporal e a estimación dos custos asociados.
+Tamén se comenta a súa planificación temporal e a estimación dos custos asociados.
 
 \section{Metodoloxía de desenvolvemento}
 O desenvolvemento do emulador seguiu unha metodoloxía iterativa e incremental,
@@ -67,12 +67,12 @@ As iteracións realizadas foron as seguintes:
     \item \textbf{Primeira interface}: constrúese unha interface básica que permite visualizar
     a saída do emulador e interactuar con el,
     indispensable para probar de forma cómoda o resto de compoñentes.
-    \item \textbf{Temporizadores, mando, porto serie e interrupcións}: impleméntanse o temporizador, 
+    \item \textbf{Temporizadores, mando, transferencia serie e interrupcións}: impleméntanse o temporizador, 
     os controis, o sistema de interrupcións e o porto serie. Grazas a este último compoñente
     puidose implementar un sistema para validar de forma automatizada o emulador 
     contra varias suites de test.
     Conséguese executar os primeiros xogos sen controlador de bancos de memoria.
-    \item \textbf{Controladores de memoria}: impleméntanse os \acrfullpl{mbc}
+    \item \textbf{Controladores de bancos de memoria}: impleméntanse os \acrfullpl{mbc}
      máis empregados nos cartuchos, ampliando a compatibilidade a un gran número de xogos.
      Válidanse coas probas de \acrshort{mbc} de mooneye.
     \item \textbf{Depuración e optimización}: corríxense erros en xogos problemáticos, 
@@ -122,6 +122,7 @@ o desenvolvemento seguiu unha estrutura común dividida en catro fases:
 
 
 \section{Análise de riscos}
+\label{sec:riscos}
 O desenvolvemento do traballo estivo suxeito a diversos
 riscos capaces de comprometer a súa planificación ou os seus obxectivos.
 Nesta sección identifícanse os máis relevantes, valorando para cada un o seu impacto
@@ -147,7 +148,7 @@ Esta análise recóllese na seguinte táboa~\ref{tab:riscos}.
       & Garantir e validar tanto a compilación como a execución correcta do emulador sobre un Linux embebido nunha Raspberry Pi Zero,
       sen empregar un hardware específico para a súa presentación. \\
 
-    Incompatibilidade dos controladores da pantalla GamePi13 co backend \acrshort{drm}
+    Incompatibilidade dos controladores da pantalla GamePi13 co backend \acrfull{drm}
       & Medio / Alta
       & Recorrer ao backend X11, máis pesado pero compatible cos controladores dispoñibles,
       en lugar do backend \acrshort{drm}, máis lixeiro e moderno. \\
@@ -242,7 +243,7 @@ Slimbook Element 14" cun procesador Intel 5 120U con 10 núcleos/12 fíos e 8 GB
   Raspberry Pi Zero W                                     & 18,95 \\
   Raspberry Pi Zero 2 W                                   & 19,95 \\
   GamePi13                                                & 10,15 \\
-  Kit adaptador (HDMI--mini HDMI, USB--micro USB, GPIO)   & 4,95 \\
+  Kit adaptador (HDMI-mini HDMI, USB-micro USB, GPIO)   & 4,95 \\
   Tarxeta micro SD SanDisk Ultra 64\,GB                   & 19,99 \\\hline
   \rowcolor{udcpink!25}
   \textbf{Subtotal hardware}                                          & \textbf{933,99} \\

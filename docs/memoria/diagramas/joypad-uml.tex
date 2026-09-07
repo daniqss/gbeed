@@ -1,0 +1,58 @@
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  scale=0.6, transform shape, font=\small,
+  %%%%%%%%% struct -> clase UML
+  structm/.style={draw, fill=white, rectangle split, rectangle split parts=3,
+                  rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% enum -> enumeración UML
+  enumer/.style={draw, fill=black!4, rectangle split, rectangle split parts=2,
+                 rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% trait -> interface UML
+  trait/.style={draw, dashed, fill=black!4, rectangle split, rectangle split parts=2,
+                rectangle split part align=center, align=left, inner sep=4pt},
+  %%%%%%%%% relacións
+  depende/.style={dashed, -{Latex[open, length=2.4mm, width=2mm]}},
+  realiza/.style={dashed, -{Triangle[open, length=3mm, width=3mm]}},
+  etiq/.style={font=\scriptsize, inner sep=1.5pt, fill=white},
+  membro/.style={font=\footnotesize\ttfamily}
+]
+
+%%%%%%%%% o compoñente
+\node[structm, minimum width=64mm] (joy) at (0,0) {
+  \nodepart{one}   \texttt{Joypad}
+  \nodepart[membro]{two}
+        + input: u8\\
+        - joyp: u8\\
+        - previous\_lines: u8
+  \nodepart[membro]{three}
+        + button\_down(btn, is\_down)\\
+        \textasciitilde{} step(interrupt)\\
+        - lines()\\
+        + read(address) / write(address, value)
+};
+
+%%%%%%%%% os botóns
+\node[enumer, minimum width=34mm] (btn) at (-62mm,-46mm) {
+  \nodepart{one}  \scriptsize$\ll$enum$\gg$\\[1pt] \texttt{JoypadButton}
+  \nodepart[membro]{two}
+        Right / Left / Up / Down\\
+        A / B / Select / Start
+};
+
+%%%%%%%%% direccionamento
+\node[trait, minimum width=42mm] (acc) at (58mm,-46mm) {
+  \nodepart{one}  \scriptsize$\ll$trait$\gg$\\[1pt] \texttt{Accessible<u16>}
+  \nodepart[membro]{two}
+        + read(address)\\
+        + write(address, value)
+};
+
+%%%%%%%%% relacións
+\draw[depende] (joy.south west) -- node[etiq, above, pos=0.55]{$\ll$emprega$\gg$} (btn.north east);
+\draw[realiza] (joy.south east) -- node[etiq, above, pos=0.55]{implementa} (acc.north west);
+
+\end{tikzpicture}
+\caption{Estrutura do mando e da súa relación co espazo de direccións.}
+\label{fig:joypad-uml}
+\end{figure}
