@@ -16,11 +16,6 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            extra-substituters = https://nixos-raspberrypi.cachix.org
-            extra-trusted-public-keys = nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
-            connect-timeout = 5
 
       - name: Build SD image
         run: nix build .#installerImages.gbeed02 --print-build-logs

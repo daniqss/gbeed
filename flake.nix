@@ -1,16 +1,12 @@
 {
   description = "DMG Game Boy Emulator for embedded devices";
 
-  nixConfig = {
-    extra-substituters = ["https://nixos-raspberrypi.cachix.org"];
-    extra-trusted-public-keys = ["nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI="];
-    connect-timeout = 5;
-  };
-
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fenix.url = "github:nix-community/fenix/monthly";
-    nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi";
+
+    # used in rpi02 with gamepi13 image, that this flake builds
+    nixpkgs-pi.url = "github:nixos/nixpkgs/nixos-25.11";
   };
 
   outputs = inputs @ {
@@ -25,6 +21,8 @@
       (system: f system (import nixpkgs {inherit system;}));
   in {
     lib = import ./nix/lib {inherit inputs outputs;};
+
+    overlays = import ./nix/overlays {inherit inputs outputs;};
 
     packages = eachSystem (system: pkgs: import ./nix/packages {inherit inputs outputs system pkgs;});
     devShells = eachSystem (system: pkgs: import ./nix/devshells {inherit inputs outputs system pkgs;});

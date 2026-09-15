@@ -1,0 +1,57 @@
+/*
+ * gamepi13 st7789v panel on spi0, driven by panel-mipi-dbi with the initialisation
+ * blob built in `nix/packages/gamepi13/panel.nix`.
+*/
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2837";
+
+	/* the panel takes chip select 0, spidev cannot keep it */
+	fragment@0 {
+		target = <&spidev0>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@1 {
+		target = <&spi0>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			/* the driver loads `panel.bin` from the first compatible string */
+			panel@0 {
+				compatible = "panel", "panel-mipi-dbi-spi";
+				reg = <0>;
+
+				spi-max-frequency = <96000000>;
+				spi-cpha;
+				spi-cpol;
+				write-only;
+
+				reset-gpios = <&gpio 27 0>;
+				dc-gpios = <&gpio 25 0>;
+
+				width-mm = <23>;
+				height-mm = <23>;
+
+				panel-timing {
+					hactive = <240>;
+					vactive = <240>;
+					hback-porch = <0>;
+					vback-porch = <0>;
+					hfront-porch = <0>;
+					vfront-porch = <0>;
+					hsync-len = <0>;
+					vsync-len = <0>;
+					clock-frequency = <0>;
+				};
+			};
+		};
+	};
+};

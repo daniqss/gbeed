@@ -1,5 +1,4 @@
 # ST7789V initialisation sequence for the gamepi13 consumed by the kernel's panel-mipi-dbi driver
-# `panel-mipi-dbi` is a generic driver.
 # it knows how to push pixels over SPI but need us to tell it how to deal with the specific display.
 {
   name = "panel";

@@ -3,19 +3,14 @@
   outputs,
   ...
 }: {
-  gbeed02 = inputs.nixos-raspberrypi.lib.nixosSystemFull {
-    # who this host is, shared by every module below instead of being repeated
-    # in each of them
-    specialArgs =
-      inputs
-      // {
-        inherit outputs;
-        hostname = "gbeed02";
-        username = "gbeed";
-        system = "aarch64-linux";
-      };
+  gbeed02 = inputs.nixpkgs-pi.lib.nixosSystem {
+    specialArgs = {
+      inherit inputs outputs;
+      hostname = "gbeed02";
+      username = "gbeed";
+    };
     modules = [
-      inputs.nixos-raspberrypi.nixosModules.sd-image
+      "${inputs.nixpkgs-pi}/nixos/modules/installer/sd-card/sd-image-aarch64.nix"
       ./gbeed02/configuration.nix
       ./gbeed02/hardware-configuration.nix
     ];
