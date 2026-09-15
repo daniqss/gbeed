@@ -1,0 +1,11 @@
+default: build
+
+build:
+    latexmk -xelatex -interaction=nonstopmode -halt-on-error -file-line-error defensa_tfg.tex < /dev/null
+
+view: build
+    xdg-open defensa_tfg.pdf
+
+clean:
+    rm -f *.aux *.fdb_latexmk *.fls *.log *.nav *.out *.pdf *.snm *.toc *.vrb *.xdv
+    rm -f contido/*.aux portada/*.aux

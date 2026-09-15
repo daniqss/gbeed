@@ -1,6 +1,7 @@
 default: run
 
 mod memoria 'docs/memoria'
+mod defensa 'docs/defensa'
 mod web 'frontends/debugger/static/web.just'
 mod cross 'cross/cross.just'
 
@@ -24,6 +25,7 @@ clean:
     cargo clean
     just web clean
     just memoria clean
+    just defensa clean
 
 fetch-test-roms:
     #!/usr/bin/env bash

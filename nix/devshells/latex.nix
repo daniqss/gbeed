@@ -25,6 +25,8 @@
 
       # style
       appendix
+      beamer
+      translator
       caption
       datetime2
       datetime2-galician

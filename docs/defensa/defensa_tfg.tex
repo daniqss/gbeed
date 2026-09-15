@@ -1,0 +1,61 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[11pt,aspectratio=169]{beamer}
+
+\def\lingua{gal}
+
+\def\nome{Queijo Seoane, Daniel}
+\def\nomedirectorA{Padrón González, Emilio José}
+\def\nomedirectorB{Vázquez Araújo, Francisco Javier}
+
+\def\titulo{Emulador de GameBoy para sistemas embebidos}
+\def\titulocurto{Emulador de GameBoy para sistemas embebidos}
+\def\titulacion{gei}
+\def\mencion{ENXEÑARÍA DE COMPUTADORES}
+
+\usepackage{estilo_defensa}
+
+
+% \usepackage{booktabs}
+% \usepackage{multirow}
+% \usepackage{pgfgantt}
+\usetikzlibrary{positioning, fit, arrows.meta, backgrounds, shapes.multipart, shapes.geometric, calc}
+
+% definición da linguaxe Rust para listings, tomada de https://github.com/denki/listings-rust (licenza BSD 3-Clause)
+\usepackage{listings-rust}
+\lstset{
+  keywordstyle=[2]\color{udcpink},
+  keywordstyle=[3]\color{udcpink},
+  keywordstyle=[4]\color{udcpink},
+  keywordstyle=[5]\color{ficblue}\itshape
+}
+
+%%% METADATOS DA PRESENTACIÓN %%%
+\title[\titulocurto]{\titulo}
+\author[\nome]{\nome}
+\date{\datasimple}
+\titlegraphic{}
+
+
+\begin{document}
+
+
+
+ \input{portada/portada}
+
+ \begin{frame}{\nomeindice}
+   \tableofcontents
+ \end{frame}
+
+ \input{contido/introducion}
+ \input{contido/arquitectura}
+ \input{contido/implementacion}
+ \input{contido/validacion}
+ \input{contido/conclusions}
+
+
+ \input{contido/peche}
+ \input{contido/extra}
+
+\end{document}
+
