@@ -2,7 +2,7 @@
 macro_rules! impl_cyclic_enum {
     ($name:ident, [$($variant:expr),+ $(,)?]) => {
         impl $name {
-            pub const ALL: [$name; [$(impl_cyclic_enum!(@replace $variant)),+].len()] = [
+            pub const ALL: &[$name] = &[
                 $($variant),+
             ];
 
@@ -24,6 +24,4 @@ macro_rules! impl_cyclic_enum {
             }
         }
     };
-
-    (@replace $variant:expr) => { () };
 }

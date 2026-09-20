@@ -164,6 +164,8 @@ impl SettingsMenuState {
     }
 
     #[allow(clippy::too_many_arguments)]
+    // the gamepi13 has no fps or debug overlay options, so their values go unread
+    #[cfg_attr(feature = "gamepi13", allow(unused_variables))]
     pub fn draw(
         &self,
         d: &mut RaylibDrawHandle,

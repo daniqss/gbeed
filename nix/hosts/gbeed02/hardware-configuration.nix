@@ -33,6 +33,8 @@
     };
 
     swraid.enable = lib.mkForce false;
+
+    supportedFilesystems.zfs = lib.mkForce false;
   };
 
   hardware = {
