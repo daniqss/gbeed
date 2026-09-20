@@ -80,31 +80,31 @@ On first boot, the system starts directly into `gbeed`. ROMs should be placed at
 If more build customization is wanted, cloning the repository, modifying [the `gbeed02` host configuration](./nix/hosts/gbeed02) and building the `installerImage` target will produce a custom image. The board setup (Raspberry Pi kernel, U-Boot and extlinux) is adapted from [nixos-pi-zero-2](https://github.com/plmercereau/nixos-pi-zero-2), and the GamePi13 panel and speaker are wired on top of it as device tree overlays in [`nix/hosts/gbeed02/dts`](./nix/hosts/gbeed02/dts).
 
 ### How to build for armv6l Debian Linux
-A Debian Bookworm build is also available, using native cross-compilation (no qemu emulation) via the provided `Dockerfile.cross.debian`. This is significantly faster than the Alpine build, producing a binary linked against glibc instead of musl.
+A Debian Bookworm build is also available, using native cross-compilation (no qemu emulation) via the provided [`cross/Dockerfile.cross.debian`](./cross/Dockerfile.cross.debian). This is significantly faster than the Alpine build, producing a binary linked against glibc instead of musl.
 
 You can easily do this with `just`:
 ```sh
-just cross-build-debian
+just cross debian
 ```
 
 This will:
 1. Build the project inside a Debian Bookworm container using the `arm-unknown-linux-gnueabihf` Rust target.
-2. Extract the resulting binary as `./gbeed`.
+2. Extract the resulting binary as `./gbeed-debian`.
 
 To use this binary on a Raspberry Pi Zero with the gamepi13 you must manually configure the device, install the required libraries and copy the binary to the device. The complete process is documented in [here](./docs/debian-gamepi13.md).
 
 ### How to build for armv6l Alpine Linux
-The easiest way to build the project for armv6l is through cross-compilation on x86_64/aarch64. This is done via a podman or docker container and qemu using the provided `Dockerfile.cross.alpine`. This provides a fully isolated build environment.
+The easiest way to build the project for armv6l is through cross-compilation on x86_64/aarch64. This is done via a podman or docker container and qemu using the provided [`cross/Dockerfile.cross.alpine`](./cross/Dockerfile.cross.alpine). This provides a fully isolated build environment.
 
 You can easily do this with `just`:
 ```sh
-just cross-build-alpine
+just cross alpine
 ```
 
 This will:
 1. Install the `arm` binfmt if needed.
 2. Build the project inside an `arm32v6/alpine` container.
-3. Extract the resulting binary as `./gbeed`.
+3. Extract the resulting binary as `./gbeed-alpine`.
 
 
 ## Tests

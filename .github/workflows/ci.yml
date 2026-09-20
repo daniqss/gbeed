@@ -3,8 +3,26 @@ name: CI
 on:
   push:
     branches: [ main ]
+  pull_request:
+  # let the release workflow run these same checks on the tagged commit
+  workflow_call:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-25.11
+
+      - name: Check formatting and clippy
+        run: |
+          nix develop .#x11 --command -- just lint-check
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -15,7 +33,7 @@ jobs:
         uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-25.11
-          
+
       - name: Run tests
         run: |
           nix develop .#x11 --command -- just test --workspace

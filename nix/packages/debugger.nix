@@ -53,7 +53,7 @@ in
       inherit description;
       homepage = repository;
       mainProgram = name;
-      license = licenses.gpl2;
+      license = licenses.gpl2Only;
       platforms = platforms.linux;
     };
   }

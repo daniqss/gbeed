@@ -3,12 +3,17 @@ name: Release SD image
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   release:
+    needs: ci
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout repository
