@@ -17,7 +17,9 @@ pub enum SettingsOption {
     ColorPalette,
     SpeedUpMode,
     SpeedUpMultiplier,
+    #[cfg(not(feature = "gamepi13"))]
     TargetedFps,
+    #[cfg(not(feature = "gamepi13"))]
     DrawDebugInfo,
     Exit,
 }
@@ -30,7 +32,9 @@ impl_cyclic_enum!(
         ColorPalette,
         SpeedUpMode,
         SpeedUpMultiplier,
+        #[cfg(not(feature = "gamepi13"))]
         TargetedFps,
+        #[cfg(not(feature = "gamepi13"))]
         DrawDebugInfo,
         Exit
     ]
@@ -42,7 +46,9 @@ impl SettingsOption {
             ColorPalette => "Color Palette",
             SpeedUpMode => "Speed Up Mode",
             SpeedUpMultiplier => "Speed Up Multiplier",
+            #[cfg(not(feature = "gamepi13"))]
             TargetedFps => "Targeted FPS",
+            #[cfg(not(feature = "gamepi13"))]
             DrawDebugInfo => "Draw Debug Info",
             Exit => "Exit",
         }
@@ -126,6 +132,7 @@ impl SettingsMenuState {
                 }
             }
 
+            #[cfg(not(feature = "gamepi13"))]
             TargetedFps => {
                 if self.input.is_pressed_a() {
                     controller.targeted_fps = controller.targeted_fps.next();
@@ -137,6 +144,7 @@ impl SettingsMenuState {
                 }
             }
 
+            #[cfg(not(feature = "gamepi13"))]
             DrawDebugInfo => {
                 if self.input.is_pressed_a() || self.input.is_pressed_b() {
                     controller.draw_debug_info = !controller.draw_debug_info;
@@ -180,13 +188,19 @@ impl SettingsMenuState {
                         SpeedUpMultiplier::Double => "2x",
                         SpeedUpMultiplier::Cuadruple => "4x",
                     },
+
+                    #[cfg(not(feature = "gamepi13"))]
                     TargetedFps => match targeted_fps {
                         TargetedFps::Target30 => "30",
                         TargetedFps::Target60 => "60",
                         TargetedFps::Unlimited => "Unlimited",
                     },
-                    DrawDebugInfo if draw_debug_info => "On",
-                    DrawDebugInfo => "Off",
+
+                    #[cfg(not(feature = "gamepi13"))]
+                    DrawDebugInfo => match draw_debug_info {
+                        true => "On",
+                        false => "Off",
+                    },
 
                     Exit => "",
                 };

@@ -243,12 +243,12 @@ mod gpio {
                 down: pins.down.is_low(),
                 left: pins.left.is_low(),
                 right: pins.right.is_low(),
-                a: pins.a.is_low(),
-                b: pins.b.is_low(),
+                a: pins.a.is_low() || pins.y.is_low(),
+                b: pins.b.is_low() || pins.x.is_low(),
                 start: pins.start.is_low(),
                 select: pins.select.is_low(),
-                escape: pins.x.is_low() || pins.y.is_low(),
-                speed_up: pins.l.is_low() || pins.r.is_low(),
+                escape: pins.l.is_low(),
+                speed_up: pins.r.is_low(),
             }
         }
     }

@@ -33,12 +33,21 @@ impl SpeedUpMultiplier {
 }
 
 #[repr(u8)]
-#[derive(Debug, Default, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum TargetedFps {
     Target30 = 30,
-    #[default]
     Target60 = 60,
     Unlimited = 0,
+}
+
+impl Default for TargetedFps {
+    fn default() -> Self {
+        if cfg!(feature = "gamepi13") {
+            Target30
+        } else {
+            Target60
+        }
+    }
 }
 
 use TargetedFps::*;
