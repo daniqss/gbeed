@@ -1,0 +1,52 @@
+\section{Conclusións e traballo futuro}
+
+\begin{frame}{Obxectivos cumpridos}
+  \small
+  \begin{columns}[t]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Emulación validada}
+        Núcleo completo do \textsc{dmg}-01, validado contra as suites de
+        referencia e cos xogos máis vendidos do catálogo.
+      \end{block}
+      \begin{block}{Núcleo reutilizable}
+        Librería \texttt{no\_std}, sen dependencias e independente de calquera
+        librería gráfica, con dúas vistas de referencia sobre ela.
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Execución en recursos limitados}
+        Velocidade real na familia Raspberry Pi Zero grazas ás optimizacións conseguidas tras o perfilado.
+      \end{block}
+      \begin{block}{Consola \textsc{diy} documentada}
+        Construción de referencia sobre hardware accesible, cunha imaxe de
+        sistema reproducible e distribuída baixo \textsc{gpl}v2.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Liñas de traballo futuro}
+  \small
+  \begin{columns}[t]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item \destacado{Game Boy Color}: gran aumento de catálogo con gran parte do traballo previo aproveitable.
+        
+        \item \destacado{Precisión}: execución ciclo a ciclo na \textsc{cpu} e
+        \textit{FIFO fetcher} opcional na \textsc{ppu}.
+
+        \item \destacado{Rendemento}: compilación (\textit{JIT}) dos bloques de código máis empregados.
+
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item \destacado{Portabilidade}: unha interface como librería de C
+        para consumila dende outras linguaxes.
+
+        \item \destacado{Experiencia de usuario}: unha carcasa 3D para a
+        construción de referencia e unha web de documentación fóra do repositorio de Github.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}

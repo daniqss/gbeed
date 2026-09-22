@@ -1,0 +1,55 @@
+\section{Metodoloxía e planificación}
+
+\begin{frame}{Desenvolvemento iterativo e incremental}
+  \begin{columns}[c]
+    \begin{column}{0.42\textwidth}
+      \small
+      \begin{itemize}
+        \item Once iteracións, onde a maioría corresponde cun
+        compoñente do hardware da Game Boy.
+
+        \item A orde vén imposta polo acoplamento do hardware.
+
+        \item O desenvolvemento dos compoñenetes segue unha estrutura de estudo da arquitectura, implementación
+          e validación.
+
+        \item Git e GitHub, empregando \textit{conventional commits} e \textit{conventional branch}
+        para manter un historial de cambios limpo.
+
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.56\textwidth}
+      \begin{center}
+      \begin{ganttchart}[
+          hgrid, vgrid,
+          x unit=0.38cm,
+          y unit title=0.40cm,
+          y unit chart=0.32cm,
+          title height=1,
+          title label font=\tiny\bfseries,
+          bar/.style={fill=udcpink!75, draw=udcpink!90},
+          bar height=0.62,
+          bar label font=\tiny,
+        ]{1}{18}
+        \gantttitle{2025}{6}\gantttitle{2026}{12} \\
+        \gantttitle{O}{2}\gantttitle{N}{2}\gantttitle{D}{2}
+        \gantttitle{X}{2}\gantttitle{F}{2}\gantttitle{M}{2}
+        \gantttitle{A}{2}\gantttitle{M}{2}\gantttitle{X}{2} \\
+        \ganttbar{It. 1}{1}{1} \\
+        \ganttbar{It. 2}{1}{2} \\
+        \ganttbar{It. 3}{2}{5} \\
+        \ganttbar{It. 4}{4}{6}\ganttbar{It. 4}{9}{9} \\
+        \ganttbar{It. 5}{3}{6} \\
+        \ganttbar{It. 6}{9}{10} \\
+        \ganttbar{It. 7}{10}{11} \\
+        \ganttbar{It. 8}{11}{13} \\
+        \ganttbar{It. 9}{12}{13} \\
+        \ganttbar{It. 10}{14}{15} \\
+        \ganttbar{It. 11}{15}{16} \\
+        \ganttbar[bar/.append style={fill=udcgray!50, draw=udcgray}]{Doc.}{15}{18}
+      \end{ganttchart}\\[0.4em]
+      \fonte{Diagrama de Gantt do proxecto.}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}

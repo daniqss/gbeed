@@ -1,0 +1,119 @@
+\section{Desenvolvemento}
+
+\begin{frame}{Arquitectura do hardware}
+  \begin{columns}[c]
+    \begin{column}{0.44\textwidth}
+      \small
+      \begin{itemize}
+
+        \item Case todos os compoñentes están integrados nun único \textsc{SoC}, o Sharp SM83,
+        
+        \item Bus de datos de 8 bits e de direccións de 16 con \destacado{64\,KiB}
+        de espazo direccionable.
+        
+        \item Ten E/S está mapeada en memoria, cada rexistro ou memoria ten o seu
+        espazo reservado no mapa de memoria.
+
+        \item O cartucho ademais de almacenar o xogo na \textsc{ROM} contén máis hardware para 
+        ampliar as capacidades da consola.
+      
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.54\textwidth}
+      \imaxe[\textwidth]{imaxes/arch_diagram.png}{Arquitectura da Game Boy \textnormal{(Copetti)}}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[plain,noframenumbering]
+  \begin{center}
+    \includegraphics[width=0.90\textwidth,height=0.74\textheight,keepaspectratio]{imaxes/motherboard_marked.png}\\[0.35em]
+    \fonte{Placa base da \textsc{dmg}.}
+  \end{center}
+\end{frame}
+
+\begin{frame}[plain,noframenumbering]
+  \begin{center}
+    \includegraphics[width=0.90\textwidth,height=0.74\textheight,keepaspectratio]{imaxes/memory_map.png}\\[0.35em]
+    \fonte{Mapa de memoria da consola.}
+  \end{center}
+\end{frame}
+
+
+
+
+\begin{frame}{Núcleo de emulación independente da plataforma}
+  \begin{columns}[c]
+    \begin{column}{0.42\textwidth}
+      \small
+      \begin{itemize}
+
+        \item \destacado{Precisión}: acádase a precisión requerida para xogar aos xogos principais do catálogo sen problema.
+
+        \item \destacado{Portabilidade}: sen dependencias en tempo de execución.
+        Os clientes son os encargados de manexar librerías e plataformas concretas.
+
+        \item \destacado{Rendemento}: o bucle quente debe permanecer libre de chamadas ao sistema e reservas de memoria e
+        empréganse resolución estática e monomorfización en vez de chamadas virtuais. 
+      
+        \end{itemize}
+    \end{column}
+    \begin{column}{0.56\textwidth}
+  \begin{center}
+        \resizebox{!}{0.66\textheight}{\input{diagramas/arquitectura-uml}}\\[0.35em]
+        \fonte{Resumo dos \textit{crates} do emulador.}
+  \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{O núcleo delega na implementación do cliente}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+\begin{lstlisting}[language=Rust,basicstyle=\ttfamily\footnotesize,breaklines=false]
+pub fn run<C: Controller>(
+    &mut self, controller: &mut C,
+) -> Result<(), DmgError> {
+    while self.cpu.cycles < 17556 {
+        self.step(controller)?;
+    }
+
+    self.cpu.cycles = 0;
+    controller.flush_buffer();
+
+    Ok(())
+}
+\end{lstlisting}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item O núcleo avanza un cadro completo sen saber nada de quen o
+        consome: só pide un \texttt{Controller}.
+
+        \item \texttt{run} e \texttt{step} reciben un \destacado{parámetro
+        xenérico}, non un obxecto que implementa o \textit{trait} \texttt{dyn Controller}.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{\texttt{Controller} para introducir comportamentos}
+\begin{lstlisting}[language=Rust,basicstyle=\ttfamily\fontsize{9.6pt}{10.9pt}\selectfont,breaklines=false]
+pub trait Renderer {
+    fn write_pixel(&mut self, x: usize, y: usize,
+                   palette: u8, color_id: u8);
+    fn update_screen(&mut self, ppu: &Ppu);
+}
+
+pub trait SerialListener {
+    fn on_transfer(&mut self, data: u8);
+}
+
+pub trait AudioPlayer {
+    fn push_sample(&mut self, left: i16, right: i16);
+}
+
+pub trait Controller:
+    SerialListener + Renderer + AudioPlayer {}
+\end{lstlisting}
+\end{frame}

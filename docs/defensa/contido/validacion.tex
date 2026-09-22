@@ -1,0 +1,46 @@
+\section{Probas e validación}
+
+\begin{frame}{Tres niveis de validación}
+  \begin{columns}[c]
+    \begin{column}{0.56\textwidth}
+      \footnotesize
+      \begin{itemize}
+        \item \destacado{Probas unitarias} sobre as instrucións máis complexas
+        da \textsc{cpu}.
+
+        \item \destacado{Suites de referencia da comunidade}, validadas en hardware real:
+          \begin{itemize}
+            \item \texttt{blargg}: \texttt{cpu\_instrs}, \texttt{instr\_timing} e \texttt{dmg\_sound}.
+            \item \texttt{mooneye}: controladores de bancos de memoria.
+            \item \texttt{dmg-acid2}: a unidade gráfica.
+          \end{itemize}
+
+        \item \destacado{Xogos comerciais}: probáronse os máis destacados da plataforma.
+
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \imaxe[0.9\textwidth]{imaxes/dmg_acid2.png}{Proba dmg-acid2 superada.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Validación con xogos comerciais}
+  \begin{center}
+    {\footnotesize
+    \rowcolors{2}{white}{udcgray!20}%
+    \begin{tabular}{l|l|c|c|l}
+      \rowcolor{udcpink!25}
+      \textbf{Xogo} & \textbf{Cartucho} & \textbf{\textsc{rom}} & \textbf{\textsc{ram}} & \textbf{Estado} \\\hline
+      Pokémon Red        & MBC3 + \textsc{ram} + batería                  & 1\,MiB   & 32\,KiB & Xogable \\
+      Tetris             & Sen controlador                                 & 32\,KiB  & ---     & Xogable \\
+      Pokémon Gold       & MBC3 + \textsc{rtc} + \textsc{ram} + batería    & 2\,MiB   & 32\,KiB & Xogable \\
+      Pokémon Crystal    & MBC3 + \textsc{rtc} + \textsc{ram} + batería    & 2\,MiB   & 32\,KiB & Non compatible \\
+      Super Mario Land   & MBC1                                            & 64\,KiB  & ---     & Xogable \\
+      Super Mario Land 2 & MBC1 + \textsc{ram} + batería                   & 512\,KiB & 8\,KiB  & Xogable \\
+      Pokémon Pinball    & MBC5 + vibración + \textsc{ram} + batería       & 1\,MiB   & 8\,KiB  & Xogable \\
+      Link's Awakening   & MBC1 + \textsc{ram} + batería                   & 512\,KiB & 8\,KiB  & Xogable \\
+    \end{tabular}}\\[0.4em]
+    \fonte{Os xogos máis vendidos do catálogo, escollidos para cubrir todos os tipos de cartucho implementados.}
+  \end{center}
+\end{frame}

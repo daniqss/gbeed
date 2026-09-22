@@ -1,0 +1,224 @@
+\ProvidesPackage{estilo_defensa}
+\typeout{=============== Estilo LaTeX para defensas de TFG GEI FIC ===============}
+
+
+\RequirePackage[table]{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{polyglossia}
+\RequirePackage{ifthen}
+\RequirePackage{tikz}
+
+
+\ifdefined\lingua
+  \message{Estilo defensa: elixiuse como lingua da presentacion: \lingua}
+\else
+  \message{Estilo defensa warning: non se elixiu lingua para a presentacion (fallback: galego)}
+  \def\lingua{gal}
+\fi
+\ifthenelse{\equal{\lingua}{gal}}{%
+  \message{Estilo defensa: cargando definicións para galego}
+  \setdefaultlanguage{galician}
+  \setotherlanguage{english}
+  \def\nomeindice{Índice}
+  \def\nomedirixe{Dirección}
+  \def\nomeestudante{Estudante}
+  \def\nometfg{TRABALLO FIN DE GRAO}
+}{%
+\ifthenelse{\equal{\lingua}{esp}}{%
+  \message{Estilo defensa: cargando definicións para español}
+  \setdefaultlanguage{spanish}
+  \setotherlanguage{english}
+  \def\nomeindice{Índice}
+  \def\nomedirixe{Dirección}
+  \def\nomeestudante{Estudiante}
+  \def\nometfg{TRABAJO FIN DE GRADO}
+}{%
+\ifthenelse{\equal{\lingua}{eng}}{%
+  \message{Estilo defensa: cargando definicións para inglés}
+  \setdefaultlanguage{english}
+  \setotherlanguage{galician}
+  \def\nomeindice{Outline}
+  \def\nomedirixe{Supervision}
+  \def\nomeestudante{Student}
+  \def\nometfg{BACHELOR'S DEGREE FINAL PROJECT}
+}{%
+  \message{Estilo defensa warning: non se detectou correctamente a lingua (fallback: galego)}
+}}}
+
+
+\ifdefined\titulacion
+  \message{Estilo defensa: elixiuse como titulación: \titulacion}
+\else
+  \message{Estilo defensa warning: non se elixiu titulación (fallback: Grao en Enxeñaría Informática)}
+  \def\titulacion{gei}
+\fi
+
+\ifthenelse{\equal{\titulacion}{gei}}{
+  \def\nometitulacion{GRAO EN ENXEÑARÍA INFORMÁTICA}
+  \def\nomemencion{MENCIÓN EN \mencion}
+  \def\carimbo{\includegraphics[height=1.35cm]{imaxes/euro_inf_seal_bachelor_light background}}
+  \ifdefined\mencion
+    \message{Estilo defensa: elixiuse como mención: \mencion}
+  \else
+    \message{Estilo defensa warning: non se elixiu mención, a compilación fallará}
+  \fi
+}{
+  \def\nometitulacion{GRAO EN CIENCIA E ENXEÑARÍA DE DATOS}
+  \def\nomemencion{\mbox{}}
+  \def\carimbo{\mbox{}}
+}
+
+
+\usepackage{libertine}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{multicol}
+\usepackage[galician,calc]{datetime2}
+\usepackage{url}
+
+\usepackage{silence}
+\WarningsOff[polyglossia]
+
+
+\definecolor{udcpink}{RGB}{177,0,114}
+\definecolor{udcgray}{RGB}{100,100,100}
+\definecolor{ficblue}{RGB}{50,110,118}
+
+
+\usetheme{default}
+\usecolortheme{default}
+\usefonttheme{professionalfonts}
+\setbeamertemplate{navigation symbols}{}
+
+\setbeamercolor{normal text}{fg=black!87}
+\setbeamercolor{structure}{fg=ficblue}
+\setbeamercolor{title}{fg=ficblue}
+\setbeamercolor{subtitle}{fg=udcgray}
+\setbeamercolor{author}{fg=black!87}
+\setbeamercolor{date}{fg=udcgray}
+\setbeamercolor{frametitle}{fg=ficblue,bg=}
+\setbeamercolor{framesubtitle}{fg=udcgray}
+\setbeamercolor{alerted text}{fg=udcpink}
+\setbeamercolor{section in toc}{fg=ficblue}
+\setbeamercolor{subsection in toc}{fg=udcgray}
+\setbeamercolor{itemize item}{fg=udcpink}
+\setbeamercolor{itemize subitem}{fg=ficblue}
+\setbeamercolor{itemize subsubitem}{fg=udcgray}
+\setbeamercolor{enumerate item}{fg=udcpink}
+\setbeamercolor{caption name}{fg=udcpink}
+\setbeamercolor{block title}{fg=white,bg=ficblue}
+\setbeamercolor{block body}{fg=black!87,bg=ficblue!8}
+\setbeamercolor{block title alerted}{fg=white,bg=udcpink}
+\setbeamercolor{block body alerted}{fg=black!87,bg=udcpink!8}
+
+\setbeamerfont{title}{series=\bfseries,size=\LARGE}
+\setbeamerfont{frametitle}{series=\bfseries,size=\Large}
+\setbeamerfont{framesubtitle}{series=\mdseries,size=\small}
+\setbeamerfont{caption}{size=\footnotesize}
+\setbeamerfont{block title}{series=\bfseries,size=\normalsize}
+
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{enumerate items}[default]
+\setbeamertemplate{blocks}[rounded][shadow=false]
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{section in toc}[sections numbered]
+
+
+\newlength{\beamermargin}
+\setlength{\beamermargin}{0.9cm}
+\newcommand{\bigrule}{{\color{udcpink}\rule{\dimexpr\paperwidth-2\beamermargin\relax}{0.5mm}}}
+\setbeamersize{text margin left=\beamermargin, text margin right=\beamermargin}
+
+\setbeamertemplate{frametitle}{%
+  \vspace*{0.55cm}%
+  \begin{beamercolorbox}[wd=\paperwidth,leftskip=\beamermargin,rightskip=\beamermargin]{frametitle}%
+    \usebeamerfont{frametitle}\insertframetitle\strut\par
+    \ifx\insertframesubtitle\@empty\else%
+      \vspace{0.1em}{\usebeamerfont{framesubtitle}\usebeamercolor[fg]{framesubtitle}\insertframesubtitle\strut\par}%
+    \fi
+    \nointerlineskip\vspace{0.3em}\bigrule\par
+  \end{beamercolorbox}%
+  \vspace*{0.2cm}%
+}
+
+
+\ifdefined\titulocurto\else\def\titulocurto{\titulo}\fi
+
+\setbeamertemplate{footline}{%
+  \hbox{%
+    \begin{beamercolorbox}[wd=\paperwidth,ht=2.4ex,dp=1.2ex,right,rightskip=\beamermargin]{}%
+      {\scriptsize\color{udcpink}\bfseries\insertframenumber}%
+    \end{beamercolorbox}%
+  }%
+  \vspace*{0.1cm}%
+}
+
+\AtBeginSection[]{%
+  \begin{frame}[plain,noframenumbering]
+    \vfill
+    \begin{center}
+      {\color{ficblue}\Huge\bfseries\thesection.\ \insertsectionhead}\\[0.5em]
+      {\color{udcpink}\rule{0.35\paperwidth}{0.5mm}}
+    \end{center}
+    \vfill
+  \end{frame}
+}
+
+\newcommand{\imaxe}[3][0.8\textwidth]{%
+  \begin{center}
+    \includegraphics[width=#1,height=0.62\textheight,keepaspectratio]{#2}\\[0.35em]
+    {\footnotesize\color{udcgray}#3}
+  \end{center}%
+}
+
+\newcommand{\fonte}[1]{{\footnotesize\color{udcgray}#1}}
+
+\newcommand{\destacado}[1]{\textcolor{udcpink}{\bfseries #1}}
+
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  % o marco do listing debe quedar sempre dentro das marxes da diapositiva
+  xleftmargin=3.4pt,
+  xrightmargin=3.4pt,
+  breakatwhitespace=true,
+  breaklines=true,
+  captionpos=b,
+  commentstyle=\color{udcgray},
+  frame=single,
+  keepspaces=true,
+  keywordstyle=\color{ficblue},
+  numbers=none,
+  numbersep=5pt,
+  numberstyle=\tiny\color{udcgray},
+  rulecolor=\color{udcgray},
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  stepnumber=1,
+  stringstyle=\color{udcpink},
+  tabsize=2
+}
+
+% listings non trae Nix de serie
+\lstdefinelanguage{Nix}{
+  morekeywords={let,in,inherit,with,rec,import,if,then,else,assert,or},
+  morecomment=[l]{\#},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  sensitive=true,
+}
+
+\DTMsavenow{lastcompilationdate}
+\def\datasimple{\DTMmonthname{\DTMfetchmonth{lastcompilationdate}} de \DTMfetchyear{lastcompilationdate}}
+
+
+\hypersetup{
+  colorlinks,
+  linkcolor=ficblue,
+  urlcolor=ficblue,
+  pdfauthor={\nome},
+  pdftitle={\titulo}
+}
+
+\endinput

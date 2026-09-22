@@ -1,0 +1,127 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Anexo: diapositivas de apoio para a rolda de preguntas                       %
+% Non se amosan durante a exposición; van despois do peche.                    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[plain,noframenumbering]{Anexo · Conxunto de instrucións do SM83}
+  \begin{center}
+    \includegraphics[width=\textwidth,height=0.74\textheight,keepaspectratio]{imaxes/sm83_instruction_set.png}\\[0.3em]
+    \fonte{Os 256 \textit{opcodes} do procesador, máis os 256 da táboa estendida con prefixo \texttt{0xCB}.}
+  \end{center}
+\end{frame}
+
+\begin{frame}[plain,noframenumbering]{Anexo · Modos da unidade gráfica}
+  \begin{center}
+    \resizebox{!}{0.72\textheight}{\input{diagramas/ppu-modos}}\\[0.3em]
+    \fonte{Máquina de estados dos modos da \textsc{ppu} tal e como se implementa.}
+  \end{center}
+\end{frame}
+
+\begin{frame}[plain,noframenumbering]{Anexo · Controladores de bancos de memoria}
+  \begin{center}
+    \resizebox{!}{0.70\textheight}{\input{diagramas/mbc-uml}}\\[0.3em]
+    \fonte{Os catro \textsc{mbc} implementados comparten interface e agrúpanse nun \textit{enum}.}
+  \end{center}
+\end{frame}
+
+\begin{frame}[plain,noframenumbering]{Anexo · Cabeceira do cartucho}
+  \begin{center}
+    \resizebox{!}{0.72\textheight}{\input{diagramas/cartucho-uml}}\\[0.3em]
+    \fonte{Serialización da cabeceira: enumeracións no canto de valores máxicos.}
+  \end{center}
+\end{frame}
+
+\begin{frame}[plain,noframenumbering]{Anexo · Interface de estilo consola}
+  \begin{center}
+    \resizebox{\textwidth}{!}{\input{diagramas/ui-estados}}\\[0.3em]
+    \fonte{Catro pantallas: os menús percórrense como un carrusel e a emulación é accesible dende calquera.}
+  \end{center}
+\end{frame}
+
+\begin{frame}[plain,noframenumbering]{Anexo · Entrada polos \textsc{gpio} da GamePi13}
+  \begin{center}
+    \resizebox{!}{0.70\textheight}{\input{diagramas/gpio-input}}\\[0.3em]
+    \fonte{O cliente le os pinos con \textit{rpi-pal} e comunícallo ao núcleo.}
+  \end{center}
+\end{frame}
+
+\begin{frame}[plain,noframenumbering,fragile]{Anexo · O temporizador en tempo constante}
+  \begin{columns}[t]
+    \begin{column}{0.48\textwidth}
+      \fonte{Antes: un bucle por ciclo.}
+\begin{lstlisting}[language=Rust]
+for _ in 0..cycles {
+  self.internal_counter =
+    self.internal_counter.wrapping_add(1);
+
+  if self.is_timer_enabled() {
+    let current = self.get_selected_bit();
+    if self.previous_bit && !current {
+      self.increment_tima();
+    }
+    self.previous_bit = current;
+  }
+}
+\end{lstlisting}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \fonte{Despois: dous desprazamentos e unha resta.}
+\begin{lstlisting}[language=Rust]
+let start = prev_counter as u32;
+let end = start + cycles as u32;
+
+// cada flanco de baixada
+// incrementa TIMA
+let edges = (end >> shift)
+          - (start >> shift);
+\end{lstlisting}
+      \vspace{0.3em}
+      {\footnotesize A mesma oportunidade apareceu despois na \textsc{apu} e
+      resolveuse igual.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[plain,noframenumbering]{Anexo · Unidade de procesamento de audio}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+      \includegraphics[width=\textwidth]{imaxes/apu_details.png}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      {\footnotesize
+      Catro canles gobernadas por contadores e un \textit{frame sequencer} a
+      512\,Hz que reparte lonxitude, varrido e envolvente entre os oito pasos
+      do seu ciclo.\\[0.5em]
+      O emulador non xera sinal analóxico: mostrea as catro canles, aplica
+      volume e panorama e pasa o resultado por un filtro paso alto que elimina
+      a compoñente continua dos conversores.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[plain,noframenumbering]{Anexo · Custo estimado do proxecto}
+  \begin{columns}[c]
+    \begin{column}{0.46\textwidth}
+      {\footnotesize
+      \rowcolors{2}{white}{udcgray!20}%
+      \begin{tabular}{l|r}
+        \rowcolor{udcpink!25}
+        \textbf{Tipo de recurso} & \textbf{Custo (€)} \\\hline
+        Hardware         & 933,99 \\
+        Software         & 0,00 \\
+        Recursos humanos & 4\,836,00 \\\hline
+        \rowcolor{udcpink!25}
+        \textbf{Total}   & \textbf{5\,770,00} \\
+      \end{tabular}}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      {\footnotesize
+      300\,h (12 ECTS) a 16,12\,€/h, segundo o nivel 2 do XX convenio de
+      enxeñaría e as táboas salariais de 2024.\\[0.5em]
+      O software é todo libre, polo que non engade custo.\\[0.5em]
+      Do hardware, o groso é o portátil de desenvolvemento: a
+      \destacado{construción de referencia} custa uns 50\,€.}
+    \end{column}
+  \end{columns}
+\end{frame}

@@ -1,0 +1,65 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Portada da defensa                                                           %
+% Réplica da portada da memoria (portada/portada.tex) adaptada a formato 16:9.  %
+% Os datos (nome, título, dirección, titulación) tómanse de defensa_tfg.tex.    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[plain,noframenumbering]
+
+  \textcolor{udcpink}{{\fontencoding{T1}\fontfamily{phv}\selectfont\footnotesize Facultade de Informática}}
+
+  \vspace{0.2cm}
+
+  \begin{center}
+    % logos oficiais: selo da UDC e selo EURO-INF (este último, só no GEI)
+    \begin{minipage}[c]{0.46\textwidth}
+      \raggedleft\includegraphics[width=0.72\textwidth]{imaxes/udc}
+    \end{minipage}%
+    \hspace{0.04\textwidth}%
+    \begin{minipage}[c]{0.20\textwidth}
+      \raggedright\carimbo
+    \end{minipage}
+
+    \vspace{0.35cm}
+
+    % as tres liñas de titulación forman un bloque cun marxe lateral igual por
+    % ambos lados e menor ca o da liña (rule) que vai debaixo do título
+    \begin{minipage}{0.62\paperwidth}
+      \centering
+      {\scriptsize\color{udcgray}
+        \nometfg \\[0.18em]
+        \nometitulacion \\[0.18em]
+        \nomemencion \par}
+    \end{minipage}
+
+    \vspace{0.45cm}
+
+    {\color{udcpink}\rule{0.5\paperwidth}{0.5mm}}
+
+    \vspace{0.75cm}
+
+    % o título céntrase respecto ao ancho completo da diapositiva
+    \makebox[\textwidth][c]{%
+      \begin{minipage}{0.96\paperwidth}
+        \centering
+        {\usebeamerfont{title}\usebeamercolor[fg]{title}\fontsize{18.5}{22}\selectfont\titulo\par}
+      \end{minipage}}
+  \end{center}
+
+  \vfill
+
+  \begin{flushleft}
+    {\small
+    \begin{tabular}{ll}
+      {\bf \nomeestudante:} & \nome \\
+      {\bf \nomedirixe:}    & \nomedirectorA\ \textperiodcentered\ \nomedirectorB \\ % engade máis
+                                                % directores (\nomedirectorC...) separados igual;
+                                                % defínense en defensa_tfg.tex
+    \end{tabular}}
+
+    \vspace{0.15cm}
+
+    {\scriptsize\color{udcgray}A Coruña, \datasimple.}
+  \end{flushleft}
+
+\end{frame}

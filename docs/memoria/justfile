@@ -3,6 +3,9 @@ default: build
 build:
     latexmk -xelatex -interaction=nonstopmode -halt-on-error -file-line-error memoria_tfg.tex < /dev/null
 
+view: build
+    xdg-open defensa_tfg.pdf
+
 clean:
     rm -f *.acn *.acr *.alg *.aux *.bbl *.blg *.fdb_latexmk *.fls *.glg *.glo *.gls *.ist *.lof *.log *.lot *.out *.pdf *.toc *.xdv
     rm -f anexos/*.aux contido/*.aux portada/*.aux

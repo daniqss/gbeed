@@ -47,3 +47,8 @@ gb-test-roms/
 *.toc
 *.xdv
 *.ist
+
+# beamer related files
+*.nav
+*.snm
+*.vrb
