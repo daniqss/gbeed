@@ -16,9 +16,15 @@
 \usepackage{estilo_defensa}
 
 
-% \usepackage{booktabs}
-% \usepackage{multirow}
-% \usepackage{pgfgantt}
+\usepackage{multirow}
+\usepackage{pgfgantt}
+
+% os diagramas TikZ tómanse da memoria, que usa o paquete glossaries;
+% aquí abonda con expandir os acrónimos a maiúsculas
+\providecommand{\acrshort}[1]{\MakeUppercase{#1}}
+\providecommand{\acrshortpl}[1]{\MakeUppercase{#1}s}
+\providecommand{\acrlong}[1]{#1}
+\providecommand{\acrfull}[1]{\MakeUppercase{#1}}
 \usetikzlibrary{positioning, fit, arrows.meta, backgrounds, shapes.multipart, shapes.geometric, calc}
 
 % definición da linguaxe Rust para listings, tomada de https://github.com/denki/listings-rust (licenza BSD 3-Clause)
@@ -48,14 +54,17 @@
  \end{frame}
 
  \input{contido/introducion}
+ \input{contido/metodoloxia}
+ \input{contido/ferramentas}
  \input{contido/arquitectura}
  \input{contido/implementacion}
  \input{contido/validacion}
+ \input{contido/demo}
  \input{contido/conclusions}
 
 
  \input{contido/peche}
- \input{contido/extra}
+%  \input{contido/extra}
 
 \end{document}
 

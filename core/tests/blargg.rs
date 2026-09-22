@@ -51,7 +51,7 @@ impl SerialListener for BlarggListener {
                 self.separator[..],
                 "Separator mismatch: expected '{}', got '{}'",
                 self.separator.iter().collect::<String>(),
-                &self.received_data.iter().collect::<String>()
+                self.received_data.iter().collect::<String>()
             );
         } else if self.received_data.len()
             >= self.rom_name.len() + self.separator.len() + self.passed_line.len()
@@ -64,7 +64,7 @@ impl SerialListener for BlarggListener {
                 self.passed_line[..],
                 "Test did not pass: expected '{}', got '{}'",
                 self.passed_line.iter().collect::<String>(),
-                &self.received_data.iter().collect::<String>()
+                self.received_data.iter().collect::<String>()
             );
 
             self.test_passed = true;

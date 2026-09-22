@@ -4,9 +4,9 @@ Proxecto LaTeX (`beamer`) para a defensa do Traballo Fin de Grao. Reproduce o es
 da memoria (`docs/memoria`): as mesmas cores corporativas, a mesma tipografía, os
 logos oficiais na portada e a mesma organización de ficheiros.
 
-A duración prevista da defensa é de **20 minutos**, o que equivale
-aproximadamente a unha diapositiva por minuto. O reparto orientativo por
-seccións está anotado en `defensa_tfg.tex`.
+A duración prevista da defensa é de **10 minutos, demostración incluída**.
+O guión completo, co reparto de tempos diapositiva a diapositiva e o anexo de
+posibles preguntas do tribunal, está en `guion.md`.
 
 ## Estrutura
 
@@ -18,6 +18,9 @@ seccións está anotado en `defensa_tfg.tex`.
   3) Directorios:
 
      > `contido/`	Contén as seccións da presentación.
+     >
+     > `diagramas/`	Diagramas TikZ tomados de `docs/memoria`, sen o entorno
+     >               `figure` nin o `\caption`, para poder inserilos nun `frame`.
      >
      > `imaxes/`	Contén as imaxes da presentación (incluídos os logos da portada).
      >
@@ -67,14 +70,23 @@ As tres cores son as da memoria e non se deben cambiar:
 ## Figuras
 
 As diapositivas non usan o entorno `figure`: nunha presentación non hai
-flotantes que colocar nin índice de figuras. Os tres patróns de uso están
+flotantes que colocar nin índice de figuras. Os patróns de uso están
 exemplificados no contido:
 
-  - `contido/arquitectura.tex`: figura que ocupa a diapositiva enteira, e figura
-    acompañada de texto en dúas columnas.
-  - `contido/validacion.tex`: fotografía a sangue, nun `frame` sen título.
+  - `contido/arquitectura.tex`: figura acompañada de texto en dúas columnas, e
+    unha diapositiva `plain` con dúas figuras e nada máis.
+  - `contido/implementacion.tex`: imaxe a sangue nun `frame` sen título, e dúas
+    figuras apiladas nunha columna.
+  - `contido/extra.tex`: diagramas TikZ escalados a unha fracción de
+    `\textheight` con `\resizebox`.
 
-Os anchos exprésanse sempre en fraccións de `\textwidth` (nunca en centímetros),
-para que a imaxe se adapte ao tamaño da diapositiva e da columna que a contén.
-As imaxes da memoria pódense reutilizar copiándoas a `imaxes/`; os diagramas
-TikZ de `docs/memoria/diagramas/` pódense inserir con `\input`.
+Os anchos exprésanse sempre en fraccións de `\textwidth` ou de `\textheight`
+(nunca en centímetros), para que a imaxe se adapte ao tamaño da diapositiva e da
+columna que a contén.
+
+As imaxes da memoria reutilízanse copiándoas a `imaxes/`. Os diagramas TikZ de
+`docs/memoria/diagramas/` están copiados en `diagramas/` sen o entorno `figure`,
+o `\caption` e o `\label`, e insírense con `\input` dentro dun `\resizebox`; o pé
+ponse coa macro `\fonte`. Como eses diagramas usan acrónimos do paquete
+`glossaries`, que aquí non se carga, `defensa_tfg.tex` define `\acrshort` e
+compañía para expandilos a maiúsculas.

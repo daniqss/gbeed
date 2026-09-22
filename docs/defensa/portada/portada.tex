@@ -22,32 +22,44 @@
 
     \vspace{0.35cm}
 
-    {\scriptsize\color{udcgray}
-      \nometfg \\
-      \nometitulacion \\
-      \nomemencion }
+    % as tres liñas de titulación forman un bloque cun marxe lateral igual por
+    % ambos lados e menor ca o da liña (rule) que vai debaixo do título
+    \begin{minipage}{0.62\paperwidth}
+      \centering
+      {\scriptsize\color{udcgray}
+        \nometfg \\[0.18em]
+        \nometitulacion \\[0.18em]
+        \nomemencion \par}
+    \end{minipage}
 
     \vspace{0.45cm}
 
     {\color{udcpink}\rule{0.5\paperwidth}{0.5mm}}
 
-    \vspace{0.35cm}
+    \vspace{0.75cm}
 
-    {\usebeamerfont{title}\usebeamercolor[fg]{title}\titulo\par}
+    % o título céntrase respecto ao ancho completo da diapositiva
+    \makebox[\textwidth][c]{%
+      \begin{minipage}{0.96\paperwidth}
+        \centering
+        {\usebeamerfont{title}\usebeamercolor[fg]{title}\fontsize{18.5}{22}\selectfont\titulo\par}
+      \end{minipage}}
   \end{center}
 
   \vfill
 
-  \begin{flushright}
+  \begin{flushleft}
     {\small
     \begin{tabular}{ll}
       {\bf \nomeestudante:} & \nome \\
-      {\bf \nomedirixe:}    & \nomedirectorA \\
-                            & \nomedirectorB \\ % duplica esta liña se o precisas, cambiando
-                                                % a letra final (A, B, C...); defínense en defensa_tfg.tex
+      {\bf \nomedirixe:}    & \nomedirectorA\ \textperiodcentered\ \nomedirectorB \\ % engade máis
+                                                % directores (\nomedirectorC...) separados igual;
+                                                % defínense en defensa_tfg.tex
     \end{tabular}}
-  \end{flushright}
 
-  \rightline{{\small\color{udcgray}A Coruña, \datasimple.}}
+    \vspace{0.15cm}
+
+    {\scriptsize\color{udcgray}A Coruña, \datasimple.}
+  \end{flushleft}
 
 \end{frame}
