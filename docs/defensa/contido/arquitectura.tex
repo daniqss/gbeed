@@ -42,30 +42,30 @@
 
 
 
-\begin{frame}{Núcleo de emulación independente da plataforma}
-  \begin{columns}[c]
-    \begin{column}{0.42\textwidth}
-      \small
-      \begin{itemize}
+% \begin{frame}{Núcleo de emulación independente da plataforma}
+%   \begin{columns}[c]
+%     \begin{column}{0.42\textwidth}
+%       \small
+%       \begin{itemize}
 
-        \item \destacado{Precisión}: acádase a precisión requerida para xogar aos xogos principais do catálogo sen problema.
+%         \item \destacado{Precisión}: acádase a precisión requerida para xogar aos xogos principais do catálogo sen problema.
 
-        \item \destacado{Portabilidade}: sen dependencias en tempo de execución.
-        Os clientes son os encargados de manexar librerías e plataformas concretas.
+%         \item \destacado{Portabilidade}: sen dependencias en tempo de execución.
+%         Os clientes son os encargados de manexar librerías e plataformas concretas.
 
-        \item \destacado{Rendemento}: o bucle quente debe permanecer libre de chamadas ao sistema e reservas de memoria e
-        empréganse resolución estática e monomorfización en vez de chamadas virtuais. 
+%         \item \destacado{Rendemento}: o bucle quente debe permanecer libre de chamadas ao sistema e reservas de memoria e
+%         empréganse resolución estática e monomorfización en vez de chamadas virtuais. 
       
-        \end{itemize}
-    \end{column}
-    \begin{column}{0.56\textwidth}
-  \begin{center}
-        \resizebox{!}{0.66\textheight}{\input{diagramas/arquitectura-uml}}\\[0.35em]
-        \fonte{Resumo dos \textit{crates} do emulador.}
-  \end{center}
-    \end{column}
-  \end{columns}
-\end{frame}
+%         \end{itemize}
+%     \end{column}
+%     \begin{column}{0.56\textwidth}
+%   \begin{center}
+%         \resizebox{!}{0.66\textheight}{\input{diagramas/arquitectura-uml}}\\[0.35em]
+%         \fonte{Resumo dos \textit{crates} do emulador.}
+%   \end{center}
+%     \end{column}
+%   \end{columns}
+% \end{frame}
 
 \begin{frame}[fragile]{O núcleo delega na implementación do cliente}
   \begin{columns}[c,onlytextwidth]
