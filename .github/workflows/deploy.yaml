@@ -1,4 +1,4 @@
-name: Deploy debugger and memoria
+name: Deploy debugger, memoria and defensa
 
 on:
   push:
@@ -62,8 +62,34 @@ jobs:
           path: docs/memoria/memoria_tfg.pdf
           if-no-files-found: error
 
+  build-defensa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Build defensa
+        run: |
+          nix develop .#latex --command just defensa build
+
+      - name: Dump LaTeX log
+        if: always()
+        run: cat docs/defensa/defensa_tfg.log
+
+      - name: Upload defensa PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: defensa
+          path: docs/defensa/defensa_tfg.pdf
+          if-no-files-found: error
+
   bundle:
-    needs: [build-web, build-memoria]
+    needs: [build-web, build-memoria, build-defensa]
     runs-on: ubuntu-latest
     steps:
       - name: Download web bundle
@@ -76,6 +102,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: memoria
+          path: ./dist
+
+      - name: Download defensa PDF
+        uses: actions/download-artifact@v4
+        with:
+          name: defensa
           path: ./dist
 
       - name: Upload Pages artifact
