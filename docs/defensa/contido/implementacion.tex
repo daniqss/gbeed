@@ -103,8 +103,6 @@ impl<S: Operand> Instruction for And<S> {
     dos que se implementaron os cinco máis habituais: sen \textsc{mbc},
     \textsc{mbc}1, \textsc{mbc}2, \textsc{mbc}3 e \textsc{mbc}5.
 
-    % \item O seu cometido principal é \destacado{intercambiar os bancos de
-    % \textsc{rom} e \textsc{ram}} para aumentar a memoria dispoñible.
     \item O cartucho pode incluir máis memoria \textsc{rom} e \textsc{ram} en forma de varios bancos.
     O cometido principal do \textsc{mbc} é intercambiar os bancos para aumentar a memoria dispoñible cun espazo de direccións limitado.
 
@@ -146,8 +144,8 @@ fn write_rom(&mut self, address: u16, value: u8) {
         avánzanse cunha suma e derívanse os eventos
         do intervalo por empregando aritmética, baixando a complexidade algorítmica de $O(n)$ a $O(1)$.
 
-        \item \destacado{Bucle quente}: eliminouse o uso de memoria no \textit{heap} no bucle quente
-        e o \textit{dynamic dispatching} substituíuse por resolución estática e monomorfización.
+        \item \destacado{Bucle quente}: eliminouse as chamadas ao sistema durante bucle quente,
+        como as reservas de memoria no \textit{heap} e a impresión de depuración.
       \end{itemize}
     \end{column}
     \begin{column}{0.52\textwidth}
