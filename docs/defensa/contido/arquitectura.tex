@@ -13,9 +13,6 @@
         
         \item Ten E/S está mapeada en memoria, cada rexistro ou memoria ten o seu
         espazo reservado no mapa de memoria.
-
-        \item O cartucho ademais de almacenar o xogo na \textsc{ROM} contén máis hardware para 
-        ampliar as capacidades da consola.
       
       \end{itemize}
     \end{column}
@@ -41,79 +38,58 @@
 
 
 
+\begin{frame}{Arquitectura do emulador}
+  \begin{columns}[c]
+    \begin{column}{0.42\textwidth}
+      \small
+      \begin{itemize}
 
-% \begin{frame}{Núcleo de emulación independente da plataforma}
-%   \begin{columns}[c]
-%     \begin{column}{0.42\textwidth}
-%       \small
-%       \begin{itemize}
+        \item O emulador divídese en tres módulos principais separados:
+        un núcleo que se ocupa da lóxica da emulación en forma de librería
+        e dous clientes que implementan a interface de usuario.
 
-%         \item \destacado{Precisión}: acádase a precisión requerida para xogar aos xogos principais do catálogo sen problema.
+        \item Para empregar o núcleo, os clientes teñen que instanciar un \texttt{Dmg}
+        e implementar un \texttt{Controller}.
 
-%         \item \destacado{Portabilidade}: sen dependencias en tempo de execución.
-%         Os clientes son os encargados de manexar librerías e plataformas concretas.
-
-%         \item \destacado{Rendemento}: o bucle quente debe permanecer libre de chamadas ao sistema e reservas de memoria e
-%         empréganse resolución estática e monomorfización en vez de chamadas virtuais. 
-      
-%         \end{itemize}
-%     \end{column}
-%     \begin{column}{0.56\textwidth}
-%   \begin{center}
-%         \resizebox{!}{0.66\textheight}{\input{diagramas/arquitectura-uml}}\\[0.35em]
-%         \fonte{Resumo dos \textit{crates} do emulador.}
-%   \end{center}
-%     \end{column}
-%   \end{columns}
-% \end{frame}
+        \end{itemize}
+    \end{column}
+    \begin{column}{0.56\textwidth}
+  \begin{center}
+        \resizebox{!}{0.66\textheight}{\input{diagramas/arquitectura-uml}}\\[0.35em]
+        \fonte{Resumo dos \textit{crates} do emulador.}
+  \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
 
 \begin{frame}[fragile]{O núcleo delega na implementación do cliente}
   \begin{columns}[c,onlytextwidth]
     \begin{column}{0.50\textwidth}
-\begin{lstlisting}[language=Rust,basicstyle=\ttfamily\footnotesize,breaklines=false]
-pub fn run<C: Controller>(
-    &mut self, controller: &mut C,
-) -> Result<(), DmgError> {
-    while self.cpu.cycles < 17556 {
-        self.step(controller)?;
-    }
+\begin{lstlisting}[language=Rust,basicstyle=\ttfamily\fontsize{7.8pt}{8.3pt}\selectfont,breaklines=false]
+impl Dmg {
+  pub fn run<C: Controller>(
+      &mut self, controller: &mut C,
+  ) -> Result<(), DmgError> {
+      while self.cpu.cycles < 17556 {
+          self.step(controller)?;
+      }
 
-    self.cpu.cycles = 0;
-    controller.flush_buffer();
+      self.cpu.cycles = 0;
+      controller.flush_buffer();
 
-    Ok(())
+      Ok(())
+  }
 }
 \end{lstlisting}
     \end{column}
     \begin{column}{0.48\textwidth}
       \begin{itemize}
-        \item O núcleo avanza un cadro completo sen saber nada de quen o
-        consome: só pide un \texttt{Controller}.
+        \item O núcleo implementa a lóxica de emulación e despreocúpase da implementación do cliente,
+        que pasa un \texttt{Controller} como parámetro xenérico.
 
-        \item \texttt{run} e \texttt{step} reciben un \destacado{parámetro
-        xenérico}, non un obxecto que implementa o \textit{trait} \texttt{dyn Controller}.
+        \item Este \texttt{Controller} implementa as operacións do emulador que son dependentes do cliente.
+        Deste xeito o núcleo queda libre de dependencias pero mantendo a capacidade de introducir comportamentos específicos do cliente.
       \end{itemize}
     \end{column}
   \end{columns}
-\end{frame}
-
-\begin{frame}[fragile]{\texttt{Controller} para introducir comportamentos}
-\begin{lstlisting}[language=Rust,basicstyle=\ttfamily\fontsize{9.6pt}{10.9pt}\selectfont,breaklines=false]
-pub trait Renderer {
-    fn write_pixel(&mut self, x: usize, y: usize,
-                   palette: u8, color_id: u8);
-    fn update_screen(&mut self, ppu: &Ppu);
-}
-
-pub trait SerialListener {
-    fn on_transfer(&mut self, data: u8);
-}
-
-pub trait AudioPlayer {
-    fn push_sample(&mut self, left: i16, right: i16);
-}
-
-pub trait Controller:
-    SerialListener + Renderer + AudioPlayer {}
-\end{lstlisting}
 \end{frame}

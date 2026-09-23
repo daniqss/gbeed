@@ -25,45 +25,39 @@
   \vfill
   \begin{itemize}
     \setlength{\itemsep}{1.1em}
-    \item Unha instrución é un \texttt{struct} que implementa
-      \texttt{Instruction} e o operando é un \destacado{parámetro xenérico}
-      que xa sabe o seu tamaño e o seu custo en ciclos.
-    \item \texttt{exec} le o operando fonte, escribe no destino e devolve o
-      efecto da instrución.
-    \item \texttt{InstructionEffect} devolve o tempo consumido e as
-      bandeiras: cada unha pode quedar a \texttt{true}, a \texttt{false} ou
+    \item Cada instrución é un \texttt{struct} que implementa
+    \texttt{Instruction}.
+
+    \item Os operandos das instruccións representanse cun tipo xenérico \texttt{Operand} que coñece
+    o seu custo en tamaño e tempo de execución.
+
+    \item Os efectos da instrución devolvense nun \texttt{InstructionEffect} que contén o tempo consumido,
+    o tamaño total da instrución e as bandeiras afectadas.
       \destacado{sen cambios}.
-    \item \texttt{info} resólvese a partir das constantes asociadas dos
-      operandos, \destacado{en tempo de compilación}.
-    \item Un módulo por instrución, sen código repetido e sen custo
-      en tempo de execución.
   \end{itemize}
   \vfill
 \end{frame}
 
-\begin{frame}[fragile]{Execución dunha instrución}
+\begin{frame}[fragile]{Implementación da instrución \texttt{AND}}
 \begin{lstlisting}[language=Rust,basicstyle=\ttfamily\fontsize{7.8pt}{8.3pt}\selectfont,breaklines=false]
-pub struct Ld<D: WritableOperand, S: Operand> {
-  dst: D,
-  src: S,
-}
-impl<D: WritableOperand, S: Operand> Ld<D, S> {
-  pub fn new(dst: D, src: S) -> Self { Self { dst, src } }
-}
-impl<D: WritableOperand, S: Operand> Instruction for Ld<D, S> {
+impl<S: Operand> Instruction for And<S> {
   fn exec(&mut self, gb: &mut Dmg) -> InstructionResult {
-    let value = self.src.read(gb);
-    self.dst.write(gb, value);
+    gb.cpu.a &= self.src.read(gb);
 
-    Ok(InstructionEffect::new(self.info(), Flags::none()))
+    Ok(InstructionEffect::new(
+      self.info(),
+      Flags {
+        z: Some(check_zero(gb.cpu.a)),
+        n: Some(false),
+        h: Some(true),
+        c: Some(false),
+      },
+    ))
   }
-  fn info(&self) -> (u8, u8) {
-    (1 + S::READ_CYCLES + D::WRITE_CYCLES, 1 + S::LEN + D::LEN)
-  }
-  fn disassembly(&self) -> String {
-    format!("ld {},{}", self.dst, self.src)
-  }
+  fn info(&self) -> (u8, u8) { (1 + S::READ_CYCLES, 1 + S::LEN) }
+  fn disassembly(&self) -> String { format!("and {}", self.src) }
 }
+
 \end{lstlisting}
 \end{frame}
 
@@ -147,11 +141,12 @@ fn write_rom(&mut self, address: u16, value: u8) {
         \item \destacado{Bucles de debuxado}: reutilizar cálculos entre píxeles
         consecutivos e acceso directo ás memorias da \textsc{ppu}.
 
-        \item \destacado{Complexidade}: temporizador e \textsc{apu} son
-        contadores periódicos; en vez de iterar nun bucle segundo o tempo avanzado pola \textsc{cpu},
-        % calculase canto tempo falta para o seguinte evento e avánzase directamente.
+        \item \destacado{Complexidade}: o \textit{timer} e a \textsc{apu} son contadores
+        periódicos. En vez de iterar un bucle por cada ciclo avanzado pola \textsc{cpu},
+        avánzanse cunha suma e derívanse os eventos
+        do intervalo por empregando aritmética, baixando a complexidade algorítmica de \destacado{$O(n)$ a $O(1)$}.
 
-        \item \destacado{Bucle quente}: elimminouse o uso de memoria no \textit{heap} no bucle quente
+        \item \destacado{Bucle quente}: eliminouse o uso de memoria no \textit{heap} no bucle quente
         e o \textit{dynamic dispatching} substituíuse por resolución estática e monomorfización.
       \end{itemize}
     \end{column}
@@ -176,7 +171,7 @@ fn write_rom(&mut self, address: u16, value: u8) {
   \vspace{1em}
   \begin{block}{Interface de estilo consola}
     Consegue unha experiencia de usuario similar á unha consola.
-    Incorpora menús para o control do emulador e varias características de calidade de vida
+    Incorpora menús para o control do emulador e varias características de calidade de vida.
   \end{block}
   \vfill
 \end{frame}
@@ -239,25 +234,3 @@ fn write_rom(&mut self, address: u16, value: u8) {
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile]{Unha imaxe de sistema reproducible}
-\begin{lstlisting}[language=Nix,breaklines=false]
-{
-  inputs,
-  outputs,
-  ...
-}: {
-  gbeed02 = inputs.nixpkgs-pi.lib.nixosSystem {
-    specialArgs = {
-      inherit inputs outputs;
-      hostname = "gbeed02";
-      username = "gbeed";
-    };
-    modules = [
-      "${inputs.nixpkgs-pi}/nixos/modules/installer/sd-card/sd-image-aarch64.nix"
-      ./gbeed02/configuration.nix
-      ./gbeed02/hardware-configuration.nix
-    ];
-  };
-}
-\end{lstlisting}
-\end{frame}
