@@ -74,9 +74,6 @@ impl<S: Operand> Instruction for And<S> {
         \item \textit{scanline rendering} debuxa cada liña con \texttt{draw\_bg}, \texttt{draw\_window} e \texttt{draw\_sprites},
         de esquerda a dereita resolvendo prioridades e transparencia.
         
-        \item O fondo garda unha \destacado{caché de identificadores de cor}
-        coa que despois se resolven as prioridades dos obxectos facilmente.
-
       \end{itemize}
     \end{column}
     \begin{column}{0.54\textwidth}
@@ -144,7 +141,7 @@ fn write_rom(&mut self, address: u16, value: u8) {
         \item \destacado{Complexidade}: o \textit{timer} e a \textsc{apu} son contadores
         periódicos. En vez de iterar un bucle por cada ciclo avanzado pola \textsc{cpu},
         avánzanse cunha suma e derívanse os eventos
-        do intervalo por empregando aritmética, baixando a complexidade algorítmica de \destacado{$O(n)$ a $O(1)$}.
+        do intervalo por empregando aritmética, baixando a complexidade algorítmica de $O(n)$ a $O(1)$.
 
         \item \destacado{Bucle quente}: eliminouse o uso de memoria no \textit{heap} no bucle quente
         e o \textit{dynamic dispatching} substituíuse por resolución estática e monomorfización.
@@ -205,10 +202,6 @@ fn write_rom(&mut self, address: u16, value: u8) {
           \item A pantalla emprégase co controlador \texttt{panel-mipi-dbi},
           en vez de usar o \textit{stack} obsoleto documentado polo fabricante.
 
-          \item O \textit{firmware} de inicialización do ST7789V e o
-          \textit{overlay} do audio por \textsc{pwm} xéranse en tempo de evaluación,
-          sen configuración manual requerida.
-
           \item Emprégase o núcleo \texttt{drm} de Raylib sen unha sesión gráfica completa. 
 
           \item Unha imaxe de \textsc{sd} lista para gravar que arranca o emulador directamente,
@@ -221,13 +214,10 @@ fn write_rom(&mut self, address: u16, value: u8) {
         \begin{itemize}
           \item \texttt{armv6l} non está soportada por NixOS polo que o mellor é partir da imaxe preconfigurada do fabricante.
 
-          \item \textit{fbcp} copia o \textit{framebuffer} principal a través de DispmanX
-          e só funciona sobre X11.
-
           \item \destacado{Materializouse un dos riscos previstos}. Obrigou a
           cambiar o backend \textsc{drm} polo de X11.
 
-          \item O binario obtense por compilación cruzada nun contedor.
+          \item Require configuración manual do sistema e obter o binario mediante compilación cruzada nun contedor.
         \end{itemize}
       \end{block}
     \end{column}
