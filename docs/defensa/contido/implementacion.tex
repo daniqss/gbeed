@@ -6,7 +6,7 @@
       \begin{itemize}
         \item Posúe dous rexistros de 16 bits: \textsc{pc} e \textsc{sp},
         e oito rexistros de 8 bits dos cales dous teñen un propósito específico: \textsc{a} e \textsc{f}.
-        
+
         \item Primeiro \destacado{aténdese ás interrupcións} pendentes segundo a súa prioridade.
         \item Se non as hai, búscase, decodifícase e execútase a instrución.
           \textsc{ppu}, \textsc{apu}, temporizadores e porto serie.
@@ -35,7 +35,6 @@
 
     \item Os efectos da instrución devolvense nun \texttt{InstructionEffect} que contén o tempo consumido,
     o tamaño total da instrución e as bandeiras afectadas.
-      \destacado{sen cambios}.
   \end{itemize}
   \vfill
 \end{frame}
