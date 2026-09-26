@@ -5,6 +5,7 @@
   platformFeatures,
 }:
 pkgs.mkShell {
+  name = "wayland";
   packages = commonPackages;
   buildInputs = platformPackages;
 

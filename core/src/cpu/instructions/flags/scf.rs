@@ -26,5 +26,6 @@ impl Instruction for Scf {
         ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "scf".to_string() }
 }

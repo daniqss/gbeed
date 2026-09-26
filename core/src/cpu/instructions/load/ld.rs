@@ -27,6 +27,7 @@ impl<D: WritableOperand, S: Operand> Instruction for Ld<D, S> {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (1 + S::READ_CYCLES + D::WRITE_CYCLES, 1 + S::LEN + D::LEN) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("ld {},{}", self.dst, self.src) }
 }
 
@@ -47,6 +48,7 @@ impl<D: Operand16> Instruction for Ld16<D> {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (3, 3) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("ld {},${:04X}", self.dst, self.val) }
 }
 
@@ -68,6 +70,7 @@ impl Instruction for LdPointedByHLIncA {
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "ld [hli],a".to_string() }
 }
 
@@ -89,6 +92,7 @@ impl Instruction for LdPointedByHLDecA {
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "ld [hld],a".to_string() }
 }
 
@@ -110,6 +114,7 @@ impl Instruction for LdAPointedByHLInc {
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "ld a,[hli]".to_string() }
 }
 
@@ -131,6 +136,7 @@ impl Instruction for LdAPointedByHLDec {
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "ld a,[hld]".to_string() }
 }
 
@@ -152,6 +158,7 @@ impl Instruction for LdImm16SP {
     }
 
     fn info(&self) -> (u8, u8) { (5, 3) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("ld [${:04X}],sp", self.addr) }
 }
 
@@ -183,6 +190,7 @@ impl Instruction for LdHLSPPlusImm8 {
     }
 
     fn info(&self) -> (u8, u8) { (3, 2) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("ld hl,sp{:+}", self.e8) }
 }
 
@@ -202,5 +210,6 @@ impl Instruction for LdSPHL {
     }
 
     fn info(&self) -> (u8, u8) { (2, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "ld sp,hl".to_string() }
 }

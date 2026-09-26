@@ -35,6 +35,7 @@ impl<D: WritableOperand> Instruction for Rr<D> {
         ))
     }
     fn info(&self) -> (u8, u8) { (2 + D::READ_CYCLES + D::WRITE_CYCLES, 2 + D::LEN) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("rr {}", self.dst) }
 }
 

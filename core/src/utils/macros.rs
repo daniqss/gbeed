@@ -163,6 +163,7 @@ macro_rules! instruction_dispatch {
             }
 
             /// Assembly representation of the instruction and its operands
+            #[cfg(feature = "alloc")]
             pub fn disassembly(&self) -> String {
                 match self {
                     $( $name::[<$instruction $($($operand)+)?>](instruction) => instruction.disassembly(), )+
@@ -171,12 +172,14 @@ macro_rules! instruction_dispatch {
         }
         }
 
+        #[cfg(feature = "alloc")]
         impl core::fmt::Display for $name {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 write!(f, "{}", self.disassembly())
             }
         }
 
+        #[cfg(feature = "alloc")]
         impl core::fmt::Debug for $name {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 write!(f, "{}", self.disassembly())

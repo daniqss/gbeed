@@ -34,18 +34,14 @@ pub enum CartridgeError {
 impl core::fmt::Display for CartridgeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            CartridgeError::InvalidRomSize(size, message) => write!(
-                f,
-                "Invalid ROM size: {}. {}",
-                size.map_or("Unknown".to_string(), |s| format!("{:?}", s)),
-                message
-            ),
-            CartridgeError::InvalidRamSize(size, message) => write!(
-                f,
-                "Invalid RAM size: {}. {}",
-                size.map_or("Unknown".to_string(), |s| format!("{:?}", s)),
-                message
-            ),
+            CartridgeError::InvalidRomSize(size, message) => match size {
+                Some(size) => write!(f, "Invalid ROM size: {:?}. {}", size, message),
+                None => write!(f, "Invalid ROM size: Unknown. {}", message),
+            },
+            CartridgeError::InvalidRamSize(size, message) => match size {
+                Some(size) => write!(f, "Invalid RAM size: {:?}. {}", size, message),
+                None => write!(f, "Invalid RAM size: Unknown. {}", message),
+            },
             CartridgeError::UnsupportedCartridgeType(cartridge_type) => {
                 write!(f, "Unsupported cartridge type: {:?}", cartridge_type)
             }
@@ -88,7 +84,7 @@ impl Default for Cartridge {
 }
 
 impl Cartridge {
-    pub fn new(raw_rom: &[u8], save: Option<Vec<u8>>) -> CartridgeResult<Self> {
+    pub fn new(raw_rom: &[u8], save: Option<&[u8]>) -> CartridgeResult<Self> {
         let header = CartridgeHeader::new(raw_rom)?;
 
         let features = CartridgeFeatures::new(&header.cartridge_type);
@@ -186,6 +182,7 @@ impl Accessible<u16> for Cartridge {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl core::fmt::Display for Cartridge {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { writeln!(f, "{}", self.header) }
 }

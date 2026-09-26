@@ -4,44 +4,34 @@ use crate::{
     cartrigde::{
         CartridgeError, CartridgeResult, RomSize, features::CartridgeFeatures, header::CartridgeHeader,
     },
+    utils::Buffer,
 };
-use alloc::{boxed::Box, vec::Vec};
 
 use super::MemoryBankController;
 
+/// MBC2 hardware has ROM at 256KiB, 16 banks of 16KiB
+const MBC2_MAX_ROM_SIZE: usize = 16 * 16 * 1024;
 const MBC2_RAM_SIZE: usize = 512;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Mbc2 {
-    rom: Vec<u8>,
+    rom: Buffer<MBC2_MAX_ROM_SIZE>,
     rom_size: RomSize,
     rom_selected_bank: u8,
 
-    ram: Box<[u8; MBC2_RAM_SIZE]>,
+    ram: Buffer<MBC2_RAM_SIZE>,
     ram_enabled: bool,
-}
-
-impl Default for Mbc2 {
-    fn default() -> Self {
-        Self {
-            rom: Vec::new(),
-            rom_size: RomSize::Rom512KB,
-            rom_selected_bank: 1,
-            ram: Box::new([0; MBC2_RAM_SIZE]),
-            ram_enabled: false,
-        }
-    }
 }
 
 impl MemoryBankController for Mbc2 {
     fn new(
         raw_rom: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         _: &CartridgeFeatures,
         header: &CartridgeHeader,
     ) -> CartridgeResult<Self> {
         let rom = if raw_rom.len() == header.rom_size.get_size() as usize {
-            raw_rom.to_vec()
+            Buffer::from_slice(raw_rom)
         } else {
             return Err(CartridgeError::InvalidRomSize(
                 Some(header.rom_size),
@@ -54,7 +44,7 @@ impl MemoryBankController for Mbc2 {
             rom_size: header.rom_size,
 
             rom_selected_bank: 1,
-            ram: Box::new([0; MBC2_RAM_SIZE]),
+            ram: Buffer::zeroed(MBC2_RAM_SIZE),
             ram_enabled: false,
         })
     }

@@ -6,10 +6,14 @@ use crate::{
         features::CartridgeFeatures, header::CartridgeHeader,
     },
     mem_range,
+    utils::Buffer,
 };
-use alloc::{boxed::Box, vec, vec::Vec};
 
 use super::MemoryBankController;
+
+/// MBC1 supports up to 2MiB ROM and 32KiB RAM
+const MBC1_MAX_ROM_SIZE: usize = 2 * 1024 * 1024;
+const MBC1_MAX_RAM_SIZE: usize = 32 * 1024;
 
 mem_range!(MBC1_RAM_ENABLE, 0x0000, 0x1FFF);
 mem_range!(ROM_BANK_NUMBER, 0x2000, 0x3FFF);
@@ -28,13 +32,13 @@ pub struct Mbc1 {
     mode: BankingMode,
     is_multicart: bool,
 
-    rom: Box<[u8]>,
+    rom: Buffer<MBC1_MAX_ROM_SIZE>,
     rom_size: RomSize,
     primary_bank: u8,
     secondary_bank: u8,
 
     ram_enabled: bool,
-    ram: Option<Box<[u8]>>,
+    ram: Option<Buffer<MBC1_MAX_RAM_SIZE>>,
     ram_size: RamSize,
 }
 
@@ -63,7 +67,7 @@ fn check_mbc1m_multicart(raw_rom: &[u8], header: &CartridgeHeader) -> bool {
 impl MemoryBankController for Mbc1 {
     fn new(
         raw_rom: &[u8],
-        save: Option<Vec<u8>>,
+        save: Option<&[u8]>,
         features: &CartridgeFeatures,
         header: &CartridgeHeader,
     ) -> CartridgeResult<Self> {
@@ -78,8 +82,8 @@ impl MemoryBankController for Mbc1 {
 
         let is_multicart = check_mbc1m_multicart(raw_rom, header);
 
-        let rom: Box<[u8]> = if raw_rom.len() == header.rom_size.get_size() as usize {
-            raw_rom.to_vec().into_boxed_slice()
+        let rom = if raw_rom.len() == header.rom_size.get_size() as usize {
+            Buffer::from_slice(raw_rom)
         } else {
             return Err(CartridgeError::InvalidRomSize(
                 Some(header.rom_size),
@@ -87,11 +91,12 @@ impl MemoryBankController for Mbc1 {
             ));
         };
 
-        let ram: Option<Box<[u8]>> = features.has_ram.then(|| {
+        let ram: Option<Buffer<MBC1_MAX_RAM_SIZE>> = features.has_ram.then(|| {
             let ram_size = header.ram_size.get_size() as usize;
-            save.filter(|s| features.has_battery && s.len() == ram_size)
-                .unwrap_or_else(|| vec![0; ram_size])
-                .into_boxed_slice()
+            match save.filter(|s| features.has_battery && s.len() == ram_size) {
+                Some(save_data) => Buffer::from_slice(save_data),
+                None => Buffer::zeroed(ram_size),
+            }
         });
 
         Ok(Self {

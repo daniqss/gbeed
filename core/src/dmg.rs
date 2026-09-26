@@ -56,7 +56,9 @@ pub struct Dmg {
 }
 
 impl Dmg {
-    pub fn new(mut cartridge: Cartridge, mut boot_rom: Option<Vec<u8>>) -> Dmg {
+    pub fn new(mut cartridge: Cartridge, boot_rom: Option<&[u8]>) -> Dmg {
+        let mut boot_rom: Option<Buffer<{ BOOT_ROM_SIZE as usize }>> = boot_rom.map(Buffer::from_slice);
+
         // swap the boot rom with the cartridge data in the memory
         if let Some(boot) = &mut boot_rom {
             cartridge.swap_boot_rom(boot);

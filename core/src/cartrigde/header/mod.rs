@@ -1,3 +1,4 @@
+#[cfg(feature = "alloc")]
 use alloc::{
     format,
     string::{String, ToString},
@@ -62,11 +63,51 @@ impl Destination {
     }
 }
 
+/// Game title, taken verbatim from the cartridge header (0x0134..=0x0143, 16 bytes at most)
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Title {
+    bytes: [u8; TITLE_SIZE as usize],
+    len: u8,
+}
+
+impl Title {
+    fn new(raw_rom: &[u8]) -> Self {
+        let raw_title = &raw_rom[TITLE_START as usize..TITLE_END as usize];
+        let len = raw_title.iter().take_while(|&&c| c != 0).count();
+
+        let mut bytes = [0u8; TITLE_SIZE as usize];
+        bytes[..len].copy_from_slice(&raw_title[..len]);
+
+        Self {
+            bytes,
+            len: len as u8,
+        }
+    }
+
+    pub fn as_str(&self) -> &str { core::str::from_utf8(&self.bytes[..self.len as usize]).unwrap_or("") }
+}
+
+impl core::ops::Deref for Title {
+    type Target = str;
+    fn deref(&self) -> &str { self.as_str() }
+}
+
+impl core::fmt::Display for Title {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { write!(f, "{}", self.as_str()) }
+}
+
+impl PartialEq<&str> for Title {
+    fn eq(&self, other: &&str) -> bool { self.as_str() == *other }
+}
+
+// `is_pre_sgb`, `license`, `supports_cgb`, `supports_sgb` and `game_version` are only read by
+// `to_string_array`, which needs `alloc`
+#[cfg_attr(not(feature = "alloc"), allow(dead_code))]
 #[derive(Debug, Default)]
 pub struct CartridgeHeader {
     is_pre_sgb: bool,
-    license: Option<String>,
-    pub title: String,
+    license: Option<&'static str>,
+    pub title: Title,
     supports_cgb: GBCSupport,
     supports_sgb: bool,
     pub(crate) cartridge_type: CartridgeType,
@@ -86,11 +127,7 @@ impl CartridgeHeader {
         Ok(Self {
             is_pre_sgb: get_license(raw_rom).0,
             license: get_license(raw_rom).1,
-            title: raw_rom[TITLE_START as usize..TITLE_END as usize]
-                .iter()
-                .take_while(|&c| *c != 0)
-                .map(|&c| c as char)
-                .collect(),
+            title: Title::new(raw_rom),
             supports_cgb: GBCSupport::new(raw_rom),
             supports_sgb: get_supports_sgb(raw_rom),
             cartridge_type: CartridgeType::new(raw_rom),
@@ -104,6 +141,7 @@ impl CartridgeHeader {
         })
     }
 
+    #[cfg(feature = "alloc")]
     pub fn to_string_array(&self) -> Vec<String> {
         vec![
             format!(
@@ -112,10 +150,7 @@ impl CartridgeHeader {
                     true => "Old license",
                     false => "New license",
                 },
-                match &self.license {
-                    Some(l) => l,
-                    None => "None",
-                }
+                self.license.unwrap_or("None")
             ),
             format!("Supports CGB -> {:?}", self.supports_cgb),
             format!(
@@ -147,6 +182,7 @@ impl CartridgeHeader {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl core::fmt::Display for CartridgeHeader {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.to_string_array().join("\n"))

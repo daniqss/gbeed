@@ -23,5 +23,6 @@ impl Instruction for Reti {
         Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (4, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "reti".to_string() }
 }

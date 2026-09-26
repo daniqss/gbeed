@@ -28,5 +28,6 @@ impl<S: Operand> Instruction for And<S> {
         ))
     }
     fn info(&self) -> (u8, u8) { (1 + S::READ_CYCLES, 1 + S::LEN) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("and {}", self.src) }
 }

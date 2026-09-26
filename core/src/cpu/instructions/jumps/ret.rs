@@ -38,6 +38,7 @@ impl Instruction for Ret {
         (cycles, 1)
     }
 
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String {
         match self.jc {
             JumpCondition::None => "ret".to_string(),

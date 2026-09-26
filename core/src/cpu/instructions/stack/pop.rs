@@ -46,6 +46,7 @@ impl Instruction for Pop {
         Ok(InstructionEffect::new(self.info(), flags_pop(self.dst, src)))
     }
     fn info(&self) -> (u8, u8) { (3, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("pop {}", self.dst) }
 }
 

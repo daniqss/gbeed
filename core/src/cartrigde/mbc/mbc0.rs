@@ -1,11 +1,9 @@
-use alloc::{boxed::Box, vec::Vec};
-use core::mem::MaybeUninit;
-
 use crate::{
     BOOT_ROM_END, BOOT_ROM_START, EXTERNAL_RAM_SIZE, EXTERNAL_RAM_START, ROM_BANK00_SIZE, ROM_BANKNN_SIZE,
     cartrigde::{
         CartridgeError, CartridgeResult, RamSize, features::CartridgeFeatures, header::CartridgeHeader,
     },
+    utils::Buffer,
 };
 
 use super::MemoryBankController;
@@ -17,15 +15,14 @@ const MBC0_RAM_SIZE: usize = EXTERNAL_RAM_SIZE as usize;
 /// They can have a RAM chip using a discrete logic decode but without a full MCB.
 #[derive(Debug)]
 pub struct Mbc0 {
-    // avoid 32kb stack allocation
-    rom: Box<[u8; MBC0_ROM_SIZE]>,
-    ram: Option<Box<[u8; MBC0_RAM_SIZE]>>,
+    rom: Buffer<MBC0_ROM_SIZE>,
+    ram: Option<Buffer<MBC0_RAM_SIZE>>,
 }
 
 impl MemoryBankController for Mbc0 {
     fn new(
         raw_rom: &[u8],
-        save: Option<Vec<u8>>,
+        save: Option<&[u8]>,
         features: &CartridgeFeatures,
         header: &CartridgeHeader,
     ) -> CartridgeResult<Self> {
@@ -36,31 +33,15 @@ impl MemoryBankController for Mbc0 {
             ));
         }
 
-        // SAFETY: store the ROM in the heap to avoid large stack allocation
-        // that could crash the emulator on some targets, like WASM
-        // This way we avoid stack copy with compile time known size in heap allocation
-        let rom: Box<[u8; MBC0_ROM_SIZE]> = unsafe {
-            let mut boxed: Box<MaybeUninit<[u8; MBC0_ROM_SIZE]>> = Box::new(MaybeUninit::uninit());
-            core::ptr::copy_nonoverlapping(raw_rom.as_ptr(), boxed.as_mut_ptr() as *mut u8, MBC0_ROM_SIZE);
-            boxed.assume_init()
-        };
+        let rom = Buffer::from_slice(&raw_rom[..MBC0_ROM_SIZE]);
 
-        let ram: Option<Box<[u8; MBC0_RAM_SIZE]>> = match (features.has_ram, header.ram_size, save) {
-            (true, RamSize::Ram8KB, Some(save_data)) => Some(unsafe {
-                let mut boxed: Box<MaybeUninit<[u8; MBC0_RAM_SIZE]>> = Box::new(MaybeUninit::uninit());
-                core::ptr::copy_nonoverlapping(
-                    save_data.as_ptr(),
-                    boxed.as_mut_ptr() as *mut u8,
-                    MBC0_RAM_SIZE,
-                );
-                boxed.assume_init()
+        let ram: Option<Buffer<MBC0_RAM_SIZE>> = match (features.has_ram, header.ram_size) {
+            (true, RamSize::Ram8KB) => Some(match save {
+                Some(save_data) if save_data.len() == MBC0_RAM_SIZE => Buffer::from_slice(save_data),
+                _ => Buffer::zeroed(MBC0_RAM_SIZE),
             }),
-            (true, RamSize::Ram8KB, None) => Some(unsafe {
-                let boxed: Box<MaybeUninit<[u8; MBC0_RAM_SIZE]>> = Box::new(MaybeUninit::zeroed());
-                boxed.assume_init()
-            }),
-            (false, RamSize::None, _) => None,
-            (_, ram, _) => {
+            (false, RamSize::None) => None,
+            (_, ram) => {
                 return Err(CartridgeError::InvalidRamSize(
                     Some(ram),
                     "Only 8KB RAM size is supported for MBC0",
@@ -88,7 +69,7 @@ impl MemoryBankController for Mbc0 {
 
     fn get_ram(&self) -> Option<&[u8]> {
         match &self.ram {
-            Some(ram) => Some(ram.as_slice()),
+            Some(ram) => Some(ram),
             None => None,
         }
     }

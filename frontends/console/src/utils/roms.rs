@@ -77,7 +77,7 @@ pub fn load_cartridge(
         }
     };
 
-    Cartridge::new(&game_data, save).map_err(|e| {
+    Cartridge::new(&game_data, save.as_deref()).map_err(|e| {
         Box::new(io::Error::new(
             io::ErrorKind::InvalidData,
             format!("Failed to create cartridge from ROM at {game_path:?}: {e}"),

@@ -140,32 +140,42 @@ impl Accessible<u16> for Joypad {
 
 impl core::fmt::Display for Joypad {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut buttons = Vec::with_capacity(10);
+        write!(f, "Joypad: [")?;
+
+        let mut first = true;
+        let mut write_button = |f: &mut core::fmt::Formatter<'_>, name: &str| -> core::fmt::Result {
+            if !first {
+                write!(f, ", ")?;
+            }
+            first = false;
+            write!(f, "{name}")
+        };
+
         if self.input & PRESS_RIGHT == 0 {
-            buttons.push("Right");
+            write_button(f, "Right")?;
         }
         if self.input & PRESS_LEFT == 0 {
-            buttons.push("Left");
+            write_button(f, "Left")?;
         }
         if self.input & PRESS_UP == 0 {
-            buttons.push("Up");
+            write_button(f, "Up")?;
         }
         if self.input & PRESS_DOWN == 0 {
-            buttons.push("Down");
+            write_button(f, "Down")?;
         }
         if self.input & PRESS_A == 0 {
-            buttons.push("A");
+            write_button(f, "A")?;
         }
         if self.input & PRESS_B == 0 {
-            buttons.push("B");
+            write_button(f, "B")?;
         }
         if self.input & PRESS_SELECT == 0 {
-            buttons.push("Select");
+            write_button(f, "Select")?;
         }
         if self.input & PRESS_START == 0 {
-            buttons.push("Start");
+            write_button(f, "Start")?;
         }
 
-        write!(f, "Joypad: [{}]", buttons.join(", "))
+        write!(f, "]")
     }
 }

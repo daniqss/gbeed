@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 mod mbc0;
 mod mbc1;
 mod mbc2;
@@ -154,7 +153,7 @@ impl CartridgeType {
 pub trait MemoryBankController {
     fn new(
         raw_rom: &[u8],
-        save: Option<Vec<u8>>,
+        save: Option<&[u8]>,
         features: &CartridgeFeatures,
         header: &CartridgeHeader,
     ) -> CartridgeResult<Self>
@@ -170,6 +169,9 @@ pub trait MemoryBankController {
     fn swap_boot_rom(&mut self, boot_rom: &mut [u8]);
 }
 
+// without `alloc`, each variant embeds its ROM/RAM inline (see `Buffer`), so the enum is
+// necessarily as big as its largest variant (MBC5, up to ~8MB) regardless of the active cartridge
+#[cfg_attr(not(feature = "alloc"), allow(clippy::large_enum_variant))]
 #[derive(Debug)]
 pub enum Mbc {
     Mbc0(Mbc0),
@@ -219,7 +221,7 @@ pub(crate) fn check_multicart(raw_rom: &[u8], header: &CartridgeHeader) -> bool 
 
 pub(crate) fn select_mbc(
     raw_rom: &[u8],
-    save: Option<Vec<u8>>,
+    save: Option<&[u8]>,
     features: &CartridgeFeatures,
     header: &CartridgeHeader,
 ) -> CartridgeResult<Mbc> {

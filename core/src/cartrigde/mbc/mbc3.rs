@@ -7,8 +7,8 @@ use crate::{
         header::CartridgeHeader,
     },
     prelude::*,
+    utils::Buffer,
 };
-use alloc::{boxed::Box, vec, vec::Vec};
 
 use super::MemoryBankController;
 
@@ -17,12 +17,16 @@ mem_range!(ROM_BANK_NUMBER, 0x2000, 0x3FFF);
 mem_range!(RAM_BANK_NUMBER_OR_RTC_SELECT, 0x4000, 0x5FFF);
 mem_range!(LATCH_CLOCK_DATA, 0x6000, 0x7FFF);
 
+/// MBC3 supports up to 2MiB ROM and 32KiB RAM
+const MBC3_MAX_ROM_SIZE: usize = 2 * 1024 * 1024;
+const MBC3_MAX_RAM_SIZE: usize = 32 * 1024;
+
 #[derive(Debug, Default)]
 pub struct Mbc3 {
-    rom: Box<[u8]>,
+    rom: Buffer<MBC3_MAX_ROM_SIZE>,
     rom_size: RomSize,
     rom_selected_bank: u8,
-    ram: Option<Box<[u8]>>,
+    ram: Option<Buffer<MBC3_MAX_RAM_SIZE>>,
     ram_enabled: bool,
     ram_size: RamSize,
     ram_selected_bank: u8,
@@ -35,12 +39,12 @@ pub struct Mbc3 {
 impl MemoryBankController for Mbc3 {
     fn new(
         raw_rom: &[u8],
-        save: Option<Vec<u8>>,
+        save: Option<&[u8]>,
         features: &CartridgeFeatures,
         header: &CartridgeHeader,
     ) -> CartridgeResult<Self> {
-        let rom: Box<[u8]> = if raw_rom.len() == header.rom_size.get_size() as usize {
-            raw_rom.to_vec().into_boxed_slice()
+        let rom = if raw_rom.len() == header.rom_size.get_size() as usize {
+            Buffer::from_slice(raw_rom)
         } else {
             return Err(CartridgeError::InvalidRomSize(
                 Some(header.rom_size),
@@ -48,11 +52,12 @@ impl MemoryBankController for Mbc3 {
             ));
         };
 
-        let ram: Option<Box<[u8]>> = features.has_ram.then(|| {
+        let ram: Option<Buffer<MBC3_MAX_RAM_SIZE>> = features.has_ram.then(|| {
             let ram_size = header.ram_size.get_size() as usize;
-            save.filter(|s| features.has_battery && s.len() == ram_size)
-                .unwrap_or_else(|| vec![0; ram_size])
-                .into_boxed_slice()
+            match save.filter(|s| features.has_battery && s.len() == ram_size) {
+                Some(save_data) => Buffer::from_slice(save_data),
+                None => Buffer::zeroed(ram_size),
+            }
         });
 
         let timer = if features.has_timer {

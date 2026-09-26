@@ -35,6 +35,7 @@ pub trait Instruction {
     /// Tuple of cycles and length of the instruction in bytes
     fn info(&self) -> (u8, u8);
     /// Returns the disassembly representation of the instruction
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String;
 }
 

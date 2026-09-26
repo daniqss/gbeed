@@ -55,17 +55,17 @@ pub trait Accessible16<Address16, Address8>: Accessible<Address8> {
 /// from this 16 bits address memory bus we can access all the memory mapped components
 #[derive(Debug)]
 pub struct Memory {
-    pub boot_rom: Option<Vec<u8>>,
-    pub ram: Box<[u8; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize]>,
-    pub hram: Box<[u8; HRAM_SIZE as usize]>,
+    pub boot_rom: Option<Buffer<{ BOOT_ROM_SIZE as usize }>>,
+    pub ram: Buffer<{ (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize }>,
+    pub hram: Buffer<{ HRAM_SIZE as usize }>,
 }
 
 impl Memory {
-    pub(crate) fn new(boot_rom: Option<Vec<u8>>) -> Memory {
+    pub(crate) fn new(boot_rom: Option<Buffer<{ BOOT_ROM_SIZE as usize }>>) -> Memory {
         Memory {
             boot_rom,
-            ram: Box::new([0; (WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize]),
-            hram: Box::new([0; HRAM_SIZE as usize]),
+            ram: Buffer::zeroed((WRAM_BANKN_SIZE + WRAM_BANK0_SIZE) as usize),
+            hram: Buffer::zeroed(HRAM_SIZE as usize),
         }
     }
 }

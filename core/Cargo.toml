@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["std"]
+default = ["std", "alloc"]
 std = []
+alloc = []
 
 [dependencies]
 pastey = "0.2.3"
