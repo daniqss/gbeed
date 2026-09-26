@@ -104,11 +104,17 @@ impl SettingsMenuState {
 
         match self.selected {
             ColorPalette => {
-                if self.input.is_pressed_a() {
-                    controller.palette = controller.palette.next();
-                }
-                if self.input.is_pressed_b() {
-                    controller.palette = controller.palette.prev();
+                if self.input.is_pressed_a() || self.input.is_pressed_b() {
+                    let old_palette = controller.palette_color;
+                    controller.palette = if self.input.is_pressed_a() {
+                        controller.palette.next()
+                    } else {
+                        controller.palette.prev()
+                    };
+                    let new_palette = controller.palette.get_palette_color();
+
+                    controller.recolor_screen(old_palette, new_palette);
+                    controller.palette_color = new_palette;
                 }
             }
             SpeedUpMode => {
@@ -149,8 +155,6 @@ impl SettingsMenuState {
                 }
             }
         }
-
-        controller.palette_color = controller.palette.get_palette_color();
 
         None
     }
