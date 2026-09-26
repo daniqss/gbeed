@@ -61,6 +61,7 @@
     ]);
 in
   pkgs.mkShell {
+    name = "x11";
     packages = commonPackages;
     buildInputs = platformPackages ++ [latexPackages];
 

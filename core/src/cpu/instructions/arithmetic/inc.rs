@@ -30,6 +30,7 @@ impl<D: WritableOperand> Instruction for Inc<D> {
         ))
     }
     fn info(&self) -> (u8, u8) { (1 + D::READ_CYCLES + D::WRITE_CYCLES, 1 + D::LEN) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("inc {}", self.dst) }
 }
 
@@ -48,5 +49,6 @@ impl<D: Operand16> Instruction for Inc16<D> {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("inc {}", self.dst) }
 }

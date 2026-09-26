@@ -23,6 +23,7 @@ impl<D: WritableOperand> Instruction for Res<D> {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (2 + D::READ_CYCLES + D::WRITE_CYCLES, 2 + D::LEN) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("res {}, {}", self.bit, self.dst) }
 }
 

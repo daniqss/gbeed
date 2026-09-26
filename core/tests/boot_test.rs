@@ -24,7 +24,7 @@ fn test_disassembly_boot() -> Result<(), Box<dyn std::error::Error>> {
 
     let game = Cartridge::new(&game_data, None).map_err(|e| format!("Failed to create cartridge: {e}"))?;
     // it actually needs a game to compare the logos
-    let mut gb = Dmg::new(game, Some(boot_rom_data));
+    let mut gb = Dmg::new(game, Some(&boot_rom_data));
     let mut init_ram = false;
     let mut set_audio = false;
     let mut setup_logo = false;

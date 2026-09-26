@@ -27,6 +27,7 @@ impl Instruction for JpToImm16 {
         }
     }
     fn info(&self) -> (u8, u8) { if self.jc.should_jump() { (4, 3) } else { (3, 3) } }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("jp {}${:04X}", self.jc, self.addr) }
 }
 
@@ -45,6 +46,7 @@ impl Instruction for JpToHL {
         Ok(InstructionEffect::with_jump(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "jp [hl]".to_string() }
 }
 

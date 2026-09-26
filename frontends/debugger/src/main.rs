@@ -179,11 +179,11 @@ impl<'a> EmulatorApp<'a> {
             _ => None,
         };
 
-        let game = Cartridge::new(&game_data, save).map_err(|e| format!("{e}"))?;
-        let title = game.header.title.clone();
+        let game = Cartridge::new(&game_data, save.as_deref()).map_err(|e| format!("{e}"))?;
+        let title = game.header.title.to_string();
         let region = format!("{:?}", game.header.destination);
 
-        self.gb = Some(Dmg::new(game, self.boot_rom.clone()));
+        self.gb = Some(Dmg::new(game, self.boot_rom.as_deref()));
         self.save_path = Some(save_path);
 
         #[cfg(target_arch = "wasm32")]

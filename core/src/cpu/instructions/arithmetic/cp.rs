@@ -32,5 +32,6 @@ impl<S: Operand> Instruction for Cp<S> {
         ))
     }
     fn info(&self) -> (u8, u8) { (1 + S::READ_CYCLES, 1 + S::LEN) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("cp {}", self.src) }
 }

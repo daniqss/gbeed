@@ -61,6 +61,7 @@
     ]);
 in
   mkShell {
+    name = "latex";
     buildInputs = [latexPackages] ++ commonPackages;
 
     env = {

@@ -3,6 +3,7 @@
   rustToolchain,
 }:
 pkgs.mkShell {
+  name = "wasm";
   buildInputs = with pkgs; [
     just
     cmake

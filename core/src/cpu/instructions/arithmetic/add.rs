@@ -32,6 +32,7 @@ impl<S: Operand> Instruction for AddA<S> {
         ))
     }
     fn info(&self) -> (u8, u8) { (1 + S::READ_CYCLES, 1 + S::LEN) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("add a,{}", self.src) }
 }
 
@@ -59,6 +60,7 @@ impl<S: Operand16> Instruction for AddHL<S> {
         ))
     }
     fn info(&self) -> (u8, u8) { (2, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("add hl,{}", self.src) }
 }
 
@@ -83,6 +85,7 @@ impl Instruction for AddSPImm8 {
         Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (4, 2) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("add sp,{:+}", self.val) }
 }
 

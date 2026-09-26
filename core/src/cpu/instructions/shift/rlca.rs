@@ -40,6 +40,7 @@ impl Instruction for Rlca {
         Ok(InstructionEffect::new(self.info(), flags))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "rlca".to_string() }
 }
 

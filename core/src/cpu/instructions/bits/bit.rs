@@ -30,5 +30,6 @@ impl<S: Operand> Instruction for Bit<S> {
         ))
     }
     fn info(&self) -> (u8, u8) { (2 + S::READ_CYCLES, 2 + S::LEN) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("bit {}, {}", self.bit, self.target) }
 }

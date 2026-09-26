@@ -25,5 +25,6 @@ impl<D: WritableOperand, S: Operand> Instruction for Ldh<D, S> {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (1 + S::READ_CYCLES + D::WRITE_CYCLES, 1 + S::LEN + D::LEN) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("ldh {},{}", self.dst, self.src) }
 }

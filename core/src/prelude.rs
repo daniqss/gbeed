@@ -1,8 +1,15 @@
+#[cfg(feature = "alloc")]
 pub use alloc::boxed::Box;
+#[cfg(feature = "alloc")]
 pub use alloc::format;
+#[cfg(feature = "alloc")]
 pub use alloc::string::{String, ToString};
+#[cfg(feature = "alloc")]
 pub use alloc::vec;
+#[cfg(feature = "alloc")]
 pub use alloc::vec::Vec;
+
+pub use crate::utils::Buffer;
 
 pub use crate::cartrigde::Cartridge;
 pub use crate::controller::Controller;

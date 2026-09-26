@@ -1,4 +1,7 @@
+pub(crate) mod buffer;
 pub(crate) mod macros;
+
+pub use buffer::Buffer;
 
 /// Convert little-endian u8 pair to u16
 #[inline(always)]

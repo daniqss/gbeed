@@ -27,6 +27,7 @@ pub struct Wave {
     /// - bit 6: length enable (read/write)
     pub period_high: u8,
 
+    // better to not use `Buffer`, pretty small array and like this we get less cache misses
     /// Each byte holds two samples, the channel reads it left to right, upper nibble first
     pub wave_ram: [u8; 16],
 

@@ -30,5 +30,6 @@ impl Instruction for Cpl {
         ))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "cpl".to_string() }
 }

@@ -19,5 +19,6 @@ impl Instruction for Halt {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (1, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "halt".to_string() }
 }

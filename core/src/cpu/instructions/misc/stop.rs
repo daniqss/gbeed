@@ -22,5 +22,6 @@ impl Instruction for Stop {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (1, 2) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { "stop".to_string() }
 }

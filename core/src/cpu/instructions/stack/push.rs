@@ -42,6 +42,7 @@ impl Instruction for Push {
         Ok(InstructionEffect::new(self.info(), Flags::none()))
     }
     fn info(&self) -> (u8, u8) { (4, 1) }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("push {}", self.src) }
 }
 

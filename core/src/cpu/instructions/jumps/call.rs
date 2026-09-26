@@ -33,5 +33,6 @@ impl Instruction for Call {
     }
 
     fn info(&self) -> (u8, u8) { if !self.jc.should_jump() { (3, 3) } else { (6, 3) } }
+    #[cfg(feature = "alloc")]
     fn disassembly(&self) -> String { format!("call {}${:04X}", self.jc, self.n16) }
 }

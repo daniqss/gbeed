@@ -7,6 +7,7 @@
   system,
 }:
 pkgs.mkShell {
+  name = "drm";
   inputsFrom = [outputs.packages.${system}.console];
   packages = commonPackages;
 
