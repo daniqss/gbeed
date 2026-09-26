@@ -1,5 +1,6 @@
 use gbeed_core::{
-    AudioPlayer, BUFFER_SIZE, Ppu, Renderer, SAMPLE_RATE, SerialListener, prelude::DMG_SCREEN_WIDTH,
+    AudioPlayer, BUFFER_SIZE, Ppu, Renderer, SAMPLE_RATE, SerialListener,
+    prelude::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH},
 };
 
 use gbeed_raylib_common::{
@@ -63,6 +64,26 @@ impl<'a> ConsoleController<'a> {
             thread,
             _audio: audio,
         }
+    }
+
+    /// Repaints the already rendered framebuffer with the current `palette_color`
+    pub fn recolor_screen(&mut self, old_palette: color::PaletteColor, new_palette: color::PaletteColor) {
+        for index in (0..DMG_SCREEN_WIDTH * DMG_SCREEN_HEIGHT * 3).step_by(3) {
+            let r = self.screen[index];
+            let g = self.screen[index + 1];
+            let b = self.screen[index + 2];
+
+            let Some(shade) = old_palette.iter().position(|c| c.r == r && c.g == g && c.b == b) else {
+                continue;
+            };
+
+            let color = new_palette[shade];
+            self.screen[index] = color.r;
+            self.screen[index + 1] = color.g;
+            self.screen[index + 2] = color.b;
+        }
+
+        self.screen.update();
     }
 }
 
