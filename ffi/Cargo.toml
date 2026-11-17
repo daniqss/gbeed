@@ -1,0 +1,21 @@
+[package]
+name = "gbeed-ffi"
+description = "Builds the C interface of gbeed-core as libgbeed, for C, Python or any language with a FFI"
+version = "0.1.0"
+edition = "2024"
+repository = "https://github.com/daniqss/gbeed"
+
+[lib]
+# produces libgbeed.so / libgbeed.a
+name = "gbeed"
+crate-type = ["cdylib", "staticlib", "rlib"]
+# the console frontend binary is also called `gbeed`, avoid the doc output collision
+doc = false
+
+[features]
+default = ["std"]
+# without it the library is no_std and heapless, for embedded targets
+std = ["gbeed-core/std", "gbeed-core/alloc"]
+
+[dependencies]
+gbeed-core = { path = "../core", default-features = false, features = ["ffi"] }

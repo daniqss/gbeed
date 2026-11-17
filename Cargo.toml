@@ -5,6 +5,8 @@ members = [
     "frontends/debugger",
     "frontends/console",
     "frontends/raylib_common",
+    "core/macros",
+    "ffi",
 ]
 
 default-members = ["frontends/console"]
@@ -13,7 +15,6 @@ default-members = ["frontends/console"]
 opt-level = 3
 lto = "fat"
 codegen-units = 1  
-panic = "abort"
 strip = true
 overflow-checks = false
 

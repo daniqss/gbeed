@@ -7,6 +7,9 @@ edition = "2024"
 default = ["std", "alloc"]
 std = []
 alloc = []
+# C interface, usable without std nor alloc. See `src/ffi`
+ffi = ["dep:gbeed-macros"]
 
 [dependencies]
 pastey = "0.2.3"
+gbeed-macros = { path = "macros", optional = true }

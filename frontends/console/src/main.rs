@@ -21,7 +21,7 @@ struct EmulatorApp<'a> {
 
 impl<'a> EmulatorApp<'a> {
     pub fn new(rl: &'a mut RaylibHandle, thread: &'a RaylibThread, audio: &'a RaylibAudio) -> Self {
-        let screen = Texture::new(rl, thread, DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32);
+        let screen = Texture::new(rl, thread, GB_SCREEN_WIDTH as i32, GB_SCREEN_HEIGHT as i32);
 
         let palette = color::Palette::default();
 

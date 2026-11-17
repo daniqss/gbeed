@@ -2,6 +2,7 @@ use crate::apu::AudioPlayer;
 use crate::ppu::Renderer;
 use crate::serial::SerialListener;
 
+#[cfg_attr(feature = "ffi", gbeed_macros::ffi_controller)]
 pub trait Controller: SerialListener + Renderer + AudioPlayer {}
 
 /// Any type implementing the three plataform traits is a controller

@@ -1,4 +1,5 @@
 mod renderer;
+/// cbindgen:ignore
 mod sprite;
 
 use crate::{
@@ -10,6 +11,8 @@ use crate::{
     prelude::*,
 };
 
+#[cfg(feature = "ffi")]
+pub use renderer::GbeedRenderer;
 pub use renderer::Renderer;
 
 mem_range!(PPU_REGISTER, 0xFF40, 0xFF4B);
@@ -32,8 +35,8 @@ const HBLANK_INTERRUPT: u8 = 0x08;
 const LYC_EQ_LY_FLAG: u8 = 0x04;
 
 // screen dimensions
-pub const DMG_SCREEN_WIDTH: usize = 160;
-pub const DMG_SCREEN_HEIGHT: usize = 144;
+pub const GB_SCREEN_WIDTH: usize = 160;
+pub const GB_SCREEN_HEIGHT: usize = 144;
 
 const DOTS_PER_SCANLINE: usize = 456;
 const SCANLINES_PER_FRAME: usize = 154;
@@ -59,18 +62,18 @@ mem_range!(BLOCK2, 0x1000, 0x1800);
 mem_range!(BG_MAP0, 0x1800, 0x1C00);
 mem_range!(BG_MAP1, 0x1C00, 0x2000);
 
-pub const LCD_CONTROL: u16 = 0xFF40;
-pub const LCD_STATUS: u16 = 0xFF41;
-pub const SCROLL_Y: u16 = 0xFF42;
-pub const SCROLL_X: u16 = 0xFF43;
-pub const LY: u16 = 0xFF44;
-pub const LYC: u16 = 0xFF45;
-pub const DMA_REGISTER: u16 = 0xFF46;
-pub const BG_PALETTE: u16 = 0xFF47;
-pub const OBJ0_PALETTE: u16 = 0xFF48;
-pub const OBJ1_PALETTE: u16 = 0xFF49;
-pub const WY: u16 = 0xFF4A;
-pub const WX: u16 = 0xFF4B;
+pub(crate) const LCD_CONTROL: u16 = 0xFF40;
+pub(crate) const LCD_STATUS: u16 = 0xFF41;
+pub(crate) const SCROLL_Y: u16 = 0xFF42;
+pub(crate) const SCROLL_X: u16 = 0xFF43;
+pub(crate) const LY: u16 = 0xFF44;
+pub(crate) const LYC: u16 = 0xFF45;
+pub(crate) const DMA_REGISTER: u16 = 0xFF46;
+pub(crate) const BG_PALETTE: u16 = 0xFF47;
+pub(crate) const OBJ0_PALETTE: u16 = 0xFF48;
+pub(crate) const OBJ1_PALETTE: u16 = 0xFF49;
+pub(crate) const WY: u16 = 0xFF4A;
+pub(crate) const WX: u16 = 0xFF4B;
 
 /// Represents the current mode of the LCD display
 ///   Mode                  | Action                                     | Duration                             | Accessible video memory
@@ -95,7 +98,7 @@ pub struct Ppu {
     pub oam_ram: [u8; OAM_SIZE as usize],
 
     /// Useful to avoid checking framebuffer with color conversion
-    bg_cache: [u8; DMG_SCREEN_WIDTH],
+    bg_cache: [u8; GB_SCREEN_WIDTH],
     pub sprites_this_frame: usize,
 
     lcd_control: u8,
@@ -150,7 +153,7 @@ impl Ppu {
 
             vram: [0; VRAM_SIZE as usize],
             oam_ram: [0; OAM_SIZE as usize],
-            bg_cache: [0; DMG_SCREEN_WIDTH],
+            bg_cache: [0; GB_SCREEN_WIDTH],
 
             sprites_this_frame: 0,
 
@@ -265,7 +268,7 @@ impl Ppu {
 
             LCDMode::Drawing if self.check_mode_dots(FINISH_DRAWING_DOTS) => {
                 // render scanline if we're not at the bottom of the screen yet
-                if self.ly < DMG_SCREEN_HEIGHT as u8 {
+                if self.ly < GB_SCREEN_HEIGHT as u8 {
                     self.draw_scanline(renderer);
                 }
 
@@ -283,7 +286,7 @@ impl Ppu {
                 // check for LYC=LY coincidence
                 self.ly_equals_lyc_check(interrupt_flag);
 
-                let next_mode = if self.ly == DMG_SCREEN_HEIGHT as u8 {
+                let next_mode = if self.ly == GB_SCREEN_HEIGHT as u8 {
                     // frame draw is finished
                     interrupt_flag.set_vblank_interrupt(true);
                     if self.vblank_interrupt() {
@@ -394,7 +397,7 @@ impl Ppu {
         let mut first_byte = self.vram[(tile_address + line_in_tile * 2) as usize];
         let mut second_byte = self.vram[(tile_address + line_in_tile * 2 + 1) as usize];
 
-        for pixel in 0..DMG_SCREEN_WIDTH {
+        for pixel in 0..GB_SCREEN_WIDTH {
             let low_pixel = (first_byte >> bit_index) & 1;
             let high_pixel = (second_byte >> bit_index) & 1;
             let color_id = (high_pixel << 1) | low_pixel;
@@ -433,7 +436,7 @@ impl Ppu {
         let window_x = self.wx as isize - 7;
         let start_pixel = if window_x < 0 { 0 } else { window_x as usize };
 
-        if start_pixel >= DMG_SCREEN_WIDTH {
+        if start_pixel >= GB_SCREEN_WIDTH {
             return;
         }
 
@@ -464,7 +467,7 @@ impl Ppu {
         let mut first_byte = self.vram[(tile_address + line_in_tile * 2) as usize];
         let mut second_byte = self.vram[(tile_address + line_in_tile * 2 + 1) as usize];
 
-        for pixel in start_pixel..DMG_SCREEN_WIDTH {
+        for pixel in start_pixel..GB_SCREEN_WIDTH {
             let low_pixel = (first_byte >> bit_index) & 1;
             let high_pixel = (second_byte >> bit_index) & 1;
             let color_id = (high_pixel << 1) | low_pixel;
@@ -500,7 +503,7 @@ impl Ppu {
         let mut drawn_sprites = 0u8;
 
         // track which sprite owns each pixel in the current line
-        let mut pixel_owner: [Option<u8>; DMG_SCREEN_WIDTH] = [None; DMG_SCREEN_WIDTH];
+        let mut pixel_owner: [Option<u8>; GB_SCREEN_WIDTH] = [None; GB_SCREEN_WIDTH];
 
         for sprites_count in 0..MAX_SPRITES_IN_OAM {
             if drawn_sprites >= MAX_SPRITES_PER_LINE {
@@ -564,7 +567,7 @@ impl Ppu {
                 }
 
                 let screen_x = sprite.xpos.wrapping_add(pixel);
-                if screen_x >= DMG_SCREEN_WIDTH as u8 {
+                if screen_x >= GB_SCREEN_WIDTH as u8 {
                     continue;
                 }
 

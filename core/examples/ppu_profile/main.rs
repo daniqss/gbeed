@@ -1,14 +1,14 @@
 use gbeed_core::{AudioPlayer, Renderer, SerialListener, prelude::*};
 
 struct ProfileController {
-    framebuffer: [[u32; DMG_SCREEN_WIDTH]; DMG_SCREEN_HEIGHT],
+    framebuffer: [[u32; GB_SCREEN_WIDTH]; GB_SCREEN_HEIGHT],
     colors: [u32; 4],
 }
 
 impl ProfileController {
     fn new() -> Self {
         Self {
-            framebuffer: [[0; DMG_SCREEN_WIDTH]; DMG_SCREEN_HEIGHT],
+            framebuffer: [[0; GB_SCREEN_WIDTH]; GB_SCREEN_HEIGHT],
             colors: [0xC4CFA1, 0x8B956D, 0x4D533C, 0x1F1F1F],
         }
     }

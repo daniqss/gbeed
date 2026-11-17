@@ -2,12 +2,12 @@ use crate::{interrupts::Interrupt, prelude::*};
 
 mem_range!(SERIAL_REGISTER, SB, SC);
 
-pub const SB: u16 = 0xFF01;
-pub const SC: u16 = 0xFF02;
+pub(crate) const SB: u16 = 0xFF01;
+pub(crate) const SC: u16 = 0xFF02;
 
-pub const SC_TRANSFER_START: u8 = 0x80;
-pub const SC_CLOCK_SPEED: u8 = 0x02;
-pub const SC_CLOCK_SELECT: u8 = 0x01;
+pub(crate) const SC_TRANSFER_START: u8 = 0x80;
+pub(crate) const SC_CLOCK_SPEED: u8 = 0x02;
+pub(crate) const SC_CLOCK_SELECT: u8 = 0x01;
 
 /// The internal serial clock runs at 8192 Hz, so 4096 T-cycles for a whole byte .
 const CYCLES_PER_BIT: i32 = 512;
@@ -17,7 +17,9 @@ const CYCLES_PER_BIT_SHIFT: u32 = CYCLES_PER_BIT.trailing_zeros();
 const FAST_CYCLES_PER_BIT_SHIFT: u32 = FAST_CYCLES_PER_BIT.trailing_zeros();
 const TRANSFER_BITS: u8 = 8;
 
+#[cfg_attr(feature = "ffi", gbeed_macros::ffi_callbacks)]
 pub trait SerialListener {
+    /// Called with every byte sent through the serial port
     fn on_transfer(&mut self, _data: u8) {}
 }
 

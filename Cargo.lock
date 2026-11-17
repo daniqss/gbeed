@@ -109,6 +109,7 @@ dependencies = [
 name = "gbeed-core"
 version = "0.1.0"
 dependencies = [
+ "gbeed-macros",
  "pastey",
 ]
 
@@ -119,6 +120,22 @@ dependencies = [
  "gbeed-core",
  "gbeed-raylib-common",
  "raylib",
+]
+
+[[package]]
+name = "gbeed-ffi"
+version = "0.1.0"
+dependencies = [
+ "gbeed-core",
+]
+
+[[package]]
+name = "gbeed-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

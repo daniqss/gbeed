@@ -131,7 +131,7 @@ impl EmulationScene {
 
         d.draw_texture_pro(
             texture,
-            Rectangle::new(0.0, 0.0, DMG_SCREEN_WIDTH as f32, DMG_SCREEN_HEIGHT as f32),
+            Rectangle::new(0.0, 0.0, GB_SCREEN_WIDTH as f32, GB_SCREEN_HEIGHT as f32),
             Rectangle::new(x as f32, y as f32, w as f32, h as f32),
             Vector2::ZERO,
             0.0,

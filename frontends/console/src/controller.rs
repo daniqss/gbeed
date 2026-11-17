@@ -1,6 +1,6 @@
 use gbeed_core::{
-    AudioPlayer, BUFFER_SIZE, Ppu, Renderer, SAMPLE_RATE, SerialListener,
-    prelude::{DMG_SCREEN_HEIGHT, DMG_SCREEN_WIDTH},
+    AudioPlayer, GB_AUDIO_BUFFER_SIZE, GB_SAMPLE_RATE, Ppu, Renderer, SerialListener,
+    prelude::{GB_SCREEN_HEIGHT, GB_SCREEN_WIDTH},
 };
 
 use gbeed_raylib_common::{
@@ -16,7 +16,7 @@ pub struct ConsoleController<'a> {
     pub palette_color: color::PaletteColor,
 
     sample_idx: usize,
-    audio_buffer: Box<[i16; BUFFER_SIZE]>,
+    audio_buffer: Box<[i16; GB_AUDIO_BUFFER_SIZE]>,
     audio_stream: AudioStream<'a>,
 
     pub speed_up_mode: SpeedUpMode,
@@ -41,9 +41,9 @@ impl<'a> ConsoleController<'a> {
 
         // match raylib's internal subbuffer size to our flush size so
         // UpdateAudioStream never has to reject a chunk for being "too many frames"
-        audio.set_audio_stream_buffer_size_default(BUFFER_SIZE as i32);
+        audio.set_audio_stream_buffer_size_default(GB_AUDIO_BUFFER_SIZE as i32);
 
-        let audio_stream = audio.new_audio_stream(SAMPLE_RATE, 16, 1);
+        let audio_stream = audio.new_audio_stream(GB_SAMPLE_RATE, 16, 1);
         audio_stream.play();
 
         Self {
@@ -52,7 +52,7 @@ impl<'a> ConsoleController<'a> {
             palette_color,
 
             sample_idx: 0,
-            audio_buffer: Box::new([0; BUFFER_SIZE]),
+            audio_buffer: Box::new([0; GB_AUDIO_BUFFER_SIZE]),
             audio_stream,
 
             speed_up_mode: SpeedUpMode::default(),
@@ -68,7 +68,7 @@ impl<'a> ConsoleController<'a> {
 
     /// Repaints the already rendered framebuffer with the current `palette_color`
     pub fn recolor_screen(&mut self, old_palette: color::PaletteColor, new_palette: color::PaletteColor) {
-        for index in (0..DMG_SCREEN_WIDTH * DMG_SCREEN_HEIGHT * 3).step_by(3) {
+        for index in (0..GB_SCREEN_WIDTH * GB_SCREEN_HEIGHT * 3).step_by(3) {
             let r = self.screen[index];
             let g = self.screen[index + 1];
             let b = self.screen[index + 2];
@@ -89,7 +89,7 @@ impl<'a> ConsoleController<'a> {
 
 impl Renderer for ConsoleController<'_> {
     fn read_pixel(&self, x: usize, y: usize) -> u32 {
-        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
+        let index = (y * GB_SCREEN_WIDTH + x) * 3;
 
         ((self.screen[index] as u32) << 16)
             | ((self.screen[index + 1] as u32) << 8)
@@ -100,7 +100,7 @@ impl Renderer for ConsoleController<'_> {
         let shade = (palette >> (color_id * 2)) & 0x03;
         let color = self.palette_color[shade as usize];
 
-        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
+        let index = (y * GB_SCREEN_WIDTH + x) * 3;
 
         self.screen[index] = color.r;
         self.screen[index + 1] = color.g;
@@ -121,7 +121,7 @@ impl AudioPlayer for ConsoleController<'_> {
 
     fn push_sample(&mut self, left: i16, right: i16) {
         // drop new samples when the buffer is full instead of wrapping
-        if self.sample_idx >= BUFFER_SIZE {
+        if self.sample_idx >= GB_AUDIO_BUFFER_SIZE {
             return;
         }
 

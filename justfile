@@ -4,6 +4,7 @@ mod memoria 'docs/memoria'
 mod defensa 'docs/defensa'
 mod web 'frontends/debugger/static/web.just'
 mod cross 'cross/cross.just'
+mod ffi 'ffi/ffi.just'
 
 build *ARGS:
     cargo build --features "${DISPLAY_FEATURES}" {{ARGS}}

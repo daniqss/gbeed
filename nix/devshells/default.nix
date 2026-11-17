@@ -21,6 +21,7 @@
     clang
     rustToolchain
     cargo-flamegraph
+    rust-cbindgen
     perf
     curl
     git

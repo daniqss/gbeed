@@ -1,5 +1,8 @@
+/// cbindgen:ignore
 mod channels;
+/// cbindgen:ignore
 mod envelope;
+/// cbindgen:ignore
 mod length_counter;
 mod player;
 
@@ -50,13 +53,11 @@ const CH3_ON_FLAG: u8 = 0x04;
 const CH2_ON_FLAG: u8 = 0x02;
 const CH1_ON_FLAG: u8 = 0x01;
 
-pub const SAMPLE_RATE: u32 = 44100;
-pub const BUFFER_SIZE: usize = 4096;
-pub const STEREO_BUFFER_SIZE: usize = BUFFER_SIZE * 2;
+pub const GB_SAMPLE_RATE: u32 = 44100;
+pub const GB_AUDIO_BUFFER_SIZE: usize = 4096;
+pub const GB_STEREO_AUDIO_BUFFER_SIZE: usize = GB_AUDIO_BUFFER_SIZE * 2;
 
-/// The base rate for the filter, this is used to calculate the
-/// filter rate based on the clock frequency and the sampling rate.
-const FILTER_RATE_BASE: f64 = 0.999958;
+const FILTER_RATE: f32 = 0.996_013_3;
 
 #[derive(Debug)]
 pub struct Apu {
@@ -119,7 +120,7 @@ impl Apu {
             sample_counter: 0,
 
             filter_diff: [0.0; 2],
-            filter_rate: FILTER_RATE_BASE.powf(cpu::FREQUENCY as f64 / SAMPLE_RATE as f64) as f32,
+            filter_rate: FILTER_RATE,
         }
     }
 
@@ -140,8 +141,8 @@ impl Apu {
         // process the requested cycles in chunks bounded by the next sample emission or the next frame sequencer tick.
         // this avoids running the per-cycle inner loop
         while remaining > 0 {
-            // cycles until next sample emission (sample_counter += SAMPLE_RATE per cycle, emits when >= FREQUENCY)
-            let cycles_to_sample = (cpu::FREQUENCY - self.sample_counter).div_ceil(SAMPLE_RATE);
+            // cycles until next sample emission (sample_counter += GB_SAMPLE_RATE per cycle, emits when >= FREQUENCY)
+            let cycles_to_sample = (cpu::FREQUENCY - self.sample_counter).div_ceil(GB_SAMPLE_RATE);
 
             // cycles until next frame sequencer step
             let cycles_to_fs = 8192 - self.cycles;
@@ -156,7 +157,7 @@ impl Apu {
             self.wave.tick(chunk);
             self.noise.tick(chunk);
 
-            self.sample_counter += chunk * SAMPLE_RATE;
+            self.sample_counter += chunk * GB_SAMPLE_RATE;
             self.cycles += chunk;
             remaining -= chunk;
 

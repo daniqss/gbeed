@@ -39,8 +39,7 @@ impl Layout {
         if is_mobile {
             let game_x = PANEL_PADDING;
             let scaled_screen_width = screen_width - PANEL_PADDING * 2;
-            let scaled_screen_height =
-                scaled_screen_width * DMG_SCREEN_HEIGHT as i32 / DMG_SCREEN_WIDTH as i32;
+            let scaled_screen_height = scaled_screen_width * GB_SCREEN_HEIGHT as i32 / GB_SCREEN_WIDTH as i32;
             let screen_center_x = screen_width / 2;
 
             let controls_y = game_y + scaled_screen_height + PANEL_PADDING * 2;
@@ -86,8 +85,8 @@ impl Layout {
             }
         } else {
             let screen_scale = 4;
-            let scaled_screen_width = DMG_SCREEN_WIDTH as i32 * screen_scale;
-            let scaled_screen_height = DMG_SCREEN_HEIGHT as i32 * screen_scale;
+            let scaled_screen_width = GB_SCREEN_WIDTH as i32 * screen_scale;
+            let scaled_screen_height = GB_SCREEN_HEIGHT as i32 * screen_scale;
 
             let game_x = PANEL_PADDING;
             let screen_center_x = game_x + scaled_screen_width / 2;

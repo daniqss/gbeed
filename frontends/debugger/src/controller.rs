@@ -1,6 +1,7 @@
 use gbeed_core::prelude::*;
 use gbeed_core::{
-    AudioPlayer, BUFFER_SIZE, Ppu, Renderer, SAMPLE_RATE, SerialListener, prelude::DMG_SCREEN_WIDTH,
+    AudioPlayer, GB_AUDIO_BUFFER_SIZE, GB_SAMPLE_RATE, Ppu, Renderer, SerialListener,
+    prelude::GB_SCREEN_WIDTH,
 };
 use gbeed_raylib_common::{Texture, color::DMG_CLASSIC_PALETTE, settings::SpeedUpMultiplier};
 use raylib::prelude::*;
@@ -22,7 +23,7 @@ pub struct DebuggerController<'a> {
     pub scroll_y: i32,
 
     sample_idx: usize,
-    audio_buffer: Box<[i16; BUFFER_SIZE]>,
+    audio_buffer: Box<[i16; GB_AUDIO_BUFFER_SIZE]>,
     audio_stream: AudioStream<'a>,
 
     pub speed_up_multiplier: SpeedUpMultiplier,
@@ -36,13 +37,13 @@ impl<'a> DebuggerController<'a> {
     pub fn new(rl: &'a mut RaylibHandle, thread: &'a RaylibThread, audio: &'a RaylibAudio) -> Self {
         // Match raylib's internal subbuffer size to our flush size so
         // UpdateAudioStream never has to reject a chunk for being "too many frames"
-        audio.set_audio_stream_buffer_size_default(BUFFER_SIZE as i32);
+        audio.set_audio_stream_buffer_size_default(GB_AUDIO_BUFFER_SIZE as i32);
 
-        let audio_stream = audio.new_audio_stream(SAMPLE_RATE, 16, 1);
+        let audio_stream = audio.new_audio_stream(GB_SAMPLE_RATE, 16, 1);
         audio_stream.play();
 
         Self {
-            screen_texture: Texture::new(rl, thread, DMG_SCREEN_WIDTH as i32, DMG_SCREEN_HEIGHT as i32),
+            screen_texture: Texture::new(rl, thread, GB_SCREEN_WIDTH as i32, GB_SCREEN_HEIGHT as i32),
             tile_textures: [
                 Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
                 Texture::new(rl, thread, TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT),
@@ -53,7 +54,7 @@ impl<'a> DebuggerController<'a> {
             scroll_y: 0,
 
             sample_idx: 0,
-            audio_buffer: Box::new([0; BUFFER_SIZE]),
+            audio_buffer: Box::new([0; GB_AUDIO_BUFFER_SIZE]),
             audio_stream,
 
             speed_up_multiplier: SpeedUpMultiplier::OneAndHalf,
@@ -67,7 +68,7 @@ impl<'a> DebuggerController<'a> {
 
 impl Renderer for DebuggerController<'_> {
     fn read_pixel(&self, x: usize, y: usize) -> u32 {
-        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
+        let index = (y * GB_SCREEN_WIDTH + x) * 3;
 
         ((self.screen_texture[index] as u32) << 16)
             | ((self.screen_texture[index + 1] as u32) << 8)
@@ -75,7 +76,7 @@ impl Renderer for DebuggerController<'_> {
     }
 
     fn write_pixel(&mut self, x: usize, y: usize, palette: u8, color_id: u8) {
-        let index = (y * DMG_SCREEN_WIDTH + x) * 3;
+        let index = (y * GB_SCREEN_WIDTH + x) * 3;
         let shade = (palette >> (color_id * 2)) & 0x03;
         let color = DMG_CLASSIC_PALETTE[shade as usize];
 
@@ -114,7 +115,7 @@ impl AudioPlayer for DebuggerController<'_> {
 
     fn push_sample(&mut self, left: i16, right: i16) {
         // drop new samples when the buffer is full instead of wrapping
-        if self.sample_idx >= BUFFER_SIZE {
+        if self.sample_idx >= GB_AUDIO_BUFFER_SIZE {
             return;
         }
 

@@ -3,7 +3,7 @@ set working-directory := '../../..'
 default: build
 
 build:
-    RUSTFLAGS="-C panic=unwind" cargo build --target wasm32-unknown-emscripten -p gbeed-debugger --release
+    cargo build --target wasm32-unknown-emscripten -p gbeed-debugger --release
     mkdir -p dist
     cp target/wasm32-unknown-emscripten/release/gbeed_debugger.wasm dist/
     cp target/wasm32-unknown-emscripten/release/gbeed-debugger.js dist/
