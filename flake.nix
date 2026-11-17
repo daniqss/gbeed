@@ -1,12 +1,17 @@
 {
   description = "DMG Game Boy Emulator for embedded devices";
 
+  # prebuilt raspberry pi kernels and firmware used by the gbeed02 image
+  nixConfig = {
+    extra-substituters = ["https://nixos-raspberrypi.cachix.org"];
+    extra-trusted-public-keys = ["nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI="];
+    connect-timeout = 5;
+  };
+
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fenix.url = "github:nix-community/fenix/monthly";
-
-    # used in rpi02 with gamepi13 image, that this flake builds
-    nixpkgs-pi.url = "github:nixos/nixpkgs/nixos-25.11";
+    nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
   };
 
   outputs = inputs @ {
